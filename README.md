@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # MBDyn<sup>&copy;</sup>
 **MBDyn**<sup>&copy;</sup> is a multibody analysis code.   
 http://www.mbdyn.org
@@ -10,20 +9,8 @@ Copyright<sup>&copy;</sup> 1996-2019
 
 Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano    
 via La Masa, 34 - 20156 Milano, Italy   
-=======
-MBDyn (C) is a multibody analysis code.
-http://www.mbdyn.org
 
-Copyright (C) 1996-2019
-
-Pierangelo Masarati     <masarati@aero.polimi.it>
-Paolo Mantegazza        <mantegazza@aero.polimi.it>
-
-Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
-via La Masa, 34 - 20156 Milano, Italy
->>>>>>> 624fbbf3b4 (Switched to markdown)
-http://www.aero.polimi.it
-
+[www.aero.polimi.it](https://www.aero.polimi.it)
 
 
 ### developers:
