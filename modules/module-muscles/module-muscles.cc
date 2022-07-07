@@ -68,6 +68,9 @@ MusclePennestriCL::OutputAppend(std::ostream& out) const
 		<< " " << f1
 		<< " " << f2
 		<< " " << f3
+		<< " " << df1dx
+		<< " " << df2dv
+		<< " " << df3dx
 		;
 };
 
@@ -80,6 +83,9 @@ MusclePennestriCL::NetCDFOutputAppend(OutputHandler& OH) const
 	OH.WriteNcVar(Var_f1, f1);
 	OH.WriteNcVar(Var_f2, f2);
 	OH.WriteNcVar(Var_f3, f3);
+	OH.WriteNcVar(Var_df1dx, df1dx);
+	OH.WriteNcVar(Var_df2dv, df2dv);
+	OH.WriteNcVar(Var_df3dx, df3dx);
 #endif // USE_NETCDF
 };
 
@@ -106,6 +112,15 @@ MusclePennestriCL::OutputAppendPrepare(OutputHandler& OH, const std::string& nam
 		Var_f3 = OH.CreateVar<doublereal>(name + ".f3",
 				OutputHandler::Dimensions::Dimensionless,
 				"Passive force-length relationship f3(v)");
+		Var_df1dx = OH.CreateVar<doublereal>(name + ".df1dx",
+				OutputHandler::Dimensions::Dimensionless,
+				"Active force-length relationship derivative df1(x)/dx");
+		Var_df2dv = OH.CreateVar<doublereal>(name + ".df2dv",
+				OutputHandler::Dimensions::Dimensionless,
+				"Active force-velocity relationship derivative df2(v)/dv");
+		Var_df3dx = OH.CreateVar<doublereal>(name + ".df3dx",
+				OutputHandler::Dimensions::Dimensionless,
+				"Passive force-length relationship derivative df3(x)/dx");
 	}
 #endif // USE_NETCDF
 };
@@ -212,6 +227,9 @@ MusclePennestriReflexiveCL::OutputAppend(std::ostream& out) const
 		<< " " << f1
 		<< " " << f2
 		<< " " << f3
+		<< " " << df1dx
+		<< " " << df2dv
+		<< " " << df3dx
 		<< " " << Kp.dGet()
 		<< " " << Kd.dGet()
 		<< " " << ReferenceLength.dGet()
@@ -228,6 +246,9 @@ MusclePennestriReflexiveCL::NetCDFOutputAppend(OutputHandler& OH) const
 	OH.WriteNcVar(Var_f1, f1);
 	OH.WriteNcVar(Var_f2, f2);
 	OH.WriteNcVar(Var_f3, f3);
+	OH.WriteNcVar(Var_df1dx, df1dx);
+	OH.WriteNcVar(Var_df2dv, df2dv);
+	OH.WriteNcVar(Var_df3dx, df3dx);
 	OH.WriteNcVar(Var_dKp, Kp.dGet());
 	OH.WriteNcVar(Var_dKd, Kd.dGet());
 	OH.WriteNcVar(Var_dReferenceLength, ReferenceLength.dGet());
@@ -254,12 +275,21 @@ MusclePennestriReflexiveCL::OutputAppendPrepare(OutputHandler& OH, const std::st
 		Var_f1 = OH.CreateVar<doublereal>(name + ".f1",
 				OutputHandler::Dimensions::Dimensionless,
 				"Active force-length relationship f1(x)");
-		Var_f2 = OH.CreateVar<doublereal>(name + ".f3",
+		Var_f2 = OH.CreateVar<doublereal>(name + ".f2",
 				OutputHandler::Dimensions::Dimensionless,
 				"Active force-velocity relationship f2(v)");
-		Var_f3 = OH.CreateVar<doublereal>(name + ".f4",
+		Var_f3 = OH.CreateVar<doublereal>(name + ".f3",
 				OutputHandler::Dimensions::Dimensionless,
 				"Passive force-length relationship f3(v)");
+		Var_df1dx = OH.CreateVar<doublereal>(name + ".df1dx",
+				OutputHandler::Dimensions::Dimensionless,
+				"Active force-length relationship derivative df1(x)/dx");
+		Var_df2dv = OH.CreateVar<doublereal>(name + ".df2dv",
+				OutputHandler::Dimensions::Dimensionless,
+				"Active force-velocity relationship derivative df2(v)/dv");
+		Var_df3dx = OH.CreateVar<doublereal>(name + ".df3dx",
+				OutputHandler::Dimensions::Dimensionless,
+				"Passive force-length relationship derivative df3(x)/dx");
 		Var_dKp = OH.CreateVar<doublereal>(name + ".Kp",
 				OutputHandler::Dimensions::Dimensionless,
 				"Proportional gain of reflexive activation");
@@ -362,6 +392,9 @@ MusclePennestriReflexiveCLWithSRS::OutputAppend(std::ostream& out) const
 		<< " " << f1
 		<< " " << f2
 		<< " " << f3
+		<< " " << df1dx
+		<< " " << df2dv
+		<< " " << df3dx
 		<< " " << Kp.dGet()
 		<< " " << Kd.dGet()
 		<< " " << ReferenceLength.dGet()
@@ -381,6 +414,9 @@ MusclePennestriReflexiveCLWithSRS::NetCDFOutputAppend(OutputHandler& OH) const
 	OH.WriteNcVar(Var_f1, f1);
 	OH.WriteNcVar(Var_f2, f2);
 	OH.WriteNcVar(Var_f3, f3);
+	OH.WriteNcVar(Var_df1dx, df1dx);
+	OH.WriteNcVar(Var_df2dv, df2dv);
+	OH.WriteNcVar(Var_df3dx, df3dx);
 	OH.WriteNcVar(Var_dKp, Kp.dGet());
 	OH.WriteNcVar(Var_dKd, Kd.dGet());
 	OH.WriteNcVar(Var_dReferenceLength, ReferenceLength.dGet());
@@ -415,6 +451,15 @@ MusclePennestriReflexiveCLWithSRS::OutputAppendPrepare(OutputHandler& OH, const 
 		Var_f3 = OH.CreateVar<doublereal>(name + ".f3",
 				OutputHandler::Dimensions::Dimensionless,
 				"Passive force-length relationship f3(v)");
+		Var_df1dx = OH.CreateVar<doublereal>(name + ".df1dx",
+				OutputHandler::Dimensions::Dimensionless,
+				"Active force-length relationship derivative df1(x)/dx");
+		Var_df2dv = OH.CreateVar<doublereal>(name + ".df2dv",
+				OutputHandler::Dimensions::Dimensionless,
+				"Active force-velocity relationship derivative df2(v)/dv");
+		Var_df3dx = OH.CreateVar<doublereal>(name + ".df3dx",
+				OutputHandler::Dimensions::Dimensionless,
+				"Passive force-length relationship derivative df3(x)/dx");
 		Var_dKp = OH.CreateVar<doublereal>(name + ".Kp",
 				OutputHandler::Dimensions::Dimensionless,
 				"Proportional gain of reflexive activation");
