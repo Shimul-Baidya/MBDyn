@@ -43,25 +43,24 @@
 
 #include "module-muscles.h"
 
-// MUSCLE ERF
-std::ostream& 
-MuscleErfCL::Restart(std::ostream& out) const 
+// FIXME: should not be needed (should be pure virtual), but ltdl wants it for some
+// reasons!
+void
+MuscleCL::Update(const doublereal& Eps, const doublereal& EpsPrime)
 {
-	out << "muscle erf"
-		", initial length, " << Li
-		<< ", reference length, " << L0
-		<< ", reference velocity, " << V0
-		<< ", reference force, " << F0
-		<< ", activation, ", Activation.pGetDriveCaller()->Restart(out)
-		<< ", activation check, " << bActivationOverflow
-		<< ", warn, " << bActivationOverflowWarn;
-	Restart_int(out)
-		<< ", ", ElasticConstitutiveLaw<doublereal, doublereal>::Restart_int(out);
+	NO_OP;
+};
+
+std::ostream&
+MuscleCL::Restart(std::ostream& out) const
+{
+	// FIXME: this is supposed to be a pure virtual method, so this (dummy)
+	// implementation should not be needed. But ltdl complains if it isn't there
 	return out;
 };
 
 std::ostream& 
-MuscleErfCL::OutputAppend(std::ostream& out) const 
+MuscleCL::OutputAppend(std::ostream& out) const 
 {
 	return out 
 		<< " " << a 
@@ -73,7 +72,7 @@ MuscleErfCL::OutputAppend(std::ostream& out) const
 };
 
 void 
-MuscleErfCL::NetCDFOutputAppend(OutputHandler& OH) const 
+MuscleCL::NetCDFOutputAppend(OutputHandler& OH) const 
 {
 #ifdef USE_NETCDF
 	OH.WriteNcVar(Var_dAct, a);
@@ -86,7 +85,7 @@ MuscleErfCL::NetCDFOutputAppend(OutputHandler& OH) const
 
 
 void 
-MuscleErfCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
+MuscleCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
 {
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
@@ -155,6 +154,143 @@ MuscleErfCL::Update(const doublereal& Eps, const doublereal& EpsPrime)
 	ConstitutiveLaw<doublereal, doublereal>::FDEPrime = F0*f1*df2dv*a*dvdEpsPrime;
 };
 
+std::ostream& 
+MuscleErfCL::Restart(std::ostream& out) const 
+{
+	out << "muscle"
+		", initial length, " << Li
+		<< ", reference length, " << L0
+		<< ", reference velocity, " << V0
+		<< ", reference force, " << F0
+		<< ", activation, ", Activation.pGetDriveCaller()->Restart(out)
+		<< ", activation check, " << bActivationOverflow
+		<< ", warn, " << bActivationOverflowWarn
+		<< ", model, erf, "; 
+	Restart_int(out)
+		<< ", ", ElasticConstitutiveLaw<doublereal, doublereal>::Restart_int(out);
+	return out;
+};
+
+std::ostream&
+MuscleErfCL::OutputAppend(std::ostream& out) const
+{
+	// FIXME: SHOULD NOT BE NEEDED! (OutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        return	MuscleCL::OutputAppend(out);
+};
+
+void MuscleErfCL::NetCDFOutputAppend(OutputHandler& OH) const
+{
+	// FIXME: SHOULD NOT BE NEEDED! (NetCDFOutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        MuscleCL::NetCDFOutputAppend(OH);
+};
+
+void MuscleErfCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
+{
+	// FIXME: SHOULD NOT BE NEEDED (OutputAppendPrepare is virtual, with base
+	// implementation in MuscleReflexiveCL)
+	MuscleCL::OutputAppendPrepare(OH, name);
+};
+
+
+// FIXME: should not be needed (should be pure virtual), but ltdl wants it for some
+// reasons!
+void
+MuscleReflexiveCL::Update(const doublereal& Eps, const doublereal& EpsPrime)
+{
+	NO_OP;
+};
+
+std::ostream& 
+MuscleReflexiveCL::Restart_int(std::ostream& out) const 
+{
+	out
+		<< ", reflexive"
+		<< ", proportional gain, ", Kp.pGetDriveCaller()->Restart(out)
+		<< ", derivative gain, ", Kd.pGetDriveCaller()->Restart(out)
+		<< ", reference length, ", ReferenceLength.pGetDriveCaller()->Restart(out);
+	return out;
+};
+
+void 
+MusclePennestriReflexiveCL::Update(const doublereal& Eps, const doublereal& EpsPrime) 
+{
+	ConstitutiveLaw<doublereal, doublereal>::Epsilon = Eps - ElasticConstitutiveLaw<doublereal, doublereal>::Get();
+	ConstitutiveLaw<doublereal, doublereal>::EpsilonPrime = EpsPrime;
+
+	doublereal dxdEps = Li/L0;
+	doublereal dvdEpsPrime = Li/V0;
+	doublereal x = (1. + ConstitutiveLaw<doublereal, doublereal>::Epsilon)*dxdEps;
+	doublereal v = ConstitutiveLaw<doublereal, doublereal>::EpsilonPrime*dvdEpsPrime;
+
+	doublereal dxRef = ReferenceLength.dGet()/L0;
+
+	doublereal aRef = Activation.dGet();
+	aReq = aRef + Kp.dGet()*(x - dxRef) + Kd.dGet()*v;
+	a = aReq;
+
+	if (aReq < 0.) {
+		if (bActivationOverflowWarn) {
+			silent_cerr("MusclePennestriReflexiveCL: activation underflow (aReq=" << aReq << ")" << std::endl);
+		}
+		if (bActivationOverflow) {
+			a = 0.;
+		}
+
+	} else if (aReq > 1.) {
+		if (bActivationOverflowWarn) {
+			silent_cerr("MusclePennestriReflexiveCL: activation overflow (aReq=" << aReq << ")" << std::endl);
+		}
+		if (bActivationOverflow) {
+			a = 1.;
+		}
+	}
+
+	f1 = std::exp(std::pow(x - 0.95, 2) - 40*std::pow(x - 0.95, 4));
+	f2 = 1.6 - 1.6*std::exp(0.1/std::pow(v - 1., 2) - 1.1/std::pow(v - 1., 4));
+	f3 = 1.3*std::atan(0.1*std::pow(x - 0.22, 10));
+
+	df1dx = f1*(2*(x - 0.95) - 4*40.*std::pow(x - 0.95, 3));
+	df2dv = 1.6*std::exp(0.1/std::pow(v - 1., 2) - 1.1/std::pow(v - 1, 4))*(2*0.1/std::pow(v - 1., 3) - 4*1.1/std::pow(v - 1., 5));
+	df3dx = 1.3*std::pow(x - 0.22, 9)/(0.01*std::pow(x - 0.22, 20) + 1);
+
+	ConstitutiveLaw<doublereal, doublereal>::F = PreStress + F0*(f1*f2*a + f3);
+	ConstitutiveLaw<doublereal, doublereal>::FDE = F0*((df1dx*aRef + f1*Kp.dGet())*f2 + df3dx)*dxdEps;
+	ConstitutiveLaw<doublereal, doublereal>::FDEPrime = F0*f1*(df2dv*aRef + f2*Kd.dGet())*dvdEpsPrime;
+};
+
+std::ostream&
+MusclePennestriReflexiveCL::Restart_int(std::ostream& out) const
+{
+	MuscleReflexiveCL::Restart_int(out);
+	out
+		<< "model, pennestri";
+		return out;
+};
+
+std::ostream&
+MusclePennestriReflexiveCL::OutputAppend(std::ostream& out) const
+{
+	// FIXME: SHOULD NOT BE NEEDED! (OutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        return	MuscleReflexiveCL::OutputAppend(out);
+};
+
+void MusclePennestriReflexiveCL::NetCDFOutputAppend(OutputHandler& OH) const
+{
+	// FIXME: SHOULD NOT BE NEEDED! (NetCDFOutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        MuscleReflexiveCL::NetCDFOutputAppend(OH);
+};
+
+void MusclePennestriReflexiveCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
+{
+	// FIXME: SHOULD NOT BE NEEDED (OutputAppendPrepare is virtual, with base
+	// implementation in MuscleReflexiveCL)
+	MuscleReflexiveCL::OutputAppendPrepare(OH, name);
+};
+
 void 
 MuscleErfReflexiveCL::Update(const doublereal& Eps, const doublereal& EpsPrime) 
 {
@@ -174,7 +310,7 @@ MuscleErfReflexiveCL::Update(const doublereal& Eps, const doublereal& EpsPrime)
 
 	if (aReq < 0.) {
 		if (bActivationOverflowWarn) {
-			silent_cerr("MuscleErfCL: activation underflow (aReq=" << aReq << ")" << std::endl);
+			silent_cerr("MuscleErfReflexiveCL: activation underflow (aReq=" << aReq << ")" << std::endl);
 		}
 		if (bActivationOverflow) {
 			a = 0.;
@@ -182,7 +318,7 @@ MuscleErfReflexiveCL::Update(const doublereal& Eps, const doublereal& EpsPrime)
 
 	} else if (aReq > 1.) {
 		if (bActivationOverflowWarn) {
-			silent_cerr("MuscleErfCL: activation overflow (aReq=" << aReq << ")" << std::endl);
+			silent_cerr("MuscleErfReflexiveCL: activation overflow (aReq=" << aReq << ")" << std::endl);
 		}
 		if (bActivationOverflow) {
 			a = 1.;
@@ -203,154 +339,35 @@ MuscleErfReflexiveCL::Update(const doublereal& Eps, const doublereal& EpsPrime)
 };
 
 std::ostream& 
-MuscleErfReflexiveCL::OutputAppend(std::ostream& out) const 
-{
-	return out 
-		<< " " << a 
-		<< " " << aReq 
-		<< " " << f1
-		<< " " << f2
-		<< " " << f3
-		<< " " << Kp.dGet()
-		<< " " << Kd.dGet()
-		<< " " << ReferenceLength.dGet()
-		;
-};
-
-void 
-MuscleErfReflexiveCL::NetCDFOutputAppend(OutputHandler& OH) const 
-{
-#ifdef USE_NETCDF
-	OH.WriteNcVar(Var_dAct, a);
-	OH.WriteNcVar(Var_dActReq, aReq);
-	OH.WriteNcVar(Var_dAref, Activation.dGet()); 
-	OH.WriteNcVar(Var_f1, f1);
-	OH.WriteNcVar(Var_f2, f2);
-	OH.WriteNcVar(Var_f3, f3);
-	OH.WriteNcVar(Var_dKp, Kp.dGet());
-	OH.WriteNcVar(Var_dKd, Kd.dGet());
-	OH.WriteNcVar(Var_dReferenceLength, ReferenceLength.dGet());
-#endif // USE_NETCDF
-};
-
-
-void 
-MuscleErfReflexiveCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
-{
-#ifdef USE_NETCDF
-	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-	if (OH.UseNetCDF(OutputHandler::LOADABLE)) 
-	{
-		Var_dAct = OH.CreateVar<doublereal>(name + ".a", 
-				OutputHandler::Dimensions::Dimensionless, 
-				"Muscular activation (effective value)");
-		Var_dActReq = OH.CreateVar<doublereal>(name + ".aReq",  
-				OutputHandler::Dimensions::Dimensionless,
-				"Requested muscular activation");
-		Var_dAref = OH.CreateVar<doublereal>(name + ".aRef",
-				OutputHandler::Dimensions::Dimensionless,
-				"Reference muscular activation");
-		Var_f1 = OH.CreateVar<doublereal>(name + ".f1",
-				OutputHandler::Dimensions::Dimensionless,
-				"Active force-length relationship f1(x)");
-		Var_f2 = OH.CreateVar<doublereal>(name + ".f3",
-				OutputHandler::Dimensions::Dimensionless,
-				"Active force-velocity relationship f2(v)");
-		Var_f3 = OH.CreateVar<doublereal>(name + ".f4",
-				OutputHandler::Dimensions::Dimensionless,
-				"Passive force-length relationship f3(v)");
-		Var_dKp = OH.CreateVar<doublereal>(name + ".Kp",
-				OutputHandler::Dimensions::Dimensionless,
-				"Proportional gain of reflexive activation");
-		Var_dKd = OH.CreateVar<doublereal>(name + ".Kd",
-				OutputHandler::Dimensions::Dimensionless,
-				"Derivative gain of reflexive activation");
-		Var_dReferenceLength = OH.CreateVar<doublereal>(name + ".Lref",
-				OutputHandler::Dimensions::Length,
-				"Reference length of reflexive activation model");
-	}
-#endif // USE_NETCDF
-};
-
-std::ostream& 
 MuscleErfReflexiveCL::Restart_int(std::ostream& out) const 
 {
+	MuscleReflexiveCL::Restart_int(out);
 	out
-		<< ", reflexive"
-		<< ", proportional gain, ", Kp.pGetDriveCaller()->Restart(out)
-		<< ", derivative gain, ", Kd.pGetDriveCaller()->Restart(out)
-		<< ", reference length, ", ReferenceLength.pGetDriveCaller()->Restart(out);
-	return out;
+		<< "model, erf";
+		return out;
 };
 
-// MUSCLE PENNESTRI
-std::ostream& 
-MusclePennestriCL::Restart(std::ostream& out) const 
+std::ostream&
+MuscleErfReflexiveCL::OutputAppend(std::ostream& out) const
 {
-	out << "muscle pennestri"
-		", initial length, " << Li
-		<< ", reference length, " << L0
-		<< ", reference velocity, " << V0
-		<< ", reference force, " << F0
-		<< ", activation, ", Activation.pGetDriveCaller()->Restart(out)
-		<< ", activation check, " << bActivationOverflow
-		<< ", warn, " << bActivationOverflowWarn;
-	Restart_int(out)
-		<< ", ", ElasticConstitutiveLaw<doublereal, doublereal>::Restart_int(out);
-	return out;
+	// FIXME: SHOULD NOT BE NEEDED! (OutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        return	MuscleReflexiveCL::OutputAppend(out);
 };
-	
-std::ostream& 
-MusclePennestriCL::OutputAppend(std::ostream& out) const 
+
+void MuscleErfReflexiveCL::NetCDFOutputAppend(OutputHandler& OH) const
 {
-	return out 
-		<< " " << a 
-		<< " " << aReq
-		<< " " << f1
-		<< " " << f2
-		<< " " << f3
-		;
+	// FIXME: SHOULD NOT BE NEEDED! (NetCDFOutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        MuscleReflexiveCL::NetCDFOutputAppend(OH);
 };
 
-void 
-MusclePennestriCL::NetCDFOutputAppend(OutputHandler& OH) const 
+void MuscleErfReflexiveCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
 {
-#ifdef USE_NETCDF
-	OH.WriteNcVar(Var_dAct, a);
-	OH.WriteNcVar(Var_dActReq, aReq);
-	OH.WriteNcVar(Var_f1, f1);
-	OH.WriteNcVar(Var_f2, f2);
-	OH.WriteNcVar(Var_f3, f3);
-#endif // USE_NETCDF
+	// FIXME: SHOULD NOT BE NEEDED (OutputAppendPrepare is virtual, with base
+	// implementation in MuscleReflexiveCL)
+	MuscleReflexiveCL::OutputAppendPrepare(OH, name);
 };
-
-
-void 
-MusclePennestriCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
-{
-#ifdef USE_NETCDF
-	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-	if (OH.UseNetCDF(OutputHandler::LOADABLE)) 
-	{
-		Var_dAct = OH.CreateVar<doublereal>(name + ".a", 
-				OutputHandler::Dimensions::Dimensionless, 
-				"Muscular activation (effective value)");
-		Var_dActReq = OH.CreateVar<doublereal>(name + ".aReq",  
-				OutputHandler::Dimensions::Dimensionless,
-				"Requested muscular activation");
-		Var_f1 = OH.CreateVar<doublereal>(name + ".f1",
-				OutputHandler::Dimensions::Dimensionless,
-				"Active force-length relationship f1(x)");
-		Var_f2 = OH.CreateVar<doublereal>(name + ".f2",
-				OutputHandler::Dimensions::Dimensionless,
-				"Active force-velocity relationship f2(v)");
-		Var_f3 = OH.CreateVar<doublereal>(name + ".f3",
-				OutputHandler::Dimensions::Dimensionless,
-				"Passive force-length relationship f3(v)");
-	}
-#endif // USE_NETCDF
-};
-
 
 void 
 MusclePennestriCL::Update(const doublereal& Eps, const doublereal& EpsPrime) 
@@ -395,57 +412,47 @@ MusclePennestriCL::Update(const doublereal& Eps, const doublereal& EpsPrime)
 	ConstitutiveLaw<doublereal, doublereal>::FDEPrime = F0*f1*df2dv*a*dvdEpsPrime;
 };
 
-
-
-void 
-MusclePennestriReflexiveCL::Update(const doublereal& Eps, const doublereal& EpsPrime) 
+std::ostream& 
+MusclePennestriCL::Restart(std::ostream& out) const 
 {
-	ConstitutiveLaw<doublereal, doublereal>::Epsilon = Eps - ElasticConstitutiveLaw<doublereal, doublereal>::Get();
-	ConstitutiveLaw<doublereal, doublereal>::EpsilonPrime = EpsPrime;
+	out << "muscle"
+		", initial length, " << Li
+		<< ", reference length, " << L0
+		<< ", reference velocity, " << V0
+		<< ", reference force, " << F0
+		<< ", activation, ", Activation.pGetDriveCaller()->Restart(out)
+		<< ", activation check, " << bActivationOverflow
+		<< ", warn, " << bActivationOverflowWarn
+		<< ", model, pennestri, "; 
+	Restart_int(out)
+		<< ", ", ElasticConstitutiveLaw<doublereal, doublereal>::Restart_int(out);
+	return out;
+};
 
-	doublereal dxdEps = Li/L0;
-	doublereal dvdEpsPrime = Li/V0;
-	doublereal x = (1. + ConstitutiveLaw<doublereal, doublereal>::Epsilon)*dxdEps;
-	doublereal v = ConstitutiveLaw<doublereal, doublereal>::EpsilonPrime*dvdEpsPrime;
+std::ostream&
+MusclePennestriCL::OutputAppend(std::ostream& out) const
+{
+	// FIXME: SHOULD NOT BE NEEDED! (OutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        return	MuscleCL::OutputAppend(out);
+};
 
-	doublereal dxRef = ReferenceLength.dGet()/L0;
+void MusclePennestriCL::NetCDFOutputAppend(OutputHandler& OH) const
+{
+	// FIXME: SHOULD NOT BE NEEDED! (NetCDFOutputAppend is virtual, with base implementation
+	// in MuscleReflexiveCL)
+        MuscleCL::NetCDFOutputAppend(OH);
+};
 
-	doublereal aRef = Activation.dGet();
-	aReq = aRef + Kp.dGet()*(x - dxRef) + Kd.dGet()*v;
-	a = aReq;
-
-	if (aReq < 0.) {
-		if (bActivationOverflowWarn) {
-			silent_cerr("MusclePennestriCL: activation underflow (aReq=" << aReq << ")" << std::endl);
-		}
-		if (bActivationOverflow) {
-			a = 0.;
-		}
-
-	} else if (aReq > 1.) {
-		if (bActivationOverflowWarn) {
-			silent_cerr("MusclePennestriCL: activation overflow (aReq=" << aReq << ")" << std::endl);
-		}
-		if (bActivationOverflow) {
-			a = 1.;
-		}
-	}
-
-	f1 = std::exp(std::pow(x - 0.95, 2) - 40*std::pow(x - 0.95, 4));
-	f2 = 1.6 - 1.6*std::exp(0.1/std::pow(v - 1., 2) - 1.1/std::pow(v - 1., 4));
-	f3 = 1.3*std::atan(0.1*std::pow(x - 0.22, 10));
-
-	df1dx = f1*(2*(x - 0.95) - 4*40.*std::pow(x - 0.95, 3));
-	df2dv = 1.6*std::exp(0.1/std::pow(v - 1., 2) - 1.1/std::pow(v - 1, 4))*(2*0.1/std::pow(v - 1., 3) - 4*1.1/std::pow(v - 1., 5));
-	df3dx = 1.3*std::pow(x - 0.22, 9)/(0.01*std::pow(x - 0.22, 20) + 1);
-
-	ConstitutiveLaw<doublereal, doublereal>::F = PreStress + F0*(f1*f2*a + f3);
-	ConstitutiveLaw<doublereal, doublereal>::FDE = F0*((df1dx*aRef + f1*Kp.dGet())*f2 + df3dx)*dxdEps;
-	ConstitutiveLaw<doublereal, doublereal>::FDEPrime = F0*f1*(df2dv*aRef + f2*Kd.dGet())*dvdEpsPrime;
+void MusclePennestriCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
+{
+	// FIXME: SHOULD NOT BE NEEDED (OutputAppendPrepare is virtual, with base
+	// implementation in MuscleReflexiveCL)
+	MuscleCL::OutputAppendPrepare(OH, name);
 };
 
 std::ostream& 
-MusclePennestriReflexiveCL::OutputAppend(std::ostream& out) const 
+MuscleReflexiveCL::OutputAppend(std::ostream& out) const 
 {
 	return out 
 		<< " " << a 
@@ -460,7 +467,7 @@ MusclePennestriReflexiveCL::OutputAppend(std::ostream& out) const
 };
 
 void 
-MusclePennestriReflexiveCL::NetCDFOutputAppend(OutputHandler& OH) const 
+MuscleReflexiveCL::NetCDFOutputAppend(OutputHandler& OH) const 
 {
 #ifdef USE_NETCDF
 	OH.WriteNcVar(Var_dAct, a);
@@ -477,7 +484,7 @@ MusclePennestriReflexiveCL::NetCDFOutputAppend(OutputHandler& OH) const
 
 
 void 
-MusclePennestriReflexiveCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
+MuscleReflexiveCL::OutputAppendPrepare(OutputHandler& OH, const std::string& name)
 {
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
@@ -513,21 +520,6 @@ MusclePennestriReflexiveCL::OutputAppendPrepare(OutputHandler& OH, const std::st
 	}
 #endif // USE_NETCDF
 };
-
-
-
-
-std::ostream& 
-MusclePennestriReflexiveCL::Restart_int(std::ostream& out) const 
-{
-	out
-		<< ", reflexive"
-		<< ", proportional gain, ", Kp.pGetDriveCaller()->Restart(out)
-		<< ", derivative gain, ", Kd.pGetDriveCaller()->Restart(out)
-		<< ", reference length, ", ReferenceLength.pGetDriveCaller()->Restart(out);
-	return out;
-};
-
 
 void 
 MusclePennestriReflexiveCLWithSRS::Update(const doublereal& Eps, const doublereal& EpsPrime) 
@@ -593,7 +585,16 @@ MusclePennestriReflexiveCLWithSRS::Update(const doublereal& Eps, const doublerea
 	ConstitutiveLaw<doublereal, doublereal>::FDE = 
 		F0*(df1dx*(f2*aRef + SRSf) + f1*(SRSdfdx + Kp.dGet()*f2) + df3dx)*dxdEps;
 };
-		
+
+std::ostream&
+MusclePennestriReflexiveCLWithSRS::Restart_int(std::ostream& out) const
+{
+	MuscleReflexiveCL::Restart_int(out);
+	out
+		<< "model, pennestri";
+	return out;
+};
+
 std::ostream& 
 MusclePennestriReflexiveCLWithSRS::OutputAppend(std::ostream& out) const 
 {
@@ -676,7 +677,7 @@ MusclePennestriReflexiveCLWithSRS::OutputAppendPrepare(OutputHandler& OH, const 
 };
 
 /* specific functional object(s) */
-struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
+struct MuscleCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 	virtual ConstitutiveLaw<doublereal, doublereal> *
 	Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
 		ConstitutiveLaw<doublereal, doublereal>* pCL = 0;
@@ -684,8 +685,8 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		CLType = ConstLawType::VISCOELASTIC;
 
 		if (HP.IsKeyWord("help")) {
-			silent_cerr("MusclePennestriCL:\n"
-				"        muscle Pennestri ,\n"
+			silent_cerr("MuscleCL:\n"
+				"        muscle,\n"
 				"                [ initial length , <Li> , ]\n"
 				"                reference length , <L0> ,\n"
 				"                [ reference velocity , <V0> , ]\n"
@@ -698,6 +699,7 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 				"                        proportional gain , (DriveCaller) <kp> ,\n"
 				"                        derivative gain , (DriveCaller) <kd> ,\n"
 				"                        reference length, (DriveCaller) <lref> ]\n"
+				" 			 model, { pennestri | erf }\n"
 				"		  	[ , short range stiffness ]\n"
 				"			[ 	, model, { exponential | linear } ,]\n"
 				" 		  	[ 	, gamma, (real) <gamma> ,]\n"
@@ -714,31 +716,40 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		bool bErgo(false);
 		bool bGotErgo(false);
 		if (HP.IsKeyWord("ergonomy")) {
-			silent_cerr("MusclePennestriCL: deprecated, \"ergonomy\" "
+			silent_cerr("MuscleCL: deprecated, \"ergonomy\" "
 					"at line " << HP.GetLineData()
 					<< " should be at end of definition" << std::endl);
 			bErgo = HP.GetYesNoOrBool(bErgo);
 			bGotErgo = true;
 		}
 
+		if (HP.IsKeyWord("pennestri")) {
+			silent_cerr("MuscleCL: deprecated \"pennestri\" at line "
+					<< HP.GetLineData()
+					<< " muscle model selection should be at the end "
+					<< " of definition, before prestress and prestrain"
+					<< std::endl);
+			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+		}
+
 		doublereal Li = -1.;
 		if (HP.IsKeyWord("initial" "length")) {
 			Li = HP.GetReal();
 			if (Li <= 0.) {
-				silent_cerr("MusclePennestriCL: null or negative initial length "
+				silent_cerr("MuscleCL: null or negative initial length "
 					"at line " << HP.GetLineData() << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 		}
 
 		if (!HP.IsKeyWord("reference" "length")) {
-			silent_cerr("MusclePennestriCL: \"reference length\" expected "
+			silent_cerr("MuscleCL: \"reference length\" expected "
 				"at line " << HP.GetLineData() << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
 		doublereal L0 = HP.GetReal();
 		if (L0 <= 0.) {
-			silent_cerr("MusclePennestriCL: null or negative reference length "
+			silent_cerr("MuscleCL: null or negative reference length "
 				"at line " << HP.GetLineData() << std::endl);
 			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
@@ -748,26 +759,26 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		if (HP.IsKeyWord("reference" "velocity")) {
 			V0 = HP.GetReal();
 			if (V0 <= 0.) {
-				silent_cerr("MusclePennestriCL: null or negative reference velocity "
+				silent_cerr("MuscleCL: null or negative reference velocity "
 					"at line " << HP.GetLineData() << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 		}
 
 		if (!HP.IsKeyWord("reference" "force")) {
-			silent_cerr("MusclePennestriCL: \"reference force\" expected "
+			silent_cerr("MuscleCL: \"reference force\" expected "
 				"at line " << HP.GetLineData() << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
 		doublereal F0 = HP.GetReal();
 		if (F0 <= 0.) {
-			silent_cerr("MusclePennestriCL: null or negative reference force "
+			silent_cerr("MuscleCL: null or negative reference force "
 				"at line " << HP.GetLineData() << std::endl);
 			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
 
 		if (!HP.IsKeyWord("activation")) {
-			silent_cerr("MusclePennestriCL: \"activation\" expected "
+			silent_cerr("MuscleCL: \"activation\" expected "
 				"at line " << HP.GetLineData() << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
@@ -792,7 +803,16 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		DriveCaller* pKp(NULL);
 		DriveCaller* pKd(NULL);
 		const DriveCaller *pRefLen(0);
+	
+		// Models
+		enum MuscleModel {
+			PENNESTRI,
+			ERF
+		} m_MuscleModel;
 		
+		// Pennestrì is the default model
+		m_MuscleModel = PENNESTRI;
+
 		// Short Range Stiffness
 		bool bSRS(false);
 		
@@ -804,7 +824,7 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		MusclePennestriReflexiveCLWithSRS::SRSModel m_SRSModel = MusclePennestriReflexiveCLWithSRS::SRSModel::SRS_LINEAR;
 		if (HP.IsKeyWord("reflexive")) {
 			if (bErgo) {
-				silent_cerr("MusclePennestriCL: "
+				silent_cerr("MuscleCL: "
 					"\"reflexive\" and \"ergonomy\" incompatible "
 					"at line " << HP.GetLineData() << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
@@ -812,21 +832,21 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 			bReflexive = true;
 
 			if (!HP.IsKeyWord("proportional" "gain")) {
-				silent_cerr("MusclePennestriCL: \"proportional gain\" expected "
+				silent_cerr("MuscleCL: \"proportional gain\" expected "
 					"at line " << HP.GetLineData() << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 			pKp = HP.GetDriveCaller();
 
 			if (!HP.IsKeyWord("derivative" "gain")) {
-				silent_cerr("MusclePennestriCL: \"derivative gain\" expected "
+				silent_cerr("MuscleCL: \"derivative gain\" expected "
 					"at line " << HP.GetLineData() << std::endl);
 					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 			pKd = HP.GetDriveCaller();
 
 			if (!HP.IsKeyWord("reference" "length")) {
-				silent_cerr("MusclePennestriCL: \"reference length\" expected "
+				silent_cerr("MuscleCL: \"reference length\" expected "
 					"at line " << HP.GetLineData() << std::endl);
 					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
@@ -834,6 +854,8 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		
 			if (HP.IsKeyWord("short" "range" "stiffness")) {
 				bSRS = true;
+				m_MuscleModel = PENNESTRI;
+				silent_cout("MuscleCL: short range stiffness requested, selecting Pennestri model" << std::endl);
 
 				if (HP.IsKeyWord("model")) {
 					if (HP.IsKeyWord("exponential")) {
@@ -841,7 +863,7 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 					} else if (HP.IsKeyWord("linear")) {
 						NO_OP; // model is unchanged
 					} else {
-						silent_cerr("MusclePennestriCL: unrecognised Short-Range Stiffness model "
+						silent_cerr("MuscleCL: unrecognised Short-Range Stiffness model "
 								"at line " << HP.GetLineData() << std::endl);
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
@@ -857,6 +879,17 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 			}
 		}
 
+		if (HP.IsKeyWord("model")) {
+			if (HP.IsKeyWord("pennestri")) {
+				NO_OP;	// default model
+			} else if (HP.IsKeyWord("erf")) {
+				m_MuscleModel = ERF;
+			} else {
+				silent_cerr("MuscleCL: unrecognised muscle model at line "
+						<< HP.GetLineData() << std::endl);
+				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+			}
+		}
 
 		/* Prestress and prestrain */
 		doublereal PreStress(0.);
@@ -868,11 +901,17 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		}
 
 		if (bErgo) {
-			SAFENEWWITHCONSTRUCTOR(pCL, MusclePennestriErgoCL,
-				MusclePennestriErgoCL(pTplDC, PreStress,
-					Li, L0, V0, F0, pAct,
-					bActivationOverflow, bActivationOverflowWarn));
-
+			if (m_MuscleModel == PENNESTRI) {
+				SAFENEWWITHCONSTRUCTOR(pCL, MusclePennestriErgoCL,
+						MusclePennestriErgoCL(pTplDC, PreStress, 
+							Li, L0, V0, F0, pAct, 
+							bActivationOverflow, bActivationOverflowWarn));
+			} else if (m_MuscleModel == ERF) {
+				SAFENEWWITHCONSTRUCTOR(pCL, MuscleErfErgoCL,
+						MuscleErfErgoCL(pTplDC, PreStress,
+							Li, L0, V0, F0, pAct,
+							bActivationOverflow, bActivationOverflowWarn));
+			}
 		} else if (bReflexive) {
 			if (bSRS) {
 				SAFENEWWITHCONSTRUCTOR(pCL, MusclePennestriReflexiveCLWithSRS,
@@ -882,19 +921,36 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 						bActivationOverflowWarn,
 						pKp, pKd, pRefLen, dSRSGamma, dSRSDelta, m_SRSModel));
 			} else {
-				SAFENEWWITHCONSTRUCTOR(pCL, MusclePennestriReflexiveCL,
-					MusclePennestriReflexiveCL(pTplDC, PreStress,
-						Li, L0, V0, F0, pAct,
-						bActivationOverflow,
-						bActivationOverflowWarn,
-						pKp, pKd, pRefLen));
+				if (m_MuscleModel == PENNESTRI) {
+					SAFENEWWITHCONSTRUCTOR(pCL, MusclePennestriReflexiveCL,
+						MusclePennestriReflexiveCL(pTplDC, PreStress,
+							Li, L0, V0, F0, pAct,
+							bActivationOverflow,
+							bActivationOverflowWarn,
+							pKp, pKd, pRefLen));
+				} else if (m_MuscleModel == ERF) {
+					SAFENEWWITHCONSTRUCTOR(pCL, MuscleErfReflexiveCL,
+							MuscleErfReflexiveCL(pTplDC, PreStress,
+							Li, L0, V0, F0, pAct,
+							bActivationOverflow,
+							bActivationOverflowWarn,
+							pKp, pKd, pRefLen));
+				}
 			}
 		} else {
-			SAFENEWWITHCONSTRUCTOR(pCL, MusclePennestriCL,
-				MusclePennestriCL(pTplDC, PreStress,
-					Li, L0, V0, F0, pAct,
-					bActivationOverflow, 
-					bActivationOverflowWarn));
+			if (m_MuscleModel == PENNESTRI) {
+				SAFENEWWITHCONSTRUCTOR(pCL, MusclePennestriCL,
+						MusclePennestriCL(pTplDC, PreStress,
+							Li, L0, V0, F0, pAct,
+							bActivationOverflow, 
+							bActivationOverflowWarn));
+			} else if (m_MuscleModel == ERF) {
+				SAFENEWWITHCONSTRUCTOR(pCL, MuscleErfCL,
+						MuscleErfCL(pTplDC, PreStress,
+							Li, L0, V0, F0, pAct,
+							bActivationOverflow, 
+							bActivationOverflowWarn));
+			}
 		}
 
 		return pCL;
@@ -904,16 +960,11 @@ struct MusclePennestriCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 extern "C" int
 module_init(const char *module_name, void *pdm, void *php)
 {
-#if 0
-	DataManager	*pDM = (DataManager *)pdm;
-	MBDynParser	*pHP = (MBDynParser *)php;
-#endif
-
-	ConstitutiveLawRead<doublereal, doublereal> *rf1D = new MusclePennestriCLR;
-	if (!SetCL1D("muscle" "pennestri", rf1D)) {
+	ConstitutiveLawRead<doublereal, doublereal> *rf1D = new MuscleCLR;
+	if (!SetCL1D("muscle", rf1D)) {
 		delete rf1D;
 
-		silent_cerr("MusclePennestriCL: "
+		silent_cerr("MuscleCL: "
 			"module_init(" << module_name << ") "
 			"failed" << std::endl);
 
