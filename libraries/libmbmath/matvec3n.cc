@@ -96,6 +96,12 @@ VecN::VecN(const VecN& v)
    }
 }
 
+VecN::VecN(VecN&& v)
+: VecN{}
+{
+     *this = std::move(v);
+}
+
 /*
   Costruttore da VectorHandler. Prende i valori da iFirstIndex 
   a iFirstIndex+ns. Nota: gli indici del VectorHandler partono da 1, 
@@ -130,6 +136,14 @@ VecN::~VecN(void)
    Destroy_();
 }
 
+VecN& VecN::operator=(VecN&& v)
+{
+     std::swap(iMaxRows, v.iMaxRows);
+     std::swap(iNumRows, v.iNumRows);
+     std::swap(pdVec, v.pdVec);
+
+     return *this;
+}
 
 void VecN::Resize(integer ns)
 {

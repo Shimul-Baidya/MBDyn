@@ -150,8 +150,8 @@ Modal::Modal(unsigned int uL,
 	Mat3xN&& oInv9,
 	Mat3xN&& oInv10,
 	Mat3xN&& oInv11,
-	VecN *aa,
-	VecN *bb,
+	VecN&& aa,
+	VecN&& bb,
 	flag fOut)
 : Elem(uL, fOut),
 Joint(uL, pDO, fOut),
@@ -193,9 +193,9 @@ Inv5jaj(NModes, 0.),
 Inv5jaPj(NModes, 0.),
 Inv9jkajak(::Zero3x3),
 Inv9jkajaPk(::Eye3),
-a(*aa), a0(*aa),
-aPrime(NModes, 0.), aPrime0(*bb),
-b(*bb),
+a(aa), a0(aa),
+aPrime(NModes, 0.), aPrime0(bb),
+b(bb),
 bPrime(NModes, 0.),
 SND(std::move(snd))
 {
@@ -3000,8 +3000,8 @@ ReadModal(DataManager* pDM,
 	Mat3xN oInv11;
 
 	// modal displacements and velocities
-	VecN *a = 0;
-	VecN *aP = 0;
+	VecN a;
+	VecN aP;
 
 	// FEM database file name
 	const char *s = HP.GetFileName();
@@ -3195,8 +3195,10 @@ ReadModal(DataManager* pDM,
         oGenDamp.Resize(NModes);
         oGenDamp.Reset();
 
-	SAFENEWWITHCONSTRUCTOR(a,  VecN, VecN(NModes, 0.));
-	SAFENEWWITHCONSTRUCTOR(aP, VecN, VecN(NModes, 0.));
+        a.Resize(NModes);
+        a.Reset();
+        aP.Resize(NModes);
+        aP.Reset();
 
 	/* array contenente le label dei nodi FEM */
 	std::vector<std::string> IdFEMNodes;
@@ -3510,7 +3512,7 @@ ReadModal(DataManager* pDM,
 					if (!bActiveModes[jMode]) {
 						continue;
 					}
-					a->Put(iCnt, d);
+					a.Put(iCnt, d);
 					iCnt++;
 				}
 
@@ -3551,7 +3553,7 @@ ReadModal(DataManager* pDM,
 					if (!bActiveModes[jMode]) {
 						continue;
 					}
-					aP->Put(iCnt, d);
+					aP.Put(iCnt, d);
 					iCnt++;
 				}
 
@@ -4474,7 +4476,7 @@ ReadModal(DataManager* pDM,
 						continue;
 					}
 
-					a->Put(iCnt, d);
+					a.Put(iCnt, d);
 					iCnt++;
 				}
 				break;
@@ -4490,7 +4492,7 @@ ReadModal(DataManager* pDM,
 						continue;
 					}
 
-					aP->Put(iCnt, d);
+					aP.Put(iCnt, d);
 					iCnt++;
 				}
 				break;
@@ -4885,15 +4887,15 @@ ReadModal(DataManager* pDM,
 		fecho
 			<< "**" << std::endl
 			<< "** RECORD GROUP 3, INITIAL MODAL DISPLACEMENTS"<< std::endl;
-		for (int r = 1; r <= a->iGetNumRows(); r++) {
-			fecho << (*a)(r) << std::endl;
+		for (int r = 1; r <= a.iGetNumRows(); r++) {
+			fecho << a(r) << std::endl;
 		}
 
 		fecho
 			<< "**" << std::endl
 			<< "** RECORD GROUP 4, INITIAL MODAL VELOCITIES"<< std::endl;
-		for (int r = 1; r <= aP->iGetNumRows(); r++) {
-			fecho << (*aP)(r) << std::endl;
+		for (int r = 1; r <= aP.iGetNumRows(); r++) {
+			fecho << aP(r) << std::endl;
 		}
 
 		fecho
@@ -5741,8 +5743,8 @@ ReadModal(DataManager* pDM,
 
 	if (bInitialValues) {
 		for (unsigned int iCnt = 0; iCnt < NModes; iCnt++) {
-			a->Put(iCnt + 1, InitialValues[iCnt]);
-			aP->Put(iCnt + 1, InitialValuesP[iCnt]);
+			a.Put(iCnt + 1, InitialValues[iCnt]);
+			aP.Put(iCnt + 1, InitialValuesP[iCnt]);
 		}
 	}
 
@@ -5778,8 +5780,8 @@ ReadModal(DataManager* pDM,
                                                std::move(oInv9),
                                                std::move(oInv10),
                                                std::move(oInv11),
-                                               a,
-                                               aP,
+                                               std::move(a),
+                                               std::move(aP),
                                                fOut));             
         } else {
                 SAFENEWWITHCONSTRUCTOR(pEl,
@@ -5813,17 +5815,14 @@ ReadModal(DataManager* pDM,
                                              std::move(oInv9),
                                              std::move(oInv10),
                                              std::move(oInv11),
-                                             a,
-                                             aP,
+                                             std::move(a),
+                                             std::move(aP),
                                              fOut));
         }
 
 	if (fOut) {
 		pDM->OutputOpen(OutputHandler::MODAL);
 	}
-
-	SAFEDELETE(a);
-	SAFEDELETE(aP);
 
 	std::ostream& os = pDM->GetLogFile();
 

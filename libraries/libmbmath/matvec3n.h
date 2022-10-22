@@ -101,12 +101,13 @@ class VecN {
 
    /* costruttore copia */
    VecN(const VecN&);
- 
+   VecN(VecN&& v);
    /* costruttore da VectorHandler (Aggiunta) */
    VecN(const VectorHandler& vh, integer ns, integer iFirstIndex);
 
    ~VecN(void);
-   
+
+   VecN& operator=(VecN&& v);
    inline integer iGetNumRows(void) const;
    
    void Resize(integer ns);   

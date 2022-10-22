@@ -188,8 +188,8 @@ public:
 			Mat3xN&& oInv9,
 			Mat3xN&& oInv10,
 			Mat3xN&& oInv11,
-			VecN *a,
-			VecN *aP,
+			VecN&& a,
+			VecN&& aP,
 			flag fOut);
 
 	/* Distruttore */

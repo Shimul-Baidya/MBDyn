@@ -74,11 +74,11 @@ ModalAd::ModalAd(unsigned int uL,
                  Mat3xN&& oInv9,
                  Mat3xN&& oInv10,
                  Mat3xN&& oInv11,
-                 VecN *aa,
-                 VecN *bb,
+                 VecN&& aa,
+                 VecN&& bb,
                  flag fOut)
 :Elem(uL, fOut),
- Modal(uL, pR, x0, R0, pDO, NM, NI, NF, dMassTmp, STmp, JTmp, std::move(uModeNumber), std::move(oGenMass), std::move(oGenStiff), std::move(oGenDamp), std::move(IdFEMNodes), std::move(oN), std::move(snd), std::move(oPHItStrNode), std::move(oPHIrStrNode), std::move(oModeShapest), std::move(oModeShapesr), std::move(oInv3), std::move(oInv4), std::move(oInv5), std::move(oInv8), std::move(oInv9), std::move(oInv10), std::move(oInv11), aa, bb, fOut),
+ Modal(uL, pR, x0, R0, pDO, NM, NI, NF, dMassTmp, STmp, JTmp, std::move(uModeNumber), std::move(oGenMass), std::move(oGenStiff), std::move(oGenDamp), std::move(IdFEMNodes), std::move(oN), std::move(snd), std::move(oPHItStrNode), std::move(oPHIrStrNode), std::move(oModeShapest), std::move(oModeShapesr), std::move(oInv3), std::move(oInv4), std::move(oInv5), std::move(oInv8), std::move(oInv9), std::move(oInv10), std::move(oInv11), std::move(aa), std::move(bb), fOut),
  pModalNode(pR)
 {
      ASSERT(pModalNode == nullptr || pModalNode->GetStructNodeType() == StructNode::MODAL);
