@@ -31,6 +31,7 @@
 
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
+#include <utility>
 #include <matvec3n.h>
 
 /* VecN - begin */
@@ -242,9 +243,9 @@ VecN::Mult(const MatNxN& m, const ArrayView& vm,
 #ifdef DEBUG
 void Mat3xN::IsValid(void) const
 {
-   ASSERT(iNumCols > 0);
-   ASSERT(iMaxCols > 0);
-   ASSERT(pdRows[0] != NULL);
+   ASSERT(iNumCols >= 0);
+   ASSERT(iMaxCols >= 0);
+   ASSERT(pdRows[0] != nullptr || iNumCols == 0);
 }
 #endif /* DEBUG */
 
@@ -308,12 +309,28 @@ Mat3xN::Mat3xN(integer nc, const doublereal& d)
    Reset(d);
 }
 
+Mat3xN::Mat3xN(Mat3xN&& A)
+: Mat3xN{}
+{
+   *this = std::move(A);
+}
 
 Mat3xN::~Mat3xN(void)
 {
    Destroy_();
 }
 
+Mat3xN& Mat3xN::operator=(Mat3xN&& A)
+{
+   std::swap(iMaxCols, A.iMaxCols);
+   std::swap(iNumCols, A.iNumCols);
+
+   for (integer i = 0; i < 3; ++i) {
+      std::swap(pdRows[i], A.pdRows[i]);
+   }
+   
+   return *this;
+}
 
 void Mat3xN::Resize(integer ns)
 {
@@ -1029,10 +1046,25 @@ MatNxN::MatNxN(integer ns, const doublereal& d)
    Reset(d);
 }
 
+MatNxN::MatNxN(MatNxN&& A)
+: MatNxN{}
+{
+   *this = std::move(A);
+}
 
 MatNxN::~MatNxN(void)
 {
    Destroy_();
+}
+
+MatNxN& MatNxN::operator=(MatNxN&& A)
+{
+   std::swap(iMaxRows, A.iMaxRows);
+   std::swap(iNumRows, A.iNumRows);
+   std::swap(pdVec, A.pdVec);
+   std::swap(pdMat, A.pdMat);
+   
+   return *this;
 }
 
 void MatNxN::Reset(const doublereal d)

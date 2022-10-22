@@ -79,33 +79,33 @@ protected:
 
 	const unsigned int NFEMNodes; // number of FEM nodes, common
 	const std::vector<std::string> IdFEMNodes; // ID of FEM nodes, common
-	const Mat3xN *pXYZFEMNodes; // local position of FEM nodes, common
+	const Mat3xN oXYZFEMNodes; // local position of FEM nodes, common
 	const doublereal dMass; // mass, common
 	const Vec3 Inv2; // undeformed static moment, common
 	const Mat3x3 Inv7; // undeformed inertia moment, common
 
 	const std::vector<unsigned int> uModeNumber;
-	const MatNxN *pModalMass;
-	const MatNxN *pModalStiff;
-	const MatNxN *pModalDamp;
+	const MatNxN oModalMass;
+	const MatNxN oModalStiff;
+	const MatNxN oModalDamp;
 
-	const Mat3xN *pPHIt;
-	const Mat3xN *pPHIr;
+	const Mat3xN oPHIt;
+	const Mat3xN oPHIr;
    
-	const Mat3xN *pModeShapest;
-	const Mat3xN *pModeShapesr;
+	const Mat3xN oModeShapest;
+	const Mat3xN oModeShapesr;
 
-	Mat3xN *pCurrXYZ;
-	Mat3xN *pCurrXYZVel;
+	Mat3xN oCurrXYZ;
+	Mat3xN oCurrXYZVel;
 
-	const Mat3xN *pInv3;
-	const Mat3xN *pInv4;
-	const Mat3xN *pInv5;
-	const Mat3xN *pInv8;
-	const Mat3xN *pInv9;
+	const Mat3xN oInv3;
+	const Mat3xN oInv4;
+	const Mat3xN oInv5;
+	const Mat3xN oInv8;
+	const Mat3xN oInv9;
 
-	const Mat3xN *pInv10;
-	const Mat3xN *pInv11;
+	const Mat3xN oInv10;
+	const Mat3xN oInv11;
 
 	Vec3   Inv3jaj;
 	Vec3   Inv3jaPj;
@@ -170,24 +170,24 @@ public:
 			doublereal dMass,
 			const Vec3& STmp,
 			const Mat3x3& JTmp,
-			const std::vector<unsigned int>& uModeNumber,
-			MatNxN *pGenMass,
-			MatNxN *pGenStiff,
-			MatNxN *pGenDamp,
-			const std::vector<std::string>& IdFEMNodes,
-			Mat3xN *pN,
-			const std::vector<Modal::StrNodeData>& snd,
-			Mat3xN *pPHIt,
-			Mat3xN *pPHIr,
-			Mat3xN *pModeShapest,
-			Mat3xN *pModeShapesr,
-			Mat3xN *pInv3,
-			Mat3xN *pInv4,
-			Mat3xN *pInv5,
-			Mat3xN *pInv8,
-			Mat3xN *pInv9,
-			Mat3xN *pInv10,
-			Mat3xN *pInv11,
+			std::vector<unsigned int>&& uModeNumber,
+			MatNxN&& oGenMass,
+			MatNxN&& oGenStiff,
+			MatNxN&& oGenDamp,
+			std::vector<std::string>&& IdFEMNodes,
+			Mat3xN&& oN,
+			std::vector<Modal::StrNodeData>&& snd,
+			Mat3xN&& oPHIt,
+			Mat3xN&& oPHIr,
+			Mat3xN&& oModeShapest,
+			Mat3xN&& oModeShapesr,
+			Mat3xN&& oInv3,
+			Mat3xN&& oInv4,
+			Mat3xN&& oInv5,
+			Mat3xN&& oInv8,
+			Mat3xN&& oInv9,
+			Mat3xN&& oInv10,
+			Mat3xN&& oInv11,
 			VecN *a,
 			VecN *aP,
 			flag fOut);
@@ -272,11 +272,11 @@ public:
 	 */
 
 	const Mat3xN& pGetPHIt(void) const {
-		return *pModeShapest;
+		return oModeShapest;
 	};
 
 	const Mat3xN& pGetPHIr(void) const {
-		return *pModeShapesr;
+		return oModeShapesr;
 	};
 
 	// NOTE: not 'const' because modify internal storage
