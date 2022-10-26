@@ -88,7 +88,7 @@ protected:
 	const MatNxN oModalMass;
 	const MatNxN oModalStiff;
 	const MatNxN oModalDamp;
-
+        const std::vector<MatNxN> rgModalStressStiff;
 	const Mat3xN oPHIt;
 	const Mat3xN oPHIr;
    
@@ -190,6 +190,7 @@ public:
 			Mat3xN&& oInv11,
 			VecN&& a,
 			VecN&& aP,
+                        std::vector<MatNxN>&& rgGenStressStiff,
 			flag fOut);
 
 	/* Distruttore */

@@ -76,9 +76,10 @@ ModalAd::ModalAd(unsigned int uL,
                  Mat3xN&& oInv11,
                  VecN&& aa,
                  VecN&& bb,
+                 std::vector<MatNxN>&& rgGenStressStiff,
                  flag fOut)
 :Elem(uL, fOut),
- Modal(uL, pR, x0, R0, pDO, NM, NI, NF, dMassTmp, STmp, JTmp, std::move(uModeNumber), std::move(oGenMass), std::move(oGenStiff), std::move(oGenDamp), std::move(IdFEMNodes), std::move(oN), std::move(snd), std::move(oPHItStrNode), std::move(oPHIrStrNode), std::move(oModeShapest), std::move(oModeShapesr), std::move(oInv3), std::move(oInv4), std::move(oInv5), std::move(oInv8), std::move(oInv9), std::move(oInv10), std::move(oInv11), std::move(aa), std::move(bb), fOut),
+ Modal(uL, pR, x0, R0, pDO, NM, NI, NF, dMassTmp, STmp, JTmp, std::move(uModeNumber), std::move(oGenMass), std::move(oGenStiff), std::move(oGenDamp), std::move(IdFEMNodes), std::move(oN), std::move(snd), std::move(oPHItStrNode), std::move(oPHIrStrNode), std::move(oModeShapest), std::move(oModeShapesr), std::move(oInv3), std::move(oInv4), std::move(oInv5), std::move(oInv8), std::move(oInv9), std::move(oInv10), std::move(oInv11), std::move(aa), std::move(bb), std::move(rgGenStressStiff), fOut),
  pModalNode(pR)
 {
      ASSERT(pModalNode == nullptr || pModalNode->GetStructNodeType() == StructNode::MODAL);
@@ -266,7 +267,7 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           XPrimeCurr.dGetCoef(iModalIndex + NModes + i, bPrime(i), 1.);
      }
 
-     const SpColVector<T> MaPP_CaP_Ka = -oModalMass * bPrime - oModalDamp * b - oModalStiff * a;
+     SpColVector<T> MaPP_CaP_Ka = -(oModalMass * bPrime) - oModalDamp * b - oModalStiff * a;
 
      SpColVector<T, 3> Inv3jaj(3, NModes), Inv3jaPj(3, NModes), Inv3jaPPj(3, NModes);
 
@@ -283,7 +284,7 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      SpMatrix<T, 3, 3> Inv10jaPj(3, 3, oInv10.iGetNumCols() ? NModes : 0);
 
      if (oInv5.iGetNumCols() || oInv8.iGetNumCols() || oInv9.iGetNumCols() || oInv10.iGetNumCols()) {
-          for (unsigned int jMode = 1; jMode <= NModes; jMode++)  {
+          for (unsigned int jMode = 1; jMode <= NModes; jMode++) {
                const T& a_jMode = a(jMode);
                const T& aP_jMode = b(jMode);
 
@@ -417,11 +418,40 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
           WorkVec.AddItem(iRigidIndex + 1, f1);
           WorkVec.AddItem(iRigidIndex + 4, f2);
+
+          if (!rgModalStressStiff.empty()) {
+               ASSERT(rgModalStressStiff.size() == 12u + SND.size() * 6u);
+
+               SpColVector<T, 6> RTwq(6, 6);
+
+               static constexpr index_type idx1[] = {1, 2, 3, 1, 2, 3};
+               static constexpr index_type idx2[] = {1, 2, 3, 2, 3, 1};
+
+               for (index_type i = 1; i <= 6; ++i) {
+                    RTwq(i) = RTw(idx1[i - 1]) * RTw(idx2[i - 1]);
+               }
+
+               for (index_type i = 1; i <= 6; ++i) {
+                    MaPP_CaP_Ka -= (rgModalStressStiff[i - 1] * a) * RTwq(i);
+               }
+
+               const SpColVector<T, 3> RTwP = Transpose(R) * wP;
+               
+               for (index_type i = 1; i <= 3; ++i) {
+                    MaPP_CaP_Ka -= (rgModalStressStiff[i - 1 + 6] * a) * RTwP(i);
+               }
+
+               const SpColVector<T, 3> RTvP = Transpose(R) * vP;
+               
+               for (index_type i = 1; i <= 3; ++i) {
+                    MaPP_CaP_Ka -= (rgModalStressStiff[i - 1 + 9] * a) * RTvP(i);                    
+               }
+          }
      }
 
      for (unsigned int jMode = 1; jMode <= NModes; jMode++) {
           const index_type jOffset = (jMode - 1) * 3 + 1;
-          T d = MaPP_CaP_Ka(jMode);
+          T& d = MaPP_CaP_Ka(jMode);
 
           if (oInv3.iGetNumCols()) {
                const SpColVector<T, 3> RInv3j = R * SubMatrix<3, 1>(oInv3, 1, 1, jMode, 1);
@@ -469,8 +499,6 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
                d += Dot(w, R * (MatTmp * RTw));
           }
-
-          WorkVec.AddItem(iModalIndex + NModes + jMode, d);
      }
 
      for (unsigned int iCnt = 1; iCnt <= NModes; iCnt++) {
@@ -523,6 +551,18 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                WorkVec.AddItem(iModalIndex + NModes + jMode, d);
           }
 
+          if (!rgModalStressStiff.empty()) {
+               ASSERT(rgModalStressStiff.size() == 12u + SND.size() * 6u);
+               
+               const index_type iOffset = -1 + 12 + (iStrNode - 1) * 6;
+               
+               ASSERT(3 + iOffset < rgModalStressStiff.size());
+               
+               for (index_type i = 1; i <= 3; ++i) {
+                    MaPP_CaP_Ka += (rgModalStressStiff[i + iOffset] * a) * vtemp(i);
+               }
+          }
+          
           SpColVector<T, 3> M(3, 1);
 
           for (index_type i = 1; i <= 3; ++i) {
@@ -545,6 +585,18 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                WorkVec.AddItem(iModalIndex + NModes + jMode, d);
           }
 
+          if (!rgModalStressStiff.empty()) {
+               ASSERT(rgModalStressStiff.size() == 12u + SND.size() * 6u);
+
+               const index_type iOffset = -1 + 12 + (iStrNode - 1) * 6 + 3;
+               
+               ASSERT(3 + iOffset < rgModalStressStiff.size());
+
+               for (index_type i = 1; i <= 3; ++i) {
+                    MaPP_CaP_Ka += (rgModalStressStiff[i + iOffset] * a) * vtemp(i);
+               }
+          }          
+
           ASSERT(dCoef != 0.);
 
           const SpColVector<T, 3> f1 = (x2 + dTmp2 - x - d1tot) / dCoef;
@@ -561,6 +613,10 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           UpdateStrNodeData(SND[iStrNodem1], d1tot, R1tot, F, M, R2);
      }
 
+     for (unsigned int jMode = 1; jMode <= NModes; jMode++) {
+          WorkVec.AddItem(iModalIndex + NModes + jMode, MaPP_CaP_Ka(jMode));
+     }
+     
      if (pModalNode) {
           WorkVec.AddItem(iRigidIndex + 7, FTmp);
           WorkVec.AddItem(iRigidIndex + 10, MTmp);

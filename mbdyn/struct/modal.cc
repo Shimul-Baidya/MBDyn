@@ -152,6 +152,7 @@ Modal::Modal(unsigned int uL,
 	Mat3xN&& oInv11,
 	VecN&& aa,
 	VecN&& bb,
+        std::vector<MatNxN>&& rgGenStressStiff,
 	flag fOut)
 : Elem(uL, fOut),
 Joint(uL, pDO, fOut),
@@ -172,6 +173,7 @@ uModeNumber(std::move(uModeNumber)),
 oModalMass(std::move(oGenMass)),
 oModalStiff(std::move(oGenStiff)),
 oModalDamp(std::move(oGenDamp)),
+rgModalStressStiff(std::move(rgGenStressStiff)),
 oPHIt(std::move(oPHItStrNode)),
 oPHIr(std::move(oPHIrStrNode)),
 oModeShapest(std::move(oModeShapest)),
@@ -199,7 +201,9 @@ b(bb),
 bPrime(NModes, 0.),
 SND(std::move(snd))
 {
-	ASSERT(pModalNode == nullptr || pModalNode->GetStructNodeType() == StructNode::MODAL);
+     ASSERT(NStrNodes == SND.size());
+     ASSERT(rgModalStressStiff.empty() || rgModalStressStiff.size() == 12u + SND.size() * 6);
+     ASSERT(pModalNode == nullptr || pModalNode->GetStructNodeType() == StructNode::MODAL);
 }
 
 Modal::~Modal(void)
@@ -2989,7 +2993,7 @@ ReadModal(DataManager* pDM,
 	MatNxN oGenMass;                   // modal mass
 	MatNxN oGenStiff;                  // modal stiffness
 	MatNxN oGenDamp;                   // modal damping
-
+        std::vector<MatNxN> rgGenStressStiff; // modal stress stiffening
 	// inertia invariants
 	Mat3xN oInv3;
 	Mat3xN oInv4;
@@ -3212,12 +3216,13 @@ ReadModal(DataManager* pDM,
 		MODAL_VERSION_3 = 3, // after adding record 13 (generalized damping)
 		MODAL_VERSION_4 = 4, // after making sizes portable
 		MODAL_VERSION_5 = 5, // after adding Inv3, Inv4 and Inv8 from modal element data for AVL-EXCITE (https://www.avl.com/excite)
+                MODAL_VERSION_6 = 6, // after adding record 19
 		MODAL_VERSION_LAST
 	};
 
 	/* NOTE: increment this each time the binary format changes! */
 	const char	magic[5] = "bmod";
-	const uint32_t	BinVersion = MODAL_VERSION_5;
+	const uint32_t	BinVersion = MODAL_VERSION_6;
 
 	uint32_t	currBinVersion = MODAL_VERSION_UNKNOWN;
 	char		checkPoint;
@@ -3245,6 +3250,7 @@ ReadModal(DataManager* pDM,
 		MODAL_RECORD_16 = 16,
 		MODAL_RECORD_17 = 17,
 		MODAL_RECORD_18 = 18,
+                MODAL_RECORD_19 = 19,
 		// NOTE: do not exceed 127
 
 		MODAL_LAST_RECORD,
@@ -4262,6 +4268,76 @@ ReadModal(DataManager* pDM,
 
 			    bRecordGroup[MODAL_RECORD_18] = true;
 			} break;
+                        case MODAL_RECORD_19: {
+			    if (bRecordGroup[MODAL_RECORD_19]) {
+				silent_cerr("file=\"" << sFileFEM << "\": "
+					    "\"RECORD GROUP 19\" already parsed"
+					    << std::endl);
+				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+			    }
+
+                            if (bActiveModes.empty()) {
+                                 silent_cerr("Modal(" << uLabel << "): "
+                                             "input file \"" << sFileFEM << "\" "
+                                             "is bogus (RECORD GROUP 19)"
+                                             << std::endl);
+                                 throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                            }
+
+                            if (bWriteBIN) {
+                                 checkPoint = MODAL_RECORD_19;
+                                 fbin.write(&checkPoint, sizeof(checkPoint));
+                            }
+
+                            unsigned int NStressStiff;
+
+                            fdat >> NStressStiff;
+
+                            if (!fdat) {
+                                 silent_cerr("file=\"" << sFileFEM << "\": "
+                                             "parse error in \"RECORD GROUP 19\""
+                                             << std::endl);                                 
+                                 throw ErrGeneric(MBDYN_EXCEPT_ARGS);                                 
+                            }
+                            
+                            if (bWriteBIN) {
+                                 fbin.write(reinterpret_cast<char*>(&NStressStiff), sizeof(NStressStiff));
+                            }
+
+                            ASSERT(rgGenStressStiff.empty());
+                            rgGenStressStiff.reserve(NStressStiff);
+                            
+                            for (unsigned int kCnt = 1; kCnt <= NStressStiff; ++kCnt) {
+                                 MatNxN oGenStressStiff(NModesFEM, 0.);
+                                 
+                                 unsigned int iCnt = 1;
+                                 for (unsigned int jMode = 1; jMode <= NModesFEM; jMode++) {
+                                      unsigned int jCnt = 1;
+
+                                      for (unsigned int kMode = 1; kMode <= NModesFEM; kMode++) {
+                                           fdat >> d;
+
+                                           if (bWriteBIN) {
+                                                fbin.write(reinterpret_cast<char*>(&d), sizeof(d));
+                                           }
+
+                                           if (!bActiveModes[jMode] || !bActiveModes[kMode]) {
+                                                continue;
+                                           }
+                                           oGenStressStiff.Put(iCnt, jCnt, d);
+                                           jCnt++;
+                                      }
+
+                                      if (bActiveModes[jMode]) {
+                                           iCnt++;
+                                      }
+                                 }
+
+                                 rgGenStressStiff.emplace_back(std::move(oGenStressStiff));
+                            }
+                            
+                            bRecordGroup[MODAL_RECORD_19] = true;
+                        } break;
 			default:
 				silent_cerr("file=\"" << sFileFEM << "\": "
 					"\"RECORD GROUP " << rg << "\" unhandled"
@@ -4818,6 +4894,40 @@ ReadModal(DataManager* pDM,
 				}
 			    }
 			    break;
+                        case MODAL_RECORD_19: {
+                             unsigned int NStressStiff;
+
+                             fbin.read(reinterpret_cast<char*>(&NStressStiff), sizeof(NStressStiff));
+                             
+                             ASSERT(rgGenStressStiff.empty());
+                             
+                             rgGenStressStiff.reserve(NStressStiff);
+                             
+                             for (unsigned int kCnt = 1; kCnt <= NStressStiff; ++kCnt) {
+                                  MatNxN oGenStressStiff(NModesFEM, 0.);                                
+                                  for (unsigned int iCnt = 1, jMode = 1; jMode <= NModesFEM; jMode++) {
+                                       unsigned int jCnt = 1;
+
+                                       for (unsigned int kMode = 1; kMode <= NModesFEM; kMode++) {
+                                            doublereal	d;
+
+                                            fbin.read((char *)&d, sizeof(d));
+
+                                            if (!bActiveModes[jMode] || !bActiveModes[kMode]) {
+                                                 continue;
+                                            }
+                                            oGenStressStiff.Put(iCnt, jCnt, d);
+                                            jCnt++;
+                                       }
+
+                                       if (bActiveModes[jMode]) {
+                                            iCnt++;
+                                       }
+                                  }
+
+                                  rgGenStressStiff.emplace_back(std::move(oGenStressStiff));
+                             }                                
+                        } break;                            
 			default:
 				silent_cerr("Modal(" << uLabel << "): "
 					"file \"" << sBinFileFEM << "\" "
@@ -5054,9 +5164,17 @@ ReadModal(DataManager* pDM,
 	}
 
 	/* numero di nodi d'interfaccia */
-	unsigned int NStrNodes = HP.GetInt();
+	const unsigned int NStrNodes = HP.GetInt();
 	DEBUGCOUT("Number of Interface Nodes : " << NStrNodes << std::endl);
 
+        if (!rgGenStressStiff.empty() && rgGenStressStiff.size() != 12u + NStrNodes * 6) {
+             silent_cerr("Modal(" << uLabel << "): invalid matrix size for record group 19\n"
+                         "expected " << NModes << "*" << NModes << "*" << (12u + NStrNodes * 6) << "\n"
+                         "got" << NModes << "*" << NModes << "*" << rgGenStressStiff.size() << " at line "
+                         << HP.GetLineData() << "\n");
+             throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+        }
+        
         oPHItStrNode.Resize(NStrNodes * NModes);
         oPHItStrNode.Reset();
         oPHIrStrNode.Resize(NStrNodes * NModes);
@@ -5782,6 +5900,7 @@ ReadModal(DataManager* pDM,
                                                std::move(oInv11),
                                                std::move(a),
                                                std::move(aP),
+                                               std::move(rgGenStressStiff),
                                                fOut));             
         } else {
                 SAFENEWWITHCONSTRUCTOR(pEl,
@@ -5817,6 +5936,7 @@ ReadModal(DataManager* pDM,
                                              std::move(oInv11),
                                              std::move(a),
                                              std::move(aP),
+                                             std::move(rgGenStressStiff),
                                              fOut));
         }
 

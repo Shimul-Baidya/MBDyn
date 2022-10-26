@@ -80,6 +80,7 @@ public:
              Mat3xN&& oInv11,
              VecN&& a,
              VecN&& aP,
+             std::vector<MatNxN>&& rgGenStressStiff,
              flag fOut);
 
      virtual ~ModalAd();
