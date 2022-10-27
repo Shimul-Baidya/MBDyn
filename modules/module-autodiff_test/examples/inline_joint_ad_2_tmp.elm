@@ -2,7 +2,7 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2020
  *
  * Pierangelo Masarati	<masarati@aero.polimi.it>
  * Paolo Mantegazza	<mantegazza@aero.polimi.it>
@@ -29,8 +29,8 @@
  */
 
 /*
- AUTHOR: Reinhard Resch <r.resch@secop.com>
-        Copyright (C) 2013(-2017) all rights reserved.
+ AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+        Copyright (C) 2013(-2020) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza

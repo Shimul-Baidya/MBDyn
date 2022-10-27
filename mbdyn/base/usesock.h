@@ -1,6 +1,6 @@
 /* $Header$ */
-/* 
- * MBDyn (C) is a multibody analysis code. 
+/*
+ * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
  * Copyright (C) 1996-2017
@@ -17,7 +17,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation (version 2 of the License).
- * 
+ *
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,17 +32,31 @@
 #ifndef USESOCK_H
 #define USESOCK_H
 #ifdef USE_SOCKET
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/un.h>
+
+#ifdef _WIN32
+  /* See http://stackoverflow.com/questions/12765743/getaddrinfo-on-win32 */
+  #ifndef _WIN32_WINNT
+    #define _WIN32_WINNT 0x0501  /* Windows XP. */
+  #endif
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  /* Assume that any non-Windows platform uses POSIX-style sockets instead. */
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <sys/un.h>
+#endif
+
+#include "sock.h"
 
 class UseSocket {
 protected:
-	int sock;
+	SOCKET sock;
 	int socket_type;
 	bool create;
 	bool connected;
 	bool abandoned;
+	bool isblocking;
 
 	mutable socklen_t socklen;
 
@@ -52,10 +66,10 @@ public:
 	UseSocket(bool c);
 	UseSocket(int t, bool c);
 	virtual ~UseSocket(void);
-	
+
 	virtual std::ostream& Restart(std::ostream& out) const;
 
-	int GetSock(void) const;
+	SOCKET GetSock(void) const;
 	void SetSock(int s);
 	virtual void Connect(void);
 	virtual void ConnectSock(int s);
@@ -63,12 +77,14 @@ public:
 	bool Connected(void) const;
 	void Abandon(void);
 	bool Abandoned(void) const;
+	bool IsBlocking(void) { return isblocking; }
 
 	socklen_t& GetSocklen(void) const;
 	virtual struct sockaddr *GetSockaddr(void) const = 0;
+	virtual std::string GetSockaddrStr (void) const = 0;
 
 	ssize_t send(const void *buf, size_t len, int flags);
-	ssize_t recv(void *buf, size_t len, int flags);
+	ssize_t recv(void *buf, size_t len, int flags, bool bMsgDontWait);
 };
 
 class UseInetSocket : public UseSocket {
@@ -83,14 +99,16 @@ public:
 	UseInetSocket(const std::string& h, unsigned short p, bool c);
 	UseInetSocket(const std::string& h, unsigned short p, int t, bool c);
 	virtual ~UseInetSocket(void);
-	
+
 	std::ostream& Restart(std::ostream& out) const;
 
 	void Connect(void);
 	void ConnectSock(int s);
 	struct sockaddr *GetSockaddr(void) const;
+	std::string GetSockaddrStr(void) const;
 };
 
+#ifndef _WIN32
 class UseLocalSocket : public UseSocket {
 protected:
 	std::string path;
@@ -102,13 +120,16 @@ public:
 	UseLocalSocket(const std::string& p, bool c);
 	UseLocalSocket(const std::string& p, int t, bool c);
 	virtual ~UseLocalSocket(void);
-	
+
 	std::ostream& Restart(std::ostream& out) const;
 
 	void Connect(void);
 	void ConnectSock(int s);
 	struct sockaddr *GetSockaddr(void) const;
+	std::string GetSockaddrStr(void) const;
 };
+#endif /* _WIN32 */
+
 #endif
 #endif /* USESOCK_H */
 

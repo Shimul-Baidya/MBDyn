@@ -47,7 +47,9 @@ InLineJoint::InLineJoint(unsigned int uL, const DofOwner* pDO,
           BasicFriction *const f)
 : Elem(uL, fOut), Joint(uL, pDO, fOut),
 pNode1(pN1), pNode2(pN2), Rv(RvTmp), p(pTmp), F(Zero3),
-preF(pref), Sh_c(sh), fc(f)
+Sh_c(sh),
+fc(f),
+preF(pref)
 {
    NO_OP;
 };
@@ -266,12 +268,13 @@ InLineJoint::AssRes(SubVectorHandler& WorkVec,
       bool ChangeJac(false);
 
       Vec3 e3a(RvTmp.GetVec(3));
-      doublereal v = (pNode1->GetVCurr()-pNode2->GetVCurr()).Dot(e3a);
+      v = (pNode1->GetVCurr()-pNode2->GetVCurr()).Dot(e3a);
+      displ = -x2mx1.Dot(e3a);
       doublereal modF = std::max(F.Norm(), preF);
       try {
           fc->AssRes(WorkVec,12+NumSelfDof,iFirstReactionIndex+NumSelfDof,modF,v,XCurr,XPrimeCurr);
       }
-      catch (Elem::ChangedEquationStructure) {
+      catch (Elem::ChangedEquationStructure& e) {
           ChangeJac = true;
       }
       doublereal f = fc->fc();
@@ -302,7 +305,25 @@ InLineJoint::OutputPrepare(OutputHandler& OH)
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			std::string name;
-			OutputPrepare_int("inline", OH, name);
+			OutputPrepare_int("Inline", OH, name);
+
+			if (fc) {
+				Var_FF = OH.CreateVar<Vec3>(name + "FF",
+						OutputHandler::Dimensions::Force,
+						"friction force (x, y, z)");
+
+				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+						OutputHandler::Dimensions::Dimensionless,
+						"friction coefficient");
+
+				Var_v = OH.CreateVar<doublereal>(name + "v",
+						OutputHandler::Dimensions::Velocity,
+						"relative sliding velocity");
+
+				Var_displ = OH.CreateVar<doublereal>(name + "displ",
+						OutputHandler::Dimensions::Length,
+						"relative sliding displacement");
+			}
 		}
 #endif // USE_NETCDF
 	}
@@ -314,25 +335,22 @@ void InLineJoint::Output(OutputHandler& OH) const
       Mat3x3 RvTmp(pNode1->GetRCurr()*Rv);
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec(F.pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec((RvTmp*F).pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
+			Joint::NetCDFOutput(OH, F, Zero3, RvTmp*F, Zero3);
+			if (fc) {
+				OH.WriteNcVar(Var_FF, RvTmp.GetVec(3)*F3);
+				OH.WriteNcVar(Var_fc, fc->fc());
+				OH.WriteNcVar(Var_v, v);
+				OH.WriteNcVar(Var_displ, displ);
+			}
 		}
 #endif // USE_NETCDF
-
-
 		if (OH.UseText(OutputHandler::JOINTS)) {
 
 			std::ostream &of = Joint::Output(OH.Joints(), "inline", GetLabel(),
 				F, Zero3, RvTmp*F, Zero3);
 		  	// TODO: output relative position and orientation
 			if (fc) {
-				of << " " << F3 << " " << fc->fc();
+				of << " " << F3 << " " << fc->fc() << " " << v << " " << displ;
 			}
 			of << std::endl;
 		}
@@ -549,6 +567,50 @@ InLineJoint::InitialAssRes(SubVectorHandler& WorkVec,
    WorkVec.PutCoef(28, x2mx1.Dot(RvTmp.GetVec(2).Cross(Omega))-RvTmp.GetVec(2).Dot(xp2mxp1));
    
    return WorkVec;
+}
+
+const OutputHandler::Dimensions
+InLineJoint::GetEquationDimension(integer index) const {
+	// DOF is unknown
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+   if (fc && fc->iGetNumDof() > 0) {
+      unsigned int i = index;
+      if ( i >= NumSelfDof + 1 && i <= NumSelfDof + fc->iGetNumDof() ) {
+         dimension = fc->GetEquationDimension(index - NumSelfDof);
+      }
+   }
+
+	return dimension;
+}
+
+std::ostream&
+InLineJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 2 << ": " <<
+			"distance constraints" << std::endl;
+
+   if (fc && fc->iGetNumDof() > 0) {
+      out 
+         << prefix << iIndex + NumSelfDof + 1 << "->" << iIndex + NumSelfDof + fc->iGetNumDof() << ": friction equation(s)" << std::endl
+         << "        ", fc->DescribeEq(out, prefix, bInitial);
+   }
+	
+	return out;
 }
 
 /* InLineJoint - end */
@@ -1024,6 +1086,37 @@ InLineWithOffsetJoint::InitialAssRes(SubVectorHandler& WorkVec,
    WorkVec.PutCoef(28, x2qmx1.Dot(RvTmp.GetVec(2).Cross(Omega1))-RvTmp.GetVec(2).Dot(xp2qmxp1));
    
    return WorkVec;
+}
+
+const OutputHandler::Dimensions
+InLineWithOffsetJoint::GetEquationDimension(integer index) const {
+	// DOF == 2
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+InLineWithOffsetJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 2 << ": " <<
+			"distance constraints" << std::endl;
+
+	return out;
 }
 
 /* InLineWithOffsetJoint - end */

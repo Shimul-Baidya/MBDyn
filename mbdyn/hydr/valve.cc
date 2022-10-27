@@ -202,7 +202,7 @@ Control_valve::AssJac(VariableSubMatrixHandler& WorkMat,
    WM.PutCoef(3, 1, Jac31);
    // WM.PutCoef(3, 2, Jac32);
    WM.PutCoef(3, 3, Jac33);
-   WM.PutCoef(3, 4, Jac24);
+   WM.PutCoef(3, 4, Jac34);
    // WM.PutCoef(4, 1, Jac41);
    WM.PutCoef(4, 2, Jac42);
    WM.PutCoef(4, 3, Jac43);
@@ -322,6 +322,21 @@ void Control_valve::Output(OutputHandler& OH) const
    }   
 }
 
+const OutputHandler::Dimensions 
+Control_valve::GetEquationDimension(integer index) const {
+   // DOF == 0
+   return OutputHandler::Dimensions::UnknownDimension;
+}
+
+std::ostream&
+Control_valve::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	out
+		<< "It does not have any DOF" << std::endl;
+
+	return out;
+}
 /* Control_valve - end */
 
 
@@ -620,6 +635,26 @@ Control_valve2::SetValue(DataManager *pDM,
 	}
 }
 
+const OutputHandler::Dimensions 
+Control_valve2::GetEquationDimension(integer index) const {
+   // DOF == LAST_Q = 6
+   
+   return OutputHandler::Dimensions::Force;
+}
+
+std::ostream&
+Control_valve2::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + LAST_Q << ": " <<
+			"control valve 2 force balance" << std::endl;
+
+	return out;
+}
+
 /* Control_valve2 - end */
 
 
@@ -810,7 +845,7 @@ Dynamic_control_valve::AssJac(VariableSubMatrixHandler& WorkMat,
    doublereal Jac51  = -.2*costante*sp/sqrt(density*deltaP)-.43*width*s; 
    doublereal Jac52  = 0.;
    doublereal Jac53  = 0.;
-   doublereal Jac54  = 0.;
+   //doublereal Jac54  = 0.;
    doublereal Jac55  = -.4*valve_diameter*Cd*width*sqrt(density*deltaP)-dCoef*.43*width*deltaP-dCoef*c1-c2-dCoef*cf1-cf2;
    doublereal Jac56  = -Mass-c3-cf3;
    
@@ -1063,6 +1098,40 @@ Dynamic_control_valve::SetValue(DataManager *pDM,
    XP.PutCoef(i+1, 0.);
    XP.PutCoef(i+2, 0.);
 }
+
+const OutputHandler::Dimensions 
+Dynamic_control_valve::GetEquationDimension(integer index) const {
+   // DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Force;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+Dynamic_control_valve::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"dynamic control valve force balance" << std::endl
+      
+      << prefix << iIndex + 2 << ": " <<
+         "dynamic control valve velocity" << std::endl;
+
+	return out;
+}
  
 /* Dynamic_control_valve - end */
 
@@ -1085,9 +1154,13 @@ Pressure_flow_control_valve::Pressure_flow_control_valve(unsigned int uL, const 
 : Elem(uL, fOut),
 HydraulicElem(uL, pDO, hf, fOut), DriveOwner(pDC),
 pNode1(p1), pNode2(p2), pNode3(p3), pNode4(p4), pNode5(p5), pNode6(p6),
-start(s0), s_max(s_mx), width(W), loss_area(Loss_A), 
-valve_diameter(Valve_d), valve_density(Valve_rho),
-c_spost(cs), c_vel(cv), c_acc(ca)
+start(s0), 
+c_spost(cs), c_vel(cv), c_acc(ca),
+width(W), 
+loss_area(Loss_A),
+valve_diameter(Valve_d),
+valve_density(Valve_rho),
+s_max(s_mx)
 {
    ASSERT(pNode1 != NULL);
    ASSERT(pNode1->GetNodeType() == Node::HYDRAULIC);
@@ -1197,8 +1270,8 @@ Pressure_flow_control_valve::AssJac(VariableSubMatrixHandler& WorkMat,
    doublereal p2 = pNode2->dGetX();
    doublereal p3 = pNode3->dGetX();
    doublereal p4 = pNode4->dGetX();
-   doublereal p5 = pNode5->dGetX();
-   doublereal p6 = pNode6->dGetX();
+   //doublereal p5 = pNode5->dGetX();
+   //doublereal p6 = pNode6->dGetX();
    doublereal density = HF->dGetDensity();
 
    s = XCurr(iFirstIndex+1); /* spostamento */
@@ -1256,7 +1329,7 @@ Pressure_flow_control_valve::AssJac(VariableSubMatrixHandler& WorkMat,
    doublereal Jac71  = -.2*costante/sqrt(density*deltaP)*sp-.43*width*s; 
    doublereal Jac72  = 0.;
    doublereal Jac73  = 0.;
-   doublereal Jac74  = 0.;
+   //doublereal Jac74  = 0.;
    doublereal Jac77  = -.4*valve_diameter*Cd*width*sqrt(density*deltaP)-dCoef*.43*width*deltaP-dCoef*c1-c2-dCoef*cf1-cf2;
    doublereal Jac78  = -Mass-c3-cf3;
 
@@ -1295,7 +1368,7 @@ Pressure_flow_control_valve::AssJac(VariableSubMatrixHandler& WorkMat,
    WM.PutCoef(4, 3, Jac43);
    WM.PutCoef(4, 4, Jac44);
    WM.PutCoef(4, 7, Jac47);
-   WM.PutCoef(5, 7, Jac67);
+   WM.PutCoef(5, 7, Jac57); // (nearly) blind fix; was Jac67
    WM.PutCoef(6, 7, Jac67);
    WM.PutCoef(7, 1, Jac71);
    WM.PutCoef(7, 2, Jac72);
@@ -1330,8 +1403,8 @@ Pressure_flow_control_valve::AssRes(SubVectorHandler& WorkVec,
    doublereal p2 = pNode2->dGetX();
    doublereal p3 = pNode3->dGetX();
    doublereal p4 = pNode4->dGetX();
-   doublereal p5 = pNode5->dGetX();
-   doublereal p6 = pNode6->dGetX();
+   //doublereal p5 = pNode5->dGetX();
+   //doublereal p6 = pNode6->dGetX();
    doublereal density = HF->dGetDensity();
 
    Force = pGetDriveCaller()->dGet();
@@ -1377,8 +1450,9 @@ Pressure_flow_control_valve::AssRes(SubVectorHandler& WorkVec,
    doublereal Res_3 = -Q13+Q34;
    doublereal Res_4 = -Q34-Q24;
    doublereal Res_5 = valve_area*sp;
-#warning "????????????? Res_6 = -Res_6 ?"
-   doublereal Res_6 = -Res_6;
+//#warning "????????????? Res_6 = -Res_6 ?"
+//   doublereal Res_6 = -Res_6;
+   doublereal Res_6 = -Res_5; // (nearly) blind fix
  
    deltaP = p1;   
    if (deltaP == 0.) {
@@ -1482,7 +1556,40 @@ Pressure_flow_control_valve::SetValue(DataManager *pDM,
    XP.PutCoef(i+1, 0.);
    XP.PutCoef(i+2, 0.);
 }
- 
+
+const OutputHandler::Dimensions 
+Pressure_flow_control_valve::GetEquationDimension(integer index) const {
+   // DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Force;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+Pressure_flow_control_valve::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"pressure flow valve force balance" << std::endl
+      
+      << prefix << iIndex + 2 << ": " <<
+         "pressure flow valve velocity" << std::endl;
+
+	return out;
+}
 /* Pressure_flow_control_valve - end */
 
 
@@ -1500,8 +1607,12 @@ Pressure_valve::Pressure_valve(unsigned int uL, const DofOwner* pDO,
 : Elem(uL, fOut),
 HydraulicElem(uL, pDO, hf, fOut),
 pNode1(p1), pNode2(p2), area_diaf(A_dia), mass(mv),
-area_max(A_max),s_max(s_mx), 
-Kappa(K), force0(F0), width(w),c_spost(cs), c_vel(cv), c_acc(ca)
+area_max(A_max),
+Kappa(K), force0(F0), width(w),
+s_max(s_mx),
+c_spost(cs), 
+c_vel(cv), 
+c_acc(ca)
 {
    ASSERT(pNode1 != NULL);
    ASSERT(pNode1->GetNodeType() == Node::HYDRAULIC);
@@ -1797,6 +1908,9 @@ Pressure_valve::AssRes(SubVectorHandler& WorkVec,
    DEBUGCOUT("-Res_2 (portata nodo2): " << -Res_2 << std::endl);   
    DEBUGCOUT("Res_3:                  " << Res_3 << std::endl); 
    DEBUGCOUT("Res_4:                  " << Res_4 << std::endl); 
+#else
+   // silence set but not used for variables used only with HYDR_DEVEL
+   (void)x0;
 #endif
    
    WorkVec.PutItem(1, iNode1RowIndex, Res_1);
@@ -1831,11 +1945,43 @@ void Pressure_valve::SetValue(DataManager *pDM,
    XP.PutCoef(i+2, 0.);
 }
 
-/* Pressure_valve - end */
-					
+const OutputHandler::Dimensions 
+Pressure_valve::GetEquationDimension(integer index) const {
+   // DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
 
-				  
- /* Flow_valve - begin */
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Force;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+Pressure_valve::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"pressure valve force balance" << std::endl
+      
+      << prefix << iIndex + 2 << ": " <<
+         "pressure valve velocity" << std::endl;
+
+	return out;
+}
+
+/* Pressure_valve - end */
+									  
+/* Flow_valve - begin */
 
 Flow_valve:: Flow_valve(unsigned int uL, const DofOwner* pDO,
 			HydraulicFluid* hf,
@@ -2073,6 +2219,10 @@ Flow_valve::AssJac(VariableSubMatrixHandler& WorkMat,
    DEBUGCOUT("Jac53: " << Jac53 << std::endl);
    DEBUGCOUT("Jac54: " << Jac54 << std::endl);
    DEBUGCOUT("Jac55: " << Jac55 << std::endl);
+#else
+   // silence set but not used warning for variables used only when HYDR_DEVEL
+   (void)Jac45old1;
+   (void)Jac45old2;
 #endif
    
    WM.PutCoef(1, 1, Jac11);
@@ -2252,6 +2402,11 @@ Flow_valve::AssRes(SubVectorHandler& WorkVec,
    DEBUGCOUT("-Res_3:(portata nodo3): " << -Res_3 << std::endl); 
    DEBUGCOUT("-Res_4:                 " << -Res_4 << std::endl); 
    DEBUGCOUT("-Res_5:                 " << -Res_5 << std::endl); 
+#else
+   // silence set but not used warning for variables used only when HYDR_DEVEL
+   (void)jumpPres23;
+   (void)x0;
+   (void)Res_4old;
 #endif
    
    WorkVec.PutItem(1, iNode1RowIndex, Res_1);
@@ -2284,4 +2439,37 @@ void Flow_valve::SetValue(DataManager *pDM,
    XP.PutCoef(i+2, 0.);  
 }
 
+const OutputHandler::Dimensions 
+Flow_valve::GetEquationDimension(integer index) const {
+   // DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Force;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+Flow_valve::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"flow valve force balance" << std::endl
+      
+      << prefix << iIndex + 2 << ": " <<
+         "flow valve velocity" << std::endl;
+
+	return out;
+}
 /* Flow_valve - end */

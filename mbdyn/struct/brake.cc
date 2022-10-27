@@ -33,6 +33,7 @@
 
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
+#include "Rot.hh"
 #include "brake.h"
 
 /* Brake - begin */
@@ -59,7 +60,9 @@ Brake::Brake(unsigned int uL, const DofOwner* pDO,
 Joint(uL, pDO, fOut), 
 pNode1(pN1), pNode2(pN2),
 d1(dTmp1), R1h(R1hTmp), d2(dTmp2), R2h(R2hTmp), /* F(Zero3), */ M(Zero3), dTheta(0.),
-Sh_c(sh), fc(f), preF(pref), r(rr), brakeForce(pdc) /* ,
+Sh_c(sh), fc(f), preF(pref), r(rr), 
+brakeForce(pdc) 
+/* ,
 isForce(isforce), Dir(dir) */
 {
 	NO_OP;
@@ -387,7 +390,7 @@ SubVectorHandler& Brake::AssRes(SubVectorHandler& WorkVec,
 	  		iFirstReactionIndex + NumSelfDof,
 			modF, v, XCurr, XPrimeCurr);
       }
-      catch (Elem::ChangedEquationStructure) {
+      catch (Elem::ChangedEquationStructure& e) {
           ChangeJac = true;
       }
       doublereal f = fc->fc();
@@ -435,6 +438,34 @@ Brake::GetEqType(unsigned int i) const
    }
 }
 
+void
+Brake::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("brake", OH, name);
+			
+			Var_Phi = OH.CreateRotationVar(name + "Phi", "rad", ORIENTATION_VECTOR,
+				"relative rotation (Euler123)");
+
+			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+				OutputHandler::Dimensions::AngularVelocity,
+				"local relative angular velocity, node 2 RF (x, y, z)");
+			
+			Var_fc = OH.CreateVar<doublereal>(name + "fc",
+				OutputHandler::Dimensions::Dimensionless,
+				"friction coefficient");
+
+			Var_Fb = OH.CreateVar<doublereal>(name + "Fb",
+				OutputHandler::Dimensions::Force,
+				"normal force the brake is activated with");
+		}
+#endif // USE_NETCDF
+	}
+}
+
 /* Output (da mettere a punto) */
 void Brake::Output(OutputHandler& OH) const
 {
@@ -442,15 +473,34 @@ void Brake::Output(OutputHandler& OH) const
       Mat3x3 R2Tmp(pNode2->GetRCurr()*R2h);
       Mat3x3 RTmp((pNode1->GetRCurr()*R1h).Transpose()*R2Tmp);
       Mat3x3 R2TmpT(R2Tmp.Transpose());
-      
-      std::ostream &of = Joint::Output(OH.Joints(), "PlaneHinge", GetLabel(),
-		    /* R2TmpT*F*/ Zero3, M, /* F */ Zero3, R2Tmp*M)
-	<< " " << MatR2EulerAngles(RTmp)*dRaDegr
-	  << " " << R2TmpT*(pNode2->GetWCurr()-pNode1->GetWCurr());
-      if (fc) {
-          of << " " << fc->fc() << " " << brakeForce.dGet();
+
+      if (OH.UseText(OutputHandler::JOINTS)) {
+	      std::ostream &of = Joint::Output(OH.Joints(), "PlaneHinge", GetLabel(),
+			      /* R2TmpT*F*/ Zero3, M, /* F */ Zero3, R2Tmp*M)
+		      << " " << MatR2EulerAngles(RTmp)*dRaDegr
+		      << " " << R2TmpT*(pNode2->GetWCurr()-pNode1->GetWCurr());
+	      if (fc) {
+		      of << " " << fc->fc() << " " << brakeForce.dGet();
+	      }
+	      of << std::endl;
       }
-      of << std::endl;
+
+#ifdef USE_NETCDF
+      if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+	      
+	      Joint::NetCDFOutput(OH, Zero3, M, Zero3, R2Tmp*M);
+	      
+	      OH.WriteNcVar(Var_Phi, RotManip::VecRot(RTmp));
+	      OH.WriteNcVar(Var_Omega, R2TmpT*(pNode2->GetWCurr()-pNode1->GetWCurr()));
+	      
+	      if (fc) {
+		      OH.WriteNcVar(Var_fc, fc->fc());
+		      OH.WriteNcVar(Var_Fb, brakeForce.dGet());
+	      }
+
+      }
+#endif // USE_NETCDF
+
    }
 }
 
@@ -528,6 +578,36 @@ doublereal Brake::dGetPrivData(unsigned int i) const
       throw ErrGeneric(MBDYN_EXCEPT_ARGS);
    }
 }
+
+const OutputHandler::Dimensions
+Brake::GetEquationDimension(integer index) const {
+	// DOF is unknown
+   if (fc && fc->iGetNumDof() > 0) {
+      unsigned int i = index;
+      if ( i >= NumSelfDof + 1 && i <= NumSelfDof + fc->iGetNumDof()) {
+         return fc->GetEquationDimension(index - NumSelfDof);
+      }
+   }
+
+   return OutputHandler::Dimensions::UnknownDimension;
+}
+
+std::ostream&
+Brake::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+   int iIndex = iGetFirstIndex();
+
+   // TODO
+   if (fc && fc->iGetNumDof() > 0) {
+      out
+         << prefix << iIndex + NumSelfDof + 1 << "->" << iIndex + NumSelfDof + fc->iGetNumDof() << ": friction equation(s)" << std::endl
+         << "        ", fc->DescribeEq(out, prefix, bInitial);
+   }
+
+	return out;
+}
+
 
 /* Brake - end */
 

@@ -258,20 +258,22 @@ SubVectorHandler& PrismaticJoint::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
-void
-PrismaticJoint::OutputPrepare(OutputHandler& OH)
+
+
+/* Output (da mettere a punto) */
+void PrismaticJoint::OutputPrepare(OutputHandler& OH)
 {
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			std::string name;
-			OutputPrepare_int("prismatic", OH, name);
+			OutputPrepare_int("Prismatic", OH, name);
 		}
 #endif // USE_NETCDF
 	}
 }
 
-/* Output (da mettere a punto) */
+
 void PrismaticJoint::Output(OutputHandler& OH) const
 {
    if (bToBeOutput()) {
@@ -279,20 +281,12 @@ void PrismaticJoint::Output(OutputHandler& OH) const
 
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec(M.pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec((R1Tmp*M).pGetVec(), OH.GetCurrentStep());
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
+			Joint::NetCDFOutput(OH, Zero3, M, Zero3, R1Tmp*M);
 		}
 #endif // USE_NETCDF
 
-
 		if (OH.UseText(OutputHandler::JOINTS)) {
-		  Joint::Output(OH.Joints(), "PlaneHinge", GetLabel(),
+		  Joint::Output(OH.Joints(), "Prismatic", GetLabel(),
 				Zero3, M, Zero3, R1Tmp*M) << std::endl;
 		}
    }   
@@ -626,4 +620,37 @@ PrismaticJoint::InitialAssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+const OutputHandler::Dimensions
+PrismaticJoint::GetEquationDimension(integer index) const {
+	// DOF == 3
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+      case 3:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+PrismaticJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 3 << ": " <<
+			"relative orientation constraints" << std::endl;
+
+	return out;
+}
 /* PrismaticJoint - end */

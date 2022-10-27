@@ -201,6 +201,7 @@ public:
 	void Update(const VectorHandler& XCurr, InverseDynamics::Order iOrder = InverseDynamics::INVERSE_DYNAMICS);	
 	DofOrder::Order GetEqType(unsigned int i) const;
 */
+	void OutputPrepare(OutputHandler& OH);
 	void Output(OutputHandler& OH) const;
 
 	/* funzioni usate nell'assemblaggio iniziale */
@@ -239,6 +240,9 @@ public:
 		connectedNodes[1] = pNode2;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 
@@ -369,6 +373,7 @@ public:
 
 	DofOrder::Order GetEqType(unsigned int i) const;
 
+	void OutputPrepare(OutputHandler& OH);
 	void Output(OutputHandler& OH) const;
 
 	/* funzioni usate nell'assemblaggio iniziale */
@@ -408,6 +413,9 @@ public:
 		connectedNodes[1] = pNode2;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 

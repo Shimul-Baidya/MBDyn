@@ -39,7 +39,7 @@ and hydraulic nodes; the constraints between the structural nodes,
 and other flow elements, e.g.\ leakages between the chambers, 
 must be added by the user.
 
-\subsection{Definitions}
+\subsubsection{Definitions}
 In the following, $\plbr{\cdot}_{s1}$ and $\plbr{\cdot}_{s2}$
 refer to structural nodes 1 and 2, 
 and $\plbr{\cdot}_{h1}$ and $\plbr{\cdot}_{h2}$
@@ -55,7 +55,7 @@ if any, is about the axis itself.
 This can be obtained by combining an inline joint with 
 a revolute rotation or a prismatic joint.
 
-\subsection{Equations}
+\subsubsection{Equations}
 \begin{eqnarray*}
 	0 & = & -\T{F} \\
 	0 & = & -\T{f}_{s1}\times\T{F} \\
@@ -114,7 +114,7 @@ constraints must account for them.
 \subsection{Dynamic Pipe}
 Finite Volume dynamic pipe.
 
-\subsection{Definitions}
+\subsubsection{Definitions}
 The dynamic pipe is formulated according to the finite volume approach.
 The pipe is discretized by means of the pressures and the flow 
 at the two ends, which are interpolated linearly.
@@ -280,3 +280,23 @@ of the {\em Reynolds}\ number, is modeled for $2000<Re<4000$.
 	p_1 & = & P_1 \\
 	p_2 & = & P_2
 \end{eqnarray*}
+
+
+\subsection{Pressure Flow Control Valve}
+\begin{align}
+	R_1 &= Q_{12} + Q_{13}
+	\\
+	R_2 &= -Q_{12} + Q_{24}
+	\\
+	R_3 &= -Q_{13} + Q_{34}
+	\\
+	R_4 &= -Q_{34} - Q_{24}
+	\\
+	R_5 &= A_v s;
+	\\
+	R_6 &= -A_v s
+	\\
+	R_7 &= -F + M \dot{v} + C \dot{s} + K s + c_1 s + c_2 \dot{s} + c_3 \dot{v} + cf_1 (s - s_{\max}) + cf_2 \dot{s} + cf_3 \dot{v}
+	\\
+	R_8 &= \dot{s} - v
+\end{align}

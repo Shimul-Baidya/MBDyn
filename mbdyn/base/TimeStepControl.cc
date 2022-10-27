@@ -117,11 +117,6 @@ ChangeStep::dGetNewStepTime(StepIntegrator::StepChange currStep, doublereal iPer
 	doublereal dNewStep = pStrategyChangeDrive->dGet();
 	doublereal dMaxTimeStep = MaxTimeStep.dGet();;
 
-	// are we sure we intend to change the time step if repeat is requested?
-	if (currStep == StepIntegrator::REPEATSTEP && dNewStep == dCurrTimeStep) {
-		return (dCurrTimeStep = dMinTimeStep/2.);
-	}
-
 	return (dCurrTimeStep = std::max(std::min(dNewStep, dMaxTimeStep), dMinTimeStep));
 }
 
@@ -217,13 +212,11 @@ Factor::dGetNewStepTime(StepIntegrator::StepChange Why, doublereal iPerformedIte
 		}
 
 		return (dCurrTimeStep = std::min(dCurrTimeStep*dReductionFactor, dMaxTimeStep));
-
 	case StepIntegrator::NEWSTEP:
 		iStepsAfterReduction++;
 		iStepsAfterRaise++;
 
 		iWeightedPerformedIters = (10*iPerformedIters + 9*iWeightedPerformedIters)/10;
-
 		if (iPerformedIters > iMaxIters) {
 			iStepsAfterReduction = 0;
 			bLastChance = false;
@@ -277,7 +270,7 @@ Factor::Init(integer iMaxIterations, doublereal dMinTimeStep, const DriveOwner& 
 	}
 
 	if (dMinTimeStep == dInitialMaxTimeStep) {
-		silent_cerr("warning: minimum time step " << dMinTimeStep << "is equal to (initial) maximum time step " << dInitialMaxTimeStep << "; no time step adaptation will take place" << std::endl);
+		silent_cerr("warning: minimum time step " << dMinTimeStep << " is equal to (initial) maximum time step " << dInitialMaxTimeStep << "; no time step adaptation will take place" << std::endl);
 
 	} else if (dMinTimeStep == dInitialMaxTimeStep) {
 		silent_cerr("error: minimum time step " << dMinTimeStep << "is greater than (initial) maximum time step " << dInitialMaxTimeStep << std::endl);
@@ -299,7 +292,7 @@ FactorTSR::Read(Solver *s, MBDynParser& HP)
 	try {
 		dReductionFactor = HP.GetReal(1., HighParser::range_gt_le<doublereal>(0., 1.));
 
-	} catch (HighParser::ErrValueOutOfRange<integer> e) {
+	} catch (HighParser::ErrValueOutOfRange<integer>& e) {
 		silent_cerr("error: invalid reduction factor " << e.Get() << " (must be positive and less than (or equal to) one) [" << e.what() << "] at line " << HP.GetLineData() << std::endl);
 		throw e;
 	}
@@ -308,7 +301,7 @@ FactorTSR::Read(Solver *s, MBDynParser& HP)
 	try {
 		iStepsBeforeReduction = HP.GetInt(1, HighParser::range_ge<integer>(1));
 
-	} catch (HighParser::ErrValueOutOfRange<integer> e) {
+	} catch (HighParser::ErrValueOutOfRange<integer>& e) {
 		silent_cerr("error: invalid number of steps before reduction " << e.Get() << " (must be greater than zero) [" << e.what() << "] at line " << HP.GetLineData() << std::endl);
 		throw e;
 	}
@@ -317,7 +310,7 @@ FactorTSR::Read(Solver *s, MBDynParser& HP)
 	try {
 		dRaiseFactor = HP.GetReal(1., HighParser::range_ge<doublereal>(1.));
 
-	} catch (HighParser::ErrValueOutOfRange<doublereal> e) {
+	} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
 		silent_cerr("error: invalid increase factor " << e.Get() << " (must be greater than (or equal to) one) [" << e.what() << "] at line " << HP.GetLineData() << std::endl);
 		throw e;
 	}
@@ -326,7 +319,7 @@ FactorTSR::Read(Solver *s, MBDynParser& HP)
 	try {
 		iStepsBeforeRaise = HP.GetInt(1, HighParser::range_ge<integer>(1));
 
-	} catch (HighParser::ErrValueOutOfRange<integer> e) {
+	} catch (HighParser::ErrValueOutOfRange<integer>& e) {
 		silent_cerr("error: invalid number of steps before increase " << e.Get() << " (must be greater than zero) [" << e.what() << "] at line " << HP.GetLineData() << std::endl);
 		throw e;
 	}
@@ -334,7 +327,7 @@ FactorTSR::Read(Solver *s, MBDynParser& HP)
 	try {
 		iMinIters = HP.GetInt(1, HighParser::range_ge<integer>(1));
 
-	} catch (HighParser::ErrValueOutOfRange<integer> e) {
+	} catch (HighParser::ErrValueOutOfRange<integer>& e) {
 		silent_cerr("error: invalid number of minimum iterations " << e.Get() << " (must be greater than zero) [" << e.what() << "] at line " << HP.GetLineData() << std::endl);
 		throw e;
 	}
@@ -344,7 +337,7 @@ FactorTSR::Read(Solver *s, MBDynParser& HP)
 		try {
 			iMaxIters = HP.GetInt(1, HighParser::range_ge<integer>(1));
 
-		} catch (HighParser::ErrValueOutOfRange<integer> e) {
+		} catch (HighParser::ErrValueOutOfRange<integer>& e) {
 			silent_cerr("error: invalid number of maximum iterations " << e.Get() << " (must be greater than zero) [" << e.what() << "] at line " << HP.GetLineData() << std::endl);
 			throw e;
 		}

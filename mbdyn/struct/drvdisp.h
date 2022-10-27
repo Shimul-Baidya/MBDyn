@@ -59,7 +59,9 @@ protected:
 
 	void AssMat(FullSubMatrixHandler& WM, doublereal dCoef);
 	void AssVec(SubVectorHandler& WorkVec, doublereal dCoef);
-
+#ifdef USE_NETCDF
+	MBDynNcVar Var_d;
+#endif // USE_NETCDF
 public:
 	/* Costruttore non banale */
 	DriveDisplacementJoint(unsigned int uL,	       
@@ -82,6 +84,7 @@ public:
 	/* Contributo al file di restart */
 	virtual std::ostream& Restart(std::ostream& out) const;
 
+	void OutputPrepare(OutputHandler &OH);
 	virtual void Output(OutputHandler& OH) const;
 
 	void SetValue(DataManager *pDM,
@@ -180,6 +183,9 @@ public:
 		connectedNodes[1] = pNode2;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* DriveDisplacementJoint - end */
@@ -202,7 +208,9 @@ protected:
 
 	void AssMat(FullSubMatrixHandler& WM, doublereal dCoef);
 	void AssVec(SubVectorHandler& WorkVec, doublereal dCoef);
-
+#ifdef USE_NETCDF
+	MBDynNcVar Var_d;
+#endif // USE_NETCDF
 public:
 	/* Costruttore non banale */
 	DriveDisplacementPinJoint(unsigned int uL,	       
@@ -224,6 +232,7 @@ public:
 	/* Contributo al file di restart */
 	virtual std::ostream& Restart(std::ostream& out) const;
 
+	void OutputPrepare(OutputHandler &OH);
 	virtual void Output(OutputHandler& OH) const;
 
 	void SetValue(DataManager *pDM,
@@ -321,6 +330,9 @@ public:
 		connectedNodes[0] = pNode;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* DriveDisplacementPinJoint - end */

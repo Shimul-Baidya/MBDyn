@@ -203,6 +203,16 @@ public:
 		const VectorHandler& XCurr,
 		const VectorHandler& XPrimeCurr) = 0;
 
+        // Used by Newton Krylov solvers only
+        // JacY += Jac * Y
+        virtual void
+        AssJac(VectorHandler& JacY,
+               const VectorHandler& Y,
+               doublereal dCoef,
+               const VectorHandler& XCurr,
+               const VectorHandler& XPrimeCurr,
+               VariableSubMatrixHandler& WorkMat);
+
 	/* inverse dynamics capable element */
 	virtual bool bInverseDynamics(void) const;
 
@@ -286,12 +296,14 @@ public:
 /* ElemWithDofs - end */
 
 
-/* SubjectToInitialAssembly - begin */
+/* InitialAssemblyElem - begin */
 
-class SubjectToInitialAssembly {
+class InitialAssemblyElem
+: virtual public Elem {
 public:
-	SubjectToInitialAssembly(void);
-	virtual ~SubjectToInitialAssembly(void);
+	InitialAssemblyElem(unsigned int uL, flag fOut);
+
+	virtual ~InitialAssemblyElem(void);
 
 	/* Numero di gradi di liberta' definiti durante l'assemblaggio iniziale
 	 * e' dato dai gradi di liberta' soliti piu' le loro derivate necessarie;
@@ -317,18 +329,13 @@ public:
 	virtual SubVectorHandler&
 	InitialAssRes(SubVectorHandler& WorkVec,
 		const VectorHandler& XCurr) = 0;
-};
 
-/* SubjectToInitialAssembly - end */
-
-
-/* InitialAssemblyElem - begin */
-
-class InitialAssemblyElem
-: virtual public Elem, public SubjectToInitialAssembly {
-public:
-	InitialAssemblyElem(unsigned int uL, flag fOut);
-	virtual ~InitialAssemblyElem(void);
+	/* Hack:
+	   deformable elements may have InitialAssembly for historical reasons,
+	   but should really not contribute to InitialAssembly;
+	   this methods allows to identify them
+	*/
+	virtual bool bIsDeformable() const;
 };
 
 /* InitialAssemblyElem - end */

@@ -34,8 +34,11 @@
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
 #include <sstream>
+#include <list>
 
 #include "output.h"
+#include "mbpar.h"
+#include "dataman.h"
 
 /* OutputHandler - begin */
 
@@ -83,28 +86,73 @@ const char* psExt[] = {
 	NULL		// 33
 };
 
+const std::unordered_map<const OutputHandler::Dimensions, const std::string> DimensionNames ({
+	{ OutputHandler::Dimensions::Dimensionless , std::string("Dimensionless") },
+	{ OutputHandler::Dimensions::Boolean , std::string("Boolean") },
+	{ OutputHandler::Dimensions::Length , std::string("Length") },
+	{ OutputHandler::Dimensions::Mass , std::string("Mass") },
+	{ OutputHandler::Dimensions::Time , std::string("Time") },
+	{ OutputHandler::Dimensions::Current , std::string("Current") },
+	{ OutputHandler::Dimensions::Temperature , std::string("Temperature") },
+	{ OutputHandler::Dimensions::Angle , std::string("Angle") },
+	{ OutputHandler::Dimensions::Area , std::string("Area") },
+	{ OutputHandler::Dimensions::Force , std::string("Force") },
+	{ OutputHandler::Dimensions::Velocity , std::string("Velocity") },
+	{ OutputHandler::Dimensions::Acceleration , std::string("Acceleration") },
+	{ OutputHandler::Dimensions::AngularVelocity , std::string("Angular velocity") },
+	{ OutputHandler::Dimensions::AngularAcceleration , std::string("Angular acceleration") },
+
+	{ OutputHandler::Dimensions::Momentum , std::string("Momentum") },
+	{ OutputHandler::Dimensions::MomentaMoment , std::string("Momenta moment") },
+	{ OutputHandler::Dimensions::MomentumDerivative , std::string("Momentum derivative") },
+	{ OutputHandler::Dimensions::MomentaMomentDerivative , std::string("Momenta moment derivative") },
+
+	{ OutputHandler::Dimensions::LinearStrain , std::string("Linear strain") },
+	{ OutputHandler::Dimensions::AngularStrain , std::string("Angular strain") },
+	{ OutputHandler::Dimensions::LinearStrainRate , std::string("Linear strain rate") },
+	{ OutputHandler::Dimensions::AngularStrainRate , std::string("Angular strain rate") },
+
+	{ OutputHandler::Dimensions::StaticMoment , std::string("Static moment") },
+	{ OutputHandler::Dimensions::MomentOfInertia , std::string("Moment of inertia") },
+
+	{ OutputHandler::Dimensions::ForceUnitSpan , std::string("Force per unit span") },
+
+	{ OutputHandler::Dimensions::Work , std::string("Work") },
+	{ OutputHandler::Dimensions::Power , std::string("Power") },
+	{ OutputHandler::Dimensions::Pressure , std::string("Pressure") },
+	{ OutputHandler::Dimensions::Moment , std::string("Moment") },
+	{ OutputHandler::Dimensions::Voltage , std::string("Voltage") },
+	{ OutputHandler::Dimensions::Charge , std::string("Charge") },
+	{ OutputHandler::Dimensions::Frequency , std::string("Frequency") },
+	{ OutputHandler::Dimensions::deg , std::string("deg") },
+	{ OutputHandler::Dimensions::rad , std::string("rad") },
+
+	/* added later for GetEquationDimension method of DofOwnerOwner class */
+
+	{ OutputHandler::Dimensions::MassFlow, std::string("Mass flow")},
+	{ OutputHandler::Dimensions::Jerk , std::string("Jerk") },
+	{ OutputHandler::Dimensions::VoltageDerivative , std::string("Voltage derivative") },
+	{ OutputHandler::Dimensions::UnknownDimension , std::string("Unknown dimension") }
+});
+
 /* Costruttore senza inizializzazione */
 OutputHandler::OutputHandler(void)
 : FileName(NULL),
 #ifdef USE_NETCDF
-#if defined(USE_NETCDFC)
-m_DimTime(0),
-m_DimV1(0),
-m_DimV3(0),
-#endif  /* USE_NETCDFC */ // only want to call default constructors if using legacy netcdf
 m_pBinFile(0),
-ncStart1(1,0),  // must initialize vectors otherwise can't assign
-#if defined(USE_NETCDF4)
-ncCount1(1,1),
-ncStart1x3(2,0),
-ncCount1x3(2,1),
-ncStart1x3x3(3,0),
-ncCount1x3x3(3,1),
-#endif  /* USE_NETCDF4 */
 #endif /* USE_NETCDF */
 iCurrWidth(iDefaultWidth),
 iCurrPrecision(iDefaultPrecision),
 nCurrRestartFile(0)
+#ifdef USE_NETCDF
+,
+ncStart1(1,0),  // must initialize vectors otherwise can't assign
+ncCount1(1,1),
+ncStart1x3(2,0),
+ncCount1x3(2,1),
+ncStart1x3x3(3,0),
+ncCount1x3x3(3,1)
+#endif  /* USE_NETCDF */
 {
 	OutputHandler_int();
 }
@@ -113,28 +161,212 @@ nCurrRestartFile(0)
 OutputHandler::OutputHandler(const char* sFName, int iExtNum)
 : FileName(sFName, iExtNum),
 #ifdef USE_NETCDF
-#if defined(USE_NETCDFC)
-m_DimTime(0),
-m_DimV1(0),
-m_DimV3(0),
-#endif  /* USE_NETCDFC */
 m_pBinFile(0),
-ncStart1(1,0),  // must initialize vectors otherwise can't assign
-#if defined(USE_NETCDF4)
-ncCount1(1,1),
-ncStart1x3(2,0),
-ncCount1x3(2,1),
-ncStart1x3x3(3,0),
-ncCount1x3x3(3,1),
-#endif  /* USE_NETCDF4 */
 #endif /* USE_NETCDF */
 iCurrWidth(iDefaultWidth),
 iCurrPrecision(iDefaultPrecision),
 nCurrRestartFile(0)
+#ifdef USE_NETCDF
+,ncStart1(1,0),  // must initialize vectors otherwise can't assign
+ncCount1(1,1),
+ncStart1x3(2,0),
+ncCount1x3(2,1),
+ncStart1x3x3(3,0),
+ncCount1x3x3(3,1)
+#endif  /* USE_NETCDF */
 {
 	OutputHandler_int();
 	Init(sFName, iExtNum);
+	SetUnspecifiedUnits(Units);
 }
+
+void OutputHandler::ReadOutputUnits(MBDynParser& HP) {
+	if (HP.IsKeyWord("MKS")) {
+		SetMKSUnits(Units);
+		Log() << "Unit for the whole model: MKS" << std::endl;
+	} else if (HP.IsKeyWord("CGS")) {
+		SetCGSUnits(Units);
+		Log() << "Unit for the whole model: CGS" << std::endl;
+	} else if (HP.IsKeyWord("MMTMS")) {
+		SetMMTMSUnits(Units);
+		Log() << "Unit for the whole model: MMTMS" << std::endl;
+	} else if (HP.IsKeyWord("MMKGMS")) {
+		SetMMKGMSUnits(Units);
+		Log() << "Unit for the whole model: MMKGMS" << std::endl;
+	} else if (HP.IsKeyWord("Custom")) {
+		Log() << "Unit for the whole model: Custom" << std::endl;
+		const std::list<Dimensions> BaseUnits ({
+			Dimensions::Length,
+			Dimensions::Mass,
+			Dimensions::Time,
+			Dimensions::Current,
+			Dimensions::Temperature		 
+		});
+		for (auto i = BaseUnits.begin(); i != BaseUnits.end(); i++) {
+			if (HP.IsKeyWord(DimensionNames.find(*i)->second.c_str())) {
+				Units[*i] = HP.GetStringWithDelims();
+			} else {
+				silent_cerr("Error while reading Custom unit system  at line"
+						<< HP.GetLineData()
+						<< "\nExpecting the definition of "
+						<< DimensionNames.find(*i)->second
+						<< " units."
+						<< std::endl);
+				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+			}
+		}
+		SetDerivedUnits(Units);
+	} else {
+		silent_cerr("Error while reading the model Units at line"
+						<< HP.GetLineData()
+						<< std::endl);
+		throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+	for (auto i = DimensionNames.begin(); i != DimensionNames.end(); i++) {
+		Log() << "Unit for " << i->second << ": " << Units[i->first] << std::endl;
+	}
+}
+
+void OutputHandler::SetDerivedUnits(std::unordered_map<Dimensions, std::string>& Units ) {
+	Units[Dimensions::Angle] = "rad";
+	Units[Dimensions::Area] = Units[Dimensions::Length] + "^2";
+	Units[Dimensions::Force] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Length] + " " +
+		Units[Dimensions::Time] + "^-2";
+	Units[Dimensions::Velocity] = Units[Dimensions::Length] + " " +
+		Units[Dimensions::Time] + "^-1";
+	Units[Dimensions::Acceleration] = Units[Dimensions::Length] + " " +
+		Units[Dimensions::Time] + "^-2";
+	Units[Dimensions::AngularVelocity] = Units[Dimensions::Angle] + " " +
+		Units[Dimensions::Time] + "^-1";
+	Units[Dimensions::AngularAcceleration] = Units[Dimensions::Angle] + " " +
+		Units[Dimensions::Time] + "^-2";
+
+	Units[Dimensions::Momentum] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Velocity];
+	Units[Dimensions::MomentaMoment] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Length] + "^2 " + 
+		Units[Dimensions::Time] + "^-1";
+	Units[Dimensions::MomentumDerivative] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Acceleration];
+	Units[Dimensions::MomentaMomentDerivative] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Length] + "^2 " + 
+		Units[Dimensions::Time] + "^-2";
+
+	Units[Dimensions::LinearStrain] = Units[Dimensions::Dimensionless];
+	Units[Dimensions::AngularStrain] = Units[Dimensions::Angle] + " " +
+		Units[Dimensions::Length] + "^-1";
+	Units[Dimensions::LinearStrainRate] = Units[Dimensions::Time] + "^-1";
+	Units[Dimensions::AngularStrainRate] = Units[Dimensions::Angle] + " " +
+		Units[Dimensions::Length] + "^-1 " + 
+		Units[Dimensions::Time] + "^-1";
+
+	Units[Dimensions::StaticMoment] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Length];
+	Units[Dimensions::MomentOfInertia] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Length] + "^2";
+
+	Units[Dimensions::ForceUnitSpan] = Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Time] + "^-2";
+
+	Units[Dimensions::Work] = Units[Dimensions::Force] + " " +
+		Units[Dimensions::Length];
+	Units[Dimensions::Power] = Units[Dimensions::Force] + " " +
+		Units[Dimensions::Velocity];
+	Units[Dimensions::Pressure] = Units[Dimensions::Force] + " " +
+		Units[Dimensions::Length] + "^-2";
+	Units[Dimensions::Moment] = Units[Dimensions::Force] + " " +
+		Units[Dimensions::Length];
+	Units[Dimensions::Voltage] = Units[Dimensions::Length] + "^2 " +
+		Units[Dimensions::Mass] + " " +
+		Units[Dimensions::Time] + "^-3 " +
+		Units[Dimensions::Current] + "^-1";
+	Units[Dimensions::Frequency] = Units[Dimensions::Time] + "^-1";
+	Units[Dimensions::Charge] = Units[Dimensions::Time] + " " +
+		Units[Dimensions::Current];
+	Units[Dimensions::deg] = "deg";
+	Units[Dimensions::rad] = "rad";
+	Units[Dimensions::MassFlow] = Units[Dimensions::Mass] + " " + 
+		Units[Dimensions::Time] + "^-1";
+	Units[Dimensions::Jerk] = Units[Dimensions::Mass] + " " +
+        Units[Dimensions::Time] + "^-3";
+	Units[Dimensions::VoltageDerivative] = Units[Dimensions::Voltage] + " " +
+        Units[Dimensions::Time] + "^-1";
+	Units[Dimensions::UnknownDimension] = "UnknownDimension";
+};
+
+void OutputHandler::SetUnspecifiedUnits(std::unordered_map<Dimensions, std::string>& Units) {
+	for (auto i = DimensionNames.begin(); i != DimensionNames.end(); i++) {
+		Units[i->first] = i->second;
+	}
+}
+
+void OutputHandler::SetMKSUnits(std::unordered_map<Dimensions, std::string>& Units) {
+	Units[Dimensions::Length] = "m";
+	Units[Dimensions::Mass] = "kg";
+	Units[Dimensions::Time] = "s";
+	Units[Dimensions::Current] = "A";
+	Units[Dimensions::Temperature] = "K";
+	SetDerivedUnits(Units);
+	Units[Dimensions::Force] = "N";
+	Units[Dimensions::Moment] = "N m";
+	Units[Dimensions::Work] = "J";
+	Units[Dimensions::Power] = "W";
+	Units[Dimensions::Pressure] = "Pa";
+	Units[Dimensions::Voltage] = "V";
+	Units[Dimensions::Charge] = "C";
+	Units[Dimensions::Frequency] = "Hz";
+};
+
+void OutputHandler::SetCGSUnits(std::unordered_map<Dimensions, std::string>& Units) {
+	Units[Dimensions::Length] = "cm";
+	Units[Dimensions::Mass] = "kg";
+	Units[Dimensions::Time] = "s";
+	Units[Dimensions::Current] = "A";
+	Units[Dimensions::Temperature] = "K";
+	SetDerivedUnits(Units);
+	Units[Dimensions::Force] = "dyn";
+	Units[Dimensions::Pressure] = "dyn cm^-2";
+	Units[Dimensions::Moment] = "dyn cm";
+	Units[Dimensions::Work] = "erg";
+	Units[Dimensions::Power] = "erg s^-1";
+	Units[Dimensions::Frequency] = "Hz";
+	Units[Dimensions::Charge] = "C";
+}
+
+void OutputHandler::SetMMTMSUnits(std::unordered_map<Dimensions, std::string>& Units) {
+	Units[Dimensions::Length] = "mm";
+	Units[Dimensions::Mass] = "ton";
+	Units[Dimensions::Time] = "ms";
+	Units[Dimensions::Current] = "A";
+	Units[Dimensions::Temperature] = "K";
+	SetDerivedUnits(Units);
+	Units[Dimensions::Force] = "N";
+	Units[Dimensions::Moment] = "N mm";
+	Units[Dimensions::Work] = "N mm";
+	Units[Dimensions::Power] = "N mm s^-1";
+	Units[Dimensions::Pressure] = "MPa";
+	Units[Dimensions::Frequency] = "kHz";
+	Units[Dimensions::Charge] = "mC";
+}
+
+void OutputHandler::SetMMKGMSUnits(std::unordered_map<Dimensions, std::string>& Units) {
+	Units[Dimensions::Length] = "mm";
+	Units[Dimensions::Mass] = "kg";
+	Units[Dimensions::Time] = "ms";
+	Units[Dimensions::Current] = "A";
+	Units[Dimensions::Temperature] = "K";
+	SetDerivedUnits(Units);
+	Units[Dimensions::Force] = "kN";
+	Units[Dimensions::Moment] = "N m";
+	Units[Dimensions::Work] = "N m";
+	Units[Dimensions::Power] = "N m ms^-1";
+	Units[Dimensions::Pressure] = "GPa";
+	Units[Dimensions::Work] = "kN mm";
+	Units[Dimensions::Frequency] = "kHz";
+	Units[Dimensions::Charge] = "mC";
+}
+
 
 // Pesudo-constructor
 void
@@ -186,7 +418,8 @@ OutputHandler::OutputHandler_int(void)
 	OutData[BEAMS].pof = &ofBeams;
 
 	OutData[ROTORS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[ROTORS].pof = &ofRotors;
 
 	OutData[RESTART].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
@@ -280,10 +513,10 @@ OutputHandler::OutputHandler_int(void)
 	OutData[NETCDF].pof = 0;
 
 	currentStep = 0;
-#if defined(USE_NETCDF4)
+#if defined(USE_NETCDF)
 	ncCount1x3[1] = ncCount1x3x3[1] = 3;
 	ncCount1x3x3[2] = 3;
-#endif  /* USE_NETCDF4 */
+#endif  /* USE_NETCDF */
 }
 
 /* Inizializzazione */
@@ -318,29 +551,15 @@ OutputHandler::~OutputHandler(void)
 }
 
 /* Aggiungere qui le funzioni che aprono i singoli stream */
-bool
+void
 OutputHandler::Open(const OutputHandler::OutFiles out)
 {
 #ifdef USE_NETCDF
 	if (out == NETCDF && !IsOpen(out)) {
-#if defined(USE_NETCDFC)
-		m_pBinFile = new NcFile(_sPutExt((char*)(psExt[NETCDF])), NcFile::Replace);
-		m_pBinFile->set_fill(NcFile::Fill);
-
-         	if (!m_pBinFile->is_valid()) {
-			silent_cerr("NetCDF file is invalid" << std::endl);
-			throw ErrFile(MBDYN_EXCEPT_ARGS);
-		}
-#elif defined(USE_NETCDF4) /*! USE_NETCDFC */
-		m_pBinFile = new netCDF::NcFile(_sPutExt((char*)(psExt[NETCDF])), netCDF::NcFile::replace, netCDF::NcFile::classic); // using the default (nc4) mode was seen to drasticly reduce the writing speed, thus using classic format
-		//~ NC_FILL only applies top variables, not files or groups in netcdf-cxx4
-		// also: error messages (throw) are part of the netcdf-cxx4 interface by default...
-#endif /* USE_NETCDF4 */
-
-		// Let's define some dimensions which could be useful
-		m_DimTime = CreateDim("time");
-		m_DimV1 = CreateDim("vec1", 1);
-		m_DimV3 = CreateDim("vec3", 3);
+		// FIXME: we should use the default format, or any selected by the user;
+		// but wait a minute: can this actually happen?
+		// return NetCDFOpen(out, netCDF::NcFile::nc4);
+		return NetCDFOpen(out, netCDF::NcFile::classic);
 
 	} else
 #endif /* USE_NETCDF */
@@ -370,13 +589,32 @@ OutputHandler::Open(const OutputHandler::OutFiles out)
 			}
 		}
 
-		return true;
+		return;
 	}
 
-	return false;
+	return;
 }
 
-bool
+#ifdef USE_NETCDF
+void
+OutputHandler::NetCDFOpen(const OutputHandler::OutFiles out, const netCDF::NcFile::FileFormat NetCDF_Format)
+{
+	if (!IsOpen(out)) {
+		m_pBinFile = new netCDF::NcFile(_sPutExt((char*)(psExt[NETCDF])), netCDF::NcFile::replace, NetCDF_Format); // using the default (nc4) mode was seen to drasticly reduce the writing speed, thus using classic format
+		//~ NC_FILL only applies top variables, not files or groups in netcdf-cxx4
+		// also: error messages (throw) are part of the netcdf-cxx4 interface by default...
+
+		// Let's define some dimensions which could be useful
+		m_DimTime = CreateDim("time");
+		m_DimV1 = CreateDim("Vec1", 1);
+		m_DimV3 = CreateDim("Vec3", 3);
+	}
+
+	return;
+}
+#endif /* USE_NETCDF */
+
+void
 OutputHandler::Open(const int out, const std::string& postfix)
 {
 	if (UseText(out) && !IsOpen(out)) {
@@ -415,10 +653,10 @@ OutputHandler::Open(const int out, const std::string& postfix)
 			OutData[out].pof->setf(std::ios::scientific);
 		}
 
-		return true;
+		return;
 	}
 
-	return false;
+	return;
 }
 
 bool
@@ -435,11 +673,7 @@ OutputHandler::IsOpen(const OutputHandler::OutFiles out) const
 {
 #ifdef USE_NETCDF
 	if (out == NETCDF) {
-#if defined(USE_NETCDFC)
-		return m_pBinFile == 0 ? false : m_pBinFile->is_valid();
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
 		return m_pBinFile == 0 ? false : !m_pBinFile->isNull();
-#endif  /* USE_NETCDF4 */
 	}
 #endif /* USE_NETCDF */
 
@@ -587,7 +821,7 @@ OutputHandler::Close(const OutputHandler::OutFiles out)
 	return true;
 }
 
-bool
+void
 OutputHandler::OutputOpen(void)
 {
 	return Open(OUTPUT);
@@ -660,14 +894,14 @@ OutputHandler::RestartOpen(bool openResXSol)
 	return true;
 }
 
-bool
+void
 OutputHandler::PartitionOpen(void)
 {
 	ASSERT(!IsOpen(PARTITION));
 	return Open(PARTITION);
 }
 
-bool
+void
 OutputHandler::LogOpen(void)
 {
 	ASSERT(!IsOpen(LOG));
@@ -726,30 +960,11 @@ OutputHandler::CreateDim(const std::string& name, integer size)
 
 	MBDynNcDim dim;
 	if (size == -1) {
-#if defined(USE_NETCDFC)
-		dim = m_pBinFile->add_dim(name.c_str());
-
-	} else {
-		dim = m_pBinFile->add_dim(name.c_str(), size);
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
 		dim = m_pBinFile->addDim(name);  // .c_str is useless here
 	} else {
 		dim = m_pBinFile->addDim(name, size);
-#endif  /* USE_NETCDF4 */
 	}
 
-#if defined(USE_NETCDFC)
-	if (dim == 0) {
-		std::ostringstream os;
-		os << "OutputHandler::CreateDim(\"" << name << "\"";
-		if (size > -1) {
-			os << ", " << size;
-		}
-		os << "): unable to add dimension";
-		silent_cerr(os.str() << std::endl);
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	}
-#endif  /* USE_NETCDFC */
 	return dim;
 }
 
@@ -758,11 +973,7 @@ OutputHandler::GetDim(const std::string& name) const
 {
 	ASSERT(m_pBinFile != 0);
 
-#if defined(USE_NETCDFC)
-	return m_pBinFile->get_dim(name.c_str());
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
 	return m_pBinFile->getDim(name);
-#endif  /* USE_NETCDF4 */
 }
 
 
@@ -771,38 +982,62 @@ OutputHandler::GetDim(const std::string& name) const
 /// and regardless of its type, and this without requiring a if condition
 /// or further testing of the NcVar, which if done at every timestep
 /// would slow down the execution
-#if defined(USE_NETCDFC)
-void
-OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Mat3x3& pGetVar) {
-	Var_Var->put_rec(pGetVar.pGetMat(), (long) ncStart1[0]);
-}
-void
-OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Vec3& pGetVar) {
-	Var_Var->put_rec(pGetVar.pGetVec(), (long) ncStart1[0]);
-}
-template <class Tvar>
-void
-OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Tvar& pGetVar) {
-	Var_Var->put_rec(&pGetVar, (long) ncStart1[0]);
-}
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
 void
 OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Mat3x3& pGetVar) {
 	Var_Var.putVar(ncStart1x3x3, ncCount1x3x3, pGetVar.pGetMat());
 }
 void
+OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Mat3x3& pGetVar,
+		const size_t& ncStart) 
+{
+	std::vector<size_t> ncStart1x3x3Tmp = ncStart1x3x3;
+	ncStart1x3x3Tmp[0] = ncStart;
+	Var_Var.putVar(ncStart1x3x3Tmp, ncCount1x3x3, pGetVar.pGetMat());
+}
+void
 OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Vec3& pGetVar) {
 	Var_Var.putVar(ncStart1x3, ncCount1x3, pGetVar.pGetVec());
+}
+void
+OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Vec3& pGetVar,
+		const size_t& ncStart) 
+{
+	std::vector<size_t> ncStart1x3Tmp = ncStart1x3;
+	ncStart1x3Tmp[0] = ncStart;
+	Var_Var.putVar(ncStart1x3Tmp, ncCount1x3, pGetVar.pGetVec());
 }
 template <class Tvar>
 void
 OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Tvar& pGetVar) {
 	Var_Var.putVar(ncStart1, ncCount1, &pGetVar);
 }
-#endif  /* USE_NETCDF4 */
+template <class Tvar, class Tstart>
+void
+OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Tvar& pGetVar, 
+		const Tstart& ncStart) 
+{
+	Var_Var.putVar(std::vector<size_t>(1,ncStart), ncCount1, &pGetVar);
+}
+template <class Tvar, class Tstart>
+void
+OutputHandler::WriteNcVar(const MBDynNcVar& Var_Var, const Tvar& pGetVar, 
+		const std::vector<Tstart>& ncStart,
+		const std::vector<size_t>& count) 
+{
+	Var_Var.putVar(ncStart, count, &pGetVar);
+}
+
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&);
-//// TODO: add all necessary type templates (char, etc..)
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const size_t&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const size_t&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&,
+		const std::vector<size_t>&, const std::vector<size_t>&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&,
+		const std::vector<size_t>&, const std::vector<size_t>&);
 
 MBDynNcVar 
 OutputHandler::CreateVar(const std::string& name, const MBDynNcType& type,
@@ -810,25 +1045,10 @@ OutputHandler::CreateVar(const std::string& name, const MBDynNcType& type,
 {
 	MBDynNcVar var;
 
-#if defined(USE_NETCDFC)
-	var = m_pBinFile->add_var(name.c_str(), type, dims.size(), const_cast<const NcDim **>(&dims[0]));
-	if (var == 0) {
-		silent_cerr("OutputHandler::CreateVar(\"" << name << "\") failed" << std::endl);
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	}
-	for (AttrValVec::const_iterator i = attrs.begin(); i != attrs.end(); ++i) {
-		if (!var->add_att(i->attr.c_str(), i->val.c_str())) {
-			silent_cerr("OutputHandler::CreateVar(\"" << name << "\"): "
-				"add_att(\"" << i->attr << "\", \"" << i->val << "\") failed" << std::endl);
-			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-		}
-	}
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
 	var = m_pBinFile->addVar(name, type, dims);
 	for (AttrValVec::const_iterator i = attrs.begin(); i != attrs.end(); ++i) {
 		var.putAtt(i->attr, i->val);
 	}
-#endif  /* USE_NETCDF4 */
 
 	return var;
 }
@@ -896,7 +1116,7 @@ OutputHandler::CreateRotationVar(const std::string& name_prefix,
 		dim[1] = DimV3();
 
 		attrs.resize(3);
-		attrs[0] = AttrVal("units", "radian");
+		attrs[0] = AttrVal("units", "deg");
 		attrs[1] = AttrVal("type", "Vec3");
 
 		std::string etype;

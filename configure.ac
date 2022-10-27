@@ -4,7 +4,7 @@ dnl
 dnl MBDyn (C) is a multibody analysis code.
 dnl http://www.mbdyn.org
 dnl
-dnl Copyright (C) 1996-2017
+dnl Copyright (C) 1996-2021
 dnl
 dnl Pierangelo Masarati     <masarati@aero.polimi.it>
 dnl Paolo Mantegazza        <mantegazza@aero.polimi.it>
@@ -75,7 +75,7 @@ define([AC_CACHE_LOAD], )dnl
 define([AC_CACHE_SAVE], )dnl
 
 dnl ================================================================
-dnl configure.in for MBDyn
+dnl configure.ac for MBDyn
 
 DATE=`date "+%B %e, %Y"`
 
@@ -110,7 +110,7 @@ dnl Determine host platform
 dnl             we try not to use this for much
 AC_CANONICAL_SYSTEM
 
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 
 dnl We use autoconf features new to 2.13.
 dnl aclocal.m4 should be built using aclocal from automake 1.4
@@ -185,8 +185,11 @@ esac
 ])dnl
 AC_SUBST(mbdyn_subdir)dnl
 
+PKG_PROG_PKG_CONFIG
+
 dnl ----------------------------------------------------------------
 dnl General "enable" options
+OL_ARG_ENABLE(Werror,[  --enable-Werror          enable building with -Werror], yes)dnl
 OL_ARG_ENABLE(debug,[  --enable-debug          enable debugging], no)dnl
 OL_ARG_WITH(debug_mode,[  --with-debug-mode[={none|mem}] with debug mode {none|mem}],none,[none mem])
 OL_ARG_ENABLE(runtime_loading,[  --enable-runtime-loading    enable runtime loading], auto)dnl
@@ -199,11 +202,17 @@ OL_ARG_ENABLE(schur,[  --enable-schur          enable Schur parallel solver
 OL_ARG_ENABLE(multithread,[  --enable-multithread    enable multithread assembly],no,[auto yes no force])dnl
 OL_ARG_ENABLE(multithread_naive,[  --enable-multithread-naive    enable multithread naive solver],no,[auto yes no force])dnl
 OL_ARG_ENABLE(mbc,[  --enable-mbc            enable MBC - multibody communication library],yes)dnl
-OL_ARG_ENABLE(netcdf,[  --enable-netcdf         enable NetCDF based binary output],auto,[auto yes no legacy netcdf4])dnl
+OL_ARG_ENABLE(netcdf,[  --enable-netcdf         enable NetCDF4 based binary output],auto,[auto yes no])dnl
 OL_ARG_ENABLE(python,[  --enable-python         enable Python support],no)dnl
 OL_ARG_ENABLE(octave,[  --enable-octave         enable Octave support],no)dnl
-OL_ARG_ENABLE(autodiff,[--enable-autodiff       enable automatic differentiation in order to compute the Jacobian matrix],no)dnl
-OL_ARG_ENABLE(autodiff_vect, [  --enable-autodiff_vect={0|16|32|64}     enable vectorization for automatic differentiation],0,[0 16 32 64])dnl
+OL_ARG_ENABLE(octave_utils,[  --enable-octave-utils   enable Octave utility functions],no)dnl
+AC_ARG_WITH(mkoctfile,[  --with-mkoctfile=exec-path Octave build tool mkoctfile],[
+	ol_with_mkoctfile_exec="$withval"
+],[ol_with_mkoctfile_exec=mkoctfile])
+AC_ARG_WITH(octave-cli,[ --with-octave-cli=exec-path Octave command line interpreter],[
+        ol_with_octave_cli_exec="$withval"
+],[ol_with_octave_cli_exec=""])
+OL_ARG_ENABLE(install_test_progs, [  --enable-install_test_progs       enable installation of some test programs which are otherwise not installed], no)
 dnl ----------------------------------------------------------------
 dnl General "with" options
 OL_ARG_WITH(g2c,[  --with-g2c              with g2c header],no,[auto yes no])
@@ -228,21 +237,28 @@ OL_ARG_WITH(blas,[
 AC_ARG_WITH(goto,[  --with-goto=lib(s)      with Goto BLAS implementation],[
 	ol_with_goto_lib="$withval"
 ],[ol_with_goto_lib=])
-AC_ARG_WITH(openblas,[  --with-openblas=lib(s)      with OpenBLAS implementation],[
+AC_ARG_WITH(openblas,[  --with-openblas=lib(s)  with OpenBLAS implementation],[
 	ol_with_openblas_lib="$withval"
 ],[ol_with_openblas_lib=])
 OL_ARG_WITH(ginac,[  --with-ginac            with GiNaC support
                           (ginac-config must be in $PATH)],auto,[auto yes no])
 OL_ARG_WITH(y12,[
        optional linear algebra solvers (naive is enabled by default):
-  --with-y12              with Y12 sparse math library],yes,[auto yes no])
+  --with-y12              with Y12 sparse math library],auto,[auto yes no])
 OL_ARG_WITH(umfpack,[  --with-umfpack          with Umfpack math library],auto,[auto yes no])
-OL_ARG_WITH(klu,[  --with-klu          with KLU math library],auto,[auto yes no])
+OL_ARG_WITH(klu,[  --with-klu              with KLU math library],auto,[auto yes no])
 OL_ARG_WITH(lapack,[  --with-lapack           with LAPACK math library],auto,[auto yes no])
-OL_ARG_WITH(harwell,[  --with-hsl              with HSL (Harwell) sparse math library - historical],no,[auto yes no])
-OL_ARG_WITH(meschach,[  --with-meschach         with Meschach math library - historical],no,[auto yes no])
+OL_ARG_WITH(harwell,[  --with-harwell              with HSL (Harwell) sparse math library - historical],no,[auto yes no])
 OL_ARG_WITH(superlu,[  --with-superlu          with SuperLU math library - eXperimental],no,[auto yes no])
-OL_ARG_WITH(wsmp,[  --with-wsmp             with Watson library - eXperimental],no,[auto yes no])
+OL_ARG_WITH(wsmp,[  --with-wsmp             with IBM Watson library],no,[auto yes no])
+OL_ARG_WITH(pardiso,[  --with-pardiso          with Intel MKL Pardiso library],no,[auto yes no])
+OL_ARG_WITH(pastix,[  --with-pastix           with Pastix math library],no,[auto yes no])
+with_suitesparseqr_default=auto
+OL_ARG_WITH(qrupdate,[  --with-qrupdate         with QRUPDATE library],$with_suitesparseqr_default,[auto yes no])
+OL_ARG_WITH(suitesparseqr,[  --with-suitesparseqr    with SuiteSparseQR library],$with_suitesparseqr_default,[auto yes no])
+OL_ARG_WITH(strumpack,[  --with-strumpack        with STRUMPACK library],auto,[auto yes no])
+OL_ARG_WITH(trilinos,[  --with-trilinos          with Trilinos library],auto,[auto yes no])
+OL_ARG_WITH(siconos,[  --with-siconos            with Siconos library],auto,[auto yes no])
 dnl temporarily disabled until we find out how to make it work...
 dnl OL_ARG_WITH(taucs,[  --with-taucs            with TAUCS math library - eXperimental],auto,[auto yes no])
 ol_with_taucs=no
@@ -256,7 +272,8 @@ OL_ARG_WITH(sasl2,[  --with-sasl2            with Cyrus SASL2 support],no,[auto 
 
 dnl module with's
 AC_ARG_WITH(module,[
-  --with-module=<list>    build listed modules (see modules/)
+  --with-module=<list>    build listed modules (stripping 'module-' from the 
+                          module's folder name, see modules/)
 ],[
 	ol_arg=
 	for ol_val in $withval ; do
@@ -271,13 +288,20 @@ AC_ARG_WITH(module,[
 OL_ARG_WITH(charm,[  --with-charm            with CHARM WP module],no,[auto yes no])
 
 fool_libtool=yes
+build_windows=no
 case "$host" in
 	*-apple-*)
 		fool_libtool=no
 		;;
+    cygwin*|*mingw*)
+        build_windows=yes
+        ;;
 	*)
 		;;
 esac
+
+dnl Add a conditional we can use in Makefile.am for MS Windows builds
+AM_CONDITIONAL([WINDOWS], [test "$build_windows" = "yes"])
 
 dnl ----------------------------------------------------------------
 dnl
@@ -294,17 +318,26 @@ fi
 AC_PROG_FC
 AC_FC_DUMMY_MAIN
 AC_FC_LIBRARY_LDFLAGS
+AC_PROG_F77
+have_fc_f77=no
 if test "x$FC" = "x" ; then
-	AC_PROG_F77
-	if test "x$F77" = "x" ; then
-		AC_MSG_ERROR([Need a working Fortran compiler])
+	if test "x$F77" != "x" ; then
+dnl		AC_MSG_ERROR([Need a working Fortran compiler])
+dnl	else
+		AC_F77_LIBRARY_LDFLAGS
+		LIBS="$LIBS $F77LIBS"
+		have_fc_f77=yes
 	fi
-	AC_F77_LIBRARY_LDFLAGS
-	LIBS="$LIBS $F77LIBS"
 else
 	F77="$FC"
 	F77LIBS="$FCLIBS"
 	LIBS="$LIBS $FCLIBS"
+	have_fc_f77=yes
+fi
+
+if test "$have_fc_f77" = "yes" ; then
+	AC_DEFINE(HAVE_FC_F77, 1, [define if a Fortran 77 compiler is available])
+	AC_DEFINE(USE_AEROD2_F, 1, [define Fortran 77 aerodynamic routines can be used])
 fi
 
 if test "$GCC" = "yes" ; then
@@ -365,12 +398,19 @@ KLU_LIBS=
 BLAS_LIBS=
 THREAD_LIBS=
 ATOMIC_OPS_LIBS=
-MESCHACH_LIBS=
 SUPERLU_LIBS=
+PARDISO_LIBS=
 WSMP_LIBS=
 HARWELL_LIBS=
 LAPACK_LIBS=
 TAUCS_LIBS=
+PASTIX_LIBS=
+PASTIX_INC=
+QRUPDATE_LIBS=
+SUITESPARSEQR_LIBS=
+STRUMPACK_LIBS=
+TRILINOS_LIBS=
+SICONOS_LIBS=
 ARPACK_LIBS=
 JDQZ_LIBS=
 SECURITY_LIBS=
@@ -383,6 +423,8 @@ BULLET_LIBS=
 PYTHON_NUMPY_HEADERS=
 OCTAVE_LIBS=
 OCTAVE_INCLUDE=
+OCTAVE_MKOCTFILE=
+OCTAVE_CLI=
 dnl GINACLIB_CONFIG=
 GINACLIB_LIBS=
 GINACLIB_CPPFLAGS=
@@ -437,6 +479,11 @@ AC_CHECK_HEADERS(sys/ioctl.h)
 AC_CHECK_HEADERS(time.h)
 AC_CHECK_HEADERS(unistd.h)
 AC_CHECK_HEADERS(values.h)
+dnl termios.h used in utils autopilot.c, we don't build if we don't have it (e.g. on windows)
+AC_CHECK_HEADER(termios.h, [have_termios=yes], [have_termios=no])
+
+dnl on windows we use winsock
+AC_CHECK_HEADERS(winsock2.h)
 
 
 dnl ----------------------------------------------------------------
@@ -543,139 +590,71 @@ fi
 
 dnl ----------------------------------------------------------------
 dnl
-dnl Enable NetCDF binary output (Classic/legacy or netcdf4)
+dnl Enable NetCDF binary output (netcdf4)
 dnl
 
 if test "$ol_enable_netcdf" != no ; then
 	have_netcdf4=no
 	have_libnetcdf4=no
-	have_netcdfc=no
-	have_libnetcdfc=no
 	AC_LANG_CPLUSPLUS
-	if test "$ol_enable_netcdf" != legacy ; then
 dnl checks for netcdf header file (for netcdf4 c++):
-		AC_CHECK_HEADER(netcdf,[have_netcdf4=yes],[have_netcdf4=no])
-		AC_LANG_C
-		if test $have_netcdf4 = "yes" ; then
-			AC_DEFINE(USE_NETCDF4,1,[must include <netcdf> to use NetCDF4 C++ support])
-			save_LIBS="$LIBS"
-			try_NETCDF_LIBS="-lnetcdf_c++4 -lnetcdf"
-			LIBS="$try_NETCDF_LIBS $LIBS"
-			AC_LANG_CPLUSPLUS
-			AC_TRY_LINK([
+	AC_CHECK_HEADER(netcdf,[have_netcdf4=yes],[have_netcdf4=no])
+	AC_LANG_C
+	if test $have_netcdf4 = "yes" ; then
+		AC_DEFINE(USE_NETCDF,1,[must include <netcdf> to use NetCDF4 C++ support])
+		save_LIBS="$LIBS"
+		try_NETCDF_LIBS="-lnetcdf_c++4 -lnetcdf"
+		LIBS="$try_NETCDF_LIBS $LIBS"
+		AC_LANG_CPLUSPLUS
+		AC_TRY_LINK([
 	#include <netcdf>
-				],[
-		/* test for netcdf */
-		netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-				],[
-					have_libnetcdf4=yes
-					NETCDF_LIBS="$try_NETCDF_LIBS"
-				])
-			AC_TRY_LINK([
+			],[
+	/* test for netcdf */
+	netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
+			],[
+				have_libnetcdf4=yes
+				NETCDF_LIBS="$try_NETCDF_LIBS"
+			],[
+			  try_NETCDF_LIBS="-lnetcdf-cxx4 -lnetcdf"
+		      LIBS="$try_NETCDF_LIBS $save_LIBS"
+			  AC_TRY_LINK([
 	#include <netcdf>
-				],[
-		/* test for netcdf sync */
-		netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-		nc.sync(); // test for sync option (comes in later version, >=4.3.0)
-		nc.close(); // test for close (appears in 4.3.0)
-				],[
-					
-				], [
-					have_libnetcdf4=no
-					AC_MSG_WARN([netcdf-cxx4 version too old, either link version 4.3.0 or more recent
-					 or otherwise use the legacy version with the --enable-netcdf command
-					 falling back to checking for legacy netcdf version ])
-				])
+			  ],[
+	/* test for netcdf */
+	netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
+			  ],[
+				have_libnetcdf4=yes
+				NETCDF_LIBS="$try_NETCDF_LIBS"
+			  ])
+			])
+		AC_TRY_LINK([
+	#include <netcdf>
+			],[
+	/* test for netcdf sync */
+	netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
+	nc.sync(); // test for sync option (comes in later version, >=4.3.0)
+	nc.close(); // test for close (appears in 4.3.0)
+			],[
+
+			], [
+				have_libnetcdf4=no
+				AC_MSG_WARN([netcdf-cxx4 version too old, link version 4.3.0 or more recent])
+			])
 			AC_LANG_C
 			LIBS="$save_LIBS"
 		fi
-	fi
-	if test "$ol_enable_netcdf" != netcdf4 ; then
-		if test $have_libnetcdf4 = no ; then
-			AC_LANG_CPLUSPLUS
-			AC_CHECK_HEADER(netcdfcpp.h,[have_netcdfcpp_h=yes],[have_netcdfcpp_h=no])
-			AC_LANG_C
-			if test $have_netcdfcpp_h = "yes" ; then
-				AC_DEFINE(HAVE_NETCDFCPP_H,1,[must include <netcdfcpp.h> to use NetCDF C++ support])
-				save_LIBS="$LIBS"
-				try_NETCDF_LIBS="-lnetcdf_c++ -lnetcdf"
-				LIBS="$try_NETCDF_LIBS $LIBS"
-				AC_LANG_CPLUSPLUS
-				AC_TRY_LINK([
-		#include <netcdfcpp.h>
-					],[
-			/* test for netcdf */
-			NcFile nc("foobar", NcFile::Replace); // Create and leave in define mode
-					],[
-						have_libnetcdfc=yes
-						NETCDF_LIBS="$try_NETCDF_LIBS"
-					])
-				AC_LANG_C
-				LIBS="$save_LIBS"
-			else
-				dnl apparently, NetCDF 4 only needs header <netcdf.h>
-				dnl and thus does not provide <netcdfcpp.h> any longer
-				AC_LANG_CPLUSPLUS
-				AC_CHECK_HEADER(netcdf.h,[have_netcdf_h=yes],[have_netcdf_h=no])
-				AC_LANG_C
-				if test $have_netcdf_h = "yes" ; then
-					AC_DEFINE(HAVE_NETCDF_H,1,[<netcdf.h> suffices to use NetCDF C++ support])
-					save_LIBS="$LIBS"
-					try_NETCDF_LIBS="-lnetcdf_c++4 -lnetcdf"
-					LIBS="$try_NETCDF_LIBS $LIBS"
-					AC_LANG_CPLUSPLUS
-					AC_TRY_LINK([
-		#include <netcdf.h>
-						],[
-				/* test for netcdf */
-				NcFile nc("foobar", NcFile::Replace); // Create and leave in define mode
-						],[
-							have_libnetcdfc=yes
-							NETCDF_LIBS="$try_NETCDF_LIBS"
-						],[
-							have_libnetcdfc=no
-						])
-					AC_LANG_C
-					LIBS="$save_LIBS"
-				fi
-			fi
-		fi
-	fi
-	if test $have_libnetcdfc = yes ; then
-		AC_DEFINE(USE_NETCDF,1,[define this to enable NetCDF based output])
-		AC_DEFINE(USE_NETCDFC,1,[define this to enable classic/legacy NetCDF based output])
-		AC_MSG_NOTICE([Enabling netcdf classic/legacy output capabilities])
-	elif test $ol_enable_netcdf != auto ; then
-		if test "$ol_enable_netcdf" = legacy ; then
-			AC_MSG_ERROR([User requested netcdf classic/legacy but cannot be enabled, see messages above.])
-		else
-			AC_MSG_WARN([Not using classic/legacy netcdf])
-		fi
-	fi
-	
+
 	if test $have_libnetcdf4 = yes ; then
-		AC_DEFINE(USE_NETCDF4,1,[define this to enable NetCDF4 based output])
-		AC_DEFINE(USE_NETCDF,1,[also define this to enable NetCDF4 based output])
+		AC_DEFINE(USE_NETCDF,1,[define this to enable NetCDF4 based output])
 		AC_MSG_NOTICE([Enabling netcdf4 output capabilities])
 	elif test $ol_enable_netcdf != auto ; then
-		if test "$ol_enable_netcdf" = netcdf4 ; then
+		if test "$ol_enable_netcdf" = yes ; then
 			AC_MSG_ERROR([User requested netcdf4 but cannot be enabled, see messages above.])
 		else
 			AC_MSG_WARN([Not using netcdf4])
 		fi
 	fi
-	
-	if test "$have_libnetcdf4" != yes ; then
-		if test "$have_libnetcdfc" != yes ; then
-			AC_DEFINE(USE_NETCDF4,0,[define this to enable NetCDF4 based output])
-			AC_DEFINE(USE_NETCDFC,0,[define this to enable classic/legacy NetCDF based output])
-			AC_DEFINE(USE_NETCDF,0,[also define this to enable NetCDF4 based output])
-			if test $ol_enable_netcdf != auto ; then
-				AC_MSG_ERROR([Could not locate neither netcdf4 nor netcdf classic/legacy headers or improper installation or versions installed.])
-			fi
-		fi
-	fi
-	
+
 fi
 
 if test "$ol_enable_netcdf" != no ; then
@@ -716,7 +695,7 @@ if test "$ol_enable_python" != no ; then
 		AC_MSG_ERROR([python needs swig])
 	fi
 	if test "$ol_enable_python" = yes ; then
-	        PYTHON_NUMPY_HEADERS=`$PYTHON -c "import numpy; print numpy.get_include()" 2>/dev/null`
+	        PYTHON_NUMPY_HEADERS=`$PYTHON -c "from __future__ import print_function; import numpy; print(\"{}\".format(numpy.get_include()))" 2>/dev/null`
 		if test x"$PYTHON_NUMPY_HEADERS" = x ; then
 			AC_MSG_ERROR([python needs numpy - including its development packages])
 		else
@@ -736,23 +715,41 @@ dnl
 dnl Enable Octave support <http://www.octave.org/>
 dnl
 use_octave=no
-if test "$ol_enable_octave" != no ; then
+use_octave_utils=no
+if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
+        if ! test -z "${ol_with_octave_cli_exec}"; then
+           OCTAVE_CLI="${ol_with_octave_cli_exec}"
+        fi
 	have_mkoctfile=no
-	which mkoctfile > /dev/null 2>&1
+      	AC_MSG_CHECKING(for mkoctfile)
+   	$ol_with_mkoctfile_exec --help > /dev/null 2>&1
 	RC=$?
 	if test "$RC" = 0 ; then
+   	   	AC_MSG_RESULT([yes])
 		have_mkoctfile=yes
-     	try_OCTAVE_LIBS="`mkoctfile -p OCTAVE_LIBS` `mkoctfile -p LFLAGS`"
-     	try_OCTAVE_INCLUDE="`mkoctfile -p INCFLAGS`"
-       export LD_LIBRARY_PATH="`mkoctfile -p OCTLIBDIR`:${LD_LIBRARY_PATH}"
-    else
+	   	OCTAVE_MKOCTFILE=$ol_with_mkoctfile_exec
+		dnl On Windows systems the output from mkoctfile contains backslashes which cause build failures!
+                try_OCTAVE_LIBS="`$ol_with_mkoctfile_exec -p OCTAVE_LIBS`"
+                try_OCTAVE_LIBS="${try_OCTAVE_LIBS} `$ol_with_mkoctfile_exec -p LDFLAGS | sed 's/-IC\:/-I\/c/g;s/-LC\:/-L\/c/g;s/\\\\/\//g'`"
+                try_OCTAVE_LIBS="${try_OCTAVE_LIBS} -L`$ol_with_mkoctfile_exec -p OCTLIBDIR | sed 's/-IC\:/-I\/c/g;s/-LC\:/-L\/c/g;s/\\\\/\//g'`"
+                try_OCTAVE_LIBS="${try_OCTAVE_LIBS} -Wl,-rpath=`$ol_with_mkoctfile_exec -p OCTLIBDIR | sed 's/-IC\:/-I\/c/g;s/-LC\:/-L\/c/g;s/\\\\/\//g'`"
+                try_OCTAVE_INCLUDE="`$ol_with_mkoctfile_exec -p INCFLAGS | sed 's/-IC\:/-I\/c/g;s/-LC\:/-L\/c/g;s/\\\\/\//g'`"
+                export LD_LIBRARY_PATH="`$ol_with_mkoctfile_exec -p OCTLIBDIR`:${LD_LIBRARY_PATH}"
+                OCTAVE_EXEC_HOME=`${OCTAVE_MKOCTFILE} -p OCTAVE_EXEC_HOME | sed 's/C\:/\/c/g;s/\\\\/\//g'`
+                if test -z "${OCTAVE_CLI}"; then
+                   if test -d "${OCTAVE_EXEC_HOME}" && test -f "${OCTAVE_EXEC_HOME}/bin/octave-cli"; then
+                      OCTAVE_CLI="${OCTAVE_EXEC_HOME}/bin/octave-cli"
+                   fi
+                fi
+        else
+		AC_MSG_RESULT([no])
     	try_OCTAVE_LIBS="-loctinterp -loctave -lcruft"
     	try_OCTAVE_INCLUDE=
 	fi
 
 	AC_LANG_CPLUSPLUS
-	save_CXXFLAGS="$CXXFLAGS"
-	CXXFLAGS="$CXXFLAGS $try_OCTAVE_INCLUDE"
+	save_CPPFLAGS="$CPPFLAGS"
+	CPPFLAGS="$CPPFLAGS $try_OCTAVE_INCLUDE"
 	AC_CHECK_HEADER(octave/oct.h,[have_octave_oct_h=yes],[have_octave_oct_h=no])
 	AC_CHECK_HEADER(octave/parse.h,[have_octave_parse_h=yes],[have_octave_parse_h=no],[
 #include <octave/oct.h>
@@ -760,13 +757,19 @@ if test "$ol_enable_octave" != no ; then
 	AC_CHECK_HEADER(octave/toplev.h,[have_octave_toplev_h=yes],[have_octave_toplev_h=no],[
 #include <octave/oct.h>
 		])
+	AC_CHECK_HEADER(octave/interpreter.h,[have_octave_interpreter_h=yes],[have_octave_interpreter_h=no],[
+#include <octave/oct.h>
+		])
 	AC_CHECK_HEADER(octave/octave.h,[have_octave_octave_h=yes],[have_octave_octave_h=no],[
 #include <octave/oct.h>
 		])
-	CXXFLAGS="$save_CXXFLAGS"
+	CPPFLAGS="$save_CPPFLAGS"
 	AC_LANG_C
 
 	link_octave="no"
+        have_clean_up_and_exit="no"
+        have_do_octave_atexit="no"
+        
 	if test "$have_octave_oct_h" = "yes" \
 		-a "$have_octave_parse_h" = "yes" \
 		-a "$have_octave_toplev_h" = "yes" \
@@ -774,11 +777,11 @@ if test "$ol_enable_octave" != no ; then
 		-a "$have_mkoctfile" = "yes" ; \
 	then
 		OCTAVE_INCLUDE="$try_OCTAVE_INCLUDE"
-		save_CXXFLAGS="$CXXFLAGS"
+		save_CPPFLAGS="$CPPFLAGS"
 		save_LIBS="$LIBS"
 		try_LIBS="$try_OCTAVE_LIBS"
 		LIBS="$try_LIBS $LIBS"
-		CXXFLAGS="$CXXFLAGS $OCTAVE_INCLUDE"
+		CPPFLAGS="$CPPFLAGS $OCTAVE_INCLUDE"
 		AC_LANG_CPLUSPLUS
 		AC_TRY_LINK([
 #include <octave/oct.h>
@@ -808,8 +811,37 @@ if test "$ol_enable_octave" != no ; then
 			],[have_clean_up_and_exit="yes"])
 		AC_LANG_C
 		LIBS="$save_LIBS"
-		CXXFLAGS="$save_CXXFLAGS"
+		CPPFLAGS="$save_CPPFLAGS"
 		OCTAVE_LIBS="$try_LIBS"
+	fi
+
+	if test "$have_octave_oct_h" = "yes" \
+		-a "$have_octave_parse_h" = "yes" \
+		-a "$have_octave_interpreter_h" = "yes" \
+		-a "$have_octave_octave_h" = "yes" \
+		-a "$have_mkoctfile" = "yes" ; \
+	then
+		OCTAVE_INCLUDE="$try_OCTAVE_INCLUDE"
+		save_CPPFLAGS="$CPPFLAGS"
+		save_LIBS="$LIBS"
+		try_LIBS="$try_OCTAVE_LIBS"
+		LIBS="$try_LIBS $LIBS"
+		CPPFLAGS="$CPPFLAGS $OCTAVE_INCLUDE"
+		AC_LANG_CPLUSPLUS
+		AC_TRY_LINK([
+#include <octave/oct.h>
+#include <octave/parse.h>
+#include <octave/interpreter.h>
+#include <octave/octave.h>
+			],[
+                        octave::interpreter interpreter;
+                        int status = interpreter.execute();
+                        octave_value_list out = octave::feval ("cos", octave_value(0.), 1);
+			],[link_octave="yes"])
+		AC_LANG_C
+		LIBS="$save_LIBS"
+		CPPFLAGS="$save_CPPFLAGS"
+		OCTAVE_LIBS="$try_LIBS"                        
 	fi
 
 	if test "$link_octave" = yes ; then
@@ -826,10 +858,32 @@ if test "$ol_enable_octave" != no ; then
 			AC_MSG_ERROR([octave support not available])
 		fi
 	fi
+
+	if test "$have_octave_oct_h" = "yes" -a "$have_mkoctfile" = "yes"; then
+	        use_octave_utils="yes"
+	else
+	        AC_MSG_ERROR([octave utils support not available])
+	fi
+
+        if test -z "${OCTAVE_CLI}"; then
+           OCTAVE_CLI=octave-cli
+        fi
 fi
 
-if test "$ol_enable_autodiff" != no ; then
-	AC_DEFINE(USE_AUTODIFF, 1, [define if automatic differentiation can be used in order to compute the Jacobian matrix])
+	AC_MSG_CHECKING([for _aligned_malloc and _aligned_free])
+	AC_TRY_LINK([
+#include <stdlib.h>
+				],[
+void* p = _aligned_malloc(1024, 32);
+_aligned_free(p);
+				],[have_aligned_malloc="yes"])
+
+	if test "$have_aligned_malloc" == "yes"; then
+		AC_DEFINE(HAVE_ALIGNED_MALLOC, 1, [define if _aligned_malloc and _aligned_free can be used])
+		AC_MSG_RESULT([yes])
+	else
+		AC_MSG_RESULT([no])
+	fi
 
 	AC_MSG_CHECKING([for posix_memalign])
 	AC_TRY_LINK([
@@ -860,265 +914,20 @@ void* p = memalign(32, 1024);
 		AC_MSG_RESULT([no])
 	fi
 
-	AC_MSG_CHECKING([for _aligned_malloc and _aligned_free])
+	AC_MSG_CHECKING([for aligned_alloc])
 	AC_TRY_LINK([
 #include <stdlib.h>
 				],[
-void* p = _aligned_malloc(1024, 32);
-_aligned_free(p);
-				],[have_aligned_malloc="yes"])
+void* p = aligned_alloc(32, 1024);
+free(p);
+				],[have_aligned_alloc="yes"])
 
-	if test "$have_aligned_malloc" == "yes"; then
-		AC_DEFINE(HAVE_ALIGNED_MALLOC, 1, [define if _aligned_malloc and _aligned_free can be used])
+	if test "$have_aligned_alloc" == "yes"; then
+		AC_DEFINE(HAVE_ALIGNED_ALLOC, 1, [define if aligned_alloc can be used])
 		AC_MSG_RESULT([yes])
 	else
 		AC_MSG_RESULT([no])
 	fi
-
-	if test "$ol_enable_autodiff_vect" == 0 ; then
-		save_CXXFLAGS="$CXXFLAGS"
-		vector_flags="-O3 -march=native -mtune=native"
-		CXXFLAGS="$CXXFLAGS $vector_flags"
-
-		AC_LANG_CPLUSPLUS
-		AC_TRY_RUN([
-#include <ctime>
-#include <cassert>
-#include <cstdlib>
-#include <iostream>
-#include <limits>
-#include <new>
-#include <iomanip>
-#include <fstream>
-using namespace std;
-
-template <typename scalar_type, int VECTOR_SIZE>
-class vector
-{
-public:
-    static const int vec_size = VECTOR_SIZE / sizeof(scalar_type);
-    typedef scalar_type __attribute__((vector_size(VECTOR_SIZE))) vector_type;
-
-    vector(int n)
-    {
-        N = n / vec_size;
-
-        if (n % vec_size != 0)
-        {
-            ++N;
-        }
-
-        void* p;
-
-#if HAVE_POSIX_MEMALIGN == 1
-    	if (0 != posix_memalign(&p, sizeof(vector_type), vector_size() * sizeof(vector_type)))
-    	{
-    		p = 0;
-    	}
-#elif HAVE_ALIGNED_MALLOC == 1
-        p = _aligned_malloc(vector_size() * sizeof(vector_type), sizeof(vector_type));
-#elif HAVE_MEMALIGN == 1
-    	p = memalign(sizeof(vector_type), vector_size() * sizeof(vector_type));
-#else
-		p = malloc(vector_size() * sizeof(vector_type));
-#endif
-
-        v = reinterpret_cast<vector_type*>(p);
-
-        if (v == 0)
-            throw std::bad_alloc();
-    }
-
-    ~vector()
-    {
-#if HAVE_ALIGNED_MALLOC == 1
-        _aligned_free(v);
-#else
-    	free(v);
-#endif
-    }
-
-    int size() const { return N * vec_size; }
-
-    int vector_size() const { return N; }
-
-    vector_type& operator[](int i)
-    {
-        return v[i];
-    }
-
-    const vector_type& operator[](int i) const
-    {
-        return v[i];
-    }
-
-    scalar_type& operator()(int i)
-    {
-        return s[i];
-    }
-
-    const scalar_type& operator()(int i) const
-    {
-        return s[i];
-    }
-private:
-    union {
-        scalar_type* s;
-        vector_type* v;
-    };
-    int N;
-};
-
-template <typename T, int VECTOR_SIZE>
-T func_vec(const T a, const T b, const vector<T,VECTOR_SIZE>& ad, const vector<T,VECTOR_SIZE>& bd,  vector<T,VECTOR_SIZE>& cd)
-{
-    for (int i = 0; i < ad.vector_size(); ++i)
-    {
-        cd[i] = ad[i] * b + a * bd[i];
-    }
-
-    return a * b;
-}
-
-template<typename T, int VECTOR_SIZE>
-clock_t testVector(int N, int M)
-{
-    T a, b, c;
-
-    a = 10;
-    b = 5;
-    vector<T,VECTOR_SIZE> ad(N), bd(N), cd(N);
-
-    for (int i = 0; i < ad.size(); ++i)
-    {
-        ad(i) = i + 1;
-        bd(i) = 10 * (i + 1);
-    }
-
-    const clock_t start = clock();
-
-    for (int i = 0; i < M; ++i)
-        c = func_vec(a, b, ad, bd, cd);
-
-    const clock_t dt = clock() - start;
-
-    assert(c == a * b);
-    for (int i = 0; i < ad.size(); ++i)
-    {
-        assert(cd(i) == ad(i) * b + bd(i) * a);
-    }
-
-    return dt;
-}
-
-int vec_size = 0;
-clock_t tmin = std::numeric_limits<clock_t>::max();
-
-template <int i>
-void runTest(int N, int M, clock_t t[])
-{
-    const int iprev = i - 1;
-    runTest<iprev>(N, M, t);
-    const int K = 1 << (i + 3);
-
-    cout << "checking for vector_size=" << setw(3) << K << " ... ";
-
-    t[i] = testVector<double, K>(N, M);
-
-    cout << "[OK] t=" << setw(5) << t[i] << endl;
-
-    if (t[i] < tmin)
-    {
-        tmin = t[i];
-        vec_size = K;
-        ofstream("grad_vector_size.dat") << K;
-    }
-}
-
-template <>
-void runTest<-1>(int N, int M, clock_t t[])
-{
-}
-
-int main(int argc, char* argv[])
-{
-    int N = 1024;
-    int M = 1000000;
-
-    if (argc > 1)
-        N = atoi(argv[1]);
-
-    if (argc > 2)
-        M = atoi(argv[2]);
-
-    const int K = 3;
-    clock_t t[K];
-
-    ofstream("grad_vector_size.dat") << 0;
-
-    runTest<K>(N, M, t);
-
-    cout << "result: optimum(vector_size)=" << vec_size << endl;
-    return 0;
-}					],
-					[],
-					[printf "[FAILED]\n"])
-
-		if test -f grad_vector_size.dat; then
-			ol_enable_autodiff_vect=`cat grad_vector_size.dat`
-
-			if test -z "$ol_enable_autodiff_vect"; then
-				ol_enable_autodiff_vect=0
-			fi
-
-			rm grad_vector_size.dat
-		fi
-
-		CXXFLAGS="$save_CXXFLAGS"
-		AC_LANG_C
-	fi
-
-	case "$ol_enable_autodiff_vect" in
-	16)
-		AC_DEFINE(GRADIENT_VECTOR_REGISTER_SIZE, 16, [the number of bytes of an avx or sse register])
-		AC_MSG_RESULT([vectorization of derivatives will use 16 byte vectors])
-		;;
-	32)
-		AC_DEFINE(GRADIENT_VECTOR_REGISTER_SIZE, 32, [the number of bytes of an avx or sse register])
-		AC_MSG_RESULT([vectorization of derivatives will use 32 byte vectors])
-		;;
-	64)
-		AC_DEFINE(GRADIENT_VECTOR_REGISTER_SIZE, 64, [the number of bytes of an avx or sse register])
-		AC_MSG_RESULT([vectorization of derivatives will use 64 byte vectors])
-		;;
-	*)
-		AC_DEFINE(GRADIENT_VECTOR_REGISTER_SIZE, 0, [the number of bytes of an avx or sse register])
-		AC_MSG_WARN([vectorization of derivatives is not possible])
-	esac
-fi
-
-dnl ----------------------------------------------------------------
-dnl
-dnl Enable blitz++ support <http://oonumerics.org/blitz/>
-dnl
-AC_LANG_CPLUSPLUS
-AC_CHECK_HEADER(blitz/blitz.h,[have_blitz_blitz_h=yes],[have_blitz_blitz_h=no])
-AC_CHECK_HEADER(blitz/array.h,[have_blitz_array_h=yes],[have_blitz_array_h=no])
-AC_CHECK_HEADER(blitz/tinyvec.h,[have_blitz_tinyvec_h=yes],[have_blitz_tinyvec_h=no])
-AC_CHECK_HEADER(blitz/tinyvec-et.h,[have_blitz_tinyvecet_h=yes],[have_blitz_tinyvecet_h=no])
-AC_CHECK_HEADER(blitz/tinymat.h,[have_blitz_tinymat_h=yes],[have_blitz_tinymat_h=no])
-AC_CHECK_HEADER(blitz/matrix.h,[have_blitz_matrix_h=yes],[have_blitz_matrix_h=no])
-AC_LANG_C
-
-if test "$have_blitz_blitz_h" = "yes" \
-	-a "$have_blitz_array_h" = "yes" \
-	-a "$have_blitz_tinyvec_h" = "yes" \
-	-a "$have_blitz_tinyvecet_h" = "yes" \
-	-a "$have_blitz_tinymat_h" = "yes" \
-	-a "$have_blitz_matrix_h" = "yes"; \
-then
-	AC_DEFINE(HAVE_BLITZ, 1, [define if blitz++ can be used])
-fi
 
 dnl ----------------------------------------------------------------
 dnl
@@ -1218,6 +1027,23 @@ fi
 
 dnl ----------------------------------------------------------------
 dnl
+dnl Checks for noexcept
+dnl
+AC_LANG_CPLUSPLUS
+have_noexcept=no
+AC_MSG_CHECKING([for noexcept])
+AC_TRY_COMPILE([int pippo() noexcept {return 1;}],[],[have_noexcept=yes],[have_noexcept=no])
+if test $have_noexcept != no ; then
+	AC_DEFINE(HAVE_NOEXCEPT,1, [define if the compiler accept noexcept])
+	AC_MSG_RESULT([yes])
+else
+	dnl AC_MSG_RESULT([no])
+	AC_MSG_ERROR([The C++ compiler does not support the noexcept keyword. You should upgrade to a more recent compiler supporting c++11.])
+fi
+AC_LANG_C
+
+dnl ----------------------------------------------------------------
+dnl
 dnl Checks for working offsetof
 dnl
 have_offsetof=no
@@ -1237,6 +1063,7 @@ dnl ----------------------------------------------------------------
 dnl
 dnl Checks for socket
 dnl
+AC_CHECK_LIB([ws2_32], [main])
 AC_CHECK_FUNC(socket,[have_socket=yes],[have_socket=no])
 use_socket=no
 if test "$have_socket" = "yes" ; then
@@ -1249,6 +1076,13 @@ if test "$have_socket" = "yes" ; then
 		AC_TRY_COMPILE([#include <sys/socket.h>],[
 			socklen_t l;
 		],[have_socklen_t=yes],[have_socklen_t=no])
+
+		if test "$have_socklen_t" = "no" ; then
+			AC_TRY_COMPILE([#include <ws2tcpip.h>],[
+				socklen_t l;
+			],[have_socklen_t=yes],[have_socklen_t=no])
+		fi
+
 		if test $have_socklen_t != no ; then
 			AC_DEFINE(HAVE_SOCKLEN_T,1,
 				[define if typedef socklen_t is defined])
@@ -1356,6 +1190,7 @@ if test "$ol_with_threads" != "no" ; then
 		fi
 	fi
 	if test "$have_threads" = "yes" ; then
+		AC_MSG_CHECKING([for threads])
 		save_LIBS="$LIBS"
 		save_CXXFLAGS="$CXXFLAGS"
 		save_CFLAGS="$CFLAGS"
@@ -1497,7 +1332,7 @@ dnl ----------------------------------------------------------------
 dnl
 dnl Check for build mbc library
 dnl
-dnl do not build libmbm if sockets are not available (fixes issue in MinGW)
+dnl do not build libmbc if sockets are not available (fixes issue in MinGW)
 AM_CONDITIONAL(BUILD_MBC,[test "$ol_enable_mbc" = "yes" -a "$have_socket" = "yes"])
 
 dnl ----------------------------------------------------------------
@@ -1640,19 +1475,6 @@ if test "$ol_link_multithread" = "yes" -o "$ol_link_multithread_naive" = "yes" ;
 fi
 
 
-
-dnl ----------------------------------------------------------------
-dnl
-dnl Check for /dev/TASK2CPU
-dnl
-AC_MSG_CHECKING([for /dev/TASK2CPU])
-if test -e "/dev/TASK2CPU" ; then
-	AC_DEFINE(HAVE_TASK2CPU,1,[define if /dev/TASK2CPU is available])
-	AC_MSG_RESULT(yes)
-else
-	AC_MSG_RESULT(no)
-fi
-
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for BOOST
@@ -1790,6 +1612,7 @@ if test $ol_with_blas != no ; then
 	/* test for blas */
 	return cblas_dgemm();
 			],[have_blas="atlas"
+				have_cblas="yes"
 				LIBS="-lcblas -lf77blas -latlas $FCLIBS $F77LIBS -lm $LIBS"
 				AC_TRY_LINK([
 					/* FIXME: some architectures might use different
@@ -1813,11 +1636,14 @@ if test $ol_with_blas != no ; then
 			LIBS="$try_blas_LIBS $LIBS"
 
 			AC_TRY_LINK([
-	extern int cblas_dgemm(void);
+	#include<cblas.h>
 			],[
 	/* test for blas */
-	return cblas_dgemm();
-			],[have_blas="cblas"],[
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, 1, 1, 1, 1, NULL, 1, NULL, 1, 0., NULL, 1);
+	return 0;
+			],[have_blas="cblas"
+				have_cblas="yes"
+			],[
 				have_blas="no"
 				if test "$ol_with_blas" = "cblas" ; then
 					AC_MSG_ERROR([CBLAS not available])
@@ -1856,6 +1682,9 @@ if test $ol_with_blas != no ; then
 		ol_link_blas="yes"
 		BLAS_LIBS="$try_blas_LIBS"
 		AC_DEFINE(HAVE_BLAS,1,[define if BLAS are available])
+		if test "$have_cblas" == "yes" ; then
+			AC_DEFINE(HAVE_CBLAS,1,[define if CBLAS are available])
+		fi
 	fi
 
 	dnl from now on, add $BLAS_LIBS to libraries that (may) depend on them
@@ -1869,10 +1698,11 @@ dnl Need either Metis or Chaco with MPI and Taucs
 dnl
 dnl First we check for Metis
 ol_link_metis=no
+new_metis_interface=no
 if test "$ol_with_metis" != "no" ; then
 	AC_CHECK_LIB(metis, METIS_PartGraphVKway,
 		[ol_link_metis=yes],[ol_link_metis=no],[-lm])
-	if test "ol_link_metis" != "yes" ; then
+	if test "$ol_link_metis" != "yes" ; then
 		AC_CHECK_LIB(metis, METIS_PartGraphKway,
 			[ol_link_metis=yes],[ol_link_metis=no],[-lm])
 	fi
@@ -1883,6 +1713,12 @@ if test "$ol_with_metis" != "no" ; then
 		if test "$ol_link_metis" != "no" ; then
 			AC_DEFINE(USE_METIS,1,
 				[define if you want to use Metis])
+			AC_TRY_COMPILE([#include "metis.h"], [idx_t i;], [new_metis_interface=yes],[new_metis_interface=no] )
+			if test "$new_metis_interface" != "no" ; then
+				AC_DEFINE(NEW_METIS_INTERFACE,1,[define if you want to use new Metis API])
+			else
+				AC_DEFINE(NEW_METIS_INTERFACE,0,[define if you want to use new Metis API])
+			fi
 		fi
 	fi
 
@@ -1932,8 +1768,11 @@ if test $ol_with_lapack != no ; then
 	AC_MSG_CHECKING([for lapack])
 
 	save_LIBS="$LIBS"
-	try_lapack_LIBS="-llapack"
-	LIBS="$try_lapack_LIBS $BLAS_LIBS $FCLIBS $F77LIBS $save_LIBS"
+
+        dnl Some optimized BLAS libraries like OpenBLAS already contain LAPACK
+        try_lapack_LIBS="$BLAS_LIBS"
+
+        LIBS="$try_lapack_LIBS $save_LIBS"
 	AC_TRY_LINK([
 	extern double dgesvd(double *);
 		],[
@@ -1949,12 +1788,10 @@ if test $ol_with_lapack != no ; then
 		],[have_lapack=yes
 		   have_lapack_=yes],[have_lapack=no
 				      have_lapack_=no])])
-	LIBS=$save_LIBS
 
 	if test "$have_lapack" == "no"; then
-        if test "$have_lapack_" == "no"; then
-            save_LIBS="$LIBS"
-            try_lapack_LIBS="-lopenblas"
+            LIBS=$save_LIBS
+            try_lapack_LIBS="-llapack"
             LIBS="$try_lapack_LIBS $BLAS_LIBS $FCLIBS $F77LIBS $save_LIBS"
             AC_TRY_LINK([
             extern double dgesvd(double *);
@@ -1971,8 +1808,6 @@ if test $ol_with_lapack != no ; then
                 ],[have_lapack=yes
                    have_lapack_=yes],[have_lapack=no
                               have_lapack_=no])])
-            LIBS=$save_LIBS
-        fi
 	fi
 
     if test "$have_lapack" != "no" ; then
@@ -1994,7 +1829,7 @@ if test $ol_with_lapack != no ; then
 			],[
 	double i = 1., o;
 	o = dggev(&i);
-			],[AC_DEFINE(HAVE_DGGEV_,1,[define to use LAPACK's dggev in Eig])])
+                        ],[AC_DEFINE(HAVE_DGGEV,1,[define to use LAPACK's dggev in Eig])])
 	fi
 
 	if test "$have_lapack_" = "yes" ; then
@@ -2003,7 +1838,7 @@ if test $ol_with_lapack != no ; then
 			],[
 	double i = 1., o;
 	o = dgecon_(&i);
-			],[AC_DEFINE(HAVE_DGECON_,1,[define to use LAPACK's dgecon in newton raphson solver])])
+                        ],[AC_DEFINE(HAVE_DGECON,1,[define to use LAPACK's dgecon in newton raphson solver])])
 	elif test "$have_lapack" = "yes" ; then
 		AC_TRY_LINK([
 	extern double dgecon(double *);
@@ -2019,7 +1854,7 @@ if test $ol_with_lapack != no ; then
 			],[
 	double o;
 	o = dlamch_("S");
-			],[AC_DEFINE(HAVE_DLAMCH_,1,[define to use LAPACK's dlamch in dgeequ])])
+                        ],[AC_DEFINE(HAVE_DLAMCH,1,[define to use LAPACK's dlamch in dgeequ])])
 	elif test "$have_lapack" = "yes" ; then
 		AC_TRY_LINK([
 	extern double dlamch(const char *);
@@ -2035,7 +1870,7 @@ if test $ol_with_lapack != no ; then
 			],[
 	double i = 1., o;
 	o = dgetrf_(&i);
-			],[AC_DEFINE(HAVE_DGETRF_,1,[define to use LAPACK's dgetrf in newton raphson solver])])
+                        ],[AC_DEFINE(HAVE_DGETRF,1,[define to use LAPACK's dgetrf in newton raphson solver])])
 	elif test "$have_lapack" = "yes" ; then
 		AC_TRY_LINK([
 	extern double dgetrf(double *);
@@ -2058,7 +1893,25 @@ if test $ol_with_lapack != no ; then
 			],[
 	double i = 1., o;
 	o = dgegv(&i);
-			],[AC_DEFINE(HAVE_DGEGV_,1,[define to use LAPACK's dgegv in Eig])])
+                        ],[AC_DEFINE(HAVE_DGEGV,1,[define to use LAPACK's dgegv in Eig])])
+        fi
+
+        if test "$have_lapack_" = "yes" ; then
+                AC_TRY_LINK([
+        extern double dtrtrs_(double *);
+                        ],[
+        double i = 1., o;
+        o = dtrtrs_(&i);
+                        ],[have_dtrtrs=yes
+                           AC_DEFINE(HAVE_DTRTRS,1,[define to use LAPACK's dtrtrs in SPQR])])
+        elif test "$have_lapack" = "yes" ; then
+                AC_TRY_LINK([
+        extern double dtrtrs(double *);
+                        ],[
+        double i = 1., o;
+        o = dtrtrs(&i);
+                        ],[have_dtrtrs=yes
+                           AC_DEFINE(HAVE_DTRTRS,1,[define to use LAPACK's dtrtrs in SPQR])])
 	fi
 
 	if test "$have_lapack" = "yes" ; then
@@ -2067,8 +1920,23 @@ if test $ol_with_lapack != no ; then
 	else
 		AC_MSG_RESULT([no])
 	fi
+
 	LIBS="$save_LIBS"
 fi
+
+if test $ol_link_lapack = no ; then
+	case "$ol_with_lapack" in
+	yes)
+		AC_MSG_ERROR([Could not locate Lapack])
+		;;
+	auto)
+		AC_MSG_WARN([Lapack not supported])
+		;;
+	*)
+		;;
+	esac
+fi
+
 
 dnl ----------------------------------------------------------------
 dnl
@@ -2465,47 +2333,6 @@ fi
 
 dnl ----------------------------------------------------------------
 dnl
-dnl Check for Meschach
-dnl
-ol_link_meschach=no
-if test $ol_with_meschach != no ; then
-	AC_CHECK_HEADERS(meschach/sparse2.h)
-
-	if test "$ac_cv_header_meschach_sparse2_h" = "yes" ; then
-
-		AC_MSG_CHECKING([for meschach library])
-		try_meschach_LIBS="-lmeschach"
-		save_LIBS=$LIBS
-		LIBS="$LIBS $try_meschach_LIBS"
-		AC_TRY_LINK([
-#include <meschach/sparse2.h>
-],[
-	SPMAT* mat;
-	mat = sp_get(10, 20, 10);
-		],[have_meschach=yes],[have_meschach=no])
-		LIBS=$save_LIBS
-
-		if test $have_meschach != no ; then
-			MESCHACH_LIBS=$try_meschach_LIBS
-			AC_DEFINE(USE_MESCHACH,1,[define if you want to use Meschach])
-			ol_link_meschach=yes
-			AC_MSG_RESULT([yes])
-		else
-			AC_MSG_RESULT([no])
-		fi
-	fi
-
-	if test $ol_link_meschach = no ; then
-		if test $ol_with_meschach != auto ; then
-			AC_MSG_ERROR([Could not locate Meschach])
-		else
-			AC_MSG_WARN([Meschach not supported])
-		fi
-	fi
-fi
-
-dnl ----------------------------------------------------------------
-dnl
 dnl Check for SuperLU
 dnl
 ol_link_superlu=no
@@ -2570,18 +2397,50 @@ fi
 
 dnl ----------------------------------------------------------------
 dnl
-dnl Check for Watson wsmp
+dnl Check for Intel MKL Pardiso
+dnl
+ol_link_pardiso=no
+if test $ol_with_pardiso != no ; then
+        AC_CHECK_HEADER(mkl/mkl_pardiso.h, [have_mkl_pardiso_h=yes], [have_mkl_pardiso_h=no])
+        AC_CHECK_HEADER(mkl/mkl_service.h, [have_mkl_service_h=yes], [have_mkl_service_h=no])
+        
+        if test "$have_mkl_pardiso_h" = "yes" ; then
+	        try_PARDISO_LIBS="-lmkl_gf_lp64 -lmkl_core -lmkl_gnu_thread -lm -lgomp"
+	        AC_CHECK_LIB(mkl_gf_lp64, pardiso_, [have_mkl_pardiso_lib=yes], [have_mkl_pardiso_lib=no], [$try_PARDISO_LIBS])
+                AC_CHECK_LIB(mkl_gf_lp64, pardiso_64_, [have_mkl_pardiso_64_lib=yes], [have_mkl_pardiso_64_lib=no], [$try_PARDISO_LIBS])
+                AC_CHECK_LIB(mkl_gf_lp64, mkl_set_num_threads_local, [have_mkl_set_num_threads_local=yes], [have_mkl_set_num_threads_local=no], [$try_PARDISO_LIBS])
+                
+	        if test "$have_mkl_pardiso_lib" = "yes" -a "$have_mkl_pardiso_64_lib" = "yes"; then
+		        AC_DEFINE(USE_PARDISO, 1, [define to use Intel MKL Pardiso library])
+                        ol_link_pardiso=yes
+		        PARDISO_LIBS="$try_PARDISO_LIBS"
+	        else
+                        if test "$ol_with_pardiso" = "yes" ; then
+			   AC_MSG_ERROR([Intel MKL pardiso library not available])
+		        fi
+	        fi
+
+                if test "$have_mkl_service_h" = "yes" -a "$have_mkl_set_num_threads_local" = "yes" ; then
+                   AC_DEFINE(USE_MKL_SET_NUM_THREADS_LOCAL,1,[define to use mkl_set_num_threads_local])
+                fi
+        fi
+fi
+
+dnl ----------------------------------------------------------------
+dnl
+dnl Check for IBM Watson wsmp
 dnl
 ol_link_wsmp=no
 if test $ol_with_wsmp != no ; then
-	try_wsmp_LIBS="-lwsmp"
-	AC_CHECK_LIB(wsmp,wgsmp_,[have_wsmp=yes],[have_wsmp=no],[$try_wsmp_LIBS])
+	try_wsmp_LIBS="-lwsmp64"
+	AC_CHECK_LIB(wsmp64,wgsmp_,[have_wsmp=yes],[have_wsmp=no],[$try_wsmp_LIBS])
 	if test "$have_wsmp" = "yes" ; then
-		AC_DEFINE(HAVE_WSMP,1,[define to use Watson wsmp library])
+		AC_DEFINE(USE_WSMP,1,[define to use IBM Watson wsmp library])
+                ol_link_wsmp=yes
 		WSMP_LIBS="$try_wsmp_LIBS"
 	else
 		if test "$ol_with_wsmp" = "yes" ; then
-			AC_MSG_ERROR([wsmp library not available])
+			AC_MSG_ERROR([IBM Watson wsmp library not available])
 		fi
 	fi
 fi
@@ -2592,7 +2451,7 @@ dnl Check for Y12
 dnl
 ol_link_y12=no
 if test $ol_with_y12 != no ; then
-	if test "x$F77" = "x" ; then
+	if test "$have_fc_f77" = "no" ; then
 		if test $ol_with_y12 = yes ; then
 			AC_MSG_ERROR([Y12 sparse LU library needs Fortran compiler])
 		fi
@@ -2601,6 +2460,222 @@ if test $ol_with_y12 != no ; then
 		AC_DEFINE(USE_Y12,1,[define to use Y12 sparse LU library])
 		Y12_LIBS="${top_builddir}/libraries/liby12/liby12.la -lm"
 	fi
+fi
+
+dnl ----------------------------------------------------------------
+dnl
+dnl Check for Pastix
+dnl
+ol_link_pastix=no
+if test $ol_with_pastix != no ; then
+        have_pastix="no"
+
+	if test -z "${PASTIX_INC}"; then
+     	        if ! test -z "${PKG_CONFIG}"; then
+     	                PASTIX_INC="`${PKG_CONFIG} --cflags pastix`"
+     	        fi
+	fi
+
+   	if test -z "${PASTIX_LIBS}"; then
+     	        if ! test -z "${PKG_CONFIG}"; then
+                        PASTIX_LIBS="`${PKG_CONFIG} --libs pastix`"
+                else
+                        PASTIX_LIBS="-lpastix -lpastix_kernels -lspm -lhwloc"
+                fi
+        fi
+
+        save_CPPFLAGS="${CPPFLAGS}"
+	CPPFLAGS="${PASTIX_INC} ${CPPFLAGS}"
+
+	AC_CHECK_HEADER([pastix.h])
+
+	if test "${ac_cv_header_pastix_h}" = yes; then
+	        save_LIBS="$LIBS"
+	        LIBS="${PASTIX_LIBS} $save_LIBS -lm"
+
+	        AC_CHECK_FUNCS([pastixInit \
+	                        pastixInitParam \
+			        pastix_task_analyze \
+			        pastix_task_numfact \
+			        pastix_task_solve \
+				pastix_task_refine \
+				pastixFinalize \
+				spmNorm \
+				spmScalMatrix \
+				spmScalVector \
+				spmExit \
+				spmCheckAxb],[have_pastix=yes],[have_pastix=no])
+
+		LIBS="$save_LIBS"
+	fi
+
+	CPPFLAGS="${save_CPPFLAGS}"
+	
+	if test "${have_pastix}" = "yes"; then
+		ol_link_pastix=yes
+	        AC_DEFINE([USE_PASTIX],1,[Define if PaStiX can be used])
+	else
+		PASTIX_LIBS=""
+		PASTIX_INC=""
+	fi
+fi
+
+dnl ----------------------------------------------------------------
+dnl
+dnl Check for QRUPDATE
+dnl
+ol_link_qrupdate=no
+if test $ol_with_qrupdate != no ; then
+   if test $ol_with_suitesparseqr = yes ; then
+      AC_MSG_NOTICE([suitesparseqr needs qrupdate; promoting qrupdate checking from auto to yes])
+      ol_with_qrupdate=yes
+   fi
+   AC_MSG_CHECKING([for qrupdate library])
+   try_qrupdate_LIBS="-lqrupdate"
+   save_LIBS="$LIBS"
+   have_qrupdate="no"
+   LIBS="$try_qrupdate_LIBS $save_LIBS -lm"
+   AC_TRY_LINK([
+        extern int dqr1up(double*);
+   ],[
+        double i = 1;
+        int o;
+        o = dqr1up(&i);
+   ],[have_qrupdate="yes"])
+
+   if test "$have_qrupdate" = "no"; then
+      AC_TRY_LINK([
+        extern int dqr1up_(double*);
+      ],[
+        double i = 1;
+        int o;
+        o = dqr1up_(&i);
+      ],[have_qrupdate="yes"])
+   fi
+
+   LIBS="$save_LIBS"
+
+   if test "$have_qrupdate" = "yes"; then
+      AC_MSG_RESULT([yes])
+      ol_link_qrupdate=yes
+      QRUPDATE_LIBS="$try_qrupdate_LIBS"
+      AC_DEFINE(USE_QRUPDATE,1,[define if you want to use QRUPDATE])
+   else
+      AC_MSG_RESULT([no])
+   fi
+fi
+
+dnl ----------------------------------------------------------------
+dnl
+dnl Check for SuiteSparseQr
+dnl
+ol_link_suitesparseqr=no
+if test $ol_with_suitesparseqr != no ; then
+        AC_LANG_CPLUSPLUS
+        AC_CHECK_HEADERS(SuiteSparseQR.hpp)
+
+        if test "$ac_cv_header_SuiteSparseQR_hpp" = "yes" ; then
+                AC_MSG_CHECKING([for SuiteSparseQR library])
+                try_suitesparseqr_LIBS="-lspqr -lcholmod"
+                save_LIBS="$LIBS"
+                have_suitesparseqr="no"
+                LIBS="$try_suitesparseqr_LIBS $save_LIBS -lm"
+                AC_TRY_LINK([
+                        #include <SuiteSparseQR.hpp>
+                        ],[
+                        cholmod_sparse *A, *Q, *R;
+                        SuiteSparse_long *E;
+                        cholmod_common oCommon;
+                        cholmod_l_start(&oCommon);
+                        A = cholmod_l_speye(100, 100, CHOLMOD_REAL, &oCommon);
+                        SuiteSparseQR<double>(SPQR_ORDERING_DEFAULT,
+                                              SPQR_NO_TOL,
+                                              A->ncol,
+                                              A,
+                                              &Q,
+                                              &R,
+                                              &E,
+                                              &oCommon);
+                        cholmod_l_free_sparse(&A, &oCommon);
+                        cholmod_l_free_sparse(&Q, &oCommon);
+                        cholmod_l_free_sparse(&R, &oCommon);
+                        cholmod_l_free(A->nrow, sizeof(*E), E, &oCommon);
+                        cholmod_l_finish(&oCommon);
+                ],[have_suitesparseqr="yes"])
+
+                LIBS="$save_LIBS"
+
+                if test "$have_suitesparseqr" = "yes"; then
+                   AC_MSG_RESULT([yes])
+
+                   if test "$have_qrupdate" = "yes" && test "$have_dtrtrs" = "yes" ; then
+                     ol_link_suitesparseqr=yes
+                     SUITESPARSEQR_LIBS="$try_suitesparseqr_LIBS"
+                     AC_DEFINE(USE_SUITESPARSE_QR,1,[define if you want to use SuiteSparseQR])
+                   fi
+                else
+                   AC_MSG_RESULT([no])
+                fi
+        fi
+fi
+
+dnl ----------------------------------------------------------------
+dnl
+dnl Check for STRUMPACK
+dnl
+ol_link_strumpack=no
+if test $ol_with_strumpack != no ; then
+        AC_LANG_CPLUSPLUS
+        AC_CHECK_HEADERS(StrumpackSparseSolver.hpp)
+
+        if test "$ac_cv_header_StrumpackSparseSolver_hpp" = "yes" ; then
+                AC_MSG_CHECKING([for STRUMPACK library])
+                try_strumpack_LIBS="-lstrumpack"
+                save_LIBS="$LIBS"
+                have_strumpack="no"
+                LIBS="$try_strumpack_LIBS $save_LIBS"
+                AC_TRY_LINK([
+                        #include <StrumpackSparseSolver.hpp>
+			 ],[
+			   double Ax[] = {1., 2., 3., 4.};
+  			   int Ar[] = {0, 1, 2, 3, 4};
+			   int Ac[] = {0, 1, 2, 3};
+			   double x[4];
+			   double b[4];
+			   using namespace strumpack;
+			   StrumpackSparseSolver<double, int> sp;							 
+                           sp.options().set_compression(CompressionType::HSS);
+	                   sp.options().set_rel_tol(1e-8);
+	                   sp.options().set_abs_tol(1e-8);
+	                   sp.options().set_gmres_restart(10);     
+			   sp.set_csr_matrix(4, Ar, Ac, Ax);
+			   sp.reorder();
+			   sp.factor();
+			   sp.solve(b, x);
+                ],[have_strumpack="yes"])
+
+                LIBS="$save_LIBS"
+
+                if test "$have_strumpack" = "yes"; then
+                   AC_MSG_RESULT([yes])
+                   ol_link_strumpack=yes
+                   STRUMPACK_LIBS="$try_strumpack_LIBS"
+                   AC_DEFINE(USE_STRUMPACK,1,[define if you want to use STRUMPACK])
+                else
+                   AC_MSG_RESULT([no])
+                fi
+        fi
+fi
+
+AC_LANG_C
+if test "$have_fc_f77" = "no" ; then
+   	if test $ol_with_y12 = yes ; then
+           	AC_MSG_ERROR([Y12 sparse LU library needs Fortran compiler])
+	fi
+else
+	ol_link_y12=yes
+	AC_DEFINE(USE_Y12,1,[define to use Y12 sparse LU library])
+	Y12_LIBS="${top_builddir}/libraries/liby12/liby12.la -lm"
 fi
 
 dnl ----------------------------------------------------------------
@@ -2624,6 +2699,231 @@ if test $ol_with_harwell != no ; then
 			AC_MSG_WARN([Harwell lib (-lhsl) not supported])
 		fi
 	fi
+fi
+
+dnl ----------------------------------------------------------------
+dnl
+dnl Check for Trilinos
+dnl
+ol_link_trilinos=no
+if test $ol_with_trilinos != no ; then
+        have_trilinos=no
+        
+        AC_LANG_CPLUSPLUS
+        AC_CHECK_HEADERS([Epetra_Comm.h Epetra_SerialComm.h Epetra_Vector.h Epetra_Operator.h Epetra_CrsMatrix.h AztecOO.h Amesos.h Amesos_BaseSolver.h NOX.H NOX_Epetra.H NOX_Solver_Generic.H NOX_Epetra_Vector.H NOX_Epetra_Interface_Required.H NOX_Epetra_Interface_Jacobian.H NOX_Epetra_Interface_Preconditioner.H NOX_Epetra_LinearSystem_AztecOO.H],[have_trilinos_h=yes],[have_trilinos_h=no])
+        
+        AC_MSG_CHECKING([for Trilinos library])
+        if test "$have_trilinos_h" = "yes" ; then
+                have_trilinos="no"
+                for trilinos_lib_config in prefix_none_without_mpi prefix_trilinos_with_mpi prefix_user ; do
+                    if test $have_trilinos = no; then
+                       case $trilinos_lib_config in
+                         prefix_none_without_mpi)
+                           try_trilinos_LIBS="-llocathyra -llocaepetra -llocalapack -lloca -lnoxepetra -lnoxlapack -lnox -lteko -lstratimikos -lstratimikosbelos -lstratimikosamesos2 -lstratimikosaztecoo -lstratimikosamesos -lstratimikosml -lstratimikosifpack -lifpack2-adapters -lifpack2 -lanasazitpetra -lModeLaplace -lanasaziepetra -lanasazi -lamesos2 -lshylu_nodetacho -lshylu_nodehts -lbelosxpetra -lbelostpetra -lbelosepetra -lbelos -lml -lifpack -lzoltan2 -lamesos -lgaleri-xpetra -lgaleri-epetra -laztecoo -lisorropia -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltrilinosss -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lzoltan -lsimpi -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lgtest -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteko -lstratimikos -lstratimikosbelos -lstratimikosamesos2 -lstratimikosaztecoo -lstratimikosamesos -lstratimikosml -lstratimikosifpack -lifpack2-adapters -lifpack2 -lanasazitpetra -lModeLaplace -lanasaziepetra -lanasazi -lamesos2 -lshylu_nodetacho -lshylu_nodehts -lbelosxpetra -lbelostpetra -lbelosepetra -lbelos -lml -lifpack -lzoltan2 -lamesos -lgaleri-xpetra -lgaleri-epetra -laztecoo -lisorropia -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltrilinosss -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lzoltan -lsimpi -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lgtest -lstratimikos -lstratimikosbelos -lstratimikosamesos2 -lstratimikosaztecoo -lstratimikosamesos -lstratimikosml -lstratimikosifpack -lamesos2 -lshylu_nodetacho -lbelosxpetra -lbelostpetra -lbelosepetra -lbelos -lml -lifpack -lamesos -lgaleri-xpetra -lgaleri-epetra -laztecoo -lisorropia -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltrilinosss -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lzoltan -lsimpi -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lgtest -lifpack2-adapters -lifpack2 -lamesos2 -lshylu_nodetacho -lshylu_nodehts -lbelosxpetra -lbelostpetra -lbelosepetra -lbelos -lzoltan2 -laztecoo -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltrilinosss -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lzoltan -lsimpi -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lgtest -lanasazitpetra -lModeLaplace -lanasaziepetra -lanasazi -lbelosxpetra -lbelostpetra -lbelosepetra -lbelos -laztecoo -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -laztecoo -ltriutils -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lamesos2 -lshylu_nodetacho -lepetraext -ltrilinosss -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lepetra -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lgtest -lshylu_nodetacho -ltrilinosss -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lgtest -lshylu_nodehts -lkokkoskernels -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lbelosxpetra -lbelostpetra -lbelosepetra -lbelos -laztecoo -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lml -lifpack -lamesos -lgaleri-xpetra -lgaleri-epetra -laztecoo -lisorropia -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltrilinosss -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lzoltan -lsimpi -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lifpack -lamesos -laztecoo -lepetraext -ltrilinosss -ltriutils -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lzoltan2 -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lzoltan -lsimpi -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lpamgen_extras -lpamgen -lamesos -lepetraext -ltrilinosss -ltriutils -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lgaleri-xpetra -lgaleri-epetra -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -laztecoo -ltriutils -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lisorropia -lepetraext -ltriutils -lzoltan -lsimpi -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lxpetra-sup -lxpetra -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lthyratpetra -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -ltriutils -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lthyratpetra -lthyraepetra -lthyracore -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -lepetra -lrtop -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lthyraepetraext -lthyraepetra -lthyracore -lepetraext -ltriutils -lepetra -lrtop -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lthyraepetra -lthyracore -lepetra -lrtop -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lthyracore -lrtop -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lepetraext -ltriutils -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -ltrilinosss -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -lepetra -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -ltpetraext -ltpetrainout -ltpetra -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -lepetra -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lkokkostsqr -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -lkokkoskernels -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraclassic -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -ltriutils -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore  -lzoltan -lsimpi -lepetra -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lrtop -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lkokkoskernels -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosremainder -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteuchoskokkoscompat -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteuchosremainder -lteuchoscore -lkokkoscore -lteuchosnumerics -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteuchoscomm -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteuchosparameterlist -lteuchosparser -lteuchoscore -lkokkoscore -lteuchosparser -lteuchoscore -lkokkoscore -lteuchoscore -lkokkoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lkokkoscontainers -lkokkoscore -lkokkoscore -lgtest -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lumfpack -lamd -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lpthread -ldl -lpthread -ldl -lpthread -ldl -lopenblas -lopenblas -lpthread -ldl -lpthread -ldl -lpthread -ldl -lpthread -ldl -lpthread -ldl -lpthread -ldl -lpthread -ldl -lpthread -ldl -lpthread -lm"
+                           ;;
+                         prefix_trilinos_with_mpi)
+                           try_trilinos_LIBS="-ltrilinos_pike-blackbox -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_pike-blackbox -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_pike-blackbox -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_trilinoscouplings -ltrilinos_stokhos_muelu -ltrilinos_stokhos_ifpack2 -ltrilinos_stokhos_amesos2 -ltrilinos_stokhos_tpetra -ltrilinos_stokhos_sacado -ltrilinos_stokhos -ltrilinos_muelu-adapters -ltrilinos_muelu-interface -ltrilinos_muelu -ltrilinos_locathyra -ltrilinos_locaepetra -ltrilinos_localapack -ltrilinos_loca -ltrilinos_noxepetra -ltrilinos_noxlapack -ltrilinos_nox -ltrilinos_intrepid2 -ltrilinos_teko -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_shards -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_sacado -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_piro -ltrilinos_rol -ltrilinos_stokhos_muelu -ltrilinos_stokhos_ifpack2 -ltrilinos_stokhos_amesos2 -ltrilinos_stokhos_tpetra -ltrilinos_stokhos_sacado -ltrilinos_stokhos -ltrilinos_rythmos -ltrilinos_muelu-adapters -ltrilinos_muelu-interface -ltrilinos_muelu -ltrilinos_locathyra -ltrilinos_locaepetra -ltrilinos_localapack -ltrilinos_loca -ltrilinos_noxepetra -ltrilinos_noxlapack -ltrilinos_nox -ltrilinos_intrepid2 -ltrilinos_intrepid -ltrilinos_teko -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_optipack -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_globipack -ltrilinos_shards -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_sacado -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_rol -ltrilinos_muelu-adapters -ltrilinos_muelu-interface -ltrilinos_muelu -ltrilinos_intrepid2 -ltrilinos_intrepid -ltrilinos_teko -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_shards -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_sacado -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_stokhos_muelu -ltrilinos_stokhos_ifpack2 -ltrilinos_stokhos_amesos2 -ltrilinos_stokhos_tpetra -ltrilinos_stokhos_sacado -ltrilinos_stokhos -ltrilinos_muelu-adapters -ltrilinos_muelu-interface -ltrilinos_muelu -ltrilinos_locathyra -ltrilinos_locaepetra -ltrilinos_localapack -ltrilinos_loca -ltrilinos_noxepetra -ltrilinos_noxlapack -ltrilinos_nox -ltrilinos_intrepid2 -ltrilinos_teko -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_shards -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_sacado -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_rythmos -ltrilinos_thyracore -ltrilinos_rtop -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_shylu_ddcommon -ltrilinos_shylu_ddfrosch -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_shylu_ddcommon -ltrilinos_shylu_ddfrosch -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_shylu_ddcommon -ltrilinos_shylu_ddfrosch -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_muelu-adapters -ltrilinos_muelu-interface -ltrilinos_muelu -ltrilinos_intrepid2 -ltrilinos_teko -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_shards -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_sacado -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_moertel -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_locathyra -ltrilinos_locaepetra -ltrilinos_localapack -ltrilinos_loca -ltrilinos_noxepetra -ltrilinos_noxlapack -ltrilinos_nox -ltrilinos_teko -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_phalanx -ltrilinos_sacado -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_intrepid2 -ltrilinos_shards -ltrilinos_sacado -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_intrepid -ltrilinos_shards -ltrilinos_sacado -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teko -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_zoltan2 -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_stratimikos -ltrilinos_stratimikosbelos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosamesos -ltrilinos_stratimikosml -ltrilinos_stratimikosifpack -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_ifpack2-adapters -ltrilinos_ifpack2 -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_zoltan2 -ltrilinos_aztecoo -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_anasazitpetra -ltrilinos_ModeLaplace -ltrilinos_anasaziepetra -ltrilinos_anasazi -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_aztecoo -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_komplex -ltrilinos_aztecoo -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_amesos2 -ltrilinos_shylu_nodetacho -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_shylu_nodetacho -ltrilinos_shylu_nodehts -ltrilinos_trilinosss -ltrilinos_kokkoskernels -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_shylu_nodetacho -ltrilinos_trilinosss -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_shylu_nodehts -ltrilinos_kokkoskernels -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_belosxpetra -ltrilinos_belostpetra -ltrilinos_belosepetra -ltrilinos_belos -ltrilinos_aztecoo -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_ml -ltrilinos_ifpack -ltrilinos_amesos -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_aztecoo -ltrilinos_isorropia -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_ifpack -ltrilinos_amesos -ltrilinos_aztecoo -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_zoltan2 -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_pamgen_extras -ltrilinos_pamgen -ltrilinos_amesos -ltrilinos_epetraext -ltrilinos_trilinosss -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_galeri-xpetra -ltrilinos_galeri-epetra -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_aztecoo -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_dpliris -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_isorropia -ltrilinos_epetraext -ltrilinos_triutils -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_optipack -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_globipack -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_xpetra-sup -ltrilinos_xpetra -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_thyratpetra -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_thyratpetra -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_thyraepetraext -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetraext -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_thyraepetra -ltrilinos_thyracore -ltrilinos_epetra -ltrilinos_rtop -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_thyracore -ltrilinos_rtop -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_epetraext -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_trilinosss -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_epetra -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_tpetra -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_epetra -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_kokkostsqr -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_kokkoskernels -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraclassic -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_triutils -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_globipack -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_shards -ltrilinos_zoltan -ltrilinos_epetra -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_sacado -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_rtop -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_kokkoskernels -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosremainder -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchosremainder -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchosnumerics -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchoscomm -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchosparser -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_teuchoscore -ltrilinos_kokkoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_kokkoscore -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -llapack -lblas -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -llapack -lblas -ldl -llapack -lblas -ldl -llapack -lblas -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -llapack -lblas -ldl -lhdf5 -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ldl -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ldl -llapack -lblas -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -llapack -lblas -ldl -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ltbb -ldl -lsmumps -ldmumps -lcmumps -lzmumps -lmumps_common -lpord -lpord -lmumps_common -lhdf5 -lz -llapack -lblas -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -llapack -lblas -ldl -llapack -lblas -ldl -lhdf5 -lz -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -llapack -lblas -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -lhdf5 -lz -llapack -lblas -ltbb -ldl -llapack -lblas -ltbb -ldl -lhdf5 -lz -llapack -lblas -ldl -llapack -lblas -ldl -llapack -lblas -ldl -lhdf5 -lz -llapack -lblas -ldl -llapack -lblas -ltbb -ldl -llapack -lblas -ltbb -ldl -llapack -lblas -ltbb -ldl -llapack -lblas -ldl -llapack -lblas -ldl -llapack -lblas -lz -lptscotch -lptscotcherr -lscotch -lscotcherr -ldl -llapack -lblas -ldl -llapack -lblas -ldl -llapack -lblas -ldl -llapack -lblas -ldl -llapack -lblas -ldl -ldl -ldl -ldl -llapack -lblas -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm -lmpi -lmpi++"
+                           ;;
+                         *)
+                           trilinos_LIBS=""
+                           ;;
+                       esac
+                       save_LIBS="$LIBS"
+                       LIBS="$try_trilinos_LIBS $save_LIBS"
+                       AC_TRY_LINK([
+                                #undef HAVE_BLAS
+                                #undef HAVE_BOOL
+                                #include <NOX.H>
+                                #include <NOX_Epetra.H>
+                                #include <NOX_Solver_Generic.H>
+                                #include <NOX_Epetra_Vector.H>
+                                #include <NOX_Epetra_Interface_Required.H>
+                                #include <NOX_Epetra_Interface_Jacobian.H>
+                                #include <NOX_Epetra_Interface_Preconditioner.H>
+                                #include <NOX_Epetra_LinearSystem_AztecOO.H>
+                                #include <Epetra_Comm.h>
+                                #include <Epetra_SerialComm.h>                        
+                                #include <Epetra_Map.h>
+                                #include <Epetra_Vector.h>
+                                #include <Epetra_Operator.h>
+                                #include <Epetra_RowMatrix.h>
+                                #include <Epetra_CrsMatrix.h>
+                                #include <Epetra_LinearProblem.h>
+                                #include <AztecOO.h>
+                                #include <Amesos.h>
+                                #include <Amesos_BaseSolver.h>
+                                struct NonlinearProblem: NOX::Epetra::Interface::Required, NOX::Epetra::Interface::Jacobian, NOX::Epetra::Interface::Preconditioner {
+                                       virtual bool computeF(const Epetra_Vector &x, Epetra_Vector &f, const FillType fillFlag) override {
+                                               return true;
+                                       }
+
+                                       virtual bool computeJacobian(const Epetra_Vector& x, Epetra_Operator&) override {
+                                               return true;
+                                       }
+
+                                       virtual bool computePreconditioner(const Epetra_Vector &x, Epetra_Operator &M, Teuchos::ParameterList *precParams) override {
+                                               return true;
+                                       }
+                                };
+			],[
+                                int N = 100;
+
+                                Epetra_SerialComm Comm;
+                                Epetra_Map Map(N, 0, Comm);
+                                Teuchos::RCP<Epetra_CrsMatrix> crsMatrix{new Epetra_CrsMatrix(Copy, Map, 3, true)};
+                                crsMatrix->NormOne();
+                                crsMatrix->NormInf();
+                                crsMatrix->FillComplete();
+                                Teuchos::RCP<NonlinearProblem> noxProblem(new NonlinearProblem);
+                                Teuchos::RCP<NOX::Epetra::Interface::Required> noxInterface{noxProblem};
+                                Teuchos::RCP<Epetra_Vector> soln{new Epetra_Vector(Map, true)};
+                                soln->NormInf(nullptr);
+                                NOX::Epetra::Vector noxSol(soln, NOX::Epetra::Vector::CreateView);
+                                Teuchos::RCP<Teuchos::ParameterList> noxParam{new Teuchos::ParameterList};
+                                Teuchos::ParameterList printParam, lineSearch, linearSolver;
+                                Teuchos::RCP<NOX::Epetra::Interface::Jacobian> intJacobian(noxProblem);
+                                Teuchos::RCP<NOX::Epetra::Interface::Preconditioner> intPrecond(noxProblem);
+                                Teuchos::RCP<Epetra_Operator> operPrecond{new Epetra_CrsMatrix(Copy, Map, 3, true)};
+                                Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linearSystem{new NOX::Epetra::LinearSystemAztecOO(printParam,
+                                                                                                                                 linearSolver,
+                                                                                                                                 intJacobian,
+                                                                                                                                 crsMatrix,
+                                                                                                                                 intPrecond,
+                                                                                                                                 operPrecond,
+                                                                                                                                 noxSol)};
+
+                                Teuchos::RCP<NOX::Epetra::Group> grpPtr{new NOX::Epetra::Group(printParam,
+                                                                                               noxInterface,
+                                                                                               noxSol,
+                                                                                               linearSystem)};
+
+                                Teuchos::RCP<NOX::StatusTest::Combo> converged =
+                                Teuchos::rcp(new NOX::StatusTest::Combo(NOX::StatusTest::Combo::AND));
+                                Teuchos::RCP<NOX::StatusTest::NormF> absresid =
+                                Teuchos::rcp(new NOX::StatusTest::NormF(1.0e-6));
+                                converged->addStatusTest(absresid);
+                                Teuchos::RCP<NOX::StatusTest::MaxIters> maxiters =
+                                Teuchos::rcp(new NOX::StatusTest::MaxIters(100));
+                                Teuchos::RCP<NOX::StatusTest::Combo> combo =
+                                Teuchos::rcp(new NOX::StatusTest::Combo(NOX::StatusTest::Combo::OR));
+                                combo->addStatusTest(converged);
+                                combo->addStatusTest(maxiters);
+
+                                Teuchos::RCP<NOX::Solver::Generic> nonlinSolver =  NOX::Solver::buildSolver(grpPtr, combo, noxParam);
+                                NOX::StatusTest::StatusType solvStatus = nonlinSolver->solve();
+                       ],[have_trilinos="yes"])
+
+                       LIBS="$save_LIBS"
+                    fi
+                done
+        fi
+        
+        if test "$have_trilinos" = "yes"; then
+           AC_MSG_RESULT([yes])
+           ol_link_trilinos=yes
+           TRILINOS_LIBS="$try_trilinos_LIBS"
+           AC_DEFINE(USE_TRILINOS,1,[define if you want to use Trilinos])
+        else
+           if test "$ol_with_trilinos" = "yes" ; then
+               AC_MSG_ERROR([Could not locate trilinos])
+           fi                
+           AC_MSG_RESULT([no])
+        fi        
+        AC_LANG_C        
+fi
+
+dnl ----------------------------------------------------------------
+dnl
+dnl Check for Siconos
+dnl
+ol_link_siconos=no
+if test $ol_with_siconos != no ; then
+        have_siconos=no
+
+        AC_LANG_CPLUSPLUS
+        AC_CHECK_HEADERS([numerics/NumericsMatrix.h numerics/SolverOptions.h numerics/MCP_cst.h numerics/NumericsVerbose.h numerics/NonSmoothDrivers.h numerics/MixedComplementarityProblem.h numerics/Newton_methods.h],[have_siconos_h=yes],[have_siconos_h=no])
+
+        AC_MSG_CHECKING([for Siconos library])
+        if test "$have_siconos_h" = "yes" ; then
+                have_siconos="no"
+                try_siconos_LIBS="-lsiconos_numerics"
+                save_LIBS="$LIBS"
+                LIBS="$try_siconos_LIBS $save_LIBS"
+                AC_TRY_LINK([
+                             #include <math.h>
+                             #include <numerics/SolverOptions.h>
+                             #include <numerics/MCP_cst.h>
+                             #include <numerics/NumericsVerbose.h>
+                             #include <numerics/NumericsMatrix.h>
+                             #include <numerics/NonSmoothDrivers.h>
+                             #include <numerics/MixedComplementarityProblem.h>
+                             #include <numerics/Newton_methods.h>
+
+                             const double A[4][4] = {{0.6463, 0.5290, 0.9212, 0.7460},
+                                                     {0.5290, 0.5324, 0.7520, 0.8531},
+                                                     {0.9212, 0.7520, 1.6135, 1.2677},
+                                                     {0.7460, 0.8531, 1.2677, 2.2271}};
+
+                             const double b[4] = {1., 2., 1., 2.};
+
+                             void compute_Fmcp(void *env, int n, double *z, double *F)
+                             {
+                                for (int i = 0; i < 4; ++i) {
+                                    F[i] = -b[i] + sin(z[i]);
+
+                                    for (int j = 0; j < 4; ++j) {
+                                        F[i] += A[i][j] * z[j];
+                                    }
+                                }
+                             }
+
+                             void compute_nabla_Fmcp(void *env, int n, double *z, NumericsMatrix *F)
+                             {
+
+                             for (int i = 0; i < 4; ++i) {
+                                 for (int j = 0; j < 4; ++j) {
+                                          NM_entry(F, i, j, A[i][j] + (i == j) * cos(z[i]));
+                                     }
+                                 }
+                             }
+                        ],[
+                             MixedComplementarityProblem* pMCP = mixedComplementarityProblem_new();
+                             SolverOptions* pOptions = solver_options_create(SICONOS_MCP_NEWTON_MIN_FBLSA);
+
+                             numerics_set_verbose(1);
+                             pMCP->n1 = 2;
+                             pMCP->n2 = 2;
+                             pMCP->compute_Fmcp = &compute_Fmcp;
+                             pMCP->compute_nabla_Fmcp = &compute_nabla_Fmcp;
+                             pMCP->nabla_Fmcp = NM_create(NM_DENSE, pMCP->n1 + pMCP->n2, pMCP->n1 + pMCP->n2);
+
+                             pOptions->iparam[SICONOS_IPARAM_MAX_ITER] = 10000;
+                             pOptions->dparam[SICONOS_DPARAM_TOL] = 1e-6;
+
+                             double w[4] = {0.}, z[4];
+
+                             mcp_driver(pMCP, z, w, pOptions);
+
+                             mixedComplementarityProblem_free(pMCP);
+                             solver_options_delete(pOptions);
+                             free(pOptions);
+                       ],[have_siconos="yes"])
+
+                       LIBS="$save_LIBS"
+        fi
+
+        if test "$have_siconos" = "yes"; then
+           AC_MSG_RESULT([yes])
+           ol_link_siconos=yes
+           SICONOS_LIBS="$try_siconos_LIBS"
+           AC_DEFINE(USE_SICONOS,1,[define if you want to use Siconos])
+        else
+           if test "$ol_with_siconos" = "yes" ; then
+               AC_MSG_ERROR([Could not locate Siconos])
+           fi
+           AC_MSG_RESULT([no])
+        fi
+        AC_LANG_C
 fi
 
 dnl ----------------------------------------------------------------
@@ -2901,6 +3201,7 @@ if test $ol_with_mpi != no ; then
 	AC_LANG_C
 
 	have_mpi_cxx_header=no
+ 	try_mpi_LIBS=
 	if test $ac_cv_header_mpipp_h = yes ; then
 		dnl mpich
 		have_mpi_cxx_header=yes
@@ -2914,13 +3215,12 @@ if test $ol_with_mpi != no ; then
 		dnl openmpi
 		have_mpi_cxx_header=yes
 		mpi_cxx_header="mpicxx.h"
-		try_mpi_LIBS="-lmpi -lmpi_cxx"
+		try_mpi_LIBS="-lmpi -lmpi++"
 	fi
 
 	if test $ac_cv_header_mpi_h = yes -a $have_mpi_cxx_header = yes ; then
 		AC_MSG_CHECKING([for mpi libraries])
 		AC_LANG_CPLUSPLUS
-		try_mpi_LIBS=
 		save_LIBS=$LIBS
  		AC_TRY_LINK([
 #include <$mpi_cxx_header>
@@ -3043,7 +3343,7 @@ dnl ----------------------------------------------------------------
 dnl
 dnl Checks id DeadBeat can be built
 dnl
-if test $ol_link_lapack != no -o $ol_link_meschach != no ; then
+if test $ol_link_lapack != no ; then
 	AC_DEFINE(USE_DBC,1,[define if you want to use GPC/DeadBeat control])
 else
 	dnl Required for GPC/Deadbeat (should be able to work it 'round...)
@@ -3067,10 +3367,10 @@ if test $ol_with_ginac != no ; then
 		GINACLIB_CPPFLAGS=`ginac-config --cppflags`
 		have_ginac=yes
 	else
-		pkg-config ginac
+		$PKG_CONFIG ginac
 		if test $? = 0; then
-			GINACLIB_LIBS=`pkg-config --libs ginac`
-			GINACLIB_CPPFLAGS=`pkg-config --cflags ginac`
+			GINACLIB_LIBS=`$PKG_CONFIG --libs ginac`
+			GINACLIB_CPPFLAGS=`$PKG_CONFIG --cflags ginac`
 			have_ginac=yes
 		fi
 	fi
@@ -3211,6 +3511,12 @@ dnl otherwise all the tests during configure would fail
 
 LDFLAGS="$LDFLAGS $EXPORT_DYNAMIC_FLAG_SPEC"
 
+if test "$ol_enable_Werror" != no ; then
+	CFLAGS="$CFLAGS -Werror -Wno-error=cpp -Wno-error=format-truncation"
+	CXXFLAGS="$CXXFLAGS -Werror -Wno-error=cpp -Wno-error=format-truncation"
+	FFLAGS="$FFLAGS"
+fi
+
 
 dnl ----------------------------------------------------------------
 dnl TODO: add a check about whether a fortran (F77, F95) compiler is
@@ -3227,9 +3533,16 @@ AC_SUBST(UMFPACK_LIBS)
 AC_SUBST(KLU_LIBS)
 AC_SUBST(Y12_LIBS)
 AC_SUBST(SUPERLU_LIBS)
+AC_SUBST(PARDISO_LIBS)
 AC_SUBST(WSMP_LIBS)
 AC_SUBST(HARWELL_LIBS)
-AC_SUBST(MESCHACH_LIBS)
+AC_SUBST(PASTIX_INC)
+AC_SUBST(PASTIX_LIBS)
+AC_SUBST(QRUPDATE_LIBS)
+AC_SUBST(SUITESPARSEQR_LIBS)
+AC_SUBST(STRUMPACK_LIBS)
+AC_SUBST(TRILINOS_LIBS)
+AC_SUBST(SICONOS_LIBS)
 AC_SUBST(LAPACK_LIBS)
 AC_SUBST(BLAS_LIBS)
 AC_SUBST(TAUCS_LIBS)
@@ -3247,6 +3560,8 @@ AC_SUBST(BULLET_LIBS)
 AC_SUBST(PYTHON_NUMPY_HEADERS)
 AC_SUBST(OCTAVE_LIBS)
 AC_SUBST(OCTAVE_INCLUDE)
+AC_SUBST(OCTAVE_MKOCTFILE)
+AC_SUBST(OCTAVE_CLI)
 AC_SUBST(MODULES_DIRS)
 AC_SUBST(MODULE_LOADPATH)
 AC_SUBST(wl)
@@ -3265,19 +3580,31 @@ AM_CONDITIONAL(USE_CHACO,[test "$ol_link_chaco" = yes])
 AM_CONDITIONAL(USE_GINAC,[test "$ol_link_ginac" = yes])
 AM_CONDITIONAL(USE_JDQZ,[test "$ol_link_jdqz" = yes])
 AM_CONDITIONAL(USE_METIS,[test "$ol_link_metis" = yes])
+AM_CONDITIONAL(NEW_METIS_INTERFACE,[test "$new_metis_interface" = yes])
+AM_CONDITIONAL(USE_NETCDF,[test "$have_libnetcdf4" = yes])
 AM_CONDITIONAL(USE_OCTAVE,[test "$use_octave" = yes])
+AM_CONDITIONAL(USE_OCTAVE_UTILS,[test "$use_octave_utils" = yes])
 AM_CONDITIONAL(USE_PYTHON,[test "$use_python" = yes])
 AM_CONDITIONAL(USE_RTAI,[test "$use_rtai" = yes])
 AM_CONDITIONAL(USE_SCHUR,[test "$use_schur" = yes])
 AM_CONDITIONAL(USE_SOCKET,[test "$use_socket" = yes])
 AM_CONDITIONAL(USE_ANN,[test "$ol_link_ann" = yes])
-AM_CONDITIONAL(USE_AUTODIFF,[test "$ol_enable_autodiff" = yes])
+AM_CONDITIONAL([USE_PASTIX],[test "$ol_link_pastix" = "yes"])
 
 AM_CONDITIONAL(FOOL_LIBTOOL,[test "$fool_libtool" = yes])
+
+AM_CONDITIONAL(USE_FORTRAN,[test "$have_fc_f77" = yes])
 AM_CONDITIONAL(BUILD_Y12,[test "$ol_link_y12" = yes])
+AM_CONDITIONAL(BUILD_AEROD2_F,[test "$have_fc_f77" = yes])
+
+AM_CONDITIONAL(HAVE_FORTRAN,[test "$have_fc_f77" = yes])
 
 AM_CONDITIONAL(BUILD_STATIC_MODULES,[test "$build_static_modules" = yes])
 AM_CONDITIONAL(BUILD_CHARM,[test "$build_charm" = yes])
+
+AM_CONDITIONAL(HAVE_TERMIOS,[test "$have_termios" = yes])
+AM_CONDITIONAL(HAVE_GETPASS,[test "$have_getpass" = yes])
+AM_CONDITIONAL(INSTALL_TEST_PROGRAMS,[test "$ol_enable_install_test_progs" = yes])
 
 dnl ----------------------------------------------------------------
 dnl

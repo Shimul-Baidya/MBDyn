@@ -6,11 +6,24 @@ include $(top_srcdir)/build/top.mk
 export LTCXXCOMPILE = @LIBTOOL@ --tag=CXX --mode=compile @CXX@ @DEFS@ \
 	-I. -I@srcdir@ \
 	-I../../include \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/libraries/libmbutil \
+	-I$(top_srcdir)/libraries/libmbmath \
+	-I$(top_srcdir)/libraries/libmbwrap \
+	-I$(top_srcdir)/libraries/libobjs \
+	-I$(top_srcdir)/libraries/libmbc \
+	-I$(top_srcdir)/mbdyn \
+	-I$(top_srcdir)/mbdyn/base \
+	-I$(top_srcdir)/mbdyn/struct \
+	-I$(top_srcdir)/mbdyn/aero \
+	-I$(top_srcdir)/mbdyn/elec \
+	-I$(top_srcdir)/mbdyn/hydr \
 	-I../$(top_srcdir)/include \
 	-I../$(top_srcdir)/libraries/libmbutil \
 	-I../$(top_srcdir)/libraries/libmbmath \
 	-I../$(top_srcdir)/libraries/libmbwrap \
 	-I../$(top_srcdir)/libraries/libobjs \
+	-I../$(top_srcdir)/libraries/libmbc \
 	-I../$(top_srcdir)/mbdyn \
 	-I../$(top_srcdir)/mbdyn/base \
 	-I../$(top_srcdir)/mbdyn/struct \
@@ -25,7 +38,20 @@ export CXXLINK = @LIBTOOL@ --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 export LTCOMPILE = @LIBTOOL@ --mode=compile @CC@ @DEFS@ \
 	-I. -I@srcdir@ \
 	-I../../include \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/libraries/libmbc \
+	-I$(top_srcdir)/libraries/libmbutil \
+	-I$(top_srcdir)/libraries/libmbmath \
+	-I$(top_srcdir)/libraries/libmbwrap \
+	-I$(top_srcdir)/libraries/libobjs \
+	-I$(top_srcdir)/mbdyn \
+	-I$(top_srcdir)/mbdyn/base \
+	-I$(top_srcdir)/mbdyn/struct \
+	-I$(top_srcdir)/mbdyn/aero \
+	-I$(top_srcdir)/mbdyn/elec \
+	-I$(top_srcdir)/mbdyn/hydr \
 	-I../$(top_srcdir)/include \
+	-I../$(top_srcdir)/libraries/libmbc \
 	-I../$(top_srcdir)/libraries/libmbutil \
 	-I../$(top_srcdir)/libraries/libmbmath \
 	-I../$(top_srcdir)/libraries/libmbwrap \
@@ -55,9 +81,9 @@ export LIBEXEC_DIR=$(libexecdir)
 
 all: libtool all__
 
-libtool: 
+libtool:
 	-@ln -sf ../libtool .
-	
+
 all__:
 	@echo "Configured modules: $(MODULES_DIRS)"
 	-@if test x"$(MODULES_DIRS)" != x ; then \
@@ -66,27 +92,31 @@ all__:
 			export MBDYN_MODULE=$$i ; \
 			isrc=$(srcdir)/$$i ; \
 			if test -d $$isrc ; then mkdir -p $$i ; fi ; \
-			for fsrc in $$isrc/*.{c,cc,f,f90,f95} ; do \
+			case $$isrc in /*) isrca=$$isrc ;; *) isrca=../$$isrc ;; esac ; \
+			for fsrc in $$isrc/*.{h,c,cc,f,f90,f95} ; do \
 				f=`basename $$fsrc` ; \
-				case $$f in \*.c|\*.cc|\*.f|\*.f90|\*.f95) ;; *) if test ! -f $$i/$$f ; then ( cd $$i && ln -sf ../$$isrc/$$f $$f ) ; fi ; ;; esac ; \
+				case $$f in \*.h|\*.c|\*.cc|\*.f|\*.f90|\*.f95) ;; *) if test ! -f $$i/$$f && test -f $$isrc/$$f ; then ( cd $$i && ln -sf $$isrca/$$f $$f ) ; fi ; ;; esac ; \
 			done ; \
 			cp $(srcdir)/Makefile.module $$i/Makefile ; \
-			( cd $$i && $(MAKE) MBDYN_MODULE_SRCDIR=../$$isrc ) ; \
+			( cd $$i && $(MAKE) OCTAVE_INCLUDE="$(OCTAVE_INCLUDE)" \
+					    OCTAVE_LIBS="$(OCTAVE_LIBS)" \
+					    MBDYN_MODULE_SRCDIR=$$isrca ) ; \
 			rm -f $$i/Makefile ; \
 		done \
 	fi
 
 install: all__
-	$(mkinstalldirs) $(libexecdir)
+	$(mkinstalldirs) $(DESTDIR)$(libexecdir)
 	-@if test x"$(MODULES_DIRS)" != x ; then \
 		for i in $(MODULES_DIRS) ; do \
 			echo "Installing $$i ..."; \
 			export MBDYN_MODULE=$$i ; \
 			isrc=$(srcdir)/$$i ; \
 			if test -d $$isrc ; then mkdir -p $$i ; fi ; \
-			for fsrc in $$isrc/*.{c,cc,f,f90,f95} ; do \
+			case $$isrc in /*) isrca=$$isrc ;; *) isrca=../$$isrc ;; esac ; \
+			for fsrc in $$isrc/*.{h,c,cc,f,f90,f95} ; do \
 				f=`basename $$fsrc` ; \
-				case $$f in \*.c|\*.cc|\*.f|\*.f90|\*.f95) ;; *) if test ! -f $$i/$$f ; then ( cd $$i && ln -sf ../$$isrc/$$f $$f ) ; fi ; ;; esac ; \
+				case $$f in \*.h|\*.c|\*.cc|\*.f|\*.f90|\*.f95) ;; *) if test ! -f $$i/$$f && test -f $$isrc/$$f ; then ( cd $$i && ln -sf $$isrca/$$f $$f ) ; fi ; ;; esac ; \
 			done ; \
 			cp $(srcdir)/Makefile.module $$i/Makefile ; \
 			( cd $$i && $(MAKE) install ) ; \
@@ -230,6 +260,12 @@ module-FMU/module-FMU.h \
 module-FMU/README.md
 
 EXTRA_DIST += \
+module-hfelem/harmonicExcitationElem2.mbd \
+module-hfelem/harmonicExcitationElem.mbd \
+module-hfelem/module-hfelem.cc \
+module-hfelem/module-hfelem.h
+
+EXTRA_DIST += \
 module-hid/README \
 module-hid/Makefile.inc \
 module-hid/module-hid.cc \
@@ -242,11 +278,6 @@ module-hid/hid_aircraft \
 module-hid/hid_test
 
 EXTRA_DIST += \
-module-hydrodynamic_plain_bearing/diffsizes.f95 \
-module-hydrodynamic_plain_bearing/hydrodynamic_plain_bearing_force_dv.f95 \
-module-hydrodynamic_plain_bearing/hydrodynamic_plain_bearing_force.f95 \
-module-hydrodynamic_plain_bearing/hydrodynamic_plain_bearing_force.h \
-module-hydrodynamic_plain_bearing/Makefile.inc \
 module-hydrodynamic_plain_bearing/module-hydrodynamic_plain_bearing.cc \
 module-hydrodynamic_plain_bearing/module-hydrodynamic_plain_bearing.h \
 module-hydrodynamic_plain_bearing/hydrodynamic_plain_bearing.mbdyn

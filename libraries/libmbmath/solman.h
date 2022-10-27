@@ -88,7 +88,7 @@ public:
 		VectorHandler& XPrimeCurr) = 0;
 
 	/* Assembla il residuo */
-	virtual void AssRes(VectorHandler& ResHdl, doublereal dCoef) = 0;
+	virtual void AssRes(VectorHandler& ResHdl, doublereal dCoef, VectorHandler*const pAbsResHdl) = 0;
 };
 
 /* SolutionDataManager - end */
@@ -191,7 +191,34 @@ public:
    	doublereal *pdSetSolVec(doublereal* pd);
 
    	/* return true if the condition number is available */
-   	bool bGetConditionNumber(doublereal& dCond) const;
+   	virtual bool bGetConditionNumber(doublereal& dCond) const;
+};
+
+class QrSolutionManager: public SolutionManager {
+public:
+        enum MatVecOpType {
+                OP_A_MINUS_Q_B, // a -= Q * b
+                OP_A_PLUS_QT_B, // a += Q^T * b
+                OP_A_MINUS_R_B, // a -= R * b
+                OP_A_MINUS_RT_B // a -= R^T * b
+        };
+
+        QrSolutionManager(void);
+        virtual ~QrSolutionManager(void);
+
+        virtual VectorHandler&
+        MatVecOp(MatVecOpType op,
+                 VectorHandler& a,
+                 const VectorHandler& b) const=0;
+        
+        // solve R * x = b
+        virtual void SolveR(void)=0;
+        
+        // solve Q * R = A
+        virtual void InitQR(void)=0;
+        
+        // solve Q_{n+1} * R_{n+1} = Q_{n} * R_{n} + u * v^T
+        virtual void UpdateQR(VectorHandler& u, VectorHandler& v)=0;
 };
 
 /* SolutionManager - end */

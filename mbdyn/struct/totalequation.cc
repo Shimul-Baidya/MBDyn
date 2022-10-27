@@ -836,6 +836,19 @@ TotalEquation::AssRes(SubVectorHandler& WorkVec,
 	return WorkVec;
 }
 
+void TotalEquation::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Total equation", OH, name);
+		}
+#endif // USE_NETCDF
+	}
+}
+
+
 void
 TotalEquation::Output(OutputHandler& OH) const
 {
@@ -857,14 +870,24 @@ TotalEquation::Output(OutputHandler& OH) const
 		Vec3 b1(X2 + b2 - X1);
 		Vec3 X(R1Tmp.MulTV(b1) - tilde_f1);
 
-		Joint::Output(OH.Joints(), "TotalEquation", GetLabel(),
-			Zero3, Zero3, Zero3, Zero3)
-			<< " " << X
-			<< " " << RotManip::VecRot(RTmp)
-			<< " " << R1Tmp.MulTV(V2 + Omega2.Cross(b2) - V1 - Omega1.Cross(b1))
-			<< " " << R1rTmp.MulTV(Omega2 - Omega1)
-			<< std::endl;
-			// accelerations?
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "TotalEquation", GetLabel(),
+					Zero3, Zero3, Zero3, Zero3)
+				<< " " << X
+				<< " " << RotManip::VecRot(RTmp)
+				<< " " << R1Tmp.MulTV(V2 + Omega2.Cross(b2) - V1 - Omega1.Cross(b1))
+				<< " " << R1rTmp.MulTV(Omega2 - Omega1)
+				<< std::endl;
+			// accelerations?	
+		}
+
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, Zero3, Zero3, Zero3, Zero3);
+			// TODO
+		}
+#endif // USE_NETCDF
+
 	}
 }
 
@@ -1223,6 +1246,32 @@ TotalEquation::dGetPrivData(unsigned int i) const
 	return 0.;
 }
 
+const OutputHandler::Dimensions
+TotalEquation::GetEquationDimension(integer index) const {
+	// DOF is variable
+	// TODO
+	std::map<int, OutputHandler::Dimensions> index_map;
+
+	int i = 0;
+		for (unsigned iCnt = 0; iCnt < nPosConstraints; iCnt++) {
+			i++;
+			index_map[i] = OutputHandler::Dimensions::Length;
+		}
+		for (unsigned iCnt = 0; iCnt < nRotConstraints; iCnt++) {
+			i++;
+			index_map[i] = OutputHandler::Dimensions::rad;
+		}
+		for (unsigned iCnt = 0; iCnt < nVelConstraints; iCnt++) {
+			i++;
+			index_map[i] = OutputHandler::Dimensions::Velocity;
+		}
+		for (unsigned iCnt = 0; iCnt < nVelConstraints; iCnt++) {
+			i++;
+			index_map[i] = OutputHandler::Dimensions::AngularVelocity;
+		}		
+
+	return index_map[index];
+}
 
 /* TotalEquation - end */
 
@@ -1842,6 +1891,20 @@ TotalReaction::GetEqType(unsigned int i) const
 	return DofOrder::ALGEBRAIC;
 }
 
+
+void TotalReaction::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Total reaction", OH, name);
+		}
+#endif // USE_NETCDF
+	}
+}
+
+
 /* Output (da mettere a punto), per ora solo reazioni */
 void
 TotalReaction::Output(OutputHandler& OH) const
@@ -1864,14 +1927,24 @@ TotalReaction::Output(OutputHandler& OH) const
 		Vec3 b1(X2 + b2 - X1);
 		Vec3 X(R1Tmp.MulTV(b1) - tilde_f1);
 
-		Joint::Output(OH.Joints(), "TotalReaction", GetLabel(),
-			F, M, R1Tmp*F, R1rTmp*M)
-			<< " " << X
-			<< " " << RotManip::VecRot(RTmp)
-			<< " " << R1Tmp.MulTV(V2 + Omega2.Cross(b2) - V1 - Omega1.Cross(b1))
-			<< " " << R1rTmp.MulTV(Omega2 - Omega1)
-			<< std::endl;
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "TotalReaction", GetLabel(),
+					F, M, R1Tmp*F, R1rTmp*M)
+				<< " " << X
+				<< " " << RotManip::VecRot(RTmp)
+				<< " " << R1Tmp.MulTV(V2 + Omega2.Cross(b2) - V1 - Omega1.Cross(b1))
+				<< " " << R1rTmp.MulTV(Omega2 - Omega1)
+				<< std::endl;
 			// accelerations?
+		}
+
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, F, M, R1Tmp*F, R1rTmp*M);
+			// TODO
+		}
+#endif // USE_NETCDF
+
 	}
 }
 
@@ -2334,6 +2407,12 @@ TotalReaction::dGetPrivData(unsigned int i) const
 	}
 
 	return 0.;
+}
+
+const OutputHandler::Dimensions
+TotalReaction::GetEquationDimension(integer index) const {
+	// DOF == 0
+	return OutputHandler::Dimensions::UnknownDimension;
 }
 
 /* TotalReaction - end */

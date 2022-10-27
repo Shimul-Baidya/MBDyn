@@ -66,15 +66,24 @@
 #include "solver.h"
 #include "dataman.h"
 #include "mtdataman.h"
-#include "thirdorderstepsol.h"
+#include "stepsol_impl.h"
+#include "ms34stepsol.h"
+#include "multistagestepsol_impl.h"
+#include "singlestepsol_impl.h"
 #include "nr.h"
 #include "linesearch.h"
+#ifdef USE_TRILINOS
+#include "noxsolver.h"
+#endif
+#ifdef USE_SICONOS
+#include "siconosmcp.h"
+#endif
 #include "bicg.h"
 #include "gmres.h"
 #include "solman.h"
 #include "readlinsol.h"
 #include "ls.h"
-#include "naivewrap.h"
+#include "naivemh.h"
 #include "Rot.hh"
 #include "cleanup.h"
 #include "drive_.h"
@@ -157,7 +166,11 @@ extern "C" void
 mbdyn_modify_last_iteration_handler(int signum)
 {
 	::mbdyn_keep_going = MBDYN_STOP_AT_END_OF_ITERATION;
+#ifdef USE_MULTITHREAD
+     	signal(signum, mbdyn_modify_last_iteration_handler);
+#else
 	signal(signum, mbdyn_really_exit_handler);
+#endif
 }
 
 extern "C" void
@@ -270,6 +283,35 @@ mbdyn_reserve_stack(unsigned long size)
 #endif /* !HAVE_MLOCKALL */
 }
 
+Solver::FakeStepIntegrator::FakeStepIntegrator(doublereal dCoef)
+     :StepIntegrator(-1, dCoef, -1., 1, 1),
+      dCoef(dCoef)
+{
+}
+
+doublereal Solver::FakeStepIntegrator::dGetCoef(unsigned int iDof) const
+{
+     return dCoef;
+}
+
+doublereal
+Solver::FakeStepIntegrator::Advance(Solver* pS,
+                                    const doublereal TStep,
+                                    const doublereal dAlph,
+                                    const StepChange StType,
+                                    std::deque<VectorHandler*>& qX,
+                                    std::deque<VectorHandler*>& qXPrime,
+                                    MyVectorHandler*const pX,
+                                    MyVectorHandler*const pXPrime,
+                                    integer& EffIter,
+                                    doublereal& Err,
+                                    doublereal& SolErr)
+{
+     ASSERT(0);
+
+     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+}
+
 /* Costruttore: esegue la simulazione */
 Solver::Solver(MBDynParser& HPar,
 		const std::string& sInFName,
@@ -310,26 +352,39 @@ eTimeStepLimit(TS_SOFT_LIMIT),
 iDummyStepsNumber(::iDefaultDummyStepsNumber),
 dDummyStepsRatio(::dDefaultDummyStepsRatio),
 eAbortAfter(AFTER_UNKNOWN),
+oFakeStepIntegrator(1.), // dCoef == 1 needed for initial assembly
 RegularType(INT_UNKNOWN),
 DummyType(INT_UNKNOWN),
 pDerivativeSteps(0),
 pFirstDummyStep(0),
+pSecondDummyStep(0),
+pThirdDummyStep(0),
 pDummySteps(0),
 pFirstRegularStep(0),
+pSecondRegularStep(0),
+pThirdRegularStep(0),
 pRegularSteps(0),
-pCurrStepIntegrator(0),
+pCurrStepIntegrator(&oFakeStepIntegrator), // Used for initial assembly
 pRhoRegular(0),
 pRhoAlgebraicRegular(0),
+//pFirstRhoRegular(0),
+//pFirstRhoAlgebraicRegular(0),
+pSecondRhoRegular(0),
+pSecondRhoAlgebraicRegular(0),
+pThirdRhoRegular(0),
+pThirdRhoAlgebraicRegular(0),
 pRhoDummy(0),
 pRhoAlgebraicDummy(0),
+pSecondRhoDummy(0),
+pSecondRhoAlgebraicDummy(0),
+pThirdRhoDummy(0),
+pThirdRhoAlgebraicDummy(0),
 dDerivativesCoef(::dDefaultDerivativesCoefficient),
 CurrLinearSolver(),
 ResTest(NonlinearSolverTest::NORM),
 SolTest(NonlinearSolverTest::NONE),
 bScale(false),
 bTrueNewtonRaphson(true),
-bKeepJac(false),
-iIterationsBeforeAssembly(0),
 NonlinearSolverType(NonlinearSolver::UNKNOWN),
 /* for matrix-free solvers */
 MFSolverType(MatrixFreeSolver::UNKNOWN),
@@ -341,7 +396,10 @@ dIterertiveEtaMax(defaultIterativeEtaMax),
 dIterertiveTau(defaultIterativeTau),
 /* end of matrix-free solvers */
 /* for line search solver */
-LineSearch(),
+oLineSearchParam(),
+#ifdef USE_TRILINOS
+oNoxSolverParam(),
+#endif
 /* end of line search solver */
 /* for parallel solvers */
 bParallel(bPar),
@@ -419,10 +477,6 @@ Solver::Prepare(void)
 		pRTSolver->Setup();
 	}
 
-#ifdef USE_MPI
-	int mpi_finalize = 0;
-#endif
-
 #ifdef USE_SCHUR
 	if (bParallel) {
 		DEBUGLCOUT(MYDEBUG_MEM, "creating parallel SchurDataManager"
@@ -448,7 +502,7 @@ Solver::Prepare(void)
 		if (nThreads > 1) {
 			if (!(CurrLinearSolver.GetSolverFlags() & LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS)) {
 				/* conservative: dir may use too much memory */
-				if (!CurrLinearSolver.AddSolverFlags(LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS)) {
+			     if (!CurrLinearSolver.AddSolverFlags(LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS, LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS)) {
 					bool b;
 
 #if defined(USE_UMFPACK)
@@ -509,6 +563,14 @@ Solver::Prepare(void)
 						eAbortAfter == AFTER_INPUT));
 		}
 	}
+
+        const unsigned uSolverFlags = CurrLinearSolver.GetSolverFlags();
+
+        if (!pDM->bUseAutoDiff() && (uSolverFlags & LinSol::SOLVER_FLAGS_ALLOWS_GRAD) != 0u) {
+             silent_cerr("warning: sparse matrix handler \"grad\" requires support for automatic differentiation which was not enabled!\n"
+                         "warning: add the statement \"use automatic differentiation;\" inside the control data section to enable it!\n");
+             CurrLinearSolver.SetSolverFlags(uSolverFlags & ~LinSol::SOLVER_FLAGS_ALLOWS_GRAD);
+        }
 
 	// log symbol table
 	std::ostream& log = pDM->GetLogFile();
@@ -674,6 +736,14 @@ Solver::Prepare(void)
 			SAFENEW(pResTestScale, NonlinearSolverTestScaleMinMax);
 			break;
 
+		case NonlinearSolverTest::RELNORM:
+			SAFENEW(pResTestScale, NonlinearSolverTestScaleRelNorm);
+			break;
+
+		case NonlinearSolverTest::SEPNORM:
+			SAFENEW(pResTestScale, NonlinearSolverTestScaleSepNorm);
+			break;
+
 		default:
 			ASSERT(0);
 			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
@@ -697,6 +767,14 @@ Solver::Prepare(void)
 
 		case NonlinearSolverTest::MINMAX:
 			SAFENEW(pResTest, NonlinearSolverTestMinMax);
+			break;
+
+		case NonlinearSolverTest::RELNORM:
+			SAFENEW(pResTest, NonlinearSolverTestRelNorm);
+			break;
+
+		case NonlinearSolverTest::SEPNORM:
+			SAFENEW(pResTest, NonlinearSolverTestSepNorm);
 			break;
 
 		default:
@@ -726,6 +804,12 @@ Solver::Prepare(void)
 
 	/* registers tests in nonlinear solver */
 	pNLS->SetTest(pResTest, pSolTest);
+
+	/* set the dimension and indices map */
+	if (pNLS->pGetResTest()->GetDimMap() != 0) {
+		pDM->SetElemDimensionIndices(pNLS->pGetResTest()->GetDimMap());
+		pDM->SetNodeDimensionIndices(pNLS->pGetResTest()->GetDimMap());
+	}
 
 	/*
 	 * Dell'assemblaggio iniziale dei vincoli se ne occupa il DataManager
@@ -809,13 +893,39 @@ Solver::Prepare(void)
 	pDerivativeSteps->SetDataManager(pDM);
 	pDerivativeSteps->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
 	if (iDummyStepsNumber) {
+		if (DummyType == StepIntegratorType::INT_MS2 || DummyType == StepIntegratorType::INT_HOPE || DummyType == StepIntegratorType::INT_MS3 || DummyType == StepIntegratorType::INT_MS4)
+		{
 		pFirstDummyStep->SetDataManager(pDM);
 		pFirstDummyStep->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
+		}
+		if (DummyType == StepIntegratorType::INT_MS3 || DummyType == StepIntegratorType::INT_MS4)
+		{
+			pSecondDummyStep->SetDataManager(pDM);
+			pSecondDummyStep->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
+		}
+		if (DummyType == StepIntegratorType::INT_MS4)
+		{
+			pThirdDummyStep->SetDataManager(pDM);
+			pThirdDummyStep->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
+		}
 		pDummySteps->SetDataManager(pDM);
 		pDummySteps->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
 	}
+	if (RegularType == StepIntegratorType::INT_MS2 || RegularType == StepIntegratorType::INT_HOPE || RegularType == StepIntegratorType::INT_MS3 || RegularType == StepIntegratorType::INT_MS4 || RegularType == StepIntegratorType::INT_HYBRID)
+	{
 	pFirstRegularStep->SetDataManager(pDM);
 	pFirstRegularStep->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
+	}
+	if (RegularType == StepIntegratorType::INT_MS3 || RegularType == StepIntegratorType::INT_MS4)
+	{
+		pSecondRegularStep->SetDataManager(pDM);
+		pSecondRegularStep->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
+	}
+	if (RegularType == StepIntegratorType::INT_MS4)
+	{
+		pThirdRegularStep->SetDataManager(pDM);
+		pThirdRegularStep->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
+	}
 	pRegularSteps->SetDataManager(pDM);
 	pRegularSteps->OutputTypes(DEBUG_LEVEL_MATCH(MYDEBUG_PRED));
 
@@ -825,6 +935,16 @@ Solver::Prepare(void)
 	/* Setup SolutionManager(s) */
 	SetupSolmans(pDerivativeSteps->GetIntegratorNumUnknownStates());
 
+	if (pNLS->pGetResTest()->GetAbsRes() != 0) {
+		pNLS->pGetResTest()->GetAbsRes()->Resize(pSM->pResHdl()->iGetSize());
+	}
+
+	/* set the dimension and indices map */
+	if (pNLS->pGetResTest()->GetDimMap() != 0) {
+		pDM->SetElemDimensionIndices(pNLS->pGetResTest()->GetDimMap());
+		pDM->SetNodeDimensionIndices(pNLS->pGetResTest()->GetDimMap());
+	}
+	
 	/* Derivative steps */
 	pCurrStepIntegrator = pDerivativeSteps;
 	try {
@@ -839,14 +959,14 @@ Solver::Prepare(void)
 			qX, qXPrime, pX, pXPrime,
 			iStIter, dTest, dSolTest);
 	}
-	catch (NonlinearSolver::NoConvergence) {
+	catch (NonlinearSolver::NoConvergence& e) {
 		silent_cerr("Initial derivatives calculation " << iStIter
 			<< " does not converge; aborting..." << std::endl
 			<< "(hint: try playing with the \"derivatives coefficient\" value)" << std::endl);
 		pDM->Output(0, dTime, 0., true);
 		throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
 	}
-	catch (NonlinearSolver::ErrSimulationDiverged) {
+	catch (NonlinearSolver::ErrSimulationDiverged& e) {
 		/*
 		 * Mettere qui eventuali azioni speciali
 		 * da intraprendere in caso di errore ...
@@ -864,7 +984,7 @@ Solver::Prepare(void)
 			"aborting..." << std::endl);
 		throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
 	}
-	catch (NonlinearSolver::ConvergenceOnSolution) {
+	catch (NonlinearSolver::ConvergenceOnSolution& e) {
 		bSolConv = true;
 	}
 	catch (EndOfSimulation& eos) {
@@ -934,13 +1054,21 @@ Solver::Prepare(void)
 
 	if (iDummyStepsNumber > 0) {
 		/* passi fittizi */
-
+		int iSubStep = 0;
+		dRefTimeStep = dInitialTimeStep * dDummyStepsRatio;
+		dCurrTimeStep = dRefTimeStep;
 		/*
 		 * inizio integrazione: primo passo a predizione lineare
 		 * con sottopassi di correzione delle accelerazioni
 		 * e delle reazioni vincolari
 		 */
-		pDM->BeforePredict(*pX, *pXPrime, *qX[0], *qXPrime[0]);
+		if (DummyType == StepIntegratorType::INT_MS2  || DummyType == StepIntegratorType::INT_HOPE || DummyType == StepIntegratorType::INT_MS3 || DummyType == StepIntegratorType::INT_MS4)
+		{
+			/* Setup SolutionManager(s) */
+			SetupSolmans(pFirstDummyStep->GetIntegratorNumUnknownStates());
+			iSubStep++;
+
+			pDM->BeforePredict(*pX, *pXPrime, qX, qXPrime);
 		Flip();
 
 		dRefTimeStep = dInitialTimeStep*dDummyStepsRatio;
@@ -948,11 +1076,14 @@ Solver::Prepare(void)
 		/* FIXME: do we need to serve pending drives in dummy steps? */
 		pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, 0);
 
-		DEBUGLCOUT(MYDEBUG_FSTEPS, "Current time step: "
+			DEBUGLCOUT(MYDEBUG_FSTEPS, "Dummy step "
+				<< iSubStep
+				<< "; current time step: "
 			<< dCurrTimeStep << std::endl);
 
-                if (outputStep()) {
-                    silent_cout("Dummy Step(" << lStep << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+			if (outputStep())
+			{
+				silent_cout("Dummy Step(" << iSubStep << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
                 }
                 
 		ASSERT(pFirstDummyStep != 0);
@@ -968,15 +1099,15 @@ Solver::Prepare(void)
 				qX, qXPrime, pX, pXPrime,
 				iStIter, dTest, dSolTest);
 		}
-		catch (NonlinearSolver::NoConvergence) {
-			silent_cerr("First dummy step does not converge; "
+		catch (NonlinearSolver::NoConvergence& e) {
+				silent_cerr("Dummy step" << iSubStep << "does not converge; "
 				"TimeStep=" << dCurrTimeStep
 				<< " cannot be reduced further; "
 				"aborting..." << std::endl);
 			pDM->Output(0, dTime, dCurrTimeStep, true);
 			throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
 		}
-		catch (NonlinearSolver::ErrSimulationDiverged) {
+		catch (NonlinearSolver::ErrSimulationDiverged& e) {
 			/*
 			 * Mettere qui eventuali azioni speciali
 			 * da intraprendere in caso di errore ...
@@ -988,17 +1119,18 @@ Solver::Prepare(void)
 			 * Mettere qui eventuali azioni speciali
 			 * da intraprendere in caso di errore ...
 			 */
-			silent_cerr("First dummy step failed because no pivot element "
+				silent_cerr("Dummy step " << iSubStep
+				<< " failed because no pivot element "
 				"could be found for column " << err.iCol
 				<< " (" << pDM->GetDofDescription(err.iCol) << "); "
 				"aborting..." << std::endl);
 			throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
 		}
-		catch (NonlinearSolver::ConvergenceOnSolution) {
+		catch (NonlinearSolver::ConvergenceOnSolution& e) {
 			bSolConv = true;
 		}
 		catch (EndOfSimulation& eos) {
-			silent_cerr("Simulation ended during the first dummy step:\n"
+				silent_cerr("Simulation ended during the dummy step " << iSubStep << " :\n"
 				<< eos.what() << "\n");
 			return false;
 		}
@@ -1023,27 +1155,227 @@ Solver::Prepare(void)
 #ifdef DEBUG_FICTITIOUS
 			pDM->Output(0, dTime, dCurrTimeStep, true);
 #endif /* DEBUG_FICTITIOUS */
-			Out << "Interrupted during first dummy step." << std::endl;
+				Out << "Interrupted during dummy step" << iSubStep << " ." << std::endl;
 			throw ErrInterrupted(MBDYN_EXCEPT_ARGS);
 		}
 
 #ifdef DEBUG_FICTITIOUS
 		pDM->Output(0, dTime, dCurrTimeStep, true);
 #endif /* DEBUG_FICTITIOUS */
+		}
+
+		if (DummyType == StepIntegratorType::INT_MS3 || DummyType == StepIntegratorType::INT_MS4)
+		{
+			/* Setup SolutionManager(s) */
+			SetupSolmans(pSecondDummyStep->GetIntegratorNumUnknownStates());
+			iSubStep++;
+
+			pDM->BeforePredict(*pX, *pXPrime, qX, qXPrime);
+			Flip();
+
+			/* FIXME: do we need to serve pending drives in dummy steps? */
+			pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, 0);
+
+			DEBUGLCOUT(MYDEBUG_FSTEPS, "Dummy step "
+				<< iSubStep
+				<< "; current time step: "
+				<< dCurrTimeStep << std::endl);
+
+			if (outputStep())
+			{
+				silent_cout("Dummy Step(" << iSubStep << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+            }
+                
+			ASSERT(pSecondDummyStep != 0);
+
+			/* pSecondDummyStep */
+			pCurrStepIntegrator = pSecondDummyStep;
+			try {
+				dTest = pSecondDummyStep->Advance(this,
+					dRefTimeStep, dCurrTimeStep/dRefTimeStep,
+					StepIntegrator::NEWSTEP,
+					qX, qXPrime, pX, pXPrime,
+					iStIter, dTest, dSolTest);
+			}
+			catch (NonlinearSolver::NoConvergence& e) {
+				silent_cerr("Dummy step" << iSubStep << "does not converge; "
+					"TimeStep=" << dCurrTimeStep
+					<< " cannot be reduced further; "
+					"aborting..." << std::endl);
+				pDM->Output(0, dTime, dCurrTimeStep, true);
+				throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
+			}
+			catch (NonlinearSolver::ErrSimulationDiverged& e) {
+				/*
+			 	* Mettere qui eventuali azioni speciali
+			 	* da intraprendere in caso di errore ...
+			 	*/
+				throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+			}
+			catch (LinearSolver::ErrFactor& err) {
+				/*
+			 	* Mettere qui eventuali azioni speciali
+			 	* da intraprendere in caso di errore ...
+			 	*/
+				silent_cerr("Dummy step " << iSubStep
+				<< " failed because no pivot element "
+				"could be found for column " << err.iCol
+				<< " (" << pDM->GetDofDescription(err.iCol) << "); "
+				"aborting..." << std::endl);
+				throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+			}
+			catch (NonlinearSolver::ConvergenceOnSolution& e) {
+				bSolConv = true;
+			}
+			catch (EndOfSimulation& eos) {
+				silent_cerr("Simulation ended during dummy step " << iSubStep << " :\n"
+					<< eos.what() << "\n");
+				return false;
+			}
+
+			SAFEDELETE(pSecondDummyStep);
+			pSecondDummyStep = 0;
+
+			dRefTimeStep = dCurrTimeStep;
+			dTime += dRefTimeStep;
+
+#if 0
+		/* don't sum up the derivatives error */
+		dTotErr += dTest;
+#endif
+			iTotIter += iStIter;
+
+			if (mbdyn_stop_at_end_of_time_step()) {
+			/*
+			 * Fa l'output della soluzione delle derivate iniziali
+			 * ed esce
+			 */
+#ifdef DEBUG_FICTITIOUS
+			pDM->Output(0, dTime, dCurrTimeStep, true);
+#endif /* DEBUG_FICTITIOUS */
+				Out << "Interrupted during dummy step" << iSubStep << " ." << std::endl;
+				throw ErrInterrupted(MBDYN_EXCEPT_ARGS);
+			}
+
+#ifdef DEBUG_FICTITIOUS
+		pDM->Output(0, dTime, dCurrTimeStep, true);
+#endif /* DEBUG_FICTITIOUS */
+		}
+
+		if (DummyType == StepIntegratorType::INT_MS4)
+		{
+			/* Setup SolutionManager(s) */
+			SetupSolmans(pThirdDummyStep->GetIntegratorNumUnknownStates());
+			iSubStep++;
+
+			pDM->BeforePredict(*pX, *pXPrime, qX, qXPrime);
+			Flip();
+
+			/* FIXME: do we need to serve pending drives in dummy steps? */
+			pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, 0);
+
+			DEBUGLCOUT(MYDEBUG_FSTEPS, "Dummy step "
+				<< iSubStep
+				<< "; current time step: "
+				<< dCurrTimeStep << std::endl);
+
+			if (outputStep())
+			{
+				silent_cout("Dummy Step(" << iSubStep << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+            }
+                
+			ASSERT(pThirdDummyStep != 0);
+
+			/* pThirdDummyStep */
+			pCurrStepIntegrator = pThirdDummyStep;
+			try {
+				dTest = pThirdDummyStep->Advance(this,
+					dRefTimeStep, dCurrTimeStep/dRefTimeStep,
+					StepIntegrator::NEWSTEP,
+					qX, qXPrime, pX, pXPrime,
+					iStIter, dTest, dSolTest);
+			}
+			catch (NonlinearSolver::NoConvergence& e) {
+				silent_cerr("Dummy step" << iSubStep << "does not converge; "
+					"TimeStep=" << dCurrTimeStep
+					<< " cannot be reduced further; "
+					"aborting..." << std::endl);
+				pDM->Output(0, dTime, dCurrTimeStep, true);
+				throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
+			}
+			catch (NonlinearSolver::ErrSimulationDiverged& e) {
+				/*
+			 	* Mettere qui eventuali azioni speciali
+			 	* da intraprendere in caso di errore ...
+			 	*/
+				throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+			}
+			catch (LinearSolver::ErrFactor& err) {
+				/*
+			 	* Mettere qui eventuali azioni speciali
+			 	* da intraprendere in caso di errore ...
+			 	*/
+				silent_cerr("Dummy step " << iSubStep
+				<< " failed because no pivot element "
+				"could be found for column " << err.iCol
+				<< " (" << pDM->GetDofDescription(err.iCol) << "); "
+				"aborting..." << std::endl);
+				throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+			}
+			catch (NonlinearSolver::ConvergenceOnSolution& e) {
+				bSolConv = true;
+			}
+			catch (EndOfSimulation& eos) {
+				silent_cerr("Simulation ended during dummy step " << iSubStep << " :\n"
+					<< eos.what() << "\n");
+				return false;
+			}
+
+			SAFEDELETE(pThirdDummyStep);
+			pThirdDummyStep = 0;
+
+			dRefTimeStep = dCurrTimeStep;
+			dTime += dRefTimeStep;
+
+#if 0
+		/* don't sum up the derivatives error */
+		dTotErr += dTest;
+#endif
+			iTotIter += iStIter;
+
+			if (mbdyn_stop_at_end_of_time_step()) {
+			/*
+			 * Fa l'output della soluzione delle derivate iniziali
+			 * ed esce
+			 */
+#ifdef DEBUG_FICTITIOUS
+			pDM->Output(0, dTime, dCurrTimeStep, true);
+#endif /* DEBUG_FICTITIOUS */
+				Out << "Interrupted during dummy step" << iSubStep << " ." << std::endl;
+				throw ErrInterrupted(MBDYN_EXCEPT_ARGS);
+			}
+
+#ifdef DEBUG_FICTITIOUS
+		pDM->Output(0, dTime, dCurrTimeStep, true);
+#endif /* DEBUG_FICTITIOUS */
+		}
 
 		/* Passi fittizi successivi */
-		if (iDummyStepsNumber > 1) {
+		if (iDummyStepsNumber > iSubStep) {
 			/* Setup SolutionManager(s) */
 			SetupSolmans(pDummySteps->GetIntegratorNumUnknownStates());
 		}
 
-		for (int iSubStep = 2;
+		for (iSubStep += 1;
 			iSubStep <= iDummyStepsNumber;
 			iSubStep++)
 		{
 			pDM->BeforePredict(*pX, *pXPrime,
-				*qX[0], *qXPrime[0]);
+				qX, qXPrime);
 			Flip();
+
+			pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, 0);
+
 
 			DEBUGLCOUT(MYDEBUG_FSTEPS, "Dummy step "
 				<< iSubStep
@@ -1065,7 +1397,7 @@ Solver::Prepare(void)
 					qX, qXPrime, pX, pXPrime,
 					iStIter, dTest, dSolTest);
 			}
-			catch (NonlinearSolver::NoConvergence) {
+			catch (NonlinearSolver::NoConvergence& e) {
 				silent_cerr("Dummy step " << iSubStep
 					<< " does not converge; "
 					"TimeStep=" << dCurrTimeStep
@@ -1075,7 +1407,7 @@ Solver::Prepare(void)
 				throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
 			}
 
-			catch (NonlinearSolver::ErrSimulationDiverged) {
+			catch (NonlinearSolver::ErrSimulationDiverged& e) {
 				/*
 				 * Mettere qui eventuali azioni speciali
 				 * da intraprendere in caso di errore ...
@@ -1094,11 +1426,11 @@ Solver::Prepare(void)
 					"aborting..." << std::endl);
 				throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
 			}
-			catch (NonlinearSolver::ConvergenceOnSolution) {
+			catch (NonlinearSolver::ConvergenceOnSolution& e) {
 				bSolConv = true;
 			}
 			catch (EndOfSimulation& eos) {
-				silent_cerr("Simulation ended during the dummy steps:\n"
+				silent_cerr("Simulation ended during the dummy step " << iSubStep << " :\n"
 					<< eos.what() << "\n");
 				return false;
 			}
@@ -1130,7 +1462,7 @@ Solver::Prepare(void)
 #ifdef DEBUG_FICTITIOUS
 				pDM->Output(0, dTime, dCurrTimeStep);
 #endif /* DEBUG_FICTITIOUS */
-				Out << "Interrupted during dummy steps."
+				Out << "Interrupted during dummy step"  << iSubStep << " ."
 					<< std::endl;
 				throw ErrInterrupted(MBDYN_EXCEPT_ARGS);
 			}
@@ -1174,6 +1506,11 @@ Solver::Prepare(void)
 			<< std::endl;
 	}
 
+        if (pDummySteps) {
+             SAFEDELETE(pDummySteps);
+             pDummySteps = 0;
+        }
+
 
 	if (eAbortAfter == AFTER_DUMMY_STEPS) {
 		Out << "End of dummy steps; no simulation is required."
@@ -1196,6 +1533,10 @@ Solver::Start(void)
 {
 	DEBUGCOUTFNAME("Solver::Start");
 
+#ifdef USE_MPI
+        int mpi_finalize = 0;
+#endif
+
 	// consistency check
 	if (eStatus != SOLVER_STATUS_PREPARED) {
 		silent_cerr("Start() must be called after Prepare()" << std::endl);
@@ -1209,22 +1550,28 @@ Solver::Start(void)
 	pNLS->SetExternal(External::REGULAR);
 #endif /* USE_EXTERNAL */
 
-	lStep = 1; /* Resetto di nuovo lStep */
+	lStep = 0; /* Resetto di nuovo lStep */
+	dRefTimeStep = dInitialTimeStep;
+	dCurrTimeStep = dRefTimeStep;
+	pTSC->Init(iMaxIterations, dMinTimeStep, MaxTimeStep, dInitialTimeStep);
 
-	DEBUGCOUT("Step " << lStep << " has been successfully completed "
-			"in " << iStIter << " iterations" << std::endl);
+	//DEBUGCOUT("Step " << lStep << " has been successfully completed "
+	//		"in " << iStIter << " iterations" << std::endl);
 
 
-	DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
-
-	pDM->BeforePredict(*pX, *pXPrime, *qX[0], *qXPrime[0]);
+	//DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
+	//First start-up step for MS2, HOPE, MS3 and MS4
+	if (RegularType == StepIntegratorType::INT_MS2  || RegularType == StepIntegratorType::INT_HOPE || RegularType == StepIntegratorType::INT_MS3 || RegularType == StepIntegratorType::INT_MS4 || RegularType == StepIntegratorType::INT_HYBRID)
+	{
+		lStep++;
+		pDM->BeforePredict(*pX, *pXPrime, qX, qXPrime);
 
 	Flip();
 	dRefTimeStep = dInitialTimeStep;
 	dCurrTimeStep = dRefTimeStep;
 
 	CurrStep = StepIntegrator::NEWSTEP;
-	pTSC->Init(iMaxIterations, dMinTimeStep, MaxTimeStep, dInitialTimeStep);
+		//pTSC->Init(iMaxIterations, dMinTimeStep, MaxTimeStep, dInitialTimeStep);
 
 	/* Setup SolutionManager(s) */
 	ASSERT(pFirstRegularStep!= 0);
@@ -1245,7 +1592,7 @@ IfFirstStepIsToBeRepeated:
 				qX, qXPrime, pX, pXPrime,
 				iStIter, dTest, dSolTest);
 	}
-	catch (NonlinearSolver::NoConvergence) {
+	catch (NonlinearSolver::NoConvergence& e) {
 		if (dCurrTimeStep > dMinTimeStep) {
 			/* Riduce il passo */
 			CurrStep = StepIntegrator::REPEATSTEP;
@@ -1265,7 +1612,7 @@ IfFirstStepIsToBeRepeated:
 		silent_cerr("Max iterations number "
 			<< std::abs(pFirstRegularStep->GetIntegratorMaxIters())
 			<< " has been reached during "
-			"first step, Time=" << dTime << "; "
+				"first step, Time=" << dTime + dCurrTimeStep << "; "
 			<< "TimeStep=" << dCurrTimeStep
 			<< " cannot be reduced further; "
 			"aborting..." << std::endl);
@@ -1273,7 +1620,7 @@ IfFirstStepIsToBeRepeated:
 
 		throw Solver::ErrMaxIterations(MBDYN_EXCEPT_ARGS);
 	}
-	catch (NonlinearSolver::ErrSimulationDiverged) {
+	catch (NonlinearSolver::ErrSimulationDiverged& e) {
 		/*
 		 * Mettere qui eventuali azioni speciali
 		 * da intraprendere in caso di errore ...
@@ -1292,7 +1639,7 @@ IfFirstStepIsToBeRepeated:
 			"aborting..." << std::endl);
 		throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
 	}
-	catch (NonlinearSolver::ConvergenceOnSolution) {
+	catch (NonlinearSolver::ConvergenceOnSolution& e) {
 		bSolConv = true;
 	}
 	catch (EndOfSimulation& eos) {
@@ -1300,6 +1647,10 @@ IfFirstStepIsToBeRepeated:
 			<< eos.what() << "\n");
 		return false;
 	}
+
+		DEBUGCOUT("Step " << lStep << " has been successfully completed "
+				"in " << iStIter << " iterations" << std::endl);
+
 
 	SAFEDELETE(pFirstRegularStep);
 	pFirstRegularStep = 0;
@@ -1341,7 +1692,7 @@ IfFirstStepIsToBeRepeated:
 		&& *EigAn.currAnalysis <= dTime)
 	{
 		std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-			EigAn.Analyses.end(), bind2nd(std::greater<doublereal>(), dTime));
+                        EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
 		if (i != EigAn.Analyses.end()) {
 			EigAn.currAnalysis = --i;
 		}
@@ -1353,6 +1704,514 @@ IfFirstStepIsToBeRepeated:
 		pRTSolver->Init();
 	}
 
+		dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
+		DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
+	}
+	//First start-up step for MS2, HOPE, MS3 and MS4
+
+	//Second start-up step for MS3 and MS4
+	if (RegularType == StepIntegratorType::INT_MS3 || RegularType == StepIntegratorType::INT_MS4)
+	{	
+		ASSERT(pSecondRegularStep!= 0);
+		SetupSolmans(pSecondRegularStep->GetIntegratorNumUnknownStates(), true);
+		pCurrStepIntegrator = pSecondRegularStep;	
+		CurrStep = StepIntegrator::NEWSTEP;
+		
+		if (pDM->EndOfSimulation() || dTime >= dFinalTime) {
+			if (pRTSolver) {
+				pRTSolver->StopCommanded();
+			}
+			silent_cout(outputCounterPrefix
+				<< "End of simulation at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "output in file \"" << sOutputFileName << "\"" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+
+			if (pRTSolver) {
+				pRTSolver->Log();
+			}
+
+			return false;
+
+		} else if (pRTSolver && pRTSolver->IsStopCommanded()) {
+			silent_cout(outputCounterPrefix
+				<< "Simulation is stopped by RTAI task" << std::endl
+				<< "Simulation ended at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+			pRTSolver->Log();
+			return false;
+
+		} else if (mbdyn_stop_at_end_of_time_step()
+	#ifdef USE_MPI
+			|| (MPI_Finalized(&mpi_finalize), mpi_finalize)
+	#endif /* USE_MPI */
+				)
+		{
+			if (pRTSolver) {
+				pRTSolver->StopCommanded();
+			}
+
+			silent_cout(outputCounterPrefix
+				<< "Interrupted!" << std::endl
+				<< "Simulation ended at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+
+			if (pRTSolver) {
+				pRTSolver->Log();
+			}
+
+			throw ErrInterrupted(MBDYN_EXCEPT_ARGS);
+		}
+		
+		lStep++;
+		pDM->BeforePredict(*pX, *pXPrime, qX, qXPrime);
+		Flip();
+		if (pRTSolver) {
+			pRTSolver->Wait();
+		}
+
+		int retries = -1;
+	IfSecondStepIsToBeRepeated:
+		try {
+			retries++;
+			pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, lStep);
+			if (outputStep()) {
+				if (outputCounter()) {
+					silent_cout(std::endl);
+				}
+ 				silent_cout("Step(" << lStep << ':' << retries << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+			}
+			dTest = pSecondRegularStep->Advance(this, dRefTimeStep,
+					dCurrTimeStep/dRefTimeStep, CurrStep,
+					qX, qXPrime, pX, pXPrime, iStIter,
+					dTest, dSolTest);
+		}
+		catch (NonlinearSolver::NoConvergence& e) {
+			if (dCurrTimeStep > dMinTimeStep) {
+				/* Riduce il passo */
+				CurrStep = StepIntegrator::REPEATSTEP;
+				doublereal dOldCurrTimeStep = dCurrTimeStep;
+				dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
+				if (dCurrTimeStep < dOldCurrTimeStep) {
+					DEBUGCOUT("Changing time step"
+						" from " << dOldCurrTimeStep
+						<< " to " << dCurrTimeStep
+						<< " during step "
+						<< lStep << " after "
+						<< iStIter << " iterations"
+						<< std::endl);
+					goto IfSecondStepIsToBeRepeated;
+				}
+			}
+
+			silent_cerr(outputCounterPrefix
+				<< "Max iterations number "
+				<< std::abs(pSecondRegularStep->GetIntegratorMaxIters())
+				<< " has been reached during "
+				"Step=" << lStep << ", "
+				"Time=" << dTime + dCurrTimeStep << "; "
+				"TimeStep=" << dCurrTimeStep
+				<< " cannot be reduced further; "
+				"aborting..." << std::endl);
+			throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
+		}
+		catch (NonlinearSolver::ErrSimulationDiverged& e) {
+			if (dCurrTimeStep > dMinTimeStep) {
+				/* Riduce il passo */
+				CurrStep = StepIntegrator::REPEATSTEP;
+				doublereal dOldCurrTimeStep = dCurrTimeStep;
+				dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
+				if (dCurrTimeStep < dOldCurrTimeStep) {
+					DEBUGCOUT("Changing time step"
+						" from " << dOldCurrTimeStep
+						<< " to " << dCurrTimeStep
+						<< " during step "
+						<< lStep << " after "
+						<< iStIter << " iterations"
+						<< std::endl);
+					goto IfSecondStepIsToBeRepeated;
+				}
+			}
+
+			silent_cerr(outputCounterPrefix
+				<< "Simulation diverged after "
+				<< iStIter << " iterations, before "
+				"reaching max iteration number "
+				<< std::abs(pSecondRegularStep->GetIntegratorMaxIters())
+				<< " during Step=" << lStep << ", "
+				"Time=" << dTime + dCurrTimeStep << "; "
+				"TimeStep=" << dCurrTimeStep
+				<< " cannot be reduced further; "
+				"aborting..." << std::endl);
+			throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+		}
+		catch (LinearSolver::ErrFactor& err) {
+		/*
+		 * Mettere qui eventuali azioni speciali
+		 * da intraprendere in caso di errore ...
+		 */
+			silent_cerr(outputCounterPrefix
+				<< "Simulation failed because no pivot element "
+				"could be found for column " << err.iCol
+				<< " (" << pDM->GetDofDescription(err.iCol) << ") "
+				"after " << iStIter << " iterations "
+				"during step " << lStep << "; "
+				"aborting..." << std::endl);
+			throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+		}
+		catch (NonlinearSolver::ConvergenceOnSolution& e) {
+			bSolConv = true;
+		}
+		catch (EndOfSimulation& eos) {
+			silent_cerr(outputCounterPrefix
+				<< "Simulation ended during a regular step:\n"
+				<< eos.what() << "\n");
+	#ifdef USE_MPI
+			MBDynComm.Abort(0);
+	#endif /* USE_MPI */
+			if (pRTSolver) {
+				pRTSolver->StopCommanded();
+			}
+
+			silent_cout("Simulation ended at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+
+			if (pRTSolver) {
+				pRTSolver->Log();
+			}
+
+			return false;
+		}
+
+		dTotErr += dTest;
+		iTotIter += iStIter;
+
+		bOut = pDM->Output(lStep, dTime + dCurrTimeStep, dCurrTimeStep);
+		/* Si fa dare l'std::ostream al file di output per il log */
+		std::ostream& Out = pDM->GetOutFile();
+		if (outputMsg()) {
+			Out << "Step " << lStep
+                        	<< " " << std::setprecision(16) << dTime + dCurrTimeStep
+				<< " " << dCurrTimeStep
+				<< " " << iStIter
+				<< " " << dTest
+				<< " " << dSolTest
+				<< " " << bSolConv
+				<< " " << bOut
+				<< std::endl;
+		}
+
+		if (bOutputCounter) {
+			silent_cout("Step " << std::setw(5) << lStep
+				<< " " << std::setw(13) << dTime + dCurrTimeStep
+				<< " " << std::setw(13) << dCurrTimeStep
+				<< " " << std::setw(4) << iStIter
+				<< " " << std::setw(13) << dTest
+				<< " " << std::setw(13) << dSolTest
+				<< " " << bSolConv
+				<< " " << bOut
+				<< outputCounterPostfix);
+		}
+
+		DEBUGCOUT("Step " << lStep
+			<< " has been successfully completed "
+			"in " << iStIter << " iterations" << std::endl);
+
+		dRefTimeStep = dCurrTimeStep;
+		dTime += dRefTimeStep;
+
+		bSolConv = false;
+
+		if (EigAn.bAnalysis
+			&& EigAn.currAnalysis != EigAn.Analyses.end()
+			&& *EigAn.currAnalysis <= dTime)
+		{
+			std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
+				EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
+			if (i != EigAn.Analyses.end()) {
+				EigAn.currAnalysis = --i;
+			}
+			Eig(bOutputCounter);
+			++EigAn.currAnalysis;
+		}
+
+		/* Calcola il nuovo timestep */
+		dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
+		DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
+		
+		SAFEDELETE(pSecondRegularStep);
+		pSecondRegularStep = 0;
+	}
+	// Second start-up step for MS3 and MS4;	
+	// Third start-up step for MS4;
+	if (RegularType == StepIntegratorType::INT_MS4)
+	{	
+		ASSERT(pThirdRegularStep!= 0);
+		SetupSolmans(pThirdRegularStep->GetIntegratorNumUnknownStates(), true);
+		pCurrStepIntegrator = pThirdRegularStep;	
+		CurrStep = StepIntegrator::NEWSTEP;	
+
+		if (pDM->EndOfSimulation() || dTime >= dFinalTime) {
+			if (pRTSolver) {
+				pRTSolver->StopCommanded();
+			}
+			silent_cout(outputCounterPrefix
+				<< "End of simulation at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "output in file \"" << sOutputFileName << "\"" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+
+			if (pRTSolver) {
+				pRTSolver->Log();
+			}
+
+			return false;
+
+			} else if (pRTSolver && pRTSolver->IsStopCommanded()) {
+			silent_cout(outputCounterPrefix
+				<< "Simulation is stopped by RTAI task" << std::endl
+				<< "Simulation ended at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+			pRTSolver->Log();
+			return false;
+
+		} else if (mbdyn_stop_at_end_of_time_step()
+	#ifdef USE_MPI
+			|| (MPI_Finalized(&mpi_finalize), mpi_finalize)
+	#endif /* USE_MPI */
+				)
+		{
+			if (pRTSolver) {
+				pRTSolver->StopCommanded();
+			}
+
+			silent_cout(outputCounterPrefix
+				<< "Interrupted!" << std::endl
+				<< "Simulation ended at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+
+			if (pRTSolver) {
+				pRTSolver->Log();
+			}
+
+			throw ErrInterrupted(MBDYN_EXCEPT_ARGS);
+		}
+
+	
+		lStep++;
+		pDM->BeforePredict(*pX, *pXPrime, qX, qXPrime);
+
+		Flip();
+
+		if (pRTSolver) {
+			pRTSolver->Wait();
+		}
+
+		int retries = -1;
+	IfThirdStepIsToBeRepeated:
+		try {
+			retries++;
+			pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, lStep);
+			if (outputStep()) {
+				if (outputCounter()) {
+					silent_cout(std::endl);
+				}
+ 				silent_cout("Step(" << lStep << ':' << retries << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+			}
+			dTest = pThirdRegularStep->Advance(this, dRefTimeStep,
+					dCurrTimeStep/dRefTimeStep, CurrStep,
+					qX, qXPrime, pX, pXPrime, iStIter,
+					dTest, dSolTest);
+		}
+		catch (NonlinearSolver::NoConvergence& e) {
+			if (dCurrTimeStep > dMinTimeStep) {
+				/* Riduce il passo */
+				CurrStep = StepIntegrator::REPEATSTEP;
+				doublereal dOldCurrTimeStep = dCurrTimeStep;
+				dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
+				if (dCurrTimeStep < dOldCurrTimeStep) {
+					DEBUGCOUT("Changing time step"
+						" from " << dOldCurrTimeStep
+						<< " to " << dCurrTimeStep
+						<< " during step "
+						<< lStep << " after "
+						<< iStIter << " iterations"
+						<< std::endl);
+					goto IfThirdStepIsToBeRepeated;
+				}
+			}
+
+			silent_cerr(outputCounterPrefix
+				<< "Max iterations number "
+				<< std::abs(pThirdRegularStep->GetIntegratorMaxIters())
+				<< " has been reached during "
+				"Step=" << lStep << ", "
+				"Time=" << dTime + dCurrTimeStep << "; "
+				"TimeStep=" << dCurrTimeStep
+				<< " cannot be reduced further; "
+				"aborting..." << std::endl);
+			throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
+		}
+		catch (NonlinearSolver::ErrSimulationDiverged& e) {
+			if (dCurrTimeStep > dMinTimeStep) {
+				/* Riduce il passo */
+				CurrStep = StepIntegrator::REPEATSTEP;
+				doublereal dOldCurrTimeStep = dCurrTimeStep;
+				dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
+				if (dCurrTimeStep < dOldCurrTimeStep) {
+					DEBUGCOUT("Changing time step"
+						" from " << dOldCurrTimeStep
+						<< " to " << dCurrTimeStep
+						<< " during step "
+						<< lStep << " after "
+						<< iStIter << " iterations"
+						<< std::endl);
+					goto IfThirdStepIsToBeRepeated;
+				}
+			}
+
+			silent_cerr(outputCounterPrefix
+				<< "Simulation diverged after "
+				<< iStIter << " iterations, before "
+				"reaching max iteration number "
+				<< std::abs(pThirdRegularStep->GetIntegratorMaxIters())
+				<< " during Step=" << lStep << ", "
+				"Time=" << dTime + dCurrTimeStep << "; "
+				"TimeStep=" << dCurrTimeStep
+				<< " cannot be reduced further; "
+				"aborting..." << std::endl);
+			throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+		}
+		catch (LinearSolver::ErrFactor& err) {
+		/*
+		 * Mettere qui eventuali azioni speciali
+		 * da intraprendere in caso di errore ...
+		 */
+			silent_cerr(outputCounterPrefix
+				<< "Simulation failed because no pivot element "
+				"could be found for column " << err.iCol
+				<< " (" << pDM->GetDofDescription(err.iCol) << ") "
+				"after " << iStIter << " iterations "
+				"during step " << lStep << "; "
+				"aborting..." << std::endl);
+			throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
+		}
+		catch (NonlinearSolver::ConvergenceOnSolution& e) {
+			bSolConv = true;
+		}
+		catch (EndOfSimulation& eos) {
+			silent_cerr(outputCounterPrefix
+				<< "Simulation ended during a regular step:\n"
+				<< eos.what() << "\n");
+	#ifdef USE_MPI
+			MBDynComm.Abort(0);
+	#endif /* USE_MPI */
+			if (pRTSolver) {
+				pRTSolver->StopCommanded();
+			}
+
+			silent_cout("Simulation ended at time "
+				<< dTime << " after "
+				<< lStep << " steps;" << std::endl
+				<< "total iterations: " << iTotIter << std::endl
+				<< "total Jacobian matrices: " << pNLS->TotalAssembledJacobian() << std::endl
+				<< "total error: " << dTotErr << std::endl);
+
+			if (pRTSolver) {
+				pRTSolver->Log();
+			}
+
+			return false;
+		}
+
+		dTotErr += dTest;
+		iTotIter += iStIter;
+
+		bOut = pDM->Output(lStep, dTime + dCurrTimeStep, dCurrTimeStep);
+
+		/* Si fa dare l'std::ostream al file di output per il log */
+		std::ostream& Out = pDM->GetOutFile();
+
+		if (outputMsg()) {
+			Out << "Step " << lStep
+                        	<< " " << std::setprecision(16) << dTime + dCurrTimeStep
+				<< " " << dCurrTimeStep
+				<< " " << iStIter
+				<< " " << dTest
+				<< " " << dSolTest
+				<< " " << bSolConv
+				<< " " << bOut
+				<< std::endl;
+		}
+
+		if (bOutputCounter) {
+			silent_cout("Step " << std::setw(5) << lStep
+				<< " " << std::setw(13) << dTime + dCurrTimeStep
+				<< " " << std::setw(13) << dCurrTimeStep
+				<< " " << std::setw(4) << iStIter
+				<< " " << std::setw(13) << dTest
+				<< " " << std::setw(13) << dSolTest
+				<< " " << bSolConv
+				<< " " << bOut
+				<< outputCounterPostfix);
+		}
+
+		DEBUGCOUT("Step " << lStep
+			<< " has been successfully completed "
+			"in " << iStIter << " iterations" << std::endl);
+
+		dRefTimeStep = dCurrTimeStep;
+		dTime += dRefTimeStep;
+
+		bSolConv = false;
+
+		if (EigAn.bAnalysis
+			&& EigAn.currAnalysis != EigAn.Analyses.end()
+			&& *EigAn.currAnalysis <= dTime)
+		{
+			std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
+				EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
+			if (i != EigAn.Analyses.end()) {
+				EigAn.currAnalysis = --i;
+			}
+			Eig(bOutputCounter);
+			++EigAn.currAnalysis;
+		}
+
+		/* Calcola il nuovo timestep */
+		dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
+		DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
+		
+		SAFEDELETE(pThirdRegularStep);
+		pThirdRegularStep = 0;
+	}
+	//Third start-up step for MS4
 	/* Altri passi regolari */
 	ASSERT(pRegularSteps != 0);
 
@@ -1369,6 +2228,10 @@ bool
 Solver::Advance(void)
 {
 	DEBUGCOUTFNAME("Solver::Advance");
+        
+#ifdef USE_MPI
+	int mpi_finalize = 0;
+#endif /* USE_MPI */
 
 	// consistency check
 	if (eStatus != SOLVER_STATUS_STARTED) {
@@ -1436,7 +2299,7 @@ Solver::Advance(void)
 	}
 
 	lStep++;
-	pDM->BeforePredict(*pX, *pXPrime, *qX[0], *qXPrime[0]);
+	pDM->BeforePredict(*pX, *pXPrime, qX, qXPrime);
 
 	Flip();
 
@@ -1460,7 +2323,7 @@ IfStepIsToBeRepeated:
 				qX, qXPrime, pX, pXPrime, iStIter,
 				dTest, dSolTest);
 	}
-	catch (NonlinearSolver::NoConvergence) {
+	catch (NonlinearSolver::NoConvergence& e) {
 		if (dCurrTimeStep > dMinTimeStep) {
 			/* Riduce il passo */
 			CurrStep = StepIntegrator::REPEATSTEP;
@@ -1489,7 +2352,7 @@ IfStepIsToBeRepeated:
 			"aborting..." << std::endl);
 		throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
 	}
-	catch (NonlinearSolver::ErrSimulationDiverged) {
+	catch (NonlinearSolver::ErrSimulationDiverged& e) {
 		if (dCurrTimeStep > dMinTimeStep) {
 			/* Riduce il passo */
 			CurrStep = StepIntegrator::REPEATSTEP;
@@ -1533,7 +2396,7 @@ IfStepIsToBeRepeated:
 			"aborting..." << std::endl);
 		throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
 	}
-	catch (NonlinearSolver::ConvergenceOnSolution) {
+	catch (NonlinearSolver::ConvergenceOnSolution& e) {
 		bSolConv = true;
 	}
 	catch (EndOfSimulation& eos) {
@@ -1571,7 +2434,7 @@ IfStepIsToBeRepeated:
 
 	if (outputMsg()) {
 		Out << "Step " << lStep
-			<< " " << dTime + dCurrTimeStep
+                        << " " << std::setprecision(16) << dTime + dCurrTimeStep
 			<< " " << dCurrTimeStep
 			<< " " << iStIter
 			<< " " << dTest
@@ -1607,7 +2470,7 @@ IfStepIsToBeRepeated:
 		&& *EigAn.currAnalysis <= dTime)
 	{
 		std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-			EigAn.Analyses.end(), bind2nd(std::greater<doublereal>(), dTime));
+                        EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
 		if (i != EigAn.Analyses.end()) {
 			EigAn.currAnalysis = --i;
 		}
@@ -1642,9 +2505,21 @@ Solver::~Solver(void)
 	DEBUGCOUTFNAME("Solver::~Solver");
 
 	if (!qX.empty()) {
-		for (int ivec = 0; ivec < iNumPreviousVectors; ivec++) {
+		integer temp_qx_size = qX.size();
+		for (int ivec = 0; ivec < temp_qx_size; ivec++)
+		{
 			if (qX[ivec] != 0) {
 				SAFEDELETE(qX[ivec]);
+			}
+		}
+	}
+
+	if (!qXPrime.empty()) {
+		integer temp_qxprime_size = qXPrime.size();
+		for (int ivec = 0; ivec < temp_qxprime_size; ivec++)
+		{
+			if (qXPrime[ivec] != 0)
+			{
 				SAFEDELETE(qXPrime[ivec]);
 			}
 		}
@@ -1678,12 +2553,28 @@ Solver::~Solver(void)
 		SAFEDELETE(pFirstDummyStep);
 	}
 
+	if (pSecondDummyStep) {
+		SAFEDELETE(pSecondDummyStep);
+	}
+
+	if (pThirdDummyStep) {
+		SAFEDELETE(pThirdDummyStep);
+	}
+
 	if (pDummySteps) {
 		SAFEDELETE(pDummySteps);
 	}
 
 	if (pFirstRegularStep) {
 		SAFEDELETE(pFirstRegularStep);
+	}
+
+	if (pSecondRegularStep) {
+		SAFEDELETE(pSecondRegularStep);
+	}
+
+	if (pThirdRegularStep) {
+		SAFEDELETE(pThirdRegularStep);
 	}
 
 	if (pRegularSteps) {
@@ -1742,18 +2633,79 @@ Solver::Restart(std::ostream& out,DataManager::eRestart type) const
 		pRhoRegular->Restart(out) << ", ";
 		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
 		break;
+	case INT_MS3:
+		out << "ms3, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_MS4:
+		out << "ms4, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_SS2:
+		out << "ss2, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_SS3:
+		out << "ss3, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_SS4:
+		out << "ss4, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
 	case INT_HOPE:
 		out << "hope, ";
 		pRhoRegular->Restart(out) << ", ";
 		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
 		break;
-
-	case INT_THIRDORDER:
-		out << "thirdorder, ";
-		if (!pRhoRegular)
-			out << "ad hoc;" << std::endl;
-			else
-			pRhoRegular->Restart(out) << ";" << std::endl;
+	case INT_BATHE:
+		out << "Bathe, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_MSSTC3:
+		out << "msstc3, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_MSSTH3:
+		out << "mssth3, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_MSSTC4:
+		out << "msstc4, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_MSSTH4:
+		out << "mssth4, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_MSSTC5:
+		out << "msstc5, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_MSSTH5:
+		out << "mssth5, ";
+		pRhoRegular->Restart(out) << ", ";
+		pRhoAlgebraicRegular->Restart(out) << ";" << std::endl;
+		break;
+	case INT_DIRK33:
+		out << "DIRK33; " << std::endl;
+		break;
+	case INT_DIRK43:
+		out << "DIRK43; " << std::endl;
+		break;
+	case INT_DIRK54:
+		out << "DIRK54; " << std::endl;
 		break;
 	case INT_IMPLICITEULER:
 		out << "implicit euler;" << std::endl;
@@ -1825,8 +2777,8 @@ Solver::Restart(std::ostream& out,DataManager::eRestart type) const
 	default :
 		out << "  nonlinear solver: newton raphson";
 		if (!bTrueNewtonRaphson) {
-			out << ", modified, " << iIterationsBeforeAssembly;
-			if (bKeepJac) {
+                        out << ", modified, " << oLineSearchParam.iIterationsBeforeAssembly;
+                        if (oLineSearchParam.bKeepJacAcrossSteps) {
 				out << ", keep jacobian matrix";
 			}
 			if (bHonorJacRequest) {
@@ -1907,10 +2859,26 @@ Solver::ReadData(MBDynParser& HP)
 		/* DEPRECATED */ "Crank" "Nicholson" /* END OF DEPRECATED */ ,
 			/* DEPRECATED */ "nostro" /* END OF DEPRECATED */ ,
 			"ms",
+			"ms2",
+			"ms3",
+			"ms4",
+			"ss2",
+			"ss3",
+			"ss4",
 			"hope",
+			"Bathe",
+			"msstc3",
+			"mssth3",
+			"msstc4",
+			"mssth4",
+			"msstc5",
+			"mssth5",
+			"DIRK33",
+			"DIRK43",
+			"DIRK54",
 			"bdf",
-			"thirdorder",
 			"implicit" "euler",
+                        "hybrid",
 
 		"derivatives" "coefficient",
 		"derivatives" "tolerance",
@@ -1944,6 +2912,12 @@ Solver::ReadData(MBDynParser& HP)
 			"default",
 			"newton" "raphson",
 			"line" "search",
+                        "bfgs",
+                        "mcp" "newton" "fb",
+                        "mcp" "newton" "min" "fb",
+                        "siconos" "mcp" "newton" "fb",
+                        "siconos" "mcp" "newton" "min" "fb",
+                        "nox",
 			"matrix" "free",
 				"bicgstab",
 				"gmres",
@@ -2016,10 +2990,26 @@ Solver::ReadData(MBDynParser& HP)
 		CRANKNICHOLSON,
 		NOSTRO,
 		MS,
+		MS2,
+		MS3,
+		MS4,
+		SS2,
+		SS3,
+		SS4,
 		HOPE,
+		BATHE,
+		MSSTC3,
+		MSSTH3,
+		MSSTC4,
+		MSSTH4,
+		MSSTC5,
+		MSSTH5,
+		DIRK33,
+		DIRK43,
+		DIRK54,
 		BDF,
-		THIRDORDER,
 		IMPLICITEULER,
+                HYBRID,
 
 		DERIVATIVESCOEFFICIENT,
 		DERIVATIVESTOLERANCE,
@@ -2053,6 +3043,12 @@ Solver::ReadData(MBDynParser& HP)
 			DEFAULT,
 			NEWTONRAPHSON,
 			LINESEARCH,
+                        BFGS,
+                        MCP_NEWTON_FB,
+                        MCP_NEWTON_MIN_FB,
+                        SICONOS_MCP_NEWTON_FB,
+                        SICONOS_MCP_NEWTON_MIN_FB,
+                        NOX,
 			MATRIXFREE,
 				BICGSTAB,
 				GMRES,
@@ -2092,6 +3088,7 @@ Solver::ReadData(MBDynParser& HP)
 
 	bool bMethod(false);
 	bool bDummyStepsMethod(false);
+	StepIntegratorType eHybridDefaultIntRegular(INT_MS2);
 
 	/* dati letti qui ma da passare alle classi
 	 *	StepIntegration e NonlinearSolver
@@ -2110,6 +3107,7 @@ Solver::ReadData(MBDynParser& HP)
 	/* Dati del passo iniziale di calcolo delle derivate */
 
 	doublereal dDerivativesTol = ::dDefaultTol;
+        doublereal dDerivativesSolTol = -1.;
 	integer iDerivativesMaxIterations = ::iDefaultMaxIterations;
 	integer iDerivativesCoefMaxIter = 0;
 	doublereal dDerivativesCoefFactor = 10.;
@@ -2170,7 +3168,7 @@ Solver::ReadData(MBDynParser& HP)
 			try {
 				dMinTimeStep = HP.GetReal(std::numeric_limits<doublereal>::min(), HighParser::range_gt<doublereal>(0.));
 
-			} catch (HighParser::ErrValueOutOfRange<doublereal> e) {
+			} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
 				silent_cerr("invalid min time step " << e.Get() << " (must be positive) [" << e.what() << "] at line " << HP.GetLineData() << std::endl);
 				throw e;
 			}
@@ -2413,6 +3411,18 @@ Solver::ReadData(MBDynParser& HP)
 				RegularType = INT_CRANKNICOLSON;
 				break;
 
+			case DIRK33:
+				RegularType = INT_DIRK33;
+				break;
+
+			case DIRK43:
+				RegularType = INT_DIRK43;
+				break;
+
+			case DIRK54:
+				RegularType = INT_DIRK54;
+				break;
+
 			case BDF:
 				/* default (order 2) */
 				RegularType = INT_MS2;
@@ -2447,6 +3457,19 @@ Solver::ReadData(MBDynParser& HP)
 					<< HP.GetLineData()
 					<< std::endl);
 			case MS:
+			case MS2:
+			case MS3:
+			case MS4:
+			case SS2:
+			case SS3:
+			case SS4:
+			case BATHE:
+			case MSSTC3:
+			case MSSTH3:
+			case MSSTC4:
+			case MSSTH4:
+			case MSSTC5:
+			case MSSTH5:
 			case HOPE:
 				pRhoRegular = HP.GetDriveCaller(true);
 
@@ -2460,7 +3483,62 @@ Solver::ReadData(MBDynParser& HP)
 				switch (KMethod) {
 				case NOSTRO:
 				case MS:
+				case MS2:
 					RegularType = INT_MS2;
+					break;
+
+				case MS3:
+					RegularType = INT_MS3;
+					pSecondRhoRegular=pRhoRegular->pCopy();
+					pSecondRhoAlgebraicRegular=pRhoRegular->pCopy();
+					break;
+
+				case MS4:
+					RegularType = INT_MS4;
+					pSecondRhoRegular=pRhoRegular->pCopy();
+					pSecondRhoAlgebraicRegular=pRhoRegular->pCopy();
+					pThirdRhoRegular=pRhoRegular->pCopy();
+					pThirdRhoAlgebraicRegular=pRhoRegular->pCopy();
+					break;
+
+				case SS2:
+					RegularType = INT_SS2;
+					break;
+
+				case SS3:
+					RegularType = INT_SS3;
+					break;
+
+				case SS4:
+					RegularType = INT_SS4;
+					break;
+
+				case BATHE:
+					RegularType = INT_BATHE;
+					break;
+
+				case MSSTC3:
+					RegularType = INT_MSSTC3;
+					break;
+
+				case MSSTH3:
+					RegularType = INT_MSSTH3;
+					break;
+
+				case MSSTC4:
+					RegularType = INT_MSSTC4;
+					break;
+
+				case MSSTH4:
+					RegularType = INT_MSSTH4;
+					break;
+
+				case MSSTC5:
+					RegularType = INT_MSSTC5;
+					break;
+
+				case MSSTH5:
+					RegularType = INT_MSSTH5;
 					break;
 
 				case HOPE:
@@ -2472,18 +3550,51 @@ Solver::ReadData(MBDynParser& HP)
 				}
 				break;
 
-			case THIRDORDER:
-				if (HP.IsKeyWord("ad" "hoc")) {
-					/* do nothing */ ;
-				} else {
-					pRhoRegular = HP.GetDriveCaller(true);
-				}
-				RegularType = INT_THIRDORDER;
-				break;
-
 			case IMPLICITEULER:
 				RegularType = INT_IMPLICITEULER;
 				break;
+			case HYBRID: {
+				const KeyWords KMethod = KeyWords(HP.GetWord());
+
+				switch (KMethod) {
+				case IMPLICITEULER:
+					eHybridDefaultIntRegular = INT_IMPLICITEULER;
+					break;
+
+				case CRANKNICOLSON:
+					eHybridDefaultIntRegular = INT_CRANKNICOLSON;
+					break;
+
+				case MS:
+				case MS2:
+					eHybridDefaultIntRegular = INT_MS2;
+					break;
+
+				case HOPE:
+					eHybridDefaultIntRegular = INT_HOPE;
+					break;
+
+				default:
+					silent_cerr("Default method \"" << K.pGetDescription(KMethod)
+						    << "\" not implemented for hybrid integrator at line "
+						    << HP.GetLineData() << std::endl);
+					throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
+				}
+
+				if (HP.IsArg()) {
+					pRhoRegular = HP.GetDriveCaller(true);
+				} else {
+					SAFENEW(pRhoRegular, NullDriveCaller);
+				}
+
+				if (HP.IsArg()) {
+					pRhoAlgebraicRegular = HP.GetDriveCaller(true);
+				} else {
+					pRhoAlgebraicRegular = pRhoRegular->pCopy();
+				}
+
+				RegularType = INT_HYBRID;
+			} break;
 
 			default:
 				silent_cerr("Unknown integration method at line "
@@ -2510,6 +3621,18 @@ Solver::ReadData(MBDynParser& HP)
 				silent_cout("warning: \"crank nicolson\" is the correct spelling" << std::endl);
 			case CRANKNICOLSON:
 				DummyType = INT_CRANKNICOLSON;
+				break;
+
+			case DIRK33:
+				DummyType = INT_DIRK33;
+				break;
+
+			case DIRK43:
+				DummyType = INT_DIRK43;
+				break;
+
+			case DIRK54:
+				DummyType = INT_DIRK54;
 				break;
 
 			case BDF:
@@ -2541,6 +3664,19 @@ Solver::ReadData(MBDynParser& HP)
 
 			case NOSTRO:
 			case MS:
+			case MS2:
+			case MS3:
+			case MS4:
+			case SS2:
+			case SS3:
+			case SS4:
+			case BATHE:
+			case MSSTC3:
+			case MSSTH3:
+			case MSSTC4:
+			case MSSTH4:
+			case MSSTC5:
+			case MSSTH5:
 			case HOPE:
 				pRhoDummy = HP.GetDriveCaller(true);
 
@@ -2553,7 +3689,62 @@ Solver::ReadData(MBDynParser& HP)
 				switch (KMethod) {
 				case NOSTRO:
 				case MS:
+				case MS2:
 					DummyType = INT_MS2;
+					break;
+
+				case MS3:
+					DummyType = INT_MS3;
+					pSecondRhoDummy = pRhoDummy->pCopy();
+					pSecondRhoAlgebraicDummy = pRhoAlgebraicDummy->pCopy();
+					break;
+
+				case MS4:
+					DummyType = INT_MS4;
+					pSecondRhoDummy = pRhoDummy->pCopy();
+					pSecondRhoAlgebraicDummy = pRhoAlgebraicDummy->pCopy();
+					pThirdRhoDummy = pRhoDummy->pCopy();
+					pThirdRhoAlgebraicDummy = pRhoAlgebraicDummy->pCopy();
+					break;
+
+				case SS2:
+					DummyType = INT_SS2;
+					break;
+
+				case SS3:
+					DummyType = INT_SS3;
+					break;
+
+				case SS4:
+					DummyType = INT_SS4;
+					break;
+
+				case BATHE:
+					DummyType = INT_BATHE;
+					break;
+
+				case MSSTC3:
+					DummyType = INT_MSSTC3;
+					break;
+
+				case MSSTH3:
+					DummyType = INT_MSSTH3;
+					break;
+
+				case MSSTC4:
+					DummyType = INT_MSSTC4;
+					break;
+
+				case MSSTH4:
+					DummyType = INT_MSSTH4;
+					break;
+
+				case MSSTC5:
+					DummyType = INT_MSSTC5;
+					break;
+
+				case MSSTH5:
+					DummyType = INT_MSSTH5;
 					break;
 
 				case HOPE:
@@ -2563,15 +3754,6 @@ Solver::ReadData(MBDynParser& HP)
 				default:
 					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 				}
-				break;
-
-			case THIRDORDER:
-				if (HP.IsKeyWord("ad" "hoc")) {
-					/* do nothing */ ;
-				} else {
-					pRhoDummy = HP.GetDriveCaller(true);
-				}
-				DummyType = INT_THIRDORDER;
 				break;
 
 			case IMPLICITEULER:
@@ -2616,6 +3798,10 @@ Solver::ReadData(MBDynParser& HP)
 						ResTest = NonlinearSolverTest::NORM;
 					} else if (HP.IsKeyWord("minmax")) {
 						ResTest = NonlinearSolverTest::MINMAX;
+					} else if (HP.IsKeyWord("relnorm")) {
+						ResTest = NonlinearSolverTest::RELNORM;
+					} else if (HP.IsKeyWord("sepnorm")) {
+						ResTest = NonlinearSolverTest::SEPNORM;
 					} else if (HP.IsKeyWord("none")) {
 						ResTest = NonlinearSolverTest::NONE;
 					} else {
@@ -2732,6 +3918,12 @@ Solver::ReadData(MBDynParser& HP)
 					"Derivatives tolerance = "
 					<< dDerivativesTol
 					<< std::endl);
+                        
+                        if (HP.IsArg()) {
+                                dDerivativesSolTol = HP.GetReal();
+                        }
+                        DEBUGLCOUT(MYDEBUG_INPUT, "Derivatives solution tolerance = "
+                                   << dDerivativesSolTol << "\n");
 			break;
 		}
 
@@ -2841,14 +4033,14 @@ Solver::ReadData(MBDynParser& HP)
 			if (bAutoDerivCoef || HP.IsKeyWord("auto")) {
 				if (HP.IsKeyWord("max" "iterations")) {
 					iDerivativesCoefMaxIter = HP.GetInt();
+                                } else {
+                                        iDerivativesCoefMaxIter = 6;
+                                }
+                            
 					if (iDerivativesCoefMaxIter < 0) {
 						silent_cerr("number of iterations must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
-
-				} else {
-					iDerivativesCoefMaxIter = 6;
-				}
 
 				if (HP.IsKeyWord("factor")) {
 					dDerivativesCoefFactor = HP.GetReal();
@@ -2873,15 +4065,15 @@ Solver::ReadData(MBDynParser& HP)
 			case MODIFIED:
 				bTrueNewtonRaphson = 0;
 				if (HP.IsArg()) {
-					iIterationsBeforeAssembly = HP.GetInt();
+                                        oLineSearchParam.iIterationsBeforeAssembly = HP.GetInt();
 				} else {
-					iIterationsBeforeAssembly = ::iDefaultIterationsBeforeAssembly;
+                                        oLineSearchParam.iIterationsBeforeAssembly = ::iDefaultIterationsBeforeAssembly;
 				}
 				DEBUGLCOUT(MYDEBUG_INPUT, "Modified "
 						"Newton-Raphson will be used; "
 						"matrix will be assembled "
 						"at most after "
-						<< iIterationsBeforeAssembly
+                                                << oLineSearchParam.iIterationsBeforeAssembly
 						<< " iterations" << std::endl);
 				break;
 
@@ -2892,7 +4084,7 @@ Solver::ReadData(MBDynParser& HP)
 			/* no break: fall-thru to next case */
 			case NR_TRUE:
 				bTrueNewtonRaphson = 1;
-				iIterationsBeforeAssembly = 0;
+                                oLineSearchParam.iIterationsBeforeAssembly = 0;
 				break;
 			}
 			break;
@@ -3144,7 +4336,8 @@ Solver::ReadData(MBDynParser& HP)
 						<< std::endl);
 					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 #endif // !USE_JDQZ
-
+                                } else if (HP.IsKeyWord("use" "external")) {
+                                        EigAn.uFlags |= EigenAnalysis::EIG_USE_EXTERNAL;
 				} else if (HP.IsKeyWord("balance")) {
 					if (HP.IsKeyWord("no")) {
 						EigAn.uFlags &= ~EigenAnalysis::EIG_BALANCE;
@@ -3237,7 +4430,16 @@ Solver::ReadData(MBDynParser& HP)
 					EigAn.uFlags |= EigenAnalysis::EIG_OUTPUT_SPARSE_MATRICES;
 				}
 				break;
+                        case EigenAnalysis::EIG_USE_EXTERNAL:
+                                if (!(EigAn.uFlags & EigenAnalysis::EIG_OUTPUT_MATRICES_MASK)) {
+                                        silent_cerr("external eigenanalysis is not possible without output of matrices" << std::endl);
+                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                }
 
+                                if ((EigAn.uFlags & EigenAnalysis::EIG_OUTPUT_MATRICES) && !(EigAn.uFlags & EigenAnalysis::EIG_OUTPUT_FULL_MATRICES)) {
+                                        EigAn.uFlags |= EigenAnalysis::EIG_OUTPUT_SPARSE_MATRICES;
+                                }
+                                break;
 			default:
 				break;
 			}
@@ -3309,6 +4511,30 @@ Solver::ReadData(MBDynParser& HP)
 				NonlinearSolverType = NonlinearSolver::LINESEARCH;
 				break;
 
+                        case BFGS:
+                                NonlinearSolverType = NonlinearSolver::BFGS;
+                                break;
+
+                        case MCP_NEWTON_FB:
+                                NonlinearSolverType = NonlinearSolver::MCP_NEWTON_FB;
+                                break;
+
+                        case MCP_NEWTON_MIN_FB:
+                                NonlinearSolverType = NonlinearSolver::MCP_NEWTON_MIN_FB;
+                                break;
+                                
+                        case NOX:
+                                NonlinearSolverType = NonlinearSolver::NOX;
+                                break;
+
+                        case SICONOS_MCP_NEWTON_FB:
+                                NonlinearSolverType = NonlinearSolver::SICONOS_MCP_NEWTON_FB;
+                                break;
+                                
+                        case SICONOS_MCP_NEWTON_MIN_FB:
+                                NonlinearSolverType = NonlinearSolver::SICONOS_MCP_NEWTON_MIN_FB;
+                                break;
+
 			case MATRIXFREE:
 				NonlinearSolverType = NonlinearSolver::MATRIXFREE;
 				break;
@@ -3321,11 +4547,21 @@ Solver::ReadData(MBDynParser& HP)
 			}
 
 			switch (NonlinearSolverType) {
+                        case NonlinearSolver::SICONOS_MCP_NEWTON_FB:
+                        case NonlinearSolver::SICONOS_MCP_NEWTON_MIN_FB:
+#ifndef USE_SICONOS
+                                silent_cerr("siconos solver is not available!\n"
+                                            "configure with --with-siconos in order to use siconos!\n");
+                                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+#endif
 			case NonlinearSolver::NEWTONRAPHSON:
 			case NonlinearSolver::LINESEARCH:
+                        case NonlinearSolver::BFGS:
+                        case NonlinearSolver::MCP_NEWTON_FB:
+                        case NonlinearSolver::MCP_NEWTON_MIN_FB:
 				bTrueNewtonRaphson = true;
-				bKeepJac = false;
-				iIterationsBeforeAssembly = 0;
+                                oLineSearchParam.bKeepJacAcrossSteps = false;
+                                oLineSearchParam.iIterationsBeforeAssembly = 0;
 
 				if (NonlinearSolverType == NonlinearSolver::NEWTONRAPHSON && HP.IsKeyWord("true")) {
 					break;
@@ -3333,15 +4569,15 @@ Solver::ReadData(MBDynParser& HP)
 
 				if (HP.IsKeyWord("modified")) {
 					bTrueNewtonRaphson = false;
-					iIterationsBeforeAssembly = HP.GetInt();
+                                        oLineSearchParam.iIterationsBeforeAssembly = HP.GetInt();
 
 					if (HP.IsKeyWord("keep" "jacobian")) {
 						pedantic_cout("Use of deprecated \"keep jacobian\" "
 							"at line " << HP.GetLineData() << std::endl);
-						bKeepJac = true;
+                                                oLineSearchParam.bKeepJacAcrossSteps = true;
 
 					} else if (HP.IsKeyWord("keep" "jacobian" "matrix")) {
-						bKeepJac = true;
+                                                oLineSearchParam.bKeepJacAcrossSteps = true;
 					}
 
 					DEBUGLCOUT(MYDEBUG_INPUT, "modified "
@@ -3350,7 +4586,7 @@ Solver::ReadData(MBDynParser& HP)
 							"matrix will be "
 							"assembled at most "
 							"after "
-							<< iIterationsBeforeAssembly
+                                                        << oLineSearchParam.iIterationsBeforeAssembly
 							<< " iterations"
 							<< std::endl);
 					if (HP.IsKeyWord("honor" "element" "requests")) {
@@ -3363,63 +4599,89 @@ Solver::ReadData(MBDynParser& HP)
 					}
 				}
 
-				if (NonlinearSolver::LINESEARCH == NonlinearSolverType) {
+                                if (NonlinearSolverType == NonlinearSolver::BFGS) {
+                                        oLineSearchParam.dAlphaModified = oLineSearchParam.dAlphaFull; // Lower number of jacobians achieved with this settings
+                                }
+
 					while (HP.IsArg()) {
-						if (HP.IsKeyWord("tolerance" "x")) {
-							LineSearch.dTolX = HP.GetReal();
-							if (LineSearch.dTolX < 0.) {
+                                                if (HP.IsKeyWord("default" "solver" "options")) {
+                                                oLineSearchParam.uFlags &= ~LineSearchParameters::ABORT_AT_LAMBDA_MIN;
+                                                oLineSearchParam.uFlags |= LineSearchParameters::NON_NEGATIVE_SLOPE_CONTINUE;
+                                                oLineSearchParam.uFlags |= LineSearchParameters::ZERO_GRADIENT_CONTINUE;
+                                                oLineSearchParam.uFlags |= LineSearchParameters::DIVERGENCE_CHECK;
+                                                oLineSearchParam.uFlags &= ~LineSearchParameters::SCALE_NEWTON_STEP;
+                                                
+                                                        if (HP.IsKeyWord("moderate" "nonlinear")) {
+                                                        oLineSearchParam.dLambdaMin = 0.1;
+                                                        oLineSearchParam.dDivergenceCheck = 10;
+                                                        } else if (HP.IsKeyWord("heavy" "nonlinear")) {
+                                                        oLineSearchParam.dLambdaMin = 1e-4;
+                                                        oLineSearchParam.dDivergenceCheck = 1.5;
+                                                        } else {
+                                                                silent_cerr("keyword \"moderate nonlinear\" or \"heavy nonlinear\" expected at line " << HP.GetLineData() << std::endl);
+                                                                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                        }
+                                                } else if (HP.IsKeyWord("tolerance" "x")) {
+                                                oLineSearchParam.dTolX = HP.GetReal();
+                                                if (oLineSearchParam.dTolX < 0.) {
 								silent_cerr("tolerance x must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
 						} else if (HP.IsKeyWord("tolerance" "min")) {
-							LineSearch.dTolMin = HP.GetReal();
-							if (LineSearch.dTolMin < 0.) {
+                                                oLineSearchParam.dTolMin = HP.GetReal();
+                                                if (oLineSearchParam.dTolMin < 0.) {
 								silent_cerr("tolerance min must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
 						} else if (HP.IsKeyWord("max" "iterations")) {
-							LineSearch.iMaxIterations = HP.GetInt();
-							if (LineSearch.iMaxIterations < 0) {
+                                                oLineSearchParam.iMaxIterations = HP.GetInt();
+                                                if (oLineSearchParam.iMaxIterations < 0) {
 								silent_cerr("max iterations must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
-						} else if (HP.IsKeyWord("alpha")) {
-							LineSearch.dAlpha = HP.GetReal();
-							if (LineSearch.dAlpha < 0.) {
-								silent_cerr("alpha must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
+						} else if (HP.IsKeyWord("alpha") || HP.IsKeyWord("alpha" "full")) {
+                                                oLineSearchParam.dAlphaFull = HP.GetReal();
+                                                if (oLineSearchParam.dAlphaFull < 0.) {
+								silent_cerr("alpha full must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
+								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+							}
+                                                } else if (HP.IsKeyWord("alpha" "modified")) {
+                                                oLineSearchParam.dAlphaModified = HP.GetReal();
+                                                if (oLineSearchParam.dAlphaModified < 0.) {
+								silent_cerr("alpha modified must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
 						} else if (HP.IsKeyWord("lambda" "min")) {
-							LineSearch.dLambdaMin = HP.GetReal();
-							if (LineSearch.dLambdaMin < 0.) {
+                                                oLineSearchParam.dLambdaMin = HP.GetReal();
+                                                if (oLineSearchParam.dLambdaMin < 0.) {
 								silent_cerr("lambda min must be greater than or equal to zero at line " << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
 							if (HP.IsKeyWord("relative")) {
 								if (HP.GetYesNoOrBool()) {
-									LineSearch.uFlags |= LineSearchParameters::RELATIVE_LAMBDA_MIN;
+                                                                oLineSearchParam.uFlags |= LineSearchParameters::RELATIVE_LAMBDA_MIN;
 								} else {
-									LineSearch.uFlags &= ~LineSearchParameters::RELATIVE_LAMBDA_MIN;
+                                                                oLineSearchParam.uFlags &= ~LineSearchParameters::RELATIVE_LAMBDA_MIN;
 								}
 							}
 						} else if (HP.IsKeyWord("lambda" "factor" "min")) {
-							LineSearch.dLambdaFactMin = HP.GetReal();
-							if (LineSearch.dLambdaFactMin <= 0. || LineSearch.dLambdaFactMin >= 1.) {
+                                                oLineSearchParam.dLambdaFactMin = HP.GetReal();
+                                                if (oLineSearchParam.dLambdaFactMin <= 0. || oLineSearchParam.dLambdaFactMin >= 1.) {
 								silent_cerr("lambda factor min must be in between zero and one at line" << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
 						} else if (HP.IsKeyWord("max" "step")) {
-							LineSearch.dMaxStep = HP.GetReal();
-							if (LineSearch.dMaxStep <= 0.) {
+                                                oLineSearchParam.dMaxStep = HP.GetReal();
+                                                if (oLineSearchParam.dMaxStep <= 0.) {
 								silent_cerr("max step must be greater than zero at line " << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
 						} else if (HP.IsKeyWord("zero" "gradient")) {
 							if (HP.IsKeyWord("continue")) {
 								if (HP.GetYesNoOrBool()) {
-									LineSearch.uFlags |= LineSearchParameters::ZERO_GRADIENT_CONTINUE;
+                                                                oLineSearchParam.uFlags |= LineSearchParameters::ZERO_GRADIENT_CONTINUE;
 								} else {
-									LineSearch.uFlags &= ~LineSearchParameters::ZERO_GRADIENT_CONTINUE;
+                                                                oLineSearchParam.uFlags &= ~LineSearchParameters::ZERO_GRADIENT_CONTINUE;
 								}
 							}
 							else {
@@ -3428,76 +4690,442 @@ Solver::ReadData(MBDynParser& HP)
 							}
 						} else if (HP.IsKeyWord("divergence" "check")) {
 							if (HP.GetYesNoOrBool()) {
-								LineSearch.uFlags |= LineSearchParameters::DIVERGENCE_CHECK;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::DIVERGENCE_CHECK;
 							} else {
-								LineSearch.uFlags &= ~LineSearchParameters::DIVERGENCE_CHECK;
+                                                        oLineSearchParam.uFlags &= ~LineSearchParameters::DIVERGENCE_CHECK;
 							}
 							if (HP.IsKeyWord("factor")) {
-								LineSearch.dDivergenceCheck = HP.GetReal();
-								if (LineSearch.dDivergenceCheck <= 0.) {
-									silent_cerr("divergence check factor must be greater than zero at line " << HP.GetLineData() << std::endl);
+                                                        oLineSearchParam.dDivergenceCheck = HP.GetReal();
+                                                        if (oLineSearchParam.dDivergenceCheck < 1.) {
+									silent_cerr("divergence check factor must be greater than one at line "
+                                                                                    << HP.GetLineData() << std::endl);
 									throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 								}
 							}
 						} else if (HP.IsKeyWord("algorithm")) {
-							LineSearch.uFlags &= ~LineSearchParameters::ALGORITHM;
+                                                oLineSearchParam.uFlags &= ~LineSearchParameters::ALGORITHM;
 							if (HP.IsKeyWord("cubic")) {
-								LineSearch.uFlags |= LineSearchParameters::ALGORITHM_CUBIC;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::ALGORITHM_CUBIC;
 							} else if (HP.IsKeyWord("factor")) {
-								LineSearch.uFlags |= LineSearchParameters::ALGORITHM_FACTOR;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::ALGORITHM_FACTOR;
 							} else {
 								silent_cerr("Keyword \"cubic\" or \"factor\" expected at line " << HP.GetLineData() << std::endl);
 								throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 							}
 						} else if (HP.IsKeyWord("scale" "newton" "step")) {
 							if (HP.GetYesNoOrBool()) {
-								LineSearch.uFlags |= LineSearchParameters::SCALE_NEWTON_STEP;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::SCALE_NEWTON_STEP;
 							} else {
-								LineSearch.uFlags &= ~LineSearchParameters::SCALE_NEWTON_STEP;
+                                                        oLineSearchParam.uFlags &= ~LineSearchParameters::SCALE_NEWTON_STEP;
 							}
 							if (HP.IsKeyWord("min" "scale")) {
-								LineSearch.dMinStepScale = HP.GetReal();
-								if (LineSearch.dMinStepScale < 0. || LineSearch.dMinStepScale > 1.) {
+                                                        oLineSearchParam.dMinStepScale = HP.GetReal();
+                                                        if (oLineSearchParam.dMinStepScale < 0. || oLineSearchParam.dMinStepScale > 1.) {
 									silent_cerr("min scale must be in range [0-1] at line " << HP.GetLineData() << std::endl);
 									throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 								}
 							}
 						} else if (HP.IsKeyWord("print" "convergence" "info")) {
 							if (HP.GetYesNoOrBool()) {
-								LineSearch.uFlags |= LineSearchParameters::PRINT_CONVERGENCE_INFO;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::PRINT_CONVERGENCE_INFO;
 							} else {
-								LineSearch.uFlags &= ~LineSearchParameters::PRINT_CONVERGENCE_INFO;
+                                                        oLineSearchParam.uFlags &= ~LineSearchParameters::PRINT_CONVERGENCE_INFO;
 							}
 						} else if (HP.IsKeyWord("verbose")) {
 							if (HP.GetYesNoOrBool()) {
-								LineSearch.uFlags |= LineSearchParameters::VERBOSE_MODE;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::VERBOSE_MODE;
 							} else {
-								LineSearch.uFlags &= ~LineSearchParameters::VERBOSE_MODE;
+                                                        oLineSearchParam.uFlags &= ~LineSearchParameters::VERBOSE_MODE;
 							}
 						} else if (HP.IsKeyWord("abort" "at" "lambda" "min")) {
 							if (HP.GetYesNoOrBool()) {
-								LineSearch.uFlags |= LineSearchParameters::ABORT_AT_LAMBDA_MIN;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::ABORT_AT_LAMBDA_MIN;
 							} else {
-								LineSearch.uFlags &= ~LineSearchParameters::ABORT_AT_LAMBDA_MIN;
+                                                        oLineSearchParam.uFlags &= ~LineSearchParameters::ABORT_AT_LAMBDA_MIN;
 							}
 						} else if (HP.IsKeyWord("non" "negative" "slope" "continue")) {
 							if (HP.GetYesNoOrBool()) {
-								LineSearch.uFlags |= LineSearchParameters::NON_NEGATIVE_SLOPE_CONTINUE;
+                                                        oLineSearchParam.uFlags |= LineSearchParameters::NON_NEGATIVE_SLOPE_CONTINUE;
 							} else {
-								LineSearch.uFlags &= ~LineSearchParameters::NON_NEGATIVE_SLOPE_CONTINUE;
+                                                        oLineSearchParam.uFlags &= ~LineSearchParameters::NON_NEGATIVE_SLOPE_CONTINUE;
 							}
+                                                } else if (HP.IsKeyWord("time" "step" "tolerance")) {
+                                                oLineSearchParam.dTimeStepTol = HP.GetReal();
+
+                                                if (oLineSearchParam.dTimeStepTol < 0) {
+                                                        silent_cerr("time step tolerance must not be smaller than zero at line "
+                                                                    << HP.GetLineData()
+                                                                    << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                    }
+                                                } else if (HP.IsKeyWord("update" "ratio")) {
+                                                oLineSearchParam.dUpdateRatio = HP.GetReal();
+
+                                                if (oLineSearchParam.dUpdateRatio <= 0) {
+                                                        silent_cerr("update ratio must be a value greater than zero at line "
+                                                                    << HP.GetLineData()
+                                                                    << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("mcp" "tolerance")) {
+                                                oLineSearchParam.dMcpTol = HP.GetReal();
+
+                                                if (oLineSearchParam.dMcpTol <= 0.) {
+                                                        silent_cerr("mcp tolerance must be greater than zero at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("mcp" "sigma")) {
+                                                oLineSearchParam.dMcpSigma = HP.GetReal();
+
+                                                if (!(oLineSearchParam.dMcpSigma <= 1. && oLineSearchParam.dMcpSigma >= 0.)) {
+                                                        silent_cerr("mcp sigma must be between zero and one at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("mcp" "rho")) {
+                                                oLineSearchParam.dMcpRho = HP.GetReal();
+
+                                                if (!(oLineSearchParam.dMcpRho <= 1. && oLineSearchParam.dMcpRho >= 0.)) {
+                                                        silent_cerr("mcp rho must be between zero and one at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("mcp" "p")) {
+                                                oLineSearchParam.dMcpP = HP.GetReal();
+
+                                                if (!(oLineSearchParam.dMcpP > 0.)) {
+                                                        silent_cerr("mcp p must be greater than zero at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                    }
 						} else {
-							silent_cerr("Keyword \"tolerance x\", "
+							silent_cerr("Keyword \"default solver options\", \"tolerance x\", "
 								"\"tolerance min\", \"max iterations\", \"alpha\", "
 								"\"lambda min\" \"lambda factor min\", \"max step\" "
 								"\"divergence check\", \"algorithm\", \"scale newton step\" "
 								"\"print convergence info\", \"verbose\", "
-								"\"abort at lambda min\" "
-								"or \"zero gradient\" expected at line " << HP.GetLineData() << std::endl);
+                                                            "\"abort at lambda min\", \"time step tolerance\", \"update ratio\", "
+                                                            "\"zero gradient\", \"mcp tolerance\", \"mcp sigma\", \"mcp rho\" or \"mcp p\" expected at line " << HP.GetLineData() << std::endl);
 							throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 						}
 					}
+                                        break;
+
+                        case NonlinearSolver::NOX:
+#ifdef USE_TRILINOS
+                                bTrueNewtonRaphson = true;
+                                oNoxSolverParam.bKeepJacAcrossSteps = false;
+                                oNoxSolverParam.iIterationsBeforeAssembly = 0;
+
+                                if (HP.IsKeyWord("modified")) {
+                                        bTrueNewtonRaphson = false;
+                                        oNoxSolverParam.iIterationsBeforeAssembly = HP.GetInt();
+
+                                        if (HP.IsKeyWord("keep" "jacobian" "matrix") || HP.IsKeyWord("keep" "jacobian")) {
+                                                oNoxSolverParam.bKeepJacAcrossSteps = true;
 				}
+
+                                        if (HP.IsKeyWord("honor" "element" "requests")) {
+                                                bHonorJacRequest = true;
+                                        }
+                                }
+
+                                while (HP.IsArg()) {
+                                        if (HP.IsKeyWord("print" "convergence" "info")) {
+                                                if (HP.GetYesNoOrBool()) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::PRINT_CONVERGENCE_INFO;
+                                                } else {
+                                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::PRINT_CONVERGENCE_INFO;
+                                                }
+                                        } else if (HP.IsKeyWord("verbose")) {
+                                                if (HP.GetYesNoOrBool()) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::VERBOSE_MODE;
+                                                } else {
+                                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::VERBOSE_MODE;
+                                                }
+                                        } else if (HP.IsKeyWord("weighted" "rms" "relative" "tolerance")) {
+                                                oNoxSolverParam.dWrmsRelTol = HP.GetReal();
+                                        } else if (HP.IsKeyWord("weighted" "rms" "absolute" "tolerance")) {
+                                                oNoxSolverParam.dWrmsAbsTol = HP.GetReal();
+                                        } else if (HP.IsKeyWord("linear" "solver")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::LINEAR_SOLVER_MASK;
+
+                                                if (HP.IsKeyWord("gmres")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINEAR_SOLVER_GMRES;
+                                                } else if (HP.IsKeyWord("cg")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINEAR_SOLVER_CG;
+                                                } else if (HP.IsKeyWord("cgs")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINEAR_SOLVER_CGS;
+                                                } else if (HP.IsKeyWord("tfqmr")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINEAR_SOLVER_TFQMR;
+                                                } else if (HP.IsKeyWord("bicgstab")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINEAR_SOLVER_BICGSTAB;
+                                                } else {
+                                                        silent_cerr("keywords \"gmres\", \"cg\", \"cgs\", \"tfqmr\" or \"bicgstab\" expected "
+                                                                    << HP.GetLineData()
+                                                                    << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("linear" "solver" "tolerance")) {
+                                                oNoxSolverParam.dTolLinSol = HP.GetReal();
+                                        } else if (HP.IsKeyWord("linear" "solver" "max" "iterations")) {
+                                                oNoxSolverParam.iMaxIterLinSol = HP.GetInt();
+                                        } else if (HP.IsKeyWord("krylov" "subspace" "size")) {
+                                                oNoxSolverParam.iKrylovSubSpaceSize = HP.GetInt();
+
+                                                if (oNoxSolverParam.iKrylovSubSpaceSize < 1) {
+                                                        silent_cerr("krylov subspace size must be greater than zero at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("use" "preconditioner" "as" "solver")) {
+                                                if (HP.GetYesNoOrBool()) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::USE_PRECOND_AS_SOLVER;
+                                                } else {
+                                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::USE_PRECOND_AS_SOLVER;
+                                                }
+                                        } else if (HP.IsKeyWord("jacobian" "operator")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::JACOBIAN_OPERATOR_MASK;
+                                                if (HP.IsKeyWord("newton" "krylov")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::JACOBIAN_NEWTON_KRYLOV;
+                                                } else if (HP.IsKeyWord("newton")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::JACOBIAN_NEWTON;
+                                                } else {
+                                                        silent_cerr("keywords \"newton krylov\" or \"newton\" expected "
+                                                                    << HP.GetLineData()
+                                                                    << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("solver")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::SOLVER_MASK;
+
+                                                if (HP.IsKeyWord("line" "search" "based")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::SOLVER_LINESEARCH_BASED;
+                                                } else if (HP.IsKeyWord("trust" "region" "based")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::SOLVER_TRUST_REGION_BASED;
+                                                } else if (HP.IsKeyWord("inexact" "trust" "region" "based")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::SOLVER_INEXACT_TRUST_REGION_BASED;
+                                                } else if (HP.IsKeyWord("tensor" "based")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::SOLVER_TENSOR_BASED;
+                                                } else {
+                                                        silent_cerr("keywords \"line search based\", \"trust region based\", \"inexact trust region based\" or \"tensor based\" expected "
+                                                                    << HP.GetLineData()
+                                                                    << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("minimum" "step")) {
+                                                oNoxSolverParam.dMinStep = HP.GetReal();
+
+                                                if (oNoxSolverParam.dMinStep <= 0.) {
+                                                        silent_cerr("minimum step must be greater than zero at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("recovery" "step")) {
+                                                oNoxSolverParam.dRecoveryStep = HP.GetReal();
+
+                                                if (oNoxSolverParam.dRecoveryStep <= 0.) {
+                                                        silent_cerr("\"recovery step\" must be greater than zero at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("recovery" "step" "type")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::RECOVERY_STEP_TYPE_MASK;
+
+                                                if (HP.IsKeyWord("constant")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::RECOVERY_STEP_TYPE_CONST;
+                                                } else if (HP.IsKeyWord("last" "computed" "step")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::RECOVERY_STEP_TYPE_LAST_STEP;
+                                                } else {
+                                                        silent_cerr("keywords \"constant\" or \"last computed step\" expected at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("direction")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::DIRECTION_MASK;
+
+                                                if (HP.IsKeyWord("newton")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::DIRECTION_NEWTON;
+                                                } else if (HP.IsKeyWord("steepest" "descent")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::DIRECTION_STEEPEST_DESCENT;
+                                                } else if (HP.IsKeyWord("nonlinear" "cg")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::DIRECTION_NONLINEAR_CG;
+                                                } else if (HP.IsKeyWord("broyden")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::DIRECTION_BROYDEN;
+                                                } else {
+                                                        silent_cerr("keywords \"newton\", \"steepest descent\", "
+                                                                    "\"nonlinear cg\" or \"broyden\" expected at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("forcing" "term")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::FORCING_TERM_MASK;
+
+                                                if (HP.IsKeyWord("constant")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::FORCING_TERM_CONSTANT;
+                                                } else if (HP.IsKeyWord("type" "1")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::FORCING_TERM_TYPE1;
+                                                } else if (HP.IsKeyWord("type" "2")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::FORCING_TERM_TYPE2;
+                                                } else {
+                                                        silent_cerr("keywords \"constant\", \"type 1\" or \"type 2\" expected at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("forcing" "term" "min" "tolerance")) {
+                                                oNoxSolverParam.dForcingTermMinTol = HP.GetReal();
+
+                                                if (oNoxSolverParam.dForcingTermMinTol <= 0.) {
+                                                        silent_cerr("forcing term min tolerance "
+                                                                    "must be greater than zero at line "
+                                                                    << HP.GetLineData() << "\n");
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("forcing" "term" "max" "tolerance")) {
+                                                oNoxSolverParam.dForcingTermMaxTol = HP.GetReal();
+
+                                                if (oNoxSolverParam.dForcingTermMaxTol <= 0.) {
+                                                        silent_cerr("forcing term max tolerance "
+                                                                    "must be greater than zero at line "
+                                                                    << HP.GetLineData() << "\n");
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("forcing" "term" "alpha")) {
+                                                oNoxSolverParam.dForcingTermAlpha = HP.GetReal();
+
+                                                if (oNoxSolverParam.dForcingTermAlpha <= 0.) {
+                                                        silent_cerr("forcing term alpha "
+                                                                    "must be greater than zero at line "
+                                                                    << HP.GetLineData() << "\n");
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("forcing" "term" "gamma")) {
+                                                oNoxSolverParam.dForcingTermGamma = HP.GetReal();
+
+                                                if (oNoxSolverParam.dForcingTermGamma <= 0.) {
+                                                        silent_cerr("forcing term gamma "
+                                                                    "must be greater than zero at line "
+                                                                    << HP.GetLineData() << "\n");
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("line" "search" "method")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::LINESEARCH_MASK;
+
+                                                if (HP.IsKeyWord("backtrack")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINESEARCH_BACKTRACK;
+                                                } else if (HP.IsKeyWord("polynomial")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINESEARCH_POLYNOMIAL;
+                                                } else if (HP.IsKeyWord("more" "thuente")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::LINESEARCH_MORE_THUENTE;
+                                                } else {
+                                                        silent_cerr("keywords \"backtrack\", \"polynomial\" or \"more thuente\" expected at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("line" "search" "max" "iterations")) {
+                                                oNoxSolverParam.iMaxIterLineSearch = HP.GetInt();
+
+                                                if (oNoxSolverParam.iMaxIterLineSearch < 1) {
+                                                        silent_cerr("\"line search max iterations\" must be greater than or equal to one at line "
+                                                                    << HP.GetLineData() << std::endl);
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("sufficient" "decrease" "condition")) {
+                                                oNoxSolverParam.uFlags &= ~NoxSolverParameters::SUFFICIENT_DEC_COND_MASK;
+
+                                                if (HP.IsKeyWord("armijo" "goldstein")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::SUFFICIENT_DEC_COND_ARMIJO_GOLDSTEIN;
+                                                } else if (HP.IsKeyWord("ared" "pred")) {
+                                                        oNoxSolverParam.uFlags |= NoxSolverParameters::SUFFICIENT_DEC_COND_ARED_PRED;
+                                                } else {
+                                                        silent_cerr("Keywords \"armijo goldstein\" or \"ared pred\" expected at line " << HP.GetLineData() << "\n");
+                                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                                }
+                                        } else if (HP.IsKeyWord("inner" "iterations" "before" "assembly")) {
+                                                oNoxSolverParam.iInnerIterBeforeAssembly = HP.GetInt();
+                                        } else {
+                                                silent_cerr("Keywords \"print convergence info\", "
+                                                            "\"verbose\", "
+                                                            "\"newton krylov perturbation\", "
+                                                            "\"solver\", "
+                                                            "\"jacobian operator\", "
+                                                            "\"direction\", "
+                                                            "\"linear solver\", "
+                                                            "\"linear solver tolerance\", "
+                                                            "\"linear solver max iterations\", "
+                                                            "\"krylov subspace size\", "
+                                                            "\"forcing term\", "
+                                                            "\"line search method\", "
+                                                            "\"line search max iterations\", "
+                                                            "\"minimum step\", "
+                                                            "\"recovery step\", "
+                                                            "\"recovery step type\", "
+                                                            "\"sufficient decrease condition\", "
+                                                            "\"inner iterations before assembly\", "
+                                                            "\"weighted rms relative tolerance\" or "
+                                                            "\"weighted rms absolute tolerance\" expected at line "
+                                                            << HP.GetLineData() << std::endl);
+                                                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                        }
+                                }
+
+                                if (oNoxSolverParam.dForcingTermMinTol >= oNoxSolverParam.dForcingTermMaxTol) {
+                                        silent_cerr("\"forcing term min tolerance\" must be "
+                                                    "less than \"forcing term max tolerance\" at line "
+                                                    << HP.GetLineData() << "\n");
+                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                }
+
+                                if ((oNoxSolverParam.uFlags & NoxSolverParameters::SOLVER_LINESEARCH_BASED) == 0 &&
+                                    (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON_KRYLOV) != 0) {
+                                        silent_cerr("warning: jacobian operator \"newton krylov\" can be used only for the line search based solver\n");
+                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::JACOBIAN_OPERATOR_MASK;
+                                        oNoxSolverParam.uFlags |= NoxSolverParameters::JACOBIAN_NEWTON;
+                                }
+
+                                if ((oNoxSolverParam.uFlags & NoxSolverParameters::DIRECTION_STEEPEST_DESCENT) != 0 &&
+                                    (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON_KRYLOV) != 0) {
+                                        silent_cerr("warning: jacobian operator \"newton krylov\" cannot be used with direction \"steepest descent\"\n");
+                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::JACOBIAN_OPERATOR_MASK;
+                                        oNoxSolverParam.uFlags |= NoxSolverParameters::JACOBIAN_NEWTON;
+                                }
+
+                                if ((oNoxSolverParam.uFlags & (NoxSolverParameters::DIRECTION_STEEPEST_DESCENT | NoxSolverParameters::DIRECTION_NONLINEAR_CG)) != 0 &&
+                                    (oNoxSolverParam.uFlags & NoxSolverParameters::SOLVER_TENSOR_BASED) != 0) {
+                                        silent_cerr("warning: directions \"steepest descent\" and \"nonlinear cg\" are not valid for solver \"tensor based\"\n");
+                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::DIRECTION_MASK;
+                                        oNoxSolverParam.uFlags |= NoxSolverParameters::DIRECTION_NEWTON;
+                                }
+
+                                if ((oNoxSolverParam.uFlags & NoxSolverParameters::SOLVER_LINESEARCH_BASED) == 0 &&
+                                    (oNoxSolverParam.uFlags & NoxSolverParameters::DIRECTION_BROYDEN) != 0) {
+                                        silent_cerr("warning: direction \"broyden\" is valid for solver \"line search based\" only\n");
+                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::SOLVER_MASK;
+                                        oNoxSolverParam.uFlags |= NoxSolverParameters::SOLVER_LINESEARCH_BASED;
+                                }
+
+                                if ((oNoxSolverParam.uFlags & NoxSolverParameters::DIRECTION_BROYDEN) != 0 &&
+                                    (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON_KRYLOV) != 0) {
+                                        silent_cerr("warning: direction \"broyden\" cannot be used with jacobian operator \"newton krylov\"\n");
+                                        oNoxSolverParam.uFlags &= ~NoxSolverParameters::JACOBIAN_OPERATOR_MASK;
+                                        oNoxSolverParam.uFlags |= NoxSolverParameters::JACOBIAN_NEWTON;
+                                }
+
+                                if (oNoxSolverParam.uFlags & NoxSolverParameters::USE_PRECOND_AS_SOLVER) {
+                                        if (oNoxSolverParam.iIterationsBeforeAssembly > 0) {
+                                                silent_cerr("warning: cannot use option \"modified\" "
+                                                            "if \"use preconditioner as solver\" is enabled\n");
+                                        }
+
+                                        oNoxSolverParam.bKeepJacAcrossSteps = false;
+                                        oNoxSolverParam.iIterationsBeforeAssembly = 0;
+                                }
+#else
+                                silent_cerr("nox solver is not available!\n"
+                                            "configure with --with-trilinos in order to use nox!\n");
+                                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+#endif
 				break;
 
 			case NonlinearSolver::MATRIXFREE:
@@ -3733,11 +5361,15 @@ EndOfCycle: /* esce dal ciclo di lettura */
 		DummyType = INT_MS2;
 	}
 
+        if (dDerivativesSolTol < 0.) {
+             dDerivativesSolTol = dSolutionTol;
+        }
+
 	/* costruzione dello step solver derivative */
 	SAFENEWWITHCONSTRUCTOR(pDerivativeSteps,
 			DerivativeSolver,
 			DerivativeSolver(dDerivativesTol,
-				0.,
+                                dDerivativesSolTol,
 				dInitialTimeStep*dDerivativesCoef,
 				iDerivativesMaxIterations,
 				bModResTest,
@@ -3746,12 +5378,6 @@ EndOfCycle: /* esce dal ciclo di lettura */
 
 	/* First step prediction must always be Crank-Nicolson for accuracy */
 	if (iDummyStepsNumber) {
-		SAFENEWWITHCONSTRUCTOR(pFirstDummyStep,
-				CrankNicolsonIntegrator,
-				CrankNicolsonIntegrator(dDummyStepsTolerance,
-					0.,
-					iDummyStepsMaxIterations,
-					bModResTest));
 
 		/* costruzione dello step solver dummy */
 		switch (DummyType) {
@@ -3759,19 +5385,220 @@ EndOfCycle: /* esce dal ciclo di lettura */
 			SAFENEWWITHCONSTRUCTOR(pDummySteps,
 					CrankNicolsonIntegrator,
 					CrankNicolsonIntegrator(dDummyStepsTolerance,
-						0.,
+						dSolutionTol,
 						iDummyStepsMaxIterations,
 						bModResTest));
 			break;
 
 		case INT_MS2:
+		SAFENEWWITHCONSTRUCTOR(pFirstDummyStep,
+				CrankNicolsonIntegrator,
+				CrankNicolsonIntegrator(dDummyStepsTolerance,
+					dSolutionTol,
+					iDummyStepsMaxIterations,
+					bModResTest));
 			SAFENEWWITHCONSTRUCTOR(pDummySteps,
-					MultistepSolver,
-					MultistepSolver(dDummyStepsTolerance,
-						0.,
+					Multistep2Solver,
+					Multistep2Solver(dDummyStepsTolerance,
+						dSolutionTol,
 						iDummyStepsMaxIterations,
 						pRhoDummy,
 						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MS3:
+			SAFENEWWITHCONSTRUCTOR(pFirstDummyStep,
+					CrankNicolsonIntegrator,
+					CrankNicolsonIntegrator(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pSecondDummyStep,
+					Multistep2Solver,
+					Multistep2Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pSecondRhoDummy,
+						pSecondRhoAlgebraicDummy,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					TunableStep3Solver,
+					TunableStep3Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MS4:
+			SAFENEWWITHCONSTRUCTOR(pFirstDummyStep,
+					CrankNicolsonIntegrator,
+					CrankNicolsonIntegrator(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pSecondDummyStep,
+					Multistep2Solver,
+					Multistep2Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pSecondRhoDummy,
+						pSecondRhoAlgebraicDummy,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pThirdDummyStep,
+					TunableStep3Solver,
+					TunableStep3Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pThirdRhoDummy,
+						pThirdRhoAlgebraicDummy,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					TunableStep4Solver,
+					TunableStep4Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_SS2:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					SS2Solver,
+					SS2Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_SS3:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					SS3Solver,
+					SS3Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_SS4:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					SS4Solver,
+					SS4Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_BATHE:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					TunableBatheSolver,
+					TunableBatheSolver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MSSTC3:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					Msstc3Solver,
+					Msstc3Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MSSTH3:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					Mssth3Solver,
+					Mssth3Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MSSTC4:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					Msstc4Solver,
+					Msstc4Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MSSTH4:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					Mssth4Solver,
+					Mssth4Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MSSTC5:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					Msstc5Solver,
+					Msstc5Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_MSSTH5:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					Mssth5Solver,
+					Mssth5Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						pRhoDummy,
+						pRhoAlgebraicDummy,
+						bModResTest));
+			break;
+
+		case INT_DIRK33:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					DIRK33Solver,
+					DIRK33Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						bModResTest));
+			break;
+
+		case INT_DIRK43:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					DIRK43Solver,
+					DIRK43Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
+						bModResTest));
+			break;
+
+		case INT_DIRK54:
+			SAFENEWWITHCONSTRUCTOR(pDummySteps,
+					DIRK54Solver,
+					DIRK54Solver(dDummyStepsTolerance,
+						dSolutionTol,
+						iDummyStepsMaxIterations,
 						bModResTest));
 			break;
 
@@ -3784,25 +5611,6 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pRhoDummy,
 						pRhoAlgebraicDummy,
 						bModResTest));
-			break;
-
-		case INT_THIRDORDER:
-			if (pRhoDummy == 0) {
-				SAFENEWWITHCONSTRUCTOR(pDummySteps,
-						AdHocThirdOrderIntegrator,
-						AdHocThirdOrderIntegrator(dDummyStepsTolerance,
-							dSolutionTol,
-							iDummyStepsMaxIterations,
-							bModResTest));
-			} else {
-				SAFENEWWITHCONSTRUCTOR(pDummySteps,
-						TunableThirdOrderIntegrator,
-						TunableThirdOrderIntegrator(dDummyStepsTolerance,
-							dSolutionTol,
-							iDummyStepsMaxIterations,
-							pRhoDummy,
-							bModResTest));
-			}
 			break;
 
 		case INT_IMPLICITEULER:
@@ -3820,13 +5628,66 @@ EndOfCycle: /* esce dal ciclo di lettura */
 			break;
 		}
 	}
+	/* constructor step solver for start steps*/
+	switch (RegularType)
+	{
+		case INT_MS2:
+		case INT_HOPE:
+		case INT_HYBRID:
+			SAFENEWWITHCONSTRUCTOR(pFirstRegularStep,
+					CrankNicolsonIntegrator,
+					CrankNicolsonIntegrator(dTol,
+						dSolutionTol,
+						iMaxIterations,
+						bModResTest));
+				break;		
 
-	SAFENEWWITHCONSTRUCTOR(pFirstRegularStep,
-			CrankNicolsonIntegrator,
-			CrankNicolsonIntegrator(dTol,
-				dSolutionTol,
-				iMaxIterations,
-				bModResTest));
+		case INT_MS3:
+			SAFENEWWITHCONSTRUCTOR(pFirstRegularStep,
+					CrankNicolsonIntegrator,
+					CrankNicolsonIntegrator(dTol,
+						dSolutionTol,
+						iMaxIterations,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pSecondRegularStep,
+					Multistep2Solver,
+					Multistep2Solver(dTol,
+						dSolutionTol,
+						iMaxIterations,
+						pSecondRhoRegular,
+						pSecondRhoAlgebraicRegular,
+						bModResTest));
+				break;
+
+		case INT_MS4:
+			SAFENEWWITHCONSTRUCTOR(pFirstRegularStep,
+					CrankNicolsonIntegrator,
+					CrankNicolsonIntegrator(dTol,
+						dSolutionTol,
+						iMaxIterations,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pSecondRegularStep,
+					Multistep2Solver,
+					Multistep2Solver(dTol,
+						dSolutionTol,
+						iMaxIterations,
+						pSecondRhoRegular,
+						pSecondRhoAlgebraicRegular,
+						bModResTest));
+			SAFENEWWITHCONSTRUCTOR(pThirdRegularStep,
+					TunableStep3Solver,
+					TunableStep3Solver(dTol,
+						dSolutionTol,
+						iMaxIterations,
+						pThirdRhoRegular,
+						pThirdRhoAlgebraicRegular,
+						bModResTest));
+				break;
+	
+	default:
+		break;
+	}
+
 
 	/* costruzione dello step solver per i passi normali */
 	switch (RegularType) {
@@ -3841,12 +5702,171 @@ EndOfCycle: /* esce dal ciclo di lettura */
 
 	case INT_MS2:
 		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
-				MultistepSolver,
-				MultistepSolver(dTol,
+				Multistep2Solver,
+				Multistep2Solver(dTol,
 					dSolutionTol,
 					iMaxIterations,
 					pRhoRegular,
 					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MS3:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				TunableStep3Solver,
+				TunableStep3Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MS4:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				TunableStep4Solver,
+				TunableStep4Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_SS2:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				SS2Solver,
+				SS2Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_SS3:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				SS3Solver,
+				SS3Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_SS4:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				SS4Solver,
+				SS4Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_BATHE:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				TunableBatheSolver,
+				TunableBatheSolver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MSSTC3:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				Msstc3Solver,
+				Msstc3Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MSSTH3:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				Mssth3Solver,
+				Mssth3Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MSSTC4:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				Msstc4Solver,
+				Msstc4Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MSSTH4:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				Mssth4Solver,
+				Mssth4Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MSSTC5:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				Msstc5Solver,
+				Msstc5Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_MSSTH5:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				Mssth5Solver,
+				Mssth5Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					pRhoRegular,
+					pRhoAlgebraicRegular,
+					bModResTest));
+		break;
+
+	case INT_DIRK33:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				DIRK33Solver,
+				DIRK33Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					bModResTest));
+		break;
+
+	case INT_DIRK43:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				DIRK43Solver,
+				DIRK43Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
+					bModResTest));
+		break;
+
+	case INT_DIRK54:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				DIRK54Solver,
+				DIRK54Solver(dTol,
+					dSolutionTol,
+					iMaxIterations,
 					bModResTest));
 		break;
 
@@ -3861,25 +5881,6 @@ EndOfCycle: /* esce dal ciclo di lettura */
 					bModResTest));
 		break;
 
-	case INT_THIRDORDER:
-		if (pRhoRegular == 0) {
-			SAFENEWWITHCONSTRUCTOR(pRegularSteps,
-					AdHocThirdOrderIntegrator,
-					AdHocThirdOrderIntegrator(dTol,
-						dSolutionTol,
-						iMaxIterations,
-						bModResTest));
-		} else {
-			SAFENEWWITHCONSTRUCTOR(pRegularSteps,
-					TunableThirdOrderIntegrator,
-					TunableThirdOrderIntegrator(dTol,
-						dSolutionTol,
-						iMaxIterations,
-						pRhoRegular,
-						bModResTest));
-		}
-		break;
-
 	case INT_IMPLICITEULER:
 		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
 				ImplicitEulerIntegrator,
@@ -3888,7 +5889,17 @@ EndOfCycle: /* esce dal ciclo di lettura */
 					iMaxIterations,
 					bModResTest));
 		break;
-
+	case INT_HYBRID:
+		SAFENEWWITHCONSTRUCTOR(pRegularSteps,
+				       HybridStepIntegrator,
+				       HybridStepIntegrator(eHybridDefaultIntRegular,
+							    dTol,
+							    dSolutionTol,
+							    iMaxIterations,
+							    pRhoRegular,
+							    pRhoAlgebraicRegular,
+							    bModResTest));
+		break;
 	default:
 		silent_cerr("Unknown integration method" << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
@@ -3901,7 +5912,7 @@ EndOfCycle: /* esce dal ciclo di lettura */
 
 #ifdef USE_MULTITHREAD
 	if (bSolverThreads) {
-		if (CurrLinearSolver.SetNumThreads(nSolverThreads)) {
+		if (!CurrLinearSolver.SetNumThreads(nSolverThreads)) {
 			silent_cerr("linear solver "
 					<< CurrLinearSolver.GetSolverName()
 					<< " does not support "
@@ -3911,6 +5922,7 @@ EndOfCycle: /* esce dal ciclo di lettura */
 #endif /* USE_MULTITHREAD */
 }
 
+#if defined USE_LAPACK || defined USE_ARPACK || defined USE_JDQZ
 static int
 do_eig(const doublereal& b, const doublereal& re,
 	const doublereal& im, const doublereal& h,
@@ -4008,6 +6020,7 @@ output_eigenvalues(const VectorHandler *pBeta,
 		Out << std::endl;
 	}
 }
+#endif // defined USE_LAPACK || defined USE_ARPACK || defined USE_JDQZ
 
 #ifdef USE_LAPACK
 // Computes eigenvalues and eigenvectors using LAPACK's
@@ -4367,10 +6380,6 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 	DataManager *pDM, Solver::EigenAnalysis *pEA,
 	bool bNewLine, const unsigned uCurr)
 {
-	NaiveSparsePermSolutionManager<Colamd_ordering>& sm
-		= dynamic_cast<NaiveSparsePermSolutionManager<Colamd_ordering> &>(*pSM);
-	const NaiveMatrixHandler& MatA = dynamic_cast<const NaiveMatrixHandler &>(*pMatA);
-
 	// shift
 	doublereal SIGMAR = 0.;
 	doublereal SIGMAI = 0.;
@@ -4395,7 +6404,7 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 
 	IDO = 0;
 	BMAT = "I";
-	N = MatA.iGetNumRows();
+	N = pMatA->iGetNumRows();
 	WHICH = "SM";
 	NEV = pEA->arpack.iNEV;
 	if (NEV > N) {
@@ -4482,11 +6491,11 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 		 */
 
 
-		MatA.MatVecMul(*sm.pResHdl(), X);
-		sm.Solve();
-		*sm.pSolHdl() -= X;
+		pMatA->MatVecMul(*pSM->pResHdl(), X);
+		pSM->Solve();
+		*pSM->pSolHdl() -= X;
 
-		Y = *sm.pSolHdl();
+		Y = *pSM->pSolHdl();
 
 		static const int CNT = 100;
 		cnt++;
@@ -4801,7 +6810,7 @@ lwork       Size of workspace, >= 4+m+5jmax+3kmax if GMRESm
 		output_eigenvalues(0, AlphaR, AlphaI, 1., pDM, pEA, 1, nconv, vOut);
 
 		if (pEA->uFlags & Solver::EigenAnalysis::EIG_OUTPUT_GEOMETRY) {
-			pDM->OutputGeometry(pEA->iResultsPrecision);
+			pDM->OutputEigGeometry(uCurr, pEA->iResultsPrecision);
 		}
 
 		if (pEA->uFlags & Solver::EigenAnalysis::EIG_OUTPUT_EIGENVECTORS) {
@@ -4858,24 +6867,31 @@ Solver::Eig(bool bNewLine)
 	DEBUGCOUT("Solver::Eig(): performing eigenanalysis" << std::endl);
 
 	integer iSize = iNumDofs;
-
-	SolutionManager *pSM = 0;
+	
+        SolutionManager *pSM = 0;
 	MatrixHandler *pMatA = 0;
 	MatrixHandler *pMatB = 0;
 
 	if (EigAn.uFlags & EigenAnalysis::EIG_USE_LAPACK) {
 		SAFENEWWITHCONSTRUCTOR(pMatA, FullMatrixHandler,
 			FullMatrixHandler(iSize));
-
 		SAFENEWWITHCONSTRUCTOR(pMatB, FullMatrixHandler,
 			FullMatrixHandler(iSize));
 
 	} else if (EigAn.uFlags & EigenAnalysis::EIG_USE_ARPACK) {
-		SAFENEWWITHCONSTRUCTOR(pSM, NaiveSparsePermSolutionManager<Colamd_ordering>,
-			NaiveSparsePermSolutionManager<Colamd_ordering>(iSize));
-		SAFENEWWITHCONSTRUCTOR(pMatA, NaiveMatrixHandler,
-			NaiveMatrixHandler(iSize));
+                const integer iStates = pRegularSteps->GetIntegratorNumUnknownStates();
+                const integer iWorkSpaceSize = CurrLinearSolver.iGetWorkSpaceSize();
+                integer iLWS = iWorkSpaceSize;
+                integer iNLD = iNumDofs*iStates;
+                
+                if (bParallel) {
+                        iLWS = iWorkSpaceSize*iNumLocDofs/(iNumDofs*iNumDofs);
+                        iNLD = iNumLocDofs*iStates;
+                }
+
+                pSM = AllocateSolman(iNLD, iLWS);                
 		pMatB = pSM->pMatHdl();
+                pMatA = pMatB->Copy();
 
 	} else if (EigAn.uFlags & EigenAnalysis::EIG_USE_JDQZ) {
 		SAFENEWWITHCONSTRUCTOR(pMatA, NaiveMatrixHandler,
@@ -4888,15 +6904,44 @@ Solver::Eig(bool bNewLine)
 			SpMapMatrixHandler(iSize));
 		SAFENEWWITHCONSTRUCTOR(pMatB, SpMapMatrixHandler,
 			SpMapMatrixHandler(iSize));
+
+	} else if (EigAn.uFlags & EigenAnalysis::EIG_OUTPUT_FULL_MATRICES) {
+		SAFENEWWITHCONSTRUCTOR(pMatA, FullMatrixHandler,
+			FullMatrixHandler(iSize));
+		SAFENEWWITHCONSTRUCTOR(pMatB, FullMatrixHandler,
+			FullMatrixHandler(iSize));
 	}
-
-	pMatA->Reset();
-	pMatB->Reset();
-
+        
 	// Matrices assembly (see eig.ps)
-	doublereal h = EigAn.dParam;
-	pDM->AssJac(*pMatA, -h/2.);
-	pDM->AssJac(*pMatB, h/2.);
+	const doublereal h = EigAn.dParam;
+
+        /*
+         * Call AssRes before AssJac in order to be sure that all
+         * the elements have updated the internal data
+         */
+        {
+             MyVectorHandler Res(iNumDofs);
+
+             StepIntegratorGuard oRestoreCurrentStepIntegrator{*this};
+
+             pCurrStepIntegrator = &oFakeStepIntegrator; // Needed for hybrid step integrator only
+
+             pDM->Update();
+             Res.Reset();
+             oFakeStepIntegrator.SetCoef(-h/2.);
+             pDM->AssRes(Res, -h/2.);
+             pMatA->Reset();
+             pDM->AssJac(*pMatA, -h/2.);
+             pMatA->PacMat(); // Needed for Trilinos sparse matrix handler
+
+             pDM->Update();
+             Res.Reset();
+             oFakeStepIntegrator.SetCoef(h/2.);
+             pDM->AssRes(Res, h/2.);
+             pMatB->Reset();
+             pDM->AssJac(*pMatB, h/2.);
+             pMatB->PacMat(); // Needed for Trilinos sparse matrix handler
+        }
 
 #ifdef DEBUG
 	DEBUGCOUT(std::endl
@@ -4930,14 +6975,10 @@ Solver::Eig(bool bNewLine)
 		}
 	}
 	if (EigAn.uFlags & EigenAnalysis::EIG_OUTPUT_FULL_MATRICES) {
-		pDM->OutputEigFullMatrices(pMatA, pMatB, uCurr, EigAn.iMatrixPrecision);
+                pDM->OutputEigFullMatrices(pMatA, pMatB, uCurr, EigAn.iMatrixPrecision);
 	}
 	else if (EigAn.uFlags & EigenAnalysis::EIG_OUTPUT_SPARSE_MATRICES) {
-		if (dynamic_cast<const NaiveMatrixHandler *>(pMatB)) {
-			pDM->OutputEigNaiveMatrices(pMatA, pMatB, uCurr, EigAn.iMatrixPrecision);
-		} else {
-			pDM->OutputEigSparseMatrices(pMatA, pMatB, uCurr, EigAn.iMatrixPrecision);
-		}
+                pDM->OutputEigSparseMatrices(pMatA, pMatB, uCurr, EigAn.iMatrixPrecision);
 	}
 
 	switch (EigAn.uFlags & EigenAnalysis::EIG_USE_MASK) {
@@ -4958,7 +6999,11 @@ Solver::Eig(bool bNewLine)
 		eig_jdqz(pMatA, pMatB, pDM, &EigAn, bNewLine, uCurr);
 		break;
 #endif // USE_JDQZ
-
+        case EigenAnalysis::EIG_USE_EXTERNAL:
+                if (EigAn.uFlags & Solver::EigenAnalysis::EIG_OUTPUT_GEOMETRY) {
+                    pDM->OutputEigGeometry(uCurr, EigAn.iResultsPrecision);
+                }
+                break;
 	default:
 		// only output matrices, use external eigenanalysis
 		break;
@@ -4993,7 +7038,11 @@ doublereal Solver::dGetInitialMaxTimeStep() const
 SolutionManager *const
 Solver::AllocateSolman(integer iNLD, integer iLWS)
 {
-	SolutionManager *pCurrSM = CurrLinearSolver.GetSolutionManager(iNLD, iLWS);
+        SolutionManager *pCurrSM = CurrLinearSolver.GetSolutionManager(iNLD,
+#ifdef USE_MPI
+                                                                       MBDynComm,
+#endif
+                                                                       iLWS);
 
 	/* special extra parameters if required */
 	switch (CurrLinearSolver.GetSolver()) {
@@ -5030,10 +7079,9 @@ Solver::AllocateSchurSolman(integer iStates)
 {
 	SolutionManager *pSSM(0);
 
-#ifdef USE_MPI
+#ifdef USE_SCHUR
 	switch (CurrIntSolver.GetSolver()) {
 	case LinSol::LAPACK_SOLVER:
-	case LinSol::MESCHACH_SOLVER:
 	case LinSol::NAIVE_SOLVER:
 	case LinSol::UMFPACK_SOLVER:
 	case LinSol::Y12_SOLVER:
@@ -5054,10 +7102,10 @@ Solver::AllocateSchurSolman(integer iStates)
 				pIntDofs, iNumIntDofs,
 				pLocalSM, CurrIntSolver));
 
-#else /* !USE_MPI */
+#else /* !USE_SCHUR */
 	silent_cerr("Configure --with-mpi to enable Schur solver" << std::endl);
 	throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-#endif /* !USE_MPI */
+#endif /* !USE_SCHUR */
 
 	return pSSM;
 };
@@ -5109,17 +7157,131 @@ Solver::AllocateNonlinearSolver()
 		SAFENEWWITHCONSTRUCTOR(pNLS,
 				NewtonRaphsonSolver,
 				NewtonRaphsonSolver(bTrueNewtonRaphson,
-					bKeepJac,
-					iIterationsBeforeAssembly,
+                                        oLineSearchParam.bKeepJacAcrossSteps,
+                                        oLineSearchParam.iIterationsBeforeAssembly,
 					*this));
 		break;
 	case NonlinearSolver::LINESEARCH:
+            switch (CurrLinearSolver.GetSolver()) {
+            case LinSol::UMFPACK_SOLVER:
+            case LinSol::KLU_SOLVER:
+            case LinSol::PASTIX_SOLVER:
+            case LinSol::PARDISO_SOLVER:
+                break;
+                
+            default:
+                if (!bTrueNewtonRaphson) {
+                    pedantic_cout("warning: linear solver \""
+                                  << CurrLinearSolver.GetSolverName()
+                                  << "\" not supported by modified line search\n");
+                }
+                
+                bTrueNewtonRaphson = true;
+            }
+            
+            if (bTrueNewtonRaphson) {
 		SAFENEWWITHCONSTRUCTOR(pNLS,
-				LineSearchSolver,
-				LineSearchSolver(pDM,
+				LineSearchFull,
+				LineSearchFull(pDM, 
                                  *this,
-                                 LineSearch));
+                                 oLineSearchParam));
+            } else {                
+                SAFENEWWITHCONSTRUCTOR(pNLS,
+                                       LineSearchModified,
+                                       LineSearchModified(pDM, 
+                                                          *this,
+                                                          oLineSearchParam));
+            }
 		break;
+        case NonlinearSolver::BFGS:
+                switch (CurrLinearSolver.GetSolver()) {
+                case LinSol::QR_SOLVER:
+                case LinSol::SPQR_SOLVER:
+                        SAFENEWWITHCONSTRUCTOR(pNLS,
+                                               LineSearchBFGS,
+                                               LineSearchBFGS(pDM,
+                                                              *this,
+                                                              oLineSearchParam));
+                        break;
+                default:
+                        silent_cerr("nonlinear solver \"bfgs\" can be used only with linear solver \"qr\" or \"spqr\"\n");
+                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }            
+                break;
+        case NonlinearSolver::MCP_NEWTON_FB:
+                SAFENEWWITHCONSTRUCTOR(pNLS,
+                                       MCPNewtonFB,
+                                       MCPNewtonFB(pDM, *this, oLineSearchParam));
+                break;
+        case NonlinearSolver::MCP_NEWTON_MIN_FB:
+                if (!pDM->bUseAutoDiff()) {
+                        silent_cerr("nonlinear solver \"mcp newton min fb\" requires support for automatic differentiation which was not enabled!\n"
+                                    "add the statement \"use automatic differentiation;\" inside the control data section to enable it!\n");
+                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+                
+                SAFENEWWITHCONSTRUCTOR(pNLS,
+                                       MCPNewtonMinFB,
+                                       MCPNewtonMinFB(pDM, *this, oLineSearchParam));
+                break;
+#ifdef USE_TRILINOS
+        case NonlinearSolver::NOX:
+                // FIXME: Since access to the Jacobian matrix through the Trilinos library is not under our control,
+                // FIXME: we have to ensure that the content of the matrix is not destroyed by the linear solver.
+                switch (CurrLinearSolver.GetSolver()) {
+                case LinSol::UMFPACK_SOLVER:
+                case LinSol::KLU_SOLVER:
+                case LinSol::Y12_SOLVER:
+                case LinSol::PARDISO_SOLVER:
+                case LinSol::PARDISO_64_SOLVER:
+                case LinSol::PASTIX_SOLVER:
+                case LinSol::SPQR_SOLVER:
+                case LinSol::STRUMPACK_SOLVER:
+                case LinSol::AZTECOO_SOLVER:
+                case LinSol::AMESOS_SOLVER:
+                case LinSol::SICONOS_SPARSE_SOLVER:
+                        // All solvers which do not destroy the Jacobian during factorization can be added here.
+                        break;
+                default:
+                        if (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON) {
+                                silent_cerr("Nonlinear solver \"nox\" cannot "
+                                            "be used with linear solver \""
+                                            << CurrLinearSolver.GetSolverName()
+                                            << "\" unless the \"newton krylov\" option is used!\n");
+                                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                        }
+                }
+                {
+                        const SolutionManager::ScaleOpt& oScale = CurrLinearSolver.GetScale();
+                        const bool bScaleEnabled = oScale.when != SolutionManager::SCALEW_NEVER && oScale.algorithm != SolutionManager::SCALEA_NONE;
+                        const unsigned uSolFlags = CurrLinearSolver.GetSolverFlags();
+                        const unsigned uMaskCCDir = LinSol::SOLVER_FLAGS_ALLOWS_CC | LinSol::SOLVER_FLAGS_ALLOWS_DIR;
+                        const bool bCompactSpmh = (uSolFlags & uMaskCCDir) != 0;
+
+                        if (bScaleEnabled && bCompactSpmh) {
+                                silent_cerr("Warning: Nonlinear solver \"nox\" cannot "
+                                            "be used with compact sparse matrix handlers "
+                                            "\"cc\" or \"dir\" and matrix scaling enabled at the same time!\n"
+                                            "Warning: using matrix handler \"map\" instead\n");
+                                CurrLinearSolver.SetSolverFlags((uSolFlags & ~uMaskCCDir) | LinSol::SOLVER_FLAGS_ALLOWS_MAP);
+                        }
+                }
+                
+                pNLS = pAllocateNoxNonlinearSolver(*this, oNoxSolverParam);
+                break;
+#endif
+#ifdef USE_SICONOS
+        case NonlinearSolver::SICONOS_MCP_NEWTON_FB:
+                SAFENEWWITHCONSTRUCTOR(pNLS,
+                                       SiconosMCPNewton,
+                                       SiconosMCPNewton(*this, oLineSearchParam));
+                break;
+        case NonlinearSolver::SICONOS_MCP_NEWTON_MIN_FB:
+                SAFENEWWITHCONSTRUCTOR(pNLS,
+                                       SiconosMCPNewtonMin,
+                                       SiconosMCPNewtonMin(*this, oLineSearchParam));
+                break;                
+#endif
 	}
 	return pNLS;
 }
@@ -5195,7 +7357,7 @@ Solver::PrintSolution(const VectorHandler& Sol, integer iIterCnt) const
 	pDM->PrintSolution(Sol, iIterCnt);
 }
 
-void Solver::CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const throw(NonlinearSolver::MaxResidualExceeded, NonlinearSolver::TimeStepLimitExceeded)
+void Solver::CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const /*throw(NonlinearSolver::MaxResidualExceeded, NonlinearSolver::TimeStepLimitExceeded)*/
 {
 	if (pDerivativeSteps) {
 		// Time step cannot be reduced
@@ -5203,7 +7365,7 @@ void Solver::CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const thro
 	}
 
 	if (dErr > dMaxResidual) {
-            if (dCurrTimeStep > 2 * dMinTimeStep) { // FIXME
+            if (dCurrTimeStep > 2 * dMinTimeStep) {
 		if (outputIters()) {
 #ifdef USE_MPI
 			if (!bParallel || MBDynComm.Get_rank() == 0)
@@ -5220,7 +7382,7 @@ void Solver::CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const thro
 	}
 
 	if (dErrDiff > dMaxResidualDiff) {
-            if (dCurrTimeStep > 2 * dMinTimeStep) { // FIXME
+            if (dCurrTimeStep > 2 * dMinTimeStep) {
 		if (outputIters()) {
 #ifdef USE_MPI
 			if (!bParallel || MBDynComm.Get_rank() == 0)
@@ -5241,7 +7403,7 @@ void Solver::CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const thro
 		break;
 
 	case TS_HARD_LIMIT: {
-		const doublereal dMaxTS = MaxTimeStep.dGet();
+                const doublereal dMaxTS = MaxTimeStep.dGet() * (1 + sqrt(std::numeric_limits<doublereal>::epsilon()));
 
 		if (dCurrTimeStep > dMaxTS && dCurrTimeStep > dMinTimeStep) {
 			if (outputIters()) {
@@ -5255,7 +7417,6 @@ void Solver::CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const thro
 						<< dMaxTS << std::endl);
 				}
 			}
-
 			throw NonlinearSolver::TimeStepLimitExceeded(MBDYN_EXCEPT_ARGS);
 		}
 		} break;

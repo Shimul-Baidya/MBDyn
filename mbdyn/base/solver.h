@@ -50,6 +50,7 @@
 #include <unistd.h>
 #include <cfloat>
 #include <cmath>
+#include <deque>
 #include <limits>
 
 class Solver;
@@ -59,11 +60,13 @@ class Solver;
 #include "dataman.h"
 #include "schurdataman.h"
 #include "schsolman.h"
-#include <deque>
 #include "linsol.h"
 #include "stepsol.h"
 #include "nonlin.h"
 #include "linesearch.h"
+#ifdef USE_TRILINOS
+#include "noxsolver.h"
+#endif
 #include "mfree.h"
 #include "cstring"
 #include "precond.h"
@@ -75,7 +78,7 @@ extern "C" int mbdyn_stop_at_end_of_time_step(void);
 extern "C" void mbdyn_set_stop_at_end_of_iteration(void);
 extern "C" void mbdyn_set_stop_at_end_of_time_step(void);
 
-class Solver : public SolverDiagnostics, protected NonlinearSolverOptions {
+class Solver : public SolverDiagnostics, protected NonlinearSolverTestOptions {
 public:
  	class ErrGeneric : public MBDynErrBase {
   	public:
@@ -144,7 +147,8 @@ public:
 			EIG_USE_LAPACK			= 0x1000U,
 			EIG_USE_ARPACK			= 0x2000U,
 			EIG_USE_JDQZ			= 0x4000U,
-			EIG_USE_MASK			= (EIG_USE_LAPACK|EIG_USE_ARPACK|EIG_USE_JDQZ),
+                        EIG_USE_EXTERNAL                = 0x8000U,
+			EIG_USE_MASK			= (EIG_USE_LAPACK|EIG_USE_ARPACK|EIG_USE_JDQZ|EIG_USE_EXTERNAL),
 
 			EIG_LAST
 		};
@@ -228,8 +232,8 @@ protected:
 	integer iNumPreviousVectors;
 	integer iUnkStates;
 	doublereal* pdWorkSpace;
-	std::deque<MyVectorHandler*> qX;      /* queque vett. stati */
-  	std::deque<MyVectorHandler*> qXPrime; /* queque vett. stati der. */
+	std::deque<VectorHandler*> qX;      /* queque vett. stati */
+  	std::deque<VectorHandler*> qXPrime; /* queque vett. stati der. */
 	MyVectorHandler* pX;                  /* queque vett. stati inc. */
   	MyVectorHandler* pXPrime;             /* queque vett. stati d. inc. */
 
@@ -263,29 +267,80 @@ protected:
 	};
 	AbortAfter eAbortAfter;
 
-   	/* Parametri per il metodo */
-	enum StepIntegratorType {
-			INT_CRANKNICOLSON,
-			INT_MODCRANKNICOLSON,
-			INT_MS2,
-			INT_HOPE,
-			INT_THIRDORDER,
-			INT_IMPLICITEULER,
-			INT_UNKNOWN
+	// Needed for elements using the hybrid step integrator interface
+	// which relies on StepIntegrator::dGetCoef also during initial assembly and for the eigensolver
+	class FakeStepIntegrator: public StepIntegrator {
+	public:
+             explicit FakeStepIntegrator(doublereal dCoef);
+
+             virtual doublereal dGetCoef(unsigned int iDof) const override;
+
+             void SetCoef(doublereal dCoefNew) {
+                  dCoef = dCoefNew;
+             }
+                        
+             virtual doublereal
+             Advance(Solver* pS,
+                     const doublereal TStep,
+                     const doublereal dAlph,
+                     const StepChange StType,
+                     std::deque<VectorHandler*>& qX,
+                     std::deque<VectorHandler*>& qXPrime,
+                     MyVectorHandler*const pX,
+                     MyVectorHandler*const pXPrime,
+                     integer& EffIter,
+                     doublereal& Err,
+                     doublereal& SolErr) override;
+	private:
+             doublereal dCoef;
+	} oFakeStepIntegrator;
+
+        friend class StepIntegratorGuard;
+        
+	class StepIntegratorGuard {
+	public:
+             explicit StepIntegratorGuard(Solver& oSolver)
+                  :oSolver(oSolver),
+                   pCurrStepIntegrator(oSolver.pCurrStepIntegrator) {
+             }
+
+             ~StepIntegratorGuard() {
+                  oSolver.pCurrStepIntegrator = pCurrStepIntegrator;
+             }
+             
+        private:
+             Solver& oSolver;
+             StepIntegrator* const pCurrStepIntegrator;
 	};
+
+	/* Parametri per il metodo */
 	StepIntegratorType RegularType, DummyType;
 
    	StepIntegrator* pDerivativeSteps;
    	StepIntegrator* pFirstDummyStep;
+	StepIntegrator* pSecondDummyStep;
+	StepIntegrator* pThirdDummyStep;
 	StepIntegrator* pDummySteps;
    	StepIntegrator* pFirstRegularStep;
+	StepIntegrator* pSecondRegularStep;
+	StepIntegrator* pThirdRegularStep;
    	StepIntegrator* pRegularSteps;
 	StepIntegrator* pCurrStepIntegrator;
 
 	DriveCaller* pRhoRegular;
 	DriveCaller* pRhoAlgebraicRegular;
+	//DriveCaller* pFirstRhoRegular;
+	//DriveCaller* pFirstRhoAlgebraicRegular;
+	DriveCaller* pSecondRhoRegular;
+	DriveCaller* pSecondRhoAlgebraicRegular;
+	DriveCaller* pThirdRhoRegular;
+	DriveCaller* pThirdRhoAlgebraicRegular;
 	DriveCaller* pRhoDummy;
 	DriveCaller* pRhoAlgebraicDummy;
+	DriveCaller* pSecondRhoDummy;
+	DriveCaller* pSecondRhoAlgebraicDummy;
+	DriveCaller* pThirdRhoDummy;
+	DriveCaller* pThirdRhoAlgebraicDummy;
 
 	doublereal dDerivativesCoef;
 	/* Type of linear solver */
@@ -299,8 +354,6 @@ protected:
 
    	/* Parametri per solutore nonlineare */
    	bool bTrueNewtonRaphson;
-   	bool bKeepJac;
-   	integer iIterationsBeforeAssembly;
 	NonlinearSolver::Type NonlinearSolverType;
 	MatrixFreeSolver::SolverType MFSolverType;
 	doublereal dIterTol;
@@ -309,8 +362,10 @@ protected:
 	integer iIterativeMaxSteps;
 	doublereal dIterertiveEtaMax;
 	doublereal dIterertiveTau;
-	struct LineSearchParameters LineSearch;
-
+	LineSearchParameters oLineSearchParam;
+#ifdef USE_TRILINOS
+        NoxSolverParameters oNoxSolverParam;
+#endif
 /* FOR PARALLEL SOLVERS */
 	bool bParallel;
 	SchurDataManager *pSDM;
@@ -422,7 +477,10 @@ public:
 
 	virtual void PrintResidual(const VectorHandler& Res, integer iIterCnt) const;
 	virtual void PrintSolution(const VectorHandler& Sol, integer iIterCnt) const;
-	virtual void CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const throw(NonlinearSolver::TimeStepLimitExceeded, NonlinearSolver::MaxResidualExceeded);
+	virtual void CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const /*throw(NonlinearSolver::TimeStepLimitExceeded, NonlinearSolver::MaxResidualExceeded)*/;
+        std::ostream& PrintSolverTime(std::ostream& os) const {
+	     return pNLS->PrintSolverTime(os);
+        }
 };
 
 inline void
@@ -438,8 +496,8 @@ Solver::Flip(void)
 	qXPrime.pop_back();
 
 	/* copy from pX, pXPrime to qx[0], qxPrime[0] */
-	MyVectorHandler* x = qX[0];
-	MyVectorHandler* xp = qXPrime[0];
+	VectorHandler* x = qX[0];
+	VectorHandler* xp = qXPrime[0];
 	for (integer i = 1; i <= iNumDofs; i++) {
 		x->PutCoef(i, pX->operator()(i));
 		xp->PutCoef(i, pXPrime->operator()(i));

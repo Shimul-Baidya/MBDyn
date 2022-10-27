@@ -165,12 +165,12 @@ NestedElem::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
  */
 void
 NestedElem::BeforePredict(VectorHandler& X,
-		VectorHandler& XP,
-		VectorHandler& XPrev,
-		VectorHandler& XPPrev) const
+	VectorHandler& XP,
+	std::deque<VectorHandler*>& qXPr,
+	std::deque<VectorHandler*>& qXPPr) const
 {
 	ASSERT(pElem != NULL);
-     	pElem->BeforePredict(X, XP, XPrev, XPPrev);
+     	pElem->BeforePredict(X, XP, qXPr, qXPPr);
 }
 
 void
@@ -554,3 +554,13 @@ NestedElem::SetInitialValue(VectorHandler& X)
 	}
 }
 
+const OutputHandler::Dimensions 
+NestedElem::GetEquationDimension(integer index) const {
+	ASSERT(pElem != NULL);
+	ElemWithDofs*  temp_pElem = dynamic_cast<ElemWithDofs*> (pElem);
+
+	if (temp_pElem != 0) {
+		return temp_pElem->GetEquationDimension(index);
+	} 
+	return OutputHandler::Dimensions::UnknownDimension;
+}

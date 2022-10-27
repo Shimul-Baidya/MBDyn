@@ -58,6 +58,10 @@ se msg e' definito, viene aggiunto in coda al messaggio di default
 int fSilent = 0;
 int fPedantic = 0;
 
+#ifdef USE_MULTITHREAD
+std::mutex mbdyn_lock_cout;
+#endif
+
 #ifdef DEBUG
 
 long int debug_level = MYDEBUG_ANY;
@@ -77,6 +81,10 @@ void _Assert(const char* file, const int line, const char* msg)
 #ifdef DEBUG_STOP
    throw MyAssert::ErrGeneric(MBDYN_EXCEPT_ARGS);
 #endif   
+
+#ifdef DEBUG_ABORT
+   abort();
+#endif
    
    return;
 }
@@ -139,15 +147,3 @@ int get_debug_options(const char *const s, const debug_array da[])
 }
 
 #endif /* DEBUG */
-
-#if defined(__GNUC__) && (defined(_M_IX86) || defined(__x86_64)) && !defined(NDEBUG) && (defined(__CYGWIN__) || defined(_WIN32)) 
-extern "C" void __assert_func (const char* file, int line, const char* func, const char* expr)
-{
-    std::cerr << "assertion " << expr << " failed: file " << file  << ":" << line  << ":" << func << std::endl;
-
-    // debug break interrupt on x86 and x86_64 makes debugging easier on Windows
-    __asm__ volatile ("int $3");
-
-    abort();
-}
-#endif

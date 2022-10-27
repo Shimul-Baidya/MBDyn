@@ -362,19 +362,32 @@ DataManager::ElemAssInit(void)
 	ASSERT(iMaxWorkNumColsJac > 0);
 	ASSERT(iMaxWorkNumItemsJac > 0);
 
-	/* SubMatrixHandlers */
-	SAFENEWWITHCONSTRUCTOR(pWorkMatA,
-			VariableSubMatrixHandler,
-			VariableSubMatrixHandler(iMaxWorkNumRowsJac,
-				iMaxWorkNumColsJac,
-				iMaxWorkNumItemsJac));
+        if (bUseAutoDiff()) {
+             SAFENEWWITHCONSTRUCTOR(pWorkMatA,
+                                    VariableSubMatrixHandlerAd,
+                                    VariableSubMatrixHandlerAd(iMaxWorkNumRowsJac,
+                                                               iMaxWorkNumColsJac,
+                                                               iMaxWorkNumItemsJac));
 
-	SAFENEWWITHCONSTRUCTOR(pWorkMatB,
-			VariableSubMatrixHandler,
-			VariableSubMatrixHandler(iMaxWorkNumRowsJac,
-				iMaxWorkNumColsJac,
-				iMaxWorkNumItemsJac));
+             SAFENEWWITHCONSTRUCTOR(pWorkMatB,
+                                    VariableSubMatrixHandlerAd,
+                                    VariableSubMatrixHandlerAd(iMaxWorkNumRowsJac,
+                                                               iMaxWorkNumColsJac,
+                                                               iMaxWorkNumItemsJac));
+        } else {
+             /* SubMatrixHandlers */
+             SAFENEWWITHCONSTRUCTOR(pWorkMatA,
+                                    VariableSubMatrixHandlerNonAd,
+                                    VariableSubMatrixHandlerNonAd(iMaxWorkNumRowsJac,
+                                                                  iMaxWorkNumColsJac,
+                                                                  iMaxWorkNumItemsJac));
 
+             SAFENEWWITHCONSTRUCTOR(pWorkMatB,
+                                    VariableSubMatrixHandlerNonAd,
+                                    VariableSubMatrixHandlerNonAd(iMaxWorkNumRowsJac,
+                                                                  iMaxWorkNumColsJac,
+                                                                  iMaxWorkNumItemsJac));
+        }
 	pWorkMat = pWorkMatA;
 
 	SAFENEWWITHCONSTRUCTOR(pWorkVec,
@@ -395,8 +408,38 @@ DataManager::AssJac(MatrixHandler& JacHdl, doublereal dCoef)
 
 	ASSERT(pWorkMat != NULL);
 	ASSERT(Elems.begin() != Elems.end());
+        
+	NodesUpdateJac(dCoef, NodeIter);
 
 	AssJac(JacHdl, dCoef, ElemIter, *pWorkMat);
+}
+
+void DataManager::AssJac(VectorHandler& JacY, const VectorHandler& Y, doublereal dCoef)
+{
+     ASSERT(JacY.iGetSize() == iGetNumDofs());
+     ASSERT(Y.iGetSize() == iGetNumDofs());
+     
+     NodesUpdateJac(Y, dCoef, NodeIter);
+
+     AssJac(JacY, Y, dCoef, ElemIter, *pWorkMat);
+}
+
+void DataManager::NodesUpdateJac(doublereal dCoef, VecIter<Node *>& Iter)
+{
+     Node* pNode = nullptr;
+
+     for (bool bStatus = Iter.bGetFirst(pNode); bStatus; bStatus = Iter.bGetNext(pNode)) {
+	  pNode->UpdateJac(dCoef);
+     }
+}
+
+void DataManager::NodesUpdateJac(const VectorHandler& Y, doublereal dCoef, VecIter<Node *>& Iter)
+{
+     Node* pNode = nullptr;
+
+     for (bool bStatus = Iter.bGetFirst(pNode); bStatus; bStatus = Iter.bGetNext(pNode)) {
+	  pNode->UpdateJac(Y, dCoef);
+     }
 }
 
 void
@@ -419,7 +462,7 @@ DataManager::AssJac(MatrixHandler& JacHdl, doublereal dCoef,
 		}
 	}
 #endif
-
+	
 	Elem* pTmpEl = NULL;
 	if (Iter.bGetFirst(pTmpEl)) {
 		do {
@@ -427,7 +470,7 @@ DataManager::AssJac(MatrixHandler& JacHdl, doublereal dCoef,
 				JacHdl += pTmpEl->AssJac(WorkMat, dCoef,
 						*pXCurr, *pXPrimeCurr);
 			}
-			catch (ErrDivideByZero) {
+			catch (ErrDivideByZero& e) {
 				silent_cerr("AssJac: divide by zero "
 					"in " << psElemNames[pTmpEl->GetElemType()]
 					<< "(" << pTmpEl->GetLabel() << ")"
@@ -439,6 +482,33 @@ DataManager::AssJac(MatrixHandler& JacHdl, doublereal dCoef,
 			silent_cerr("### " << psElemNames[pTmpEl->GetElemType()] << "(" << pTmpEl->GetLabel() <<"):" << std::endl);
 			silent_cerr(JacHdl << std::endl);
 #endif
+		} while (Iter.bGetNext(pTmpEl));
+	}
+}
+
+void
+DataManager::AssJac(VectorHandler& JacY,
+                    const VectorHandler& Y,
+                    doublereal dCoef,
+                    VecIter<Elem *> &Iter,
+                    VariableSubMatrixHandler& WorkMat)
+{
+	Elem* pTmpEl = nullptr;
+        
+        JacY.Reset();
+     
+	if (Iter.bGetFirst(pTmpEl)) {
+		do {
+			try {
+                             pTmpEl->AssJac(JacY, Y, dCoef, *pXCurr, *pXPrimeCurr, WorkMat);
+			}
+			catch (ErrDivideByZero& e) {
+				silent_cerr("AssJac: divide by zero "
+					"in " << psElemNames[pTmpEl->GetElemType()]
+					<< "(" << pTmpEl->GetLabel() << ")"
+					<< std::endl);
+				throw ErrDivideByZero(MBDYN_EXCEPT_ARGS);
+			}
 		} while (Iter.bGetNext(pTmpEl));
 	}
 }
@@ -495,17 +565,18 @@ DataManager::AssMats(MatrixHandler& A_Hdl, MatrixHandler& B_Hdl,
 
 /* Assemblaggio del residuo */
 void
-DataManager::AssRes(VectorHandler& ResHdl, doublereal dCoef) 
+DataManager::AssRes(VectorHandler& ResHdl, doublereal dCoef, VectorHandler*const pAbsResHdl)
 {
 	DEBUGCOUT("Entering AssRes()" << std::endl);
 
-	AssRes(ResHdl, dCoef, ElemIter, *pWorkVec);
+	AssRes(ResHdl, dCoef, ElemIter, *pWorkVec, pAbsResHdl);
 }
 
 void
 DataManager::AssRes(VectorHandler& ResHdl, doublereal dCoef,
 		VecIter<Elem *> &Iter,
-		SubVectorHandler& WorkVec)
+		SubVectorHandler& WorkVec,
+		VectorHandler*const pAbsResHdl)
 {
 	DEBUGCOUT("Entering AssRes()" << std::endl);
 
@@ -516,12 +587,14 @@ DataManager::AssRes(VectorHandler& ResHdl, doublereal dCoef,
 			try {
 				ResHdl += pTmpEl->AssRes(WorkVec, dCoef,
 					*pXCurr, *pXPrimeCurr);
+				if (pAbsResHdl) WorkVec.AddAbsValuesTo(*pAbsResHdl);
 			}
-			catch(Elem::ChangedEquationStructure) {
+			catch(Elem::ChangedEquationStructure& e) {
 				ResHdl += WorkVec;
+				if (pAbsResHdl) WorkVec.AddAbsValuesTo(*pAbsResHdl);
 				ChangedEqStructure = true;
 			}
-			catch (ErrDivideByZero) {
+			catch (ErrDivideByZero& e) {
 				silent_cerr("AssRes: divide by zero "
 					"in " << psElemNames[pTmpEl->GetElemType()]
 					<< "(" << pTmpEl->GetLabel() << ")"
@@ -538,6 +611,47 @@ DataManager::AssRes(VectorHandler& ResHdl, doublereal dCoef,
 	}
 	if (ChangedEqStructure) {
 		throw ChangedEquationStructure(MBDYN_EXCEPT_ARGS);
+	}
+}
+
+void
+DataManager::SetElemDimensionIndices(std::map<OutputHandler::Dimensions, std::set<integer>>* pDimMap) {
+	Elem* pTmpEl = NULL;
+
+	if (ElemIter.bGetFirst(pTmpEl)){
+		do {
+
+			ElemWithDofs*  dof_pTmpEl = dynamic_cast<ElemWithDofs*> (pTmpEl);
+
+			if (dof_pTmpEl != 0) {
+
+				integer first_index = dof_pTmpEl->iGetFirstIndex();
+
+				/* set the indices value to corresponding dimensions */
+				for (unsigned int i = 1; i <= dof_pTmpEl->iGetNumDof(); i++) {
+					(*pDimMap)[dof_pTmpEl->GetEquationDimension(i)].insert(first_index + i);
+				}
+
+			}
+			
+		} while (ElemIter.bGetNext(pTmpEl));
+	}
+}
+
+void
+DataManager::SetNodeDimensionIndices(std::map<OutputHandler::Dimensions, std::set<integer>>* pDimMap) {
+	for (unsigned int i = 0; i < Nodes.size(); i++) {
+		integer first_index = Nodes[i]->iGetFirstIndex();
+
+                if (first_index < 0) {
+                     // Ignore DummyStructNode
+                     continue;
+                }
+                
+		/* set the indices value to corresponding dimensions */
+		for (unsigned int j = 1; j <= Nodes[i]->iGetNumDof(); j++) {
+			(*pDimMap)[Nodes[i]->GetEquationDimension(j)].insert(first_index + j);
+		}
 	}
 }
 
@@ -562,15 +676,9 @@ DataManager::ElemOutputPrepare(OutputHandler& OH)
 			MBDynNcVar VarLabels = OH.CreateVar(std::string("elem.") + ElemData[et].ShortDesc, MbNcInt, attrs, dim);
 			ElemContainerType::const_iterator p = ElemData[et].ElemContainer.begin();
 			for (unsigned i = 0; i < unsigned(iNumElems); i++, p++) {
-#if defined(USE_NETCDFC)
-				VarLabels->set_cur(i);
-				const long l = p->second->GetLabel();
-				VarLabels->put(&l, 1);
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
 				const std::vector<size_t> ncStartPos(1,i);
 				const long l = p->second->GetLabel();
 				VarLabels.putVar(ncStartPos, &l);
-#endif  /* USE_NETCDF4 */
 			}
 		}
 	}

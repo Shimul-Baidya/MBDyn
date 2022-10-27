@@ -117,9 +117,9 @@ public:
 	 * Elaborazione vettori e dati prima e dopo la predizione
 	 * per MultiStepIntegrator */
 	virtual void BeforePredict(VectorHandler& X,
-			VectorHandler& XP,
-			VectorHandler& XPrev,
-			VectorHandler& XPPrev) const;
+		VectorHandler& XP,
+		std::deque<VectorHandler*>& /* qXPr */ ,
+		std::deque<VectorHandler*>& /* qXPPr */ ) const;
 
 	virtual void AfterPredict(VectorHandler& X, VectorHandler& XP);
 
@@ -251,6 +251,9 @@ public:
 	virtual const DofOwner* pGetDofOwner(void) const;
 	virtual integer iGetFirstIndex(void) const;
 	virtual void SetInitialValue(VectorHandler& X);
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 #endif // NESTEDELEM_H

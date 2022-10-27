@@ -61,6 +61,24 @@ Elem::AssMats(VariableSubMatrixHandler& /* WorkMatA */ ,
 		"AssMats() not implemented yet" << std::endl);
 }
 
+void
+Elem::AssJac(VectorHandler& JacY,
+             const VectorHandler& Y,
+             doublereal dCoef,
+             const VectorHandler& XCurr,
+             const VectorHandler& XPrimeCurr,
+             VariableSubMatrixHandler& WorkMat)
+{
+     // All elements used with the matrix free Trilinos solver
+     // should implement this function for efficiency reasons 
+     DEBUGCERR(psElemNames[GetElemType()] << "(" << GetLabel() << "): "
+               "Newton Krylov AssJac() not implemented yet" << std::endl);
+     
+     AssJac(WorkMat, dCoef, XCurr, XPrimeCurr);
+
+     WorkMat.MultAddTo(JacY, Y);
+}
+
 bool
 Elem::bInverseDynamics(void) const
 {
@@ -212,22 +230,6 @@ ElemWithDofs::~ElemWithDofs(void)
 /* ElemWithDofs - end */
 
 
-/* SubjectToInitialAssembly - begin */
-
-SubjectToInitialAssembly::SubjectToInitialAssembly(void) 
-{
-	NO_OP;
-}
-
-
-SubjectToInitialAssembly::~SubjectToInitialAssembly(void)
-{
-	NO_OP;
-}
-
-/* SubjectToInitialAssembly - end */
-
-
 /* InitialAssemblyElem - begin */
 
 InitialAssemblyElem::InitialAssemblyElem(unsigned int uL, flag fOut)
@@ -239,6 +241,10 @@ InitialAssemblyElem::InitialAssemblyElem(unsigned int uL, flag fOut)
 InitialAssemblyElem::~InitialAssemblyElem(void)
 {
 	NO_OP;
+}
+
+bool InitialAssemblyElem::bIsDeformable() const {
+	return false;
 }
 
 /* InitialAssemblyElem - end */

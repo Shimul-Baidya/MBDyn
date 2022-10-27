@@ -52,7 +52,8 @@ DistanceJoint::DistanceJoint(unsigned int uL, const DofOwner* pDO,
 : Elem(uL, fOut),
 Joint(uL, pDO, fOut),
 DriveOwner(pDC),
-pNode1(pN1), pNode2(pN2), v(Zero3), dAlpha(0.)
+pNode1(pN1), pNode2(pN2), v(Zero3), 
+dAlpha(0.)
 {
    NO_OP;
 }
@@ -265,6 +266,28 @@ SubVectorHandler& DistanceJoint::AssRes(SubVectorHandler& WorkVec,
 }
 
 
+void
+DistanceJoint::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Distance", OH, name);
+			
+			Var_V = OH.CreateVar<Vec3>(name + "V",
+				OutputHandler::Dimensions::Dimensionless,
+				"constrained distance direction unit vector (x, y, z)");
+			
+			Var_d = OH.CreateVar<doublereal>(name + "d",
+				OutputHandler::Dimensions::Length,
+				"constrained distance magnitude");
+		}
+#endif // USE_NETCDF
+	}
+}
+
+
 void DistanceJoint::Output(OutputHandler& OH) const
 {
    if(bToBeOutput()) {
@@ -275,9 +298,21 @@ void DistanceJoint::Output(OutputHandler& OH) const
       } else {
 	 vTmp = v;
       }
-      Joint::Output(OH.Joints(), "Distance", GetLabel(),
-		    vTmp, Zero3, v*dAlpha, Zero3)
-	<< " " << v << " " << d << std::endl;
+
+      if (OH.UseText(OutputHandler::JOINTS)) {
+	      Joint::Output(OH.Joints(), "Distance", GetLabel(),
+			      vTmp, Zero3, v*dAlpha, Zero3)
+		      << " " << v/d << " " << d << std::endl;
+      }
+
+#ifdef USE_NETCDF
+	if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+		Joint::NetCDFOutput(OH, vTmp, Zero3, v*dAlpha, Zero3);
+		OH.WriteNcVar(Var_V, v/d);
+		OH.WriteNcVar(Var_d, d);
+	}
+#endif // USE_NETCDF
+
    }
 }
 
@@ -599,6 +634,46 @@ DistanceJoint::SetValue(DataManager *pDM,
 	X.Put(iGetFirstIndex() + 1, v);
 }
 
+const OutputHandler::Dimensions
+DistanceJoint::GetEquationDimension(integer index) const {
+	// DOF == 4
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 4:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+	return dimension;
+	
+}
+
+std::ostream&
+DistanceJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 3 << ": " <<
+			"distance error components" << std::endl
+
+		<< prefix << iIndex + 4 << ": " <<
+			"direction normalization" << std::endl;
+
+	return out;
+}
 /* DistanceJoint - end */
 
 
@@ -855,21 +930,52 @@ DistanceJointWithOffset::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+void
+DistanceJointWithOffset::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Distance with offset", OH, name);
+			
+			Var_V = OH.CreateVar<Vec3>(name + "V",
+				OutputHandler::Dimensions::Dimensionless,
+				"constrained distance direction unit vector (x, y, z)");
+			
+			Var_d = OH.CreateVar<doublereal>(name + "d",
+				OutputHandler::Dimensions::Length,
+				"constrained distance magnitude");
+		}
+#endif // USE_NETCDF
+	}
+}
 
 void DistanceJointWithOffset::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) {
-      doublereal d = dGet();
-      Vec3 vTmp;
-      if (fabs(d) > std::numeric_limits<doublereal>::epsilon()) {
-	 vTmp = Vec3(dAlpha, 0., 0.);
-      } else {
-	 vTmp = v;
-      }
-      Joint::Output(OH.Joints(), "DistanceWithOffs", GetLabel(),
-		    vTmp, Zero3, v*dAlpha, Zero3)
-	<< " " << v << " " << d << std::endl;
-   }
+	if (bToBeOutput()) {
+		doublereal d = dGet();
+		Vec3 vTmp;
+		if (fabs(d) > std::numeric_limits<doublereal>::epsilon()) {
+			vTmp = Vec3(dAlpha, 0., 0.);
+		} else {
+			vTmp = v;
+		}
+
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "DistanceWithOffs", GetLabel(),
+				vTmp, Zero3, v*dAlpha, Zero3)
+			<< " " << v/d << " " << d << std::endl;
+		}
+
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, vTmp, Zero3, v*dAlpha, Zero3);
+			OH.WriteNcVar(Var_V, v/d);
+			OH.WriteNcVar(Var_d, d);
+		}
+#endif // USE_NETCDF
+	}
 }
 
 
@@ -1200,6 +1306,45 @@ DistanceJointWithOffset::SetValue(DataManager *pDM,
 	X.Put(iGetFirstIndex() + 1, v);
 }
 
+const OutputHandler::Dimensions
+DistanceJointWithOffset::GetEquationDimension(integer index) const {
+	// DOF == 4
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 4:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+DistanceJointWithOffset::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 3 << ": " <<
+			"distance error components" << std::endl
+
+		<< prefix << iIndex + 4 << ": " <<
+			"direction normalization" << std::endl;
+
+	return out;
+}
 
 /* DistanceJointWithOffset - end */
 
@@ -1541,14 +1686,35 @@ ClampJoint::Update(const VectorHandler& XCurr, InverseDynamics::Order iOrder)
    	M = Vec3(XCurr, iFirstReactionIndex + 4);
 }
 
+
+void ClampJoint::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Clamp", OH, name);
+		}
+#endif // USE_NETCDF
+	}
+}
+
+
 void
 ClampJoint::Output(OutputHandler& OH) const
 {
 	if (bToBeOutput()) {
 		const Mat3x3& R(pNode->GetRCurr());
 
-		Joint::Output(OH.Joints(), "Clamp", GetLabel(),
-			R.MulTV(F), R.MulTV(M), F, M) << std::endl;
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "Clamp", GetLabel(),
+					R.MulTV(F), R.MulTV(M), F, M) << std::endl;
+		}
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, R.MulTV(F), R.MulTV(M), F, M);
+		}
+#endif // USE_NETCDF
 	}
 }
 
@@ -1724,6 +1890,36 @@ ClampJoint::dGetPrivData(unsigned int i) const
 	}
 
 	throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+}
+
+const OutputHandler::Dimensions
+ClampJoint::GetEquationDimension(integer index) const {
+	
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 4:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 5:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 6:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+	}
+
+	return dimension;
 }
 
 /* ClampJoint - end */

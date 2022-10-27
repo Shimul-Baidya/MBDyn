@@ -40,7 +40,6 @@
 #include "ccmh.h"
 #include "dirccmh.h"
 #include "harwrap.h"
-#include "mschwrap.h"
 #include "y12wrap.h"
 #include "umfpackwrap.h"
 #include "kluwrap.h"
@@ -50,8 +49,17 @@
 #include "taucswrap.h"
 #include "naivewrap.h"
 #include "parnaivewrap.h"
-
-
+#include "pardisowrap.h"
+#include "pastixwrap.h"
+#include "qrwrap.h"
+#include "strumpackwrap.h"
+#include "wsmpwrap.h"
+#ifdef USE_TRILINOS
+#include "aztecoowrap.h"
+#endif
+#ifdef USE_SICONOS
+#include "siconoswrap.h"
+#endif
 #include "linsol.h"
 
 /* solver data */
@@ -71,11 +79,6 @@ const LinSol::solver_t solver[] = {
 		LinSol::SOLVER_FLAGS_NONE,
 		LinSol::SOLVER_FLAGS_NONE,
 		-1., -1. },
-	{ "Meschach", NULL,
-		LinSol::MESCHACH_SOLVER,
-		LinSol::SOLVER_FLAGS_NONE,
-		LinSol::SOLVER_FLAGS_NONE,
-		-1., -1. },
 	{ "Naive", NULL,
 		LinSol::NAIVE_SOLVER,
 		LinSol::SOLVER_FLAGS_ALLOWS_REVERSE_CUTHILL_MC_KEE |
@@ -92,7 +95,7 @@ const LinSol::solver_t solver[] = {
 #endif /* USE_NAIVE_MULTITHREAD */
 			0,
 		LinSol::SOLVER_FLAGS_NONE,
-		1.e-8, -1. },
+		1.e-5, -1. },
 	{ "SuperLU", NULL, 
 		LinSol::SUPERLU_SOLVER,
 		LinSol::SOLVER_FLAGS_ALLOWS_COLAMD |
@@ -113,8 +116,8 @@ const LinSol::solver_t solver[] = {
        		-1., -1. },
 	{ "Umfpack", "umfpack3", 
 		LinSol::UMFPACK_SOLVER,
-		LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_CC|LinSol::SOLVER_FLAGS_ALLOWS_DIR|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
-		LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
+	        LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_CC|LinSol::SOLVER_FLAGS_ALLOWS_DIR|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS|LinSol::SOLVER_FLAGS_ALLOWS_GRAD,
+	        LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
 		.1,
 #ifdef UMFPACK_DROPTOL
 		0.
@@ -124,7 +127,7 @@ const LinSol::solver_t solver[] = {
 		},
 	{ "KLU", NULL, 
 		LinSol::KLU_SOLVER,
-		LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_CC|LinSol::SOLVER_FLAGS_ALLOWS_DIR|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
+	        LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_CC|LinSol::SOLVER_FLAGS_ALLOWS_DIR|LinSol::SOLVER_FLAGS_ALLOWS_GRAD|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
 		LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
 		.1 },
 	{ "Y12", NULL,
@@ -132,6 +135,97 @@ const LinSol::solver_t solver[] = {
 		LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_CC|LinSol::SOLVER_FLAGS_ALLOWS_DIR|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
 		LinSol::SOLVER_FLAGS_ALLOWS_MAP|LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
 		-1., -1. },
+        { "Pardiso", NULL,
+		LinSol::PARDISO_SOLVER,
+		LinSol::SOLVER_FLAGS_ALLOWS_MAP |
+	        LinSol::SOLVER_FLAGS_ALLOWS_GRAD |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_FCT,
+		LinSol::SOLVER_FLAGS_ALLOWS_MAP,
+		1e-13, -1. },
+        { "Pardiso_64", NULL,
+		LinSol::PARDISO_64_SOLVER,
+		LinSol::SOLVER_FLAGS_ALLOWS_MAP |
+	        LinSol::SOLVER_FLAGS_ALLOWS_GRAD |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_FCT,
+		LinSol::SOLVER_FLAGS_ALLOWS_MAP,
+		1e-13, -1. },
+        { "Pastix", NULL,
+		LinSol::PASTIX_SOLVER,
+		LinSol::SOLVER_FLAGS_ALLOWS_MAP |
+	        LinSol::SOLVER_FLAGS_ALLOWS_GRAD |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_FCT |
+	        LinSol::SOLVER_FLAGS_ALLOWS_SCOTCH |
+	        LinSol::SOLVER_FLAGS_ALLOWS_METIS |
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_SVD |
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_PQRCP | 
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_RQRCP |
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_TQRCP |
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_RQRRT,
+		LinSol::SOLVER_FLAGS_ALLOWS_MAP,
+		-1., -1. },
+        { "QR", NULL,
+                LinSol::QR_SOLVER,
+                LinSol::SOLVER_FLAGS_NONE,
+                LinSol::SOLVER_FLAGS_NONE,
+                -1., -1. },
+        { "SPQR", NULL,
+                LinSol::SPQR_SOLVER,
+                LinSol::SOLVER_FLAGS_ALLOWS_MAP |
+	        LinSol::SOLVER_FLAGS_ALLOWS_GRAD |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS |
+                LinSol::SOLVER_FLAGS_ALLOWS_AMD |
+                LinSol::SOLVER_FLAGS_ALLOWS_METIS |
+                LinSol::SOLVER_FLAGS_ALLOWS_GIVEN,
+                LinSol::SOLVER_FLAGS_ALLOWS_MAP,
+                -1., -1. },
+        { "STRUMPACK", NULL,
+                LinSol::STRUMPACK_SOLVER,
+                LinSol::SOLVER_FLAGS_ALLOWS_MAP |
+	        LinSol::SOLVER_FLAGS_ALLOWS_GRAD |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS |
+	        LinSol::SOLVER_FLAGS_ALLOWS_MT_FCT |
+	        LinSol::SOLVER_FLAGS_ALLOWS_METIS |
+	        LinSol::SOLVER_FLAGS_ALLOWS_SCOTCH |
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_HSS |
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_BLR | 
+	        LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_HODLR,
+                LinSol::SOLVER_FLAGS_ALLOWS_MAP,
+                -1., -1. },	
+	{ "Watson", NULL,
+	  LinSol::WATSON_SOLVER,
+	  LinSol::SOLVER_FLAGS_ALLOWS_MAP |
+	  LinSol::SOLVER_FLAGS_ALLOWS_CC |
+	  LinSol::SOLVER_FLAGS_ALLOWS_DIR |
+	  LinSol::SOLVER_FLAGS_ALLOWS_GRAD |
+#ifdef WSMP_SOLVER_ENABLE_MULTITHREAD_FACTOR // Disable by default because valgrind reports a race condition in WSMP Version 20.05.20
+	  LinSol::SOLVER_FLAGS_ALLOWS_MT_FCT | 
+#endif
+	  LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS,
+	  LinSol::SOLVER_FLAGS_ALLOWS_MAP,
+	  -1., -1. },
+        {"AztecOO", NULL,
+         LinSol::AZTECOO_SOLVER,
+         LinSol::SOLVER_FLAGS_PRECOND_MASK,
+         LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_UMFPACK,
+         -1, -1},
+        {"Amesos", NULL,
+         LinSol::AMESOS_SOLVER,
+         LinSol::SOLVER_FLAGS_PRECOND_MASK,
+         LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_UMFPACK,
+         -1, -1},
+        {"Siconos" "sparse", NULL,
+         LinSol::SICONOS_SPARSE_SOLVER,
+         0u,
+         0u,
+         -1, -1},
+        {"Siconos" "dense", NULL,
+         LinSol::SICONOS_DENSE_SOLVER,
+         0u,
+         0u,
+         -1, -1},
 	{ NULL, NULL, 
 		LinSol::EMPTY_SOLVER,
 		LinSol::SOLVER_FLAGS_NONE,
@@ -161,7 +255,11 @@ iWorkSpaceSize(0),
 blockSize(0),
 dPivotFactor(-1.),
 dDropTolerance(0.),
-iMaxIter(0) // Restore the original behavior by default
+dLowRankCompressTol(0.01),
+dLowRankCompressMinRatio(1.),
+iMaxIter(0), // Restore the original behavior by default
+dTolRes(1e-10),
+iVerbose(0)
 {
 	NO_OP;
 }
@@ -230,16 +328,53 @@ LinSol::SetSolver(LinSol::SolverType t, unsigned f)
 		return true;
 #endif /* USE_HARWELL */
 
-	case LinSol::MESCHACH_SOLVER:
-#ifdef USE_MESCHACH
-		currSolver = t;
-		return true;
-#endif /* USE_MESCHACH */
+        case LinSol::PARDISO_SOLVER:
+        case LinSol::PARDISO_64_SOLVER:
+#ifdef USE_PARDISO
+             currSolver = t;
+             return true;
+#endif
+        case LinSol::PASTIX_SOLVER:
+#ifdef USE_PASTIX
+                currSolver = t;
+                return true;
+#endif
+        case LinSol::QR_SOLVER:
+                currSolver = t;
+                return true;
+#ifdef USE_SUITESPARSE_QR
+        case LinSol::SPQR_SOLVER:
+                currSolver = t;
+                return true;
+#endif
+#ifdef USE_STRUMPACK
+	case LinSol::STRUMPACK_SOLVER:
+	     currSolver = t;
+	     return true;
+#endif
+#ifdef USE_WSMP
+	case LinSol::WATSON_SOLVER:
+	     currSolver = t;
+	     return true;
+#endif
+#ifdef USE_TRILINOS
+        case LinSol::AZTECOO_SOLVER:
+             currSolver = t;
+             return true;
+             
+        case LinSol::AMESOS_SOLVER:
+             currSolver = t;
+             return true;
+#endif
+#ifdef USE_SICONOS
+        case LinSol::SICONOS_SPARSE_SOLVER:
+             currSolver = t;
+             return true;
 
-		/* else */
-		silent_cerr(::solver[t].s_name << " unavailable" << std::endl);
-		return false;
-
+        case LinSol::SICONOS_DENSE_SOLVER:
+             currSolver = t;
+             return true;
+#endif
 	case LinSol::NAIVE_SOLVER:
 		currSolver = t;
 		return true;
@@ -289,21 +424,13 @@ LinSol::SetSolverFlags(unsigned f)
 }
 
 bool
-LinSol::AddSolverFlags(unsigned f)
+LinSol::AddSolverFlags(unsigned mask, unsigned flag)
 {
-	if ((::solver[currSolver].s_flags & f) == f) {
-		solverFlags |= f;
-		return true;
-	}
-
-	return false;
-}
-
-bool
-LinSol::MaskSolverFlags(unsigned f)
-{
-	if ((::solver[currSolver].s_flags & f) == f) {
-		solverFlags &= ~f;
+        ASSERT((mask & flag) == flag);
+	
+        if ((::solver[currSolver].s_flags & flag) == flag) {
+	        solverFlags &= ~mask;
+		solverFlags |= flag;
 		return true;
 	}
 
@@ -358,6 +485,7 @@ LinSol::SetWorkSpaceSize(integer i)
 {
 	switch (currSolver) {
 	case LinSol::Y12_SOLVER:
+        case LinSol::SICONOS_SPARSE_SOLVER:
 		iWorkSpaceSize = i;
 		break;
 
@@ -392,6 +520,29 @@ LinSol::SetDropTolerance(const doublereal& d)
 	return true;
 }
 
+bool
+LinSol::SetLowRankCompressTol(const doublereal& d)
+{
+     if (0 == (::solver[currSolver].s_flags & LinSol::SOLVER_FLAGS_COMPRESSION_MASK)) {
+	  return false;
+     }
+
+     dLowRankCompressTol = d;
+
+     return true;
+}
+
+bool LinSol::SetLowRankCompressMinRatio(const doublereal& d)
+{
+     if (0 == (::solver[currSolver].s_flags & LinSol::SOLVER_FLAGS_COMPRESSION_MASK)) {
+	  return false;
+     }
+
+     dLowRankCompressMinRatio = d;
+
+     return true;
+}
+
 unsigned
 LinSol::GetBlockSize(void) const
 {
@@ -420,6 +571,8 @@ LinSol::SetScale(const SolutionManager::ScaleOpt& s)
 	case LinSol::NAIVE_SOLVER:
 	case LinSol::UMFPACK_SOLVER:
 	case LinSol::KLU_SOLVER:
+        case LinSol::PASTIX_SOLVER:
+	case LinSol::WATSON_SOLVER:
 		scale = s;
 		break;
 
@@ -441,18 +594,61 @@ LinSol::SetMaxIterations(integer iMaxIterations)
 {
 	switch (currSolver) {
 	case LinSol::UMFPACK_SOLVER:
+        case LinSol::PARDISO_SOLVER:
+        case LinSol::PARDISO_64_SOLVER:
+        case LinSol::PASTIX_SOLVER:
+	case LinSol::STRUMPACK_SOLVER:
+	case LinSol::WATSON_SOLVER:
+        case LinSol::AZTECOO_SOLVER:
 		iMaxIter = iMaxIterations;
 		break;
 
 	default:
 		return false;
 	}
-
+        
 	return true;
 }
 
+bool LinSol::SetTolerance(doublereal dToleranceRes)
+{
+        switch (currSolver) {
+        case LinSol::AZTECOO_SOLVER:
+                dTolRes = dToleranceRes;
+                break;
+        default:
+                return false;
+        }
+
+        return true;               
+}
+
+bool LinSol::SetVerbose(integer iVerb)
+{
+     switch (currSolver) {
+     case LinSol::UMFPACK_SOLVER:
+     case LinSol::PARDISO_SOLVER:
+     case LinSol::PARDISO_64_SOLVER:
+     case LinSol::PASTIX_SOLVER:
+     case LinSol::STRUMPACK_SOLVER:
+     case LinSol::AZTECOO_SOLVER:
+     case LinSol::AMESOS_SOLVER:
+	  iVerbose = iVerb;
+	  break;
+	  
+     default:
+	  return false;
+     }
+     
+     return true;
+}
+
 SolutionManager *const
-LinSol::GetSolutionManager(integer iNLD, integer iLWS) const
+LinSol::GetSolutionManager(integer iNLD,
+#ifdef USE_MPI
+                           MPI::Intracomm& oComm,
+#endif
+                           integer iLWS) const
 {
 	SolutionManager *pCurrSM = NULL;
 	const unsigned type = (solverFlags & LinSol::SOLVER_FLAGS_TYPE_MASK);
@@ -569,19 +765,6 @@ LinSol::GetSolutionManager(integer iNLD, integer iLWS) const
       		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 #endif /* !USE_SUPERLU */
 
-	case LinSol::MESCHACH_SOLVER:
-#ifdef USE_MESCHACH
-		SAFENEWWITHCONSTRUCTOR(pCurrSM,
-			MeschachSparseSolutionManager,
-			MeschachSparseSolutionManager(iNLD, iLWS,
-				dPivotFactor));
-		break;
-#else /* !USE_MESCHACH */
-		silent_cerr("Configure with --with-meschach "
-			"to enable Meschach solver" << std::endl);
-      		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-#endif /* !USE_MESCHACH */
-
 	case LinSol::LAPACK_SOLVER:
 #ifdef USE_LAPACK
 		SAFENEWWITHCONSTRUCTOR(pCurrSM,
@@ -642,22 +825,28 @@ LinSol::GetSolutionManager(integer iNLD, integer iLWS) const
 		case LinSol::SOLVER_FLAGS_ALLOWS_DIR: {
 			typedef UmfpackSparseCCSolutionManager<DirCColMatrixHandler<0> > CCSM;
 	      		SAFENEWWITHCONSTRUCTOR(pCurrSM, CCSM,
-					CCSM(iNLD, dPivotFactor, dDropTolerance, blockSize, scale, iMaxIter));
+					       CCSM(iNLD, dPivotFactor, dDropTolerance, blockSize, scale, iMaxIter, iVerbose));
 			break;
 		}
 
 		case LinSol::SOLVER_FLAGS_ALLOWS_CC: {
 			typedef UmfpackSparseCCSolutionManager<CColMatrixHandler<0> > CCSM;
 	      		SAFENEWWITHCONSTRUCTOR(pCurrSM, CCSM,
-					CCSM(iNLD, dPivotFactor, dDropTolerance, blockSize, scale, iMaxIter));
+					       CCSM(iNLD, dPivotFactor, dDropTolerance, blockSize, scale, iMaxIter, iVerbose));
 			break;
 		}
-
-		default:
+		case LinSol::SOLVER_FLAGS_ALLOWS_GRAD: {
+		        typedef UmfpackSparseSolutionManager<SpGradientSparseMatrixHandler> UMFSM;
 			SAFENEWWITHCONSTRUCTOR(pCurrSM,
-				UmfpackSparseSolutionManager,
-				UmfpackSparseSolutionManager(iNLD,
-					dPivotFactor, dDropTolerance, blockSize, scale, iMaxIter));
+					       UMFSM,
+					       UMFSM(iNLD, dPivotFactor, dDropTolerance, blockSize, scale, iMaxIter, iVerbose));
+			break;		     
+		}
+		default:
+		        typedef UmfpackSparseSolutionManager<SpMapMatrixHandler> UMFSM;
+			SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					       UMFSM,
+					       UMFSM(iNLD, dPivotFactor, dDropTolerance, blockSize, scale, iMaxIter, iVerbose));
 			break;
 		}
 		} break;
@@ -674,23 +863,30 @@ LinSol::GetSolutionManager(integer iNLD, integer iLWS) const
 		case LinSol::SOLVER_FLAGS_ALLOWS_DIR: {
 			typedef KLUSparseCCSolutionManager<DirCColMatrixHandler<0> > CCSM;
 	      		SAFENEWWITHCONSTRUCTOR(pCurrSM, CCSM,
-					CCSM(iNLD, dPivotFactor, scale));
+					       CCSM(iNLD, dPivotFactor, scale));
 			break;
 		}
 
 		case LinSol::SOLVER_FLAGS_ALLOWS_CC: {
 			typedef KLUSparseCCSolutionManager<CColMatrixHandler<0> > CCSM;
 	      		SAFENEWWITHCONSTRUCTOR(pCurrSM, CCSM,
-					CCSM(iNLD, dPivotFactor, scale));
+					       CCSM(iNLD, dPivotFactor, scale));
 			break;
 		}
-
+		     
+		case LinSol::SOLVER_FLAGS_ALLOWS_GRAD: {
+		     typedef KLUSparseSolutionManager<SpGradientSparseMatrixHandler> KLUSM;
+		     SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					    KLUSM,
+					    KLUSM(iNLD, dPivotFactor, scale));
+		     break;
+		}
+                     
 		default:
-			SAFENEWWITHCONSTRUCTOR(pCurrSM,
-				KLUSparseSolutionManager,
-				KLUSparseSolutionManager(iNLD,
-										 dPivotFactor,
-										 scale));
+		     typedef KLUSparseSolutionManager<SpMapMatrixHandler> KLUSM;
+			  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+						 KLUSM,
+						 KLUSM(iNLD, dPivotFactor, scale));
 			break;
 		}
 
@@ -700,7 +896,161 @@ LinSol::GetSolutionManager(integer iNLD, integer iLWS) const
 			"to enable KLU solver" << std::endl);
       		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 #endif /* !USE_KLU */
+        case LinSol::PARDISO_SOLVER:
+        case LinSol::PARDISO_64_SOLVER:
+#ifdef USE_PARDISO
+                {
+                        typedef PardisoSolutionManager<SpGradientSparseMatrixHandler, MKL_INT> PARDISO_SM_GRAD;
+                        typedef PardisoSolutionManager<SpGradientSparseMatrixHandler, long long> PARDISO_64_SM_GRAD;
+                        typedef PardisoSolutionManager<SpMapMatrixHandler, MKL_INT> PARDISO_SM_MAP;
+                        typedef PardisoSolutionManager<SpMapMatrixHandler, long long> PARDISO_64_SM_MAP;
+                        
+                        switch (type) {
+                        case LinSol::SOLVER_FLAGS_ALLOWS_GRAD: {
+                                if (currSolver == LinSol::PARDISO_64_SOLVER) {
+                                        SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                                               PARDISO_64_SM_GRAD,
+                                                               PARDISO_64_SM_GRAD(iNLD, dPivotFactor, nThreads, iMaxIter, iVerbose));
+                                } else {
+                                        SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                                               PARDISO_SM_GRAD,
+                                                               PARDISO_SM_GRAD(iNLD, dPivotFactor, nThreads, iMaxIter, iVerbose));
+                                }
+                        } break;
+                        default:
+                                if (currSolver == LinSol::PARDISO_64_SOLVER) {
+                                        SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                                               PARDISO_64_SM_MAP,
+                                                               PARDISO_64_SM_MAP(iNLD, dPivotFactor, nThreads, iMaxIter, iVerbose));
+                                } else {
+                                        SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                                               PARDISO_SM_MAP,
+                                                               PARDISO_SM_MAP(iNLD, dPivotFactor, nThreads, iMaxIter, iVerbose));
+                                }
+                        }
+		} break;
+#else /* !USE_PARDISO */
+      		silent_cerr("Configure with --with-pardiso "
+                            "to enable Pardiso solver" << std::endl);
+      		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+#endif /* !USE_PARDISO */
+	case LinSol::PASTIX_SOLVER: 
+#ifdef USE_PASTIX
+		{
+                    switch (type) {
+		    case LinSol::SOLVER_FLAGS_ALLOWS_GRAD: {
+                        SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                               PastixSolutionManager<SpGradientSparseMatrixHandler>,
+                                               PastixSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                    } break;
+                    default:
+			SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                               PastixSolutionManager<SpMapMatrixHandler>,
+                                               PastixSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                    }
+		} break;
+#else /* !USE_PASTIX */
+      		silent_cerr("Configure with --with-pastix "
+			"to enable Pastix solver" << std::endl);
+      		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+#endif /* !USE_PASTIX */
+        case LinSol::QR_SOLVER:
+                SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                       QrDenseSolutionManager,
+                                       QrDenseSolutionManager(iNLD));
+                break;
+#ifdef USE_SUITESPARSE_QR
+        case LinSol::SPQR_SOLVER:
+	     switch (type) {
+	     case LinSol::SOLVER_FLAGS_ALLOWS_GRAD:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 QrSparseSolutionManager<SpGradientSparseMatrixHandler>,
+					 QrSparseSolutionManager<SpGradientSparseMatrixHandler>(iNLD, solverFlags));
+		  break;
+	     default:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 QrSparseSolutionManager<SpMapMatrixHandler>,
+					 QrSparseSolutionManager<SpMapMatrixHandler>(iNLD, solverFlags));
+		  break;
+	     }
+	     break;
+#endif
+#ifdef USE_STRUMPACK
+	case LinSol::STRUMPACK_SOLVER:
+	     switch (type) {
+	     case LinSol::SOLVER_FLAGS_ALLOWS_GRAD:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 StrumpackSolutionManager<SpGradientSparseMatrixHandler>,
+					 StrumpackSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, solverFlags, iVerbose));
+		  break;
+	     default:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 StrumpackSolutionManager<SpMapMatrixHandler>,
+					 StrumpackSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, solverFlags, iVerbose));
+		  break;
+	     }
+	     break;
+#endif
+#ifdef USE_WSMP
+	case LinSol::WATSON_SOLVER:
+	     switch (type) {
+	     case LinSol::SOLVER_FLAGS_ALLOWS_CC:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 WsmpSparseCCSolutionManager<CColMatrixHandler<0> >,
+					 WsmpSparseCCSolutionManager<CColMatrixHandler<0> >(iNLD, dPivotFactor, blockSize, nThreads, scale, iMaxIter));
+		  break;
+	     case LinSol::SOLVER_FLAGS_ALLOWS_DIR:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 WsmpSparseCCSolutionManager<DirCColMatrixHandler<0> >,
+					 WsmpSparseCCSolutionManager<DirCColMatrixHandler<0> >(iNLD, dPivotFactor, blockSize, nThreads, scale, iMaxIter));
+		  break;
+	     case LinSol::SOLVER_FLAGS_ALLOWS_GRAD:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 WsmpSparseSolutionManager<SpGradientSparseMatrixHandler>,
+					 WsmpSparseSolutionManager<SpGradientSparseMatrixHandler>(iNLD, dPivotFactor, blockSize, nThreads, scale, iMaxIter));
+		  break;
+	     default:
+		  SAFENEWWITHCONSTRUCTOR(pCurrSM,
+					 WsmpSparseSolutionManager<SpMapMatrixHandler>,
+					 WsmpSparseSolutionManager<SpMapMatrixHandler>(iNLD, dPivotFactor, blockSize, nThreads, scale, iMaxIter));
+	     }
+	     break;
+#endif
+#ifdef USE_TRILINOS
+        case LinSol::AZTECOO_SOLVER:
+             pCurrSM = pAllocateAztecOOSolutionManager(
+#ifdef USE_MPI
+                  oComm,
+#endif
+                  iNLD,
+                  iMaxIter,
+                  dTolRes,
+                  iVerbose,
+                  solverFlags);
+             break;
+        case LinSol::AMESOS_SOLVER:
+             pCurrSM = pAllocateAmesosSolutionManager(
+#ifdef USE_MPI
+                  oComm,
+#endif
+                  iNLD,
+                  iVerbose,
+                  solverFlags);
+             break;
+#endif
+#ifdef USE_SICONOS
+        case LinSol::SICONOS_SPARSE_SOLVER:
+             SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                    SiconosSparseSolutionManager,
+                                    SiconosSparseSolutionManager(iNLD, iLWS));
+             break;
 
+        case LinSol::SICONOS_DENSE_SOLVER:
+             SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                    SiconosDenseSolutionManager,
+                                    SiconosDenseSolutionManager(iNLD));
+             break;
+#endif
 	case LinSol::NAIVE_SOLVER:
 		if (perm == LinSol::SOLVER_FLAGS_ALLOWS_COLAMD) {
 			if (nThreads == 1) {

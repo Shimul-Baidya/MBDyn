@@ -36,6 +36,7 @@
 #include <limits>
 
 #include "body.h"
+#include "bodyad.h"
 #include "body_vm.h"
 #include "dataman.h"
 
@@ -993,7 +994,6 @@ Body::AssMatsRBK_int(
 	// m: delta omega
 	WMB.Add(iIdx + 3 + 1, 3 + 1, MTmp2);
 }
-
 /* Body - end */
 
 
@@ -1044,7 +1044,7 @@ DynamicBody::AssJac(VariableSubMatrixHandler& WorkMat,
 	FullSubMatrixHandler& WM = WorkMat.SetFull();
 
 	Vec3 GravityAcceleration;
-	bool g = GravityOwner::bGetGravity(pNode->GetXCurr(),
+	bool g = GravityOwner::bGetGravity(pNode->GetXCurr() + pNode->GetRCurr()*Xgc,
 		GravityAcceleration);
 
 	integer iNumRows = 6;
@@ -1081,7 +1081,6 @@ DynamicBody::AssJac(VariableSubMatrixHandler& WorkMat,
 	return WorkMat;
 }
 
-
 void
 DynamicBody::AssMats(VariableSubMatrixHandler& WorkMatA,
 	VariableSubMatrixHandler& WorkMatB,
@@ -1095,7 +1094,7 @@ DynamicBody::AssMats(VariableSubMatrixHandler& WorkMatA,
 	FullSubMatrixHandler& WMB = WorkMatB.SetFull();
 
 	Vec3 GravityAcceleration;
-	bool g = GravityOwner::bGetGravity(pNode->GetXCurr(),
+	bool g = GravityOwner::bGetGravity(pNode->GetXCurr() + pNode->GetRCurr()*Xgc,
 		GravityAcceleration);
 
 	integer iNumRows = 6;
@@ -1190,16 +1189,16 @@ DynamicBody::AssMats(FullSubMatrixHandler& WMA,
 
 SubVectorHandler&
 DynamicBody::AssRes(SubVectorHandler& WorkVec,
-	doublereal /* dCoef */ ,
-	const VectorHandler& /* XCurr */ ,
-	const VectorHandler& /* XPrimeCurr */ )
+                    doublereal dCoef,
+                    const VectorHandler& XCurr ,
+                    const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("DynamicBody::AssRes");
 
 	/* Se e' definita l'accelerazione di gravita',
 	 * la aggiunge (solo al residuo) */
 	Vec3 GravityAcceleration;
-	bool g = GravityOwner::bGetGravity(pNode->GetXCurr(),
+	bool g = GravityOwner::bGetGravity(pNode->GetXCurr() + pNode->GetRCurr()*Xgc,
 		GravityAcceleration);
 
 	const RigidBodyKinematics *pRBK = pNode->pGetRBK();
@@ -1417,8 +1416,6 @@ DynamicBody::GetG_int(void) const
 	return (STmp + X*dMass).Cross(V) + R*(J0*(R.MulTV(W)))
 		- X.Cross(STmp.Cross(W));
 }
-
-
 /* DynamicBody - end */
 
 
@@ -1431,8 +1428,10 @@ ModalBody::ModalBody(unsigned int uL,
 	const Mat3x3& J,
 	flag fOut)
 : Elem(uL, fOut),
-DynamicBody(uL, pNode, dMass, Xgc, J, fOut),
-XPP(::Zero3), WP(::Zero3)
+  Body(uL, pNode, dMass, Xgc, J, fOut),
+  DynamicBody(uL, pNode, dMass, Xgc, J, fOut),
+  XPP(::Zero3),
+  WP(::Zero3)
 {
 	NO_OP;
 }
@@ -1445,9 +1444,9 @@ ModalBody::~ModalBody(void)
 
 void
 ModalBody::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
-{ 
-	*piNumRows = 12; 
-	*piNumCols = 12; 
+{
+	*piNumRows = 12;
+	*piNumCols = 12;
 }
 
 VariableSubMatrixHandler&
@@ -1457,7 +1456,7 @@ ModalBody::AssJac(VariableSubMatrixHandler& WorkMat,
 	const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("ModalBody::AssJac");
-
+        
 	/* Casting di WorkMat */
 	FullSubMatrixHandler& WM = WorkMat.SetFull();
 
@@ -1488,10 +1487,9 @@ ModalBody::AssJac(VariableSubMatrixHandler& WorkMat,
 	}
 
 	AssMats(WM, WM, dCoef, XCurr, XPrimeCurr, g, GravityAcceleration);
-
+        
 	return WorkMat;
 }
-
 
 void
 ModalBody::AssMats(VariableSubMatrixHandler& WorkMatA,
@@ -1534,7 +1532,6 @@ ModalBody::AssMats(VariableSubMatrixHandler& WorkMatA,
 
 	AssMats(WMA, WMB, 1., XCurr, XPrimeCurr, g, GravityAcceleration);
 }
-
 
 void
 ModalBody::AssMats(FullSubMatrixHandler& WMA,
@@ -1586,7 +1583,6 @@ ModalBody::AssMats(FullSubMatrixHandler& WMA,
 	}
 }
 
-
 SubVectorHandler&
 ModalBody::AssRes(SubVectorHandler& WorkVec,
 	doublereal dCoef,
@@ -1594,7 +1590,7 @@ ModalBody::AssRes(SubVectorHandler& WorkVec,
 	const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("ModalBody::AssRes");
-
+        
 	/* Se e' definita l'accelerazione di gravita',
 	 * la aggiunge (solo al residuo) */
 	Vec3 GravityAcceleration;
@@ -1649,6 +1645,17 @@ ModalBody::AssRes(SubVectorHandler& WorkVec,
 	pDN->AddInertia(dMass, STmp, JTmp);
 
 	return WorkVec;
+}
+
+void
+ModalBody::SetValue(DataManager *pDM,
+                    VectorHandler& X, VectorHandler& XP,
+                    SimulationEntity::Hints *ph)
+{
+        // Attention! We must override DynamicBody::SetValue here!
+        // Depending on the order of our elements,
+        // it is possible to get an incorrect
+        // initial velocity and initial angular velocity!
 }
 
 /* ModalBody - end */
@@ -1712,7 +1719,6 @@ StaticBody::AssJac(VariableSubMatrixHandler& WorkMat,
 	return WorkMat;
 }
 
-
 void
 StaticBody::AssMats(VariableSubMatrixHandler& WorkMatA,
 	VariableSubMatrixHandler& WorkMatB,
@@ -1764,7 +1770,7 @@ StaticBody::AssMats(FullSubMatrixHandler& WMA,
 	/* Se e' definita l'accelerazione di gravita',
 	 * la aggiunge (solo al residuo) */
 	Vec3 Acceleration(Zero3);
-	bool g = GravityOwner::bGetGravity(pNode->GetXCurr(), Acceleration);
+	bool g = GravityOwner::bGetGravity(pNode->GetXCurr() + pNode->GetRCurr()*Xgc, Acceleration);
 
 	/* TODO: reference */
 	Vec3 W(Zero3);
@@ -1792,16 +1798,16 @@ StaticBody::AssMats(FullSubMatrixHandler& WMA,
 
 SubVectorHandler&
 StaticBody::AssRes(SubVectorHandler& WorkVec,
-	doublereal /* dCoef */ ,
-	const VectorHandler& /* XCurr */ ,
-	const VectorHandler& /* XPrimeCurr */ )
+	doublereal dCoef,
+	const VectorHandler& XCurr,
+	const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("StaticBody::AssRes");
 
 	/* Se e' definita l'accelerazione di gravita',
 	 * la aggiunge (solo al residuo) */
 	Vec3 Acceleration(Zero3);
-	bool g = GravityOwner::bGetGravity(pNode->GetXCurr(), Acceleration);
+	bool g = GravityOwner::bGetGravity(pNode->GetXCurr() + pNode->GetRCurr()*Xgc, Acceleration);
 
 	/* W is uninitialized because its use is conditioned by w */
 	const RigidBodyKinematics *pRBK = pNode->pGetRBK();
@@ -1835,14 +1841,12 @@ StaticBody::AssRes(SubVectorHandler& WorkVec,
 	return WorkVec;
 }
 
-
 /* inverse dynamics capable element */
 bool
 StaticBody::bInverseDynamics(void) const
 {
 	return true;
 }
-
 
 SubVectorHandler&
 StaticBody::AssRes(SubVectorHandler& WorkVec,
@@ -1857,7 +1861,7 @@ StaticBody::AssRes(SubVectorHandler& WorkVec,
 
 	/* Se e' definita l'accelerazione di gravita', la aggiunge */
 	Vec3 GravityAcceleration;
-	bool g = GravityOwner::bGetGravity(pNode->GetXCurr(),
+	bool g = GravityOwner::bGetGravity(pNode->GetXCurr() + pNode->GetRCurr()*Xgc,
 		GravityAcceleration);
 
 	WorkVec.ResizeReset(6);
@@ -1951,7 +1955,7 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 	/* tabella delle parole chiave */
 	KeyTable K(HP, sKeyWords);
 
-	/* nodo collegato */
+	/* associated node */
 	const StructDispNode *pStrDispNode = pDM->ReadNode<const StructDispNode, Node::STRUCTURAL>(HP);
 	const StructNode *pStrNode = dynamic_cast<const StructNode *>(pStrDispNode);
 
@@ -1981,7 +1985,7 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 		 *
 		 * Xgc = Sum(Xgc_i*dm_i)/Sum(dm_i)
 		 *
-		 * J = Sum(J_i)-Sum(dm_i*(Xgc_i-Xgc)/\(Xgc_i-Xgc)/\)
+		 * J = Sum(J_i) - Sum(dm_i*(Xgc_i-Xgc)/\(Xgc_i-Xgc)/\)
 		 *
 		 * and it can be accomplished by accumulating:
 		 *
@@ -2027,7 +2031,7 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 		dm += dMTmp;
 
 		if (pStrNode) {
-			/* posiz. c.g. */
+			/* Center of gravity position */
 			Vec3 XgcTmp(HP.GetPosRel(RF));
 			if (iNumMasses == 1) {
 				Xgc = XgcTmp;
@@ -2038,35 +2042,44 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 
 			DEBUGLCOUT(MYDEBUG_INPUT, "position of mass(" << iCnt
 				<< ") center of gravity = " << XgcTmp << std::endl);
-
 			/*
-			 * matrice del mom. d'inerzia
+			 * inertia matrix
 			 *
-			 * Usa la funzione che legge una matrice qualsiasi con parole chiave
-			 * per forme abbreviate:
-			 *   - null: matrice vuota
-			 *   - eye:  matrice identita'
-			 *   - diag: matrice diagonale, seguita da 3 reali
-			 *   - sym:  matrice simmetrica, seguita da 6 reali,
-			 *           letta come triangolare superiore ordinata per righe:
+			 * Uses the method that reads a generic matrix with keywords for
+			 * abbreviated forms:
+			 *   - null: empty matrix
+			 *   - eye:  identity matrix
+			 *   - diag: diagonal matrix, 3 real numbers expected
+			 *   - sym:  symmetric matrix, 6 real numbers expected,
+			 *           read as row-oriented upper triangular:
 			 *           m11, m12, m13,    m22, m23,    m33
-			 *   - matrice generica, costituita da 9 reali, letta per righe:
-			 *           m11, m12, m13,    m21, m22, m23,   m31, m32, m33
+			 *   - generic matrix, 9 real numbers expected, read row-oriented:
+			 *           m11, m12, m13,    m21, m22, m23,    m31, m32, m33
 			 *
-			 * Si assume inoltre che la matrice dei momenti di inerzia
-			 * sia espressa nel centro di massa del corpo, quindi viene
-			 * corretta per l'eventuale offset rispetto al nodo
+			 * It is also assumed that the inertia matrix is expressed with 
+			 * respect to the center of gravity of the body, therefore the 
+			 * transport term due to the possible offset with respect to the 
+			 * node is removed.
+			 *
 			 */
-			// TODO: instead of "inertial" or "node", use "orientation [ , reference, <ref> ] , <mat>"...
+
 			Mat3x3 JTmp(HP.GetMatRel(RF));
 			DEBUGLCOUT(MYDEBUG_INPUT, "Inertia matrix of mass(" << iCnt
-				<< ") =" << std::endl << JTmp << std::endl);
+				<< ") = " << JTmp << std::endl);
 			if (!JTmp.IsSymmetric()) {
 				silent_cerr("Body(" << uLabel << "): "
 					"warning, non-symmetric inertia tensor at line " << HP.GetLineData() << std::endl);
 			}
 
-			if (HP.IsKeyWord("inertial")) {
+			if (HP.IsKeyWord("orientation")) {
+				DEBUGLCOUT(MYDEBUG_INPUT,
+					"supplied in relative frame" << std::endl);
+				Mat3x3 RTmp(HP.GetRotRel(RF));
+				JTmp = RTmp*JTmp.MulMT(RTmp);
+			} else if (HP.IsKeyWord("inertial")) {
+				silent_cerr("Body(" << uLabel << "): "
+					"warning, using deprecated keyword \"inertial\" at line " << HP.GetLineData()
+					<< " just use \"orientation\" instead" << std::endl);
 				DEBUGLCOUT(MYDEBUG_INPUT,
 					"supplied in inertial reference frame" << std::endl);
 				if (HP.IsKeyWord("node")) {
@@ -2075,10 +2088,10 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 					Mat3x3 RTmp(HP.GetRotRel(RF));
 					JTmp = RTmp*JTmp.MulMT(RTmp);
 				}
-				DEBUGLCOUT(MYDEBUG_INPUT,
-					"Inertia matrix of mass(" << iCnt << ") "
-					"in current frame =" << JTmp << std::endl);
 			}
+			DEBUGLCOUT(MYDEBUG_INPUT,
+				"Inertia matrix of mass(" << iCnt << ") "
+				"in current frame = " << JTmp << std::endl);
 
 			J += JTmp - Mat3x3(MatCrossCross, XgcTmp, XgcTmp*dMTmp);
 		}
@@ -2151,9 +2164,15 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 
 		/* static */
 		if (pStrNode) {
-			SAFENEWWITHCONSTRUCTOR(pSB, StaticBody,
-				StaticBody(uLabel, dynamic_cast<const StaticStructNode *>(pStaticDispNode),
-					dm, Xgc, J, fOut));
+                        if (pDM->bUseAutoDiff()) {
+                                SAFENEWWITHCONSTRUCTOR(pSB, StaticBodyAd,
+                                                       StaticBodyAd(uLabel, dynamic_cast<const StaticStructNodeAd*>(pStaticDispNode),
+                                                                    dm, Xgc, J, fOut));
+                        } else {
+                                SAFENEWWITHCONSTRUCTOR(pSB, StaticBody,
+                                                       StaticBody(uLabel, dynamic_cast<const StaticStructNode *>(pStaticDispNode),
+                                                                  dm, Xgc, J, fOut));
+                        }
 			pEl = pSB;
 
 		} else {
@@ -2212,12 +2231,22 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 			}
 
 			if (pModalNode) {
-				SAFENEWWITHCONSTRUCTOR(pEl, ModalBody,
-					ModalBody(uLabel, pModalNode, dm, Xgc, J, fOut));
+                                if (pDM->bUseAutoDiff()) {
+                                        SAFENEWWITHCONSTRUCTOR(pEl, ModalBodyAd,
+                                                               ModalBodyAd(uLabel, dynamic_cast<const ModalNodeAd*>(pModalNode), dm, Xgc, J, fOut));                                        
+                                } else {
+                                        SAFENEWWITHCONSTRUCTOR(pEl, ModalBody,
+                                                               ModalBody(uLabel, pModalNode, dm, Xgc, J, fOut));
+                                }
 
 			} else {
-				SAFENEWWITHCONSTRUCTOR(pEl, DynamicBody,
-					DynamicBody(uLabel, pDynamicStructNode, dm, Xgc, J, fOut));
+                                if (pDM->bUseAutoDiff()) {
+                                        SAFENEWWITHCONSTRUCTOR(pEl, DynamicBodyAd,
+                                                               DynamicBodyAd(uLabel, dynamic_cast<const DynamicStructNodeAd*>(pDynamicStructNode), dm, Xgc, J, fOut));                                        
+                                } else {
+                                        SAFENEWWITHCONSTRUCTOR(pEl, DynamicBody,
+                                                               DynamicBody(uLabel, pDynamicStructNode, dm, Xgc, J, fOut));
+                                }
 			}
 		} else {
 			SAFENEWWITHCONSTRUCTOR(pEl, DynamicMass,

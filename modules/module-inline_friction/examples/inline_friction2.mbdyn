@@ -31,7 +31,7 @@
  */
 
 /*
- AUTHOR: Reinhard Resch <r.resch@secop.com>
+ AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
         Copyright (C) 2011(-2017) all rights reserved.
 
         The copyright of this code is transferred
@@ -121,6 +121,7 @@ begin: initial value;
     #output: jacobian;
 #    output: counter;
     linear solver: naive;
+    threads: assembly, 1;
 #    abort after: assembly;
 #    abort after: derivatives;   
 	eigenanalysis: list, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,

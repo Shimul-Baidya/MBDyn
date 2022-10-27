@@ -219,7 +219,8 @@ VecN::operator () (integer i) const
 
 /* Mat3xN - begin */
 
-class Mat3xN {
+class Mat3xN: public sp_grad::SpConstMatElemAdapter<Mat3xN>
+{
 
  friend class MatNx3;
  friend class MatNxN;
@@ -243,7 +244,7 @@ class Mat3xN {
    
  public:
    Mat3xN(void); /* to allow arrays of Mat3xN */
-   Mat3xN(integer nc);
+   explicit Mat3xN(integer nc); /* Attention: Mat3xN could be constructed from a doublereal if this is not explicit! */
    Mat3xN(integer nc, const doublereal& d);
    ~Mat3xN(void);
    
@@ -292,6 +293,14 @@ class Mat3xN {
 
    inline doublereal & operator () (integer i, integer j);
    inline const doublereal & operator () (integer i, integer j) const;
+
+     static constexpr sp_grad::index_type iNumRowsStatic = 3;
+     static constexpr sp_grad::index_type iNumColsStatic = sp_grad::SpMatrixSize::DYNAMIC;
+     inline sp_grad::index_type iGetRowOffset() const noexcept { return iGetNumCols(); }
+     inline constexpr sp_grad::index_type iGetColOffset() const noexcept { return 1; }
+     inline const doublereal* begin() const noexcept { return &pdRows[0][0]; }
+     inline const doublereal* end() const noexcept { return &pdRows[0][iGetNumRows() * iGetNumCols()]; }
+     doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i, j); }
 };
 
 
@@ -372,7 +381,8 @@ Mat3xN::operator () (integer i, integer j) const
  /* classe aggiunta per gestire operazioni con matrici Nx3. Per adesso
     sono memorizzate come tre array Nx1  */
 
-class MatNx3 {
+class MatNx3: public sp_grad::SpConstMatElemAdapter<MatNx3>
+{
 
  friend class VecN;
  friend class Mat3xN;
@@ -400,6 +410,8 @@ class MatNx3 {
    MatNx3(integer ns, const doublereal& d);   
    ~MatNx3(void);
    
+   const MatNx3& Copy(const MatNx3& m);
+
    inline integer iGetNumRows(void) const;
    void Resize(integer ns); 
    void Reset(const doublereal d = 0.);
@@ -414,6 +426,9 @@ class MatNx3 {
    /* *this = [3xN]T */
    const MatNx3& Transpose(const Mat3xN& n);
 
+   const MatNx3& operator *= (const doublereal& d);
+   const MatNx3& operator /= (const doublereal& d);
+
    /* *this = m * n */
    const MatNx3& Mult(const MatNxN& m, const MatNx3& n);
 
@@ -424,6 +439,15 @@ class MatNx3 {
 
    inline doublereal & operator () (integer i, integer j);
    inline const doublereal & operator () (integer i, integer j) const;
+
+     static constexpr sp_grad::index_type iNumRowsStatic = sp_grad::SpMatrixSize::DYNAMIC;
+     static constexpr sp_grad::index_type iNumColsStatic = 3;
+     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return 3; }
+     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
+     inline sp_grad::index_type iGetColOffset() const noexcept { return iGetNumRows(); }
+     inline const doublereal* begin() const noexcept { return &pdCols[0][0]; }
+     inline const doublereal* end() const noexcept { return &pdCols[0][iGetNumRows() * iGetNumCols()]; }
+     doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i, j); }
 };
 
 
@@ -511,7 +535,8 @@ MatNx3::operator () (integer i, integer j) const
    In verita' queste matrici devono comunque essere diagonali (o non si riesce a escludere i
    modi rigidi quando si esportano i modi nel multi-corpo) quindi non dovrebbe servire piu' */
 
-class MatNxN {
+class MatNxN: public sp_grad::SpConstMatElemAdapter<MatNxN>
+{
    friend class Mat3xN;
    friend class MatNx3;
    friend class VecN;
@@ -541,6 +566,7 @@ class MatNxN {
    MatNxN(integer ns, const doublereal& d);   
    ~MatNxN(void);
    
+   void Resize(integer ns) {Create_(ns);};
    inline integer iGetNumRows(void) const;
    inline integer iGetNumCols(void) const;
    void Reset(const doublereal d = 0.);
@@ -549,6 +575,9 @@ class MatNxN {
    inline void Sub(integer i, integer j, const doublereal& d);
    inline const doublereal& dGet(integer i, integer j) const;
 
+   const MatNxN& operator *= (const doublereal& d);
+   const MatNxN& operator /= (const doublereal& d);
+
    const MatNxN& Copy(const MatNxN& m);
 
    /* *this = m * n */
@@ -556,6 +585,14 @@ class MatNxN {
 
    inline doublereal& operator () (integer i, integer j);
    inline const doublereal& operator () (integer i, integer j) const;
+
+     static constexpr sp_grad::index_type iNumRowsStatic = sp_grad::SpMatrixSize::DYNAMIC;
+     static constexpr sp_grad::index_type iNumColsStatic = sp_grad::SpMatrixSize::DYNAMIC;
+     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
+     inline sp_grad::index_type iGetColOffset() const noexcept { return iGetNumRows(); }
+     inline const doublereal* begin() const noexcept { return &pdMat[0][0]; }
+     inline const doublereal* end() const noexcept { return &pdMat[0][iGetNumRows() * iGetNumCols()]; }
+     doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i, j); }
 };
 
 

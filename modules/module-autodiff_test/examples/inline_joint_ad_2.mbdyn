@@ -2,7 +2,7 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2020
  *
  * Pierangelo Masarati	<masarati@aero.polimi.it>
  * Paolo Mantegazza	<mantegazza@aero.polimi.it>
@@ -29,8 +29,8 @@
  */
 
 /*
- AUTHOR: Reinhard Resch <r.resch@secop.com>
-        Copyright (C) 2011(-2017) all rights reserved.
+ AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+        Copyright (C) 2011(-2020) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -41,21 +41,21 @@
 set: real X0 = 20e-3;
 set: real Y0 = 30e-3;
 set: real Z0 = -15e-3;
-set: real dX1 = 5e-2*0;
-set: real dY1 = 1e-2*0;
-set: real dZ1 = -1e-2*0;
-set: real dX2 = -5e-2*0;
-set: real dY2 = -3e-2*0;
-set: real dZ2 = -1e-2*0;
-set: real dXP = 1.5e6*0;
-set: real dYP = 0.8e4*0;
-set: real dZP = -0.7e0*0;
-set: real dWX = 7.2e2*0;
-set: real dWY = -13.5e2*0;
-set: real dWZ = -50.3e3;
+set: real dX1 = 0;
+set: real dY1 = 0;
+set: real dZ1 = 0;
+set: real dX2 = 0;
+set: real dY2 = 0;
+set: real dZ2 = 0;
+set: real dXP = 0;
+set: real dYP = 0;
+set: real dZP = 0;
+set: real dWX = 0;
+set: real dWY = 0;
+set: real dWZ = 0;
 set: real dx = 50e-3;
-set: real dy = 10e-3*0;
-set: real dz = 5e-3;
+set: real dy = 0;
+set: real dz = 0;
 
 set: real m = 2;
 set: real J11 = 0.02;
@@ -96,36 +96,23 @@ begin: initial value;
 	initial time: 0.;
 	final time: 10;
 	time step: 1e-3;
-    min time step: 0.1;
-    max time step: 1e-2;
+
 	max iterations: 1000;
-#	strategy: factor, 0.8, 1, 1.25, 1, 3, 6;
 	tolerance: 1e-8;
-#    method: implicit euler;
     method: ms, 0.6;
     derivatives tolerance: 2e-5;
     derivatives max iterations: 100;
 	derivatives coefficient: 2e-6;
-#    output: residual;
-    #output: jacobian;
-#    output: counter;
-#    linear solver: umfpack, colamd, pivot factor, 0.1, scale, /*lapack,*/ iterative, scale tolerance, 1e-8, always, print condition number, no, max iterations, 100;
-#    linear solver: naive, colamd, pivot factor, 0.1, scale, iterative, scale tolerance, 1e-8, always;
     linear solver: naive, colamd, pivot factor, 0.1;
-#    nonlinear solver: line search, verbose, yes, print convergence info, no, abort at lambda min, no, scale newton step, no, divergence check, yes, factor, 10., lambda min, 1e-16;
-#    linear solver: naive, colamd, pivot factor, 0.1;
     nonlinear solver: newton raphson;
-#    abort after: assembly;
-#    abort after: derivatives;   
 	eigenanalysis: list, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        suffix width, 2,
     output matrices, 
 	parameter, 0.01,
 	output eigenvectors, output geometry,	
     use lapack, balance, permute;
-    #output: solver condition number, stat, yes;
-    #output: jacobian;
-    #output: iterations;
-    #abort after: assembly;
+    threads: assembly, 1;
+    output: iterations;
 end: initial value;
 
 include: "inline_joint_ad_2_parameters.set";
@@ -137,15 +124,12 @@ begin: control data;
     rigid bodies: 1;
     loadable elements: 2-2*traditional;
     joints: 1+2*traditional;
-	max iterations: 1000;
-	tolerance: 1e-11;
+	max iterations: 10;
+	tolerance: 1e-6;
 	gravity;
-	#~ print: dof stats;
-	#~ print: equation description;
 	print: dof description;
-	#~ print: element connection;
-	#~ print: node connection;	
-    use: loadable elements, in assembly;
+
+use: loadable elements, in assembly;
 end: control data;
 
 reference: ref_id_slider,
@@ -185,7 +169,7 @@ structural: node_id_ground, static,
 end: nodes;
 
 begin: elements;
-
+    module load: "libmodule-autodiff_test.la";
 	body: body_id_slider,
 		# node
 		node_id_slider,

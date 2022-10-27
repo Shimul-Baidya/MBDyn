@@ -78,7 +78,7 @@ public:
 		const doublereal v,
 		const VectorHandler& X,
 		const VectorHandler& XP) 
-			throw(Elem::ChangedEquationStructure) = 0;
+			/*throw(Elem::ChangedEquationStructure)*/ = 0;
 /** Compute self jacobian and friction coefficient derivatives
  */
 	virtual void AssJac(
@@ -99,6 +99,9 @@ public:
 		const VectorHandler&X, 
 		const VectorHandler&XP,
 		const unsigned int solution_startdof) {};
+	
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const = 0;
 };
 
 /** Base class for friction shape coefficient
@@ -186,7 +189,7 @@ public:
 		const doublereal F,
 		const doublereal v,
 		const VectorHandler& X,
-		const VectorHandler& XP) throw(Elem::ChangedEquationStructure);
+		const VectorHandler& XP) /*throw(Elem::ChangedEquationStructure)*/;
 	void AssJac(
 		FullSubMatrixHandler& WorkMat,
 		ExpandableRowVector& dfc,
@@ -199,6 +202,9 @@ public:
 		const VectorHandler& XP,
 		const ExpandableRowVector& dF,
 		const ExpandableRowVector& dv) const;
+	
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /** A Coulomb model based on 
@@ -274,7 +280,7 @@ public:
 		const doublereal F,
 		const doublereal v,
 		const VectorHandler& X,
-		const VectorHandler& XP) throw(Elem::ChangedEquationStructure);
+		const VectorHandler& XP) /*throw(Elem::ChangedEquationStructure)*/;
 	void AssJac(
 		FullSubMatrixHandler& WorkMat,
 		ExpandableRowVector& dfc,
@@ -287,13 +293,19 @@ public:
 		const VectorHandler& XP,
 		const ExpandableRowVector& dF,
 		const ExpandableRowVector& dv) const;
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 
 /** Simple shape coefficient: 1.
  */
 class SimpleShapeCoefficient : public BasicShapeCoefficient {
+private:
+	doublereal shc;
 public:
+	SimpleShapeCoefficient(void) : BasicShapeCoefficient(), shc(1.) {};
 	virtual doublereal Sh_c(void) const;
 	virtual doublereal Sh_c(
 		const doublereal f,

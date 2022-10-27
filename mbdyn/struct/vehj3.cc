@@ -73,14 +73,6 @@ tilde_f1(tilde_f1), tilde_f2(tilde_f2),
 tilde_R1h(tilde_R1h), tilde_R2h(tilde_R2h),
 od(od),
 tilde_k(Zero6), tilde_kPrime(Zero6),
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars...
-Var_tilde_d(0),
-Var_tilde_dPrime(0),
-Var_d(0),
-Var_dPrime(0),
-Var_Phi(0),
-Var_Omega(0),
-#endif // USE_NETCDFC
 bFirstRes(false)
 {
 	ASSERT(pNode1 != NULL);
@@ -122,20 +114,26 @@ DeformableJoint::OutputPrepare(OutputHandler &OH)
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			std::string name;
-			OutputPrepare_int("deformable joint", OH, name);
-			Var_tilde_d = OH.CreateVar<Vec3>(name + "d", "m",
-					"relative position in local frame (x, y, z)");
-			Var_tilde_dPrime = OH.CreateVar<Vec3>(name + "dPrime", "m/s",
-					"relative linear velocity in local frame (x, y, z)");
-			Var_d = OH.CreateVar<Vec3>(name + "D", "m",
-					"relative position in global frame (x, y, z)");
-			Var_dPrime = OH.CreateVar<Vec3>(name + "DPrime", "m/s",
-					"relative linear velocity in global frame (x, y, z)");
-			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega", "radian/s",
+			OutputPrepare_int("Deformable joint", OH, name);
+			Var_tilde_d = OH.CreateVar<Vec3>(name + "d",
+				OutputHandler::Dimensions::Length,
+				"relative position in local frame (x, y, z)");
+			Var_tilde_dPrime = OH.CreateVar<Vec3>(name + "dPrime",
+				OutputHandler::Dimensions::Velocity,
+				"relative linear velocity in local frame (x, y, z)");
+			Var_d = OH.CreateVar<Vec3>(name + "D",
+				OutputHandler::Dimensions::Length,
+				"relative position in global frame (x, y, z)");
+			Var_dPrime = OH.CreateVar<Vec3>(name + "DPrime",
+				OutputHandler::Dimensions::Velocity,
+				"relative linear velocity in global frame (x, y, z)");
+			Var_Phi = OH.CreateRotationVar(name, "", od, 
+				"relative orientation, in joint reference frame");
+			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}
-#endif
+#endif // USE_NETCDF
 	}
 }
 
@@ -179,29 +177,21 @@ DeformableJoint::Output(OutputHandler& OH) const
 
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec((R1h*F).pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec((R1h*M).pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec(F.pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec(M.pGetVec(), OH.GetCurrentStep());
-
+			Joint::NetCDFOutput(OH, R1h*F, R1h*M, F, M);
 			switch (od) {
 			case EULER_123:
 			case EULER_313:
 			case EULER_321:
 			case ORIENTATION_VECTOR:
-				Var_Phi->put_rec(E.pGetVec(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, E);
 				break;
 			case ORIENTATION_MATRIX:
-				Var_Phi->put_rec(R.pGetMat(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, R);
 				break;
 			default:
 				/* impossible */
 				break;
 			}
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
 		}
 #endif // USE_NETCDF
 		if (OH.UseText(OutputHandler::JOINTS)) {
@@ -808,6 +798,11 @@ DeformableJoint::InitialAssRes(SubVectorHandler& WorkVec,
 	return WorkVec;
 }
 
+const OutputHandler::Dimensions
+DeformableJoint::GetEquationDimension(integer index) const {
+	// DOF == 0
+	return OutputHandler::Dimensions::UnknownDimension;
+}
 /* DeformableJoint - end */
 
 

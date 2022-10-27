@@ -42,18 +42,18 @@
 #include "joint.h"
 
 DrivenElem::DrivenElem(DataManager *pdm,
-		const DriveCaller* pDC, const Elem* pE,
+		const DriveCaller* pDC,
+		bool b_active,
+		const Elem* pE,
 		SimulationEntity::Hints *ph)
 : Elem(pE->GetLabel(), pE->fToBeOutput()),
 NestedElem(pE),
 DriveOwner(pDC),
 pDM(pdm),
 pHints(ph),
-bActive(false)
+bActive(b_active)
 {
 	ASSERT(pDC != 0);
-
-	bActive = (pDC->dGet() != 0.);
 }
 
 
@@ -73,14 +73,15 @@ DrivenElem::~DrivenElem(void)
 bool
 DrivenElem::bIsActive(void) const
 {
-	return (dGet() != 0.);
+	// return (dGet() != 0.);
+	return bActive;
 }
 
 void
 DrivenElem::Output(OutputHandler& OH) const
 {
 	ASSERT(pElem != 0);
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		pElem->Output(OH);
 	}
 }
@@ -116,12 +117,12 @@ DrivenElem::Restart(std::ostream& out) const
 void
 DrivenElem::BeforePredict(VectorHandler& X,
 		VectorHandler& XP,
-		VectorHandler& XPrev,
-		VectorHandler& XPPrev) const
+		std::deque<VectorHandler*>& qXPr,
+		std::deque<VectorHandler*>& qXPPr) const
 {
 	ASSERT(pElem != 0);
-	if (dGet() != 0.) {
-     		pElem->BeforePredict(X, XP, XPrev, XPPrev);
+	if (bIsActive()) {
+     		pElem->BeforePredict(X, XP, qXPr, qXPPr);
 	}
 }
 
@@ -129,6 +130,9 @@ void
 DrivenElem::AfterPredict(VectorHandler& X, VectorHandler& XP)
 {
 	ASSERT(pElem != 0);
+
+	// NOTE: we check here whether the condition has changed
+	// Perhaps AfterConvergence is more approprate, isn't it?
 	if (dGet() != 0.) {
 		if (!bActive) {
 			bActive = true;
@@ -150,8 +154,13 @@ DrivenElem::SetValue(DataManager *pdm,
 {
 	ASSERT(pElem != 0);
 
-	if (dGet() != 0.) {
+	// PM, May 19, 2022: I'm assuming this is the first time we need to check whether the element is active
+	if (bIsActive()) {
+		bActive = true;
 		pElem->SetValue(pdm, X, XP, ph);
+
+	} else {
+		bActive = false;
 	}
 }
 
@@ -160,7 +169,7 @@ void
 DrivenElem::SetInitialValue(VectorHandler& X)
 {
 	ASSERT(pElem != 0);
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		ElemWithDofs*	pEwD = dynamic_cast<ElemWithDofs *>(pElem);
 		if (pEwD) {
 			pEwD->SetInitialValue(X);
@@ -174,7 +183,7 @@ void
 DrivenElem::Update(const VectorHandler& XCurr, const VectorHandler& XPrimeCurr)
 {
 	ASSERT(pElem != 0);
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		pElem->Update(XCurr, XPrimeCurr);
 	}
 }
@@ -184,7 +193,7 @@ void
 DrivenElem::Update(const VectorHandler& XCurr, InverseDynamics::Order iOrder)
 {
 	ASSERT(pElem != 0);
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		pElem->Update(XCurr, iOrder);
 	}
 }
@@ -203,7 +212,7 @@ DrivenElem::AssJac(VariableSubMatrixHandler& WorkMat,
 		|| dynamic_cast<const Joint *>(pElem)->bIsPrescribedMotion()
 		|| dynamic_cast<const Joint *>(pElem)->bIsErgonomy());
 	// dGet() must not be zero, otherwise AssJac() would not be called
-	ASSERT(dGet() != 0.);
+	ASSERT(bIsActive());
 
 	return pElem->AssJac(WorkMat, XCurr);
 }
@@ -218,7 +227,7 @@ DrivenElem::AssRes(SubVectorHandler& WorkVec,
 {
 	ASSERT(pElem != 0);
 
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		return pElem->AssRes(WorkVec, XCurr, XPrimeCurr, XPrimePrimeCurr, iOrder);
 	}
 
@@ -233,7 +242,7 @@ DrivenElem::AfterConvergence(const VectorHandler& X,
 	const VectorHandler& XP, const VectorHandler& XPP)
 {
 	ASSERT(pElem != 0);
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		pElem->AfterConvergence(X, XP, XPP);
 	}
 }
@@ -242,7 +251,7 @@ void
 DrivenElem::AfterConvergence(const VectorHandler& X, const VectorHandler& XP)
 {
 	ASSERT(pElem != 0);
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		pElem->AfterConvergence(X, XP);
 	}
 }
@@ -256,7 +265,7 @@ DrivenElem::AssJac(VariableSubMatrixHandler& WorkMat,
 {
 	ASSERT(pElem != 0);
 
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		return pElem->AssJac(WorkMat, dCoef, XCurr, XPrimeCurr);
 	}
 
@@ -302,7 +311,7 @@ DrivenElem::AssMats(VariableSubMatrixHandler& WorkMatA,
 {
 	ASSERT(pElem != 0);
 
-	if (dGet() != 0.) {
+	if (bIsActive()) {
 		pElem->AssMats(WorkMatA, WorkMatB, XCurr, XPrimeCurr);
 		return;
 	}

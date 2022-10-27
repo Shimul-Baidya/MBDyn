@@ -53,6 +53,9 @@ private:
 	Mat3x3 R2h;
 	Vec3 F;
 	doublereal dM;
+#ifdef USE_NETCDF
+	MBDynNcVar Var_Phi;
+#endif // USE_NETCDF
 
 public:
 	/* Costruttore non banale */
@@ -95,6 +98,7 @@ public:
 		const VectorHandler& XCurr,
 		const VectorHandler& XPrimeCurr);
 
+	void OutputPrepare(OutputHandler& OH);
 	void Output(OutputHandler& OH) const;
 
 	/* funzioni usate nell'assemblaggio iniziale */
@@ -128,6 +132,14 @@ public:
 		connectedNodes[1] = pNode2;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+	/* describes the dimension of components of equation */
+    virtual std::ostream& DescribeEq(std::ostream& out,
+		  const char *prefix = "",
+		  bool bInitial = false) const;
 };
 
 /* UniversalHingeJoint - end */
@@ -230,6 +242,14 @@ public:
 		connectedNodes[1] = pNode2;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+	/* describes the dimension of components of equation */
+    virtual std::ostream& DescribeEq(std::ostream& out,
+		  const char *prefix = "",
+		  bool bInitial = false) const;
 };
 
 /* UniversalRotationJoint - end */
@@ -248,7 +268,9 @@ private:
 	Mat3x3 Rh;
 	Vec3 F;
 	doublereal dM;
-
+#ifdef USE_NETCDF
+	MBDynNcVar Var_Phi;
+#endif // USE_NETCDF
 public:
 	/* Costruttore non banale */
 	UniversalPinJoint(unsigned int uL, const DofOwner* pDO,
@@ -293,6 +315,7 @@ public:
 		const VectorHandler& XCurr,
 		const VectorHandler& XPrimeCurr);
 
+	void OutputPrepare(OutputHandler& OH);
 	virtual void Output(OutputHandler& OH) const;
 
 	/* funzioni usate nell'assemblaggio iniziale */
@@ -325,6 +348,13 @@ public:
 		connectedNodes[0] = pNode;
 	};
 	/* ************************************************ */
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+	/* describes the dimension of components of equation */
+    virtual std::ostream& DescribeEq(std::ostream& out,
+		  const char *prefix = "",
+		  bool bInitial = false) const;
 };
 
 /* UniversalPinJoint - end */

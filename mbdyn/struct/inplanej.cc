@@ -164,13 +164,37 @@ SubVectorHandler& InPlaneJoint::AssRes(SubVectorHandler& WorkVec,
 }
 
 
+void InPlaneJoint::OutputPrepare(OutputHandler& OH)
+{
+	if(bToBeOutput()) {      
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("In plane", OH, name);
+	}
+#endif // USE_NETCDF
+	}
+}
+
+
 void InPlaneJoint::Output(OutputHandler& OH) const
 {
    if(bToBeOutput()) {      
       Vec3 vTmp(pNode1->GetRCurr()*v);
-      Joint::Output(OH.Joints(), "InPlane", GetLabel(),
-		    Vec3(dF, 0., 0.), Zero3, vTmp*dF, Zero3) << std::endl;      
-   }   
+
+
+      if (OH.UseText(OutputHandler::JOINTS)) {
+	      Joint::Output(OH.Joints(), "InPlane", GetLabel(),
+			      Vec3(dF, 0., 0.), Zero3, vTmp*dF, Zero3) << std::endl;      
+      }
+
+#ifdef USE_NETCDF
+      if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+	      Joint::NetCDFOutput(OH, Vec3(dF, 0., 0.), Zero3, vTmp*dF, Zero3);
+      }
+#endif // USE_NETCDF
+
+   } 
 }
  
 
@@ -345,6 +369,33 @@ void InPlaneJoint::SetInitialValue(VectorHandler& /* X */ )
    NO_OP;
 }
 
+const OutputHandler::Dimensions
+InPlaneJoint::GetEquationDimension(integer index) const {
+	// DOF == 1
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+InPlaneJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"distance constraints" << std::endl;
+
+	return out;
+}
 /* InPlaneJoint - end */
 
 
@@ -503,13 +554,32 @@ InPlaneWithOffsetJoint::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+void InPlaneWithOffsetJoint::OutputPrepare(OutputHandler& OH)
+{
+	if(bToBeOutput()) {      
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("In plane with offset", OH, name);
+	}
+#endif // USE_NETCDF
+	}
+}
+
 
 void InPlaneWithOffsetJoint::Output(OutputHandler& OH) const
 {
    if(bToBeOutput()) {            
       Vec3 vTmp(pNode1->GetRCurr()*v);
-      Joint::Output(OH.Joints(), "InPlaneWithOffs", GetLabel(),
-		    Vec3(dF, 0., 0.), Zero3, vTmp*dF, Zero3) << std::endl;      
+      if (OH.UseText(OutputHandler::JOINTS)) {
+	      Joint::Output(OH.Joints(), "InPlaneWithOffs", GetLabel(),
+			      Vec3(dF, 0., 0.), Zero3, vTmp*dF, Zero3) << std::endl;
+      }
+#ifdef USE_NETCDF
+      if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+	      Joint::NetCDFOutput(OH, Vec3(dF, 0., 0.), Zero3, vTmp*dF, Zero3);
+      }
+#endif // USE_NETCDF
    }   
 }
  
@@ -726,6 +796,34 @@ InPlaneWithOffsetJoint::InitialAssRes(SubVectorHandler& WorkVec,
 void InPlaneWithOffsetJoint::SetInitialValue(VectorHandler& /* X */ )
 { 
    NO_OP;
+}
+
+const OutputHandler::Dimensions
+InPlaneWithOffsetJoint::GetEquationDimension(integer index) const {
+	// DOF == 1
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+InPlaneWithOffsetJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"distance constraints" << std::endl;
+
+	return out;
 }
 
 /* InPlaneWithOffsetJoint - end */

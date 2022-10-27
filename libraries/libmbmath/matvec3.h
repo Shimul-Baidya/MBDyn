@@ -42,6 +42,7 @@
 #include "myassert.h"
 #include "except.h"
 #include "solman.h"
+#include "sp_matrix_base_fwd.h"
 
 #include "tpls.h"
 
@@ -95,7 +96,8 @@ class Vec3_Manip {
 /* Vec3 - begin */
 
 // Vettori di dimensione 3
-class Vec3 {
+class Vec3: public sp_grad::SpConstMatElemAdapter<Vec3>
+{
    friend class Mat3x3;   
    friend Vec3 operator - (const Vec3& v);
    // friend class Mat3x3_Manip;
@@ -273,7 +275,7 @@ class Vec3 {
     Assegnazione di un coefficiente. 
     Nota: l'indice ha base 1, in stile FORTRAN.
     */
-   inline void Put(unsigned short int iRow, const doublereal& dCoef) {
+   inline void Put(integer iRow, const doublereal& dCoef) {
       ASSERT(iRow >= 1 && iRow <= 3);   
       pdVec[--iRow] = dCoef;
    };
@@ -282,27 +284,27 @@ class Vec3 {
     Lettura di un coefficiente.
     Nota: l'indice ha base 1, in stile FORTRAN.
     */
-   inline const doublereal& dGet(unsigned short int iRow) const {
+   inline const doublereal& dGet(integer iRow) const {
       ASSERT(iRow >= 1 && iRow <= 3);
       return pdVec[--iRow];
    };
 
-   inline doublereal& operator () (unsigned short int iRow) {
+   inline doublereal& operator () (integer iRow) {
       ASSERT(iRow >= 1 && iRow <= 3);
       return pdVec[--iRow];
    };
 
-   inline const doublereal& operator () (unsigned short int iRow) const {
+   inline const doublereal& operator () (integer iRow) const {
       ASSERT(iRow >= 1 && iRow <= 3);
       return pdVec[--iRow];
    };
 
-   inline doublereal& operator [] (unsigned short int iRow) {
+   inline doublereal& operator [] (integer iRow) {
       ASSERT(iRow <= 2);
       return pdVec[iRow];
    };
 
-   inline const doublereal& operator [] (unsigned short int iRow) const {
+   inline const doublereal& operator [] (integer iRow) const {
       ASSERT(iRow <= 2);
       return pdVec[iRow];
    };
@@ -366,7 +368,20 @@ class Vec3 {
       
       return *this;
    };
-      
+
+     template <typename DERIVED>
+     Vec3& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& v) {
+          using namespace sp_grad;
+
+          static_assert(v.iNumRowsStatic == iNumRowsStatic);
+          static_assert(v.iNumColsStatic == iNumColsStatic);
+          
+          for (index_type i = 1; i <= iNumRowsStatic; ++i) {
+               (*this)(i) = v.dGetValue(i, 1);
+          }
+          
+          return *this;
+     }
    /*
     Operatore somma. 
     Restituisce v sommato a se stesso in un temporaneo.
@@ -499,6 +514,16 @@ class Vec3 {
     I coefficienti sono separati dalla stringa sFill (spazio di default).
     */
    std::ostream& Write(std::ostream& out, const char* sFill = " ") const;
+
+     static constexpr sp_grad::index_type iNumRowsStatic = 3;
+     static constexpr sp_grad::index_type iNumColsStatic = 1;
+     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
+     inline constexpr sp_grad::index_type iGetColOffset() const noexcept { return iNumRowsStatic; }
+     inline constexpr sp_grad::index_type iGetNumRows() const noexcept { return iNumRowsStatic; }
+     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return iNumColsStatic; }
+     inline const doublereal* begin() const noexcept { return &pdVec[0]; }
+     inline const doublereal* end() const noexcept { return &pdVec[iNumRowsStatic]; }
+     doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i); }     
 };
    
 /* Vec3 - end */
@@ -547,7 +572,8 @@ class Mat3x3_Manip {
 
 /* Mat3x3 - begin */
 // Matrici 3x3
-class Mat3x3 {
+class Mat3x3: public sp_grad::SpConstMatElemAdapter<Mat3x3>
+{
    friend class Vec3;
    friend class SparseSubMatrixHandler;
    friend class Mat3x3_Manip;   
@@ -755,8 +781,8 @@ class Mat3x3 {
     Assegnazione di un coefficiente.
     Nota: gli indici hanno base 1, in stile FORTRAN.
     */
-   inline void Put(unsigned short int iRow,
-		   unsigned short int iCol, 
+   inline void Put(integer iRow,
+		   integer iCol, 
 		   const doublereal& dCoef) {
       ASSERT(iRow >= 1 && iRow <= 3);
       ASSERT(iCol >= 1 && iCol <= 3);      
@@ -767,22 +793,22 @@ class Mat3x3 {
     Lettura di un coefficiente.
     Nota: gli indici hanno base 1, in stile FORTRAN.
     */
-   inline const doublereal& dGet(unsigned short int iRow, 
-				 unsigned short int iCol) const {
+   inline const doublereal& dGet(integer iRow, 
+				 integer iCol) const {
       ASSERT(iRow >= 1 && iRow <= 3);
       ASSERT(iCol >= 1 && iCol <= 3);      
       return pdMat[--iRow+3*--iCol];
    };
 
-   inline doublereal& operator () (unsigned short int iRow, 
-		   unsigned short int iCol) {
+   inline doublereal& operator () (integer iRow, 
+		   integer iCol) {
        ASSERT(iRow >= 1 && iRow <= 3);
        ASSERT(iCol >= 1 && iCol <= 3);
        return pdMat[--iRow+3*--iCol];
    };
 
-   inline const doublereal& operator () (unsigned short int iRow, 
-		   unsigned short int iCol) const {
+   inline const doublereal& operator () (integer iRow, 
+		   integer iCol) const {
        ASSERT(iRow >= 1 && iRow <= 3);
        ASSERT(iCol >= 1 && iCol <= 3);
        return pdMat[--iRow+3*--iCol];
@@ -890,7 +916,7 @@ class Mat3x3 {
     Ottiene un sottovettore dalla matrice.
     Nota: l'indice e' a base 1, in stile FORTRAN.
     */
-   Vec3 GetVec(unsigned short int i) const {
+   Vec3 GetVec(integer i) const {
       ASSERT(i >= 1 && i <= 3);
       return Vec3(pdMat+3*--i);
    };
@@ -900,7 +926,7 @@ class Mat3x3 {
     Nota: l'indice e' a base 1, in stile FORTRAN.
     Alias di GetVec()
     */
-   Vec3 GetCol(unsigned short int i) const {
+   Vec3 GetCol(integer i) const {
       ASSERT(i >= 1 && i <= 3);
       return Vec3(pdMat + 3*--i);
    };
@@ -909,13 +935,13 @@ class Mat3x3 {
     Ottiene un sottovettore dalla matrice.
     Nota: l'indice e' a base 1, in stile FORTRAN.
     */
-   Vec3 GetRow(unsigned short int i) const {
+   Vec3 GetRow(integer i) const {
       ASSERT(i >= 1 && i <= 3);
       --i;
       return Vec3(pdMat[i], pdMat[3 + i], pdMat[6 + i]);
    };
 
-   void PutVec(unsigned short int i, const Vec3& v) {
+   void PutVec(integer i, const Vec3& v) {
       ASSERT(i >= 1 && i <= 3);
 
       i--; i = 3*i;
@@ -924,7 +950,7 @@ class Mat3x3 {
       pdMat[i] = v.pdVec[V3];
    };
 
-   void AddVec(unsigned short int i, const Vec3& v) {
+   void AddVec(integer i, const Vec3& v) {
       ASSERT(i >= 1 && i <= 3);
 
       i--; i = 3*i;
@@ -933,7 +959,7 @@ class Mat3x3 {
       pdMat[i] += v.pdVec[V3];
    };
 
-   void SubVec(unsigned short int i, const Vec3& v) {
+   void SubVec(integer i, const Vec3& v) {
       ASSERT(i >= 1 && i <= 3);
 
       i--; i = 3*i;
@@ -1066,7 +1092,23 @@ class Mat3x3 {
       
       return *this;
    };
-   
+
+     template <typename DERIVED>
+     Mat3x3& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& m) {
+          using namespace sp_grad;
+
+          static_assert(m.iNumRowsStatic == iNumRowsStatic);
+          static_assert(m.iNumColsStatic == iNumColsStatic);
+
+          for (index_type j = 1; j <= iNumColsStatic; ++j) {
+               for (index_type i = 1; i <= iNumRowsStatic; ++i) {
+                    (*this)(i, j) = m.dGetValue(i, j);
+               }
+          }
+          
+          return *this;
+     }
+     
    /*
     Operatore somma. 
     Restituisce v sommato a se stesso in un temporaneo.
@@ -1374,6 +1416,16 @@ class Mat3x3 {
    std::ostream& Write(std::ostream& out, 
 		  const char* sFill = " ", 
 		  const char* sFill2 = NULL) const;
+     
+     static constexpr sp_grad::index_type iNumRowsStatic = 3;
+     static constexpr sp_grad::index_type iNumColsStatic = 3;
+     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
+     inline constexpr sp_grad::index_type iGetColOffset() const noexcept { return iNumRowsStatic; }
+     inline constexpr sp_grad::index_type iGetNumRows() const noexcept { return iNumRowsStatic; }
+     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return iNumColsStatic; }
+     inline const doublereal* begin() const noexcept { return &pdMat[0]; }
+     inline const doublereal* end() const noexcept { return &pdMat[iNumRowsStatic * iNumColsStatic]; }
+     doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i, j); }
 };
 
 /* Mat3x3 - end */
@@ -1628,9 +1680,9 @@ extern Vec3 MatR2LinParam(const Mat3x3& R);
  normale al prodotto vettore tra va e vb viene assunta come
  componente ib nel sistema locale.
  */
-extern Mat3x3 MatR2vec(unsigned short int ia, 
+extern Mat3x3 MatR2vec(integer ia, 
 		       const Vec3& va, 
-		       unsigned short int ib, 
+		       integer ib, 
 		       const Vec3& vb);
 
 

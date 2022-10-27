@@ -12,6 +12,12 @@ mbdyn_SOURCES = \
 mbdyn.cc  \
 mbdyn.h
 
+# Hack needed to use abs() function whose derivative evaluates correctly at 0
+if USE_GINAC
+mbdyn_SOURCES += \
+ginac_mbdyn_abs.cc
+endif
+
 # need to fool libtool in getting libbase linked twice ;)
 # hope this is not fixed for a while...
 
@@ -39,13 +45,15 @@ mbdyn_LDADD += \
 ../libraries/libann/libmbann.la \
 $(GINACLIB_LIBS) \
 @Y12_LIBS@ \
+@PASTIX_LIBS@ \
+@QRUPDATE_LIBS@ \
+@SUITESPARSEQR_LIBS@ \
 @HARWELL_LIBS@ \
 @ARPACK_LIBS@ \
 @JDQZ_LIBS@ \
 @LAPACK_LIBS@ \
 @UMFPACK_LIBS@ \
 @KLU_LIBS@ \
-@MESCHACH_LIBS@ \
 @SUPERLU_LIBS@ \
 @TAUCS_LIBS@ \
 @MPI_LIBS@ \
@@ -60,6 +68,8 @@ $(GINACLIB_LIBS) \
 @OCTAVE_LIBS@ \
 @BLAS_LIBS@ \
 @FCLIBS@ \
+@TRILINOS_LIBS@ \
+@SICONOS_LIBS@ \
 @LIBS@ \
 $(GINACLIB_LIBS)
 
@@ -72,9 +82,10 @@ AM_CPPFLAGS = \
 -I$(srcdir)/../libraries/libmbutil \
 -I$(srcdir)/../libraries/libmbmath \
 -I$(srcdir)/../libraries/libmbwrap \
+-I$(srcdir)/../libraries/libmbc \
 -I$(srcdir)/../mbdyn/base \
 -I$(srcdir)/../mbdyn/struct \
--I../mbdyn/thermo \
+-I$(srcdir)/../mbdyn/thermo \
 -I$(srcdir)/../mbdyn/aero \
 -I$(srcdir)/../mbdyn/elec \
 -I$(srcdir)/../mbdyn/hydr \

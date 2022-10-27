@@ -200,7 +200,7 @@ strategy is defined using the \kw{strategy} statement.
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{card} ::= \kw{tolerance} : \{ \kw{null} | \bnt{residual_tolerance} \}
-            [ , \kw{test} , \{ \kw{none} | \kw{norm} | \kw{minmax} \} [ , \kw{scale} ] ]
+            [ , \kw{test} , \{ \kw{none} | \kw{norm} | \kw{minmax} | \kw{relnorm} | \kw{sepnorm} \} [ , \kw{scale} ] ]
         [ , \{ \kw{null} | \bnt{solution_tolerance} \} 
             [ , \kw{test} , \{ \kw{none} | \kw{norm} | \kw{minmax} \} ] ] ;
 \end{Verbatim}
@@ -211,11 +211,42 @@ disables the residual testing, disabling the computation
 of the test on the residual.
 The \kw{test} mechanism is used to select what kind of test must
 be performed; currently, only \kw{norm} (the default) 
-and \kw{minmax} are supported.
+and \kw{minmax} are supported for the \bnt{solution\_tolerance}, with
+the additional \kw{relnorm} and \kw{sepnorm} making sense only for the residual.
+
 The special value \kw{none} means that the test is not actually 
 computed; it is the default when the test is disabled by setting
 the tolerance to zero, or by using the keyword \kw{null};
 however, it can be restored to any mechanism for output purposes.
+
+The \kw{relnorm} test can be useful when the magnitude of the
+generalized forces involved in the model is unknown or is known to vary
+considerably during the simulation, thus one does not know what value 
+of tolerance may make sense for the problem at hand.
+In this case \kw{relnorm} allows to compute a reference scale, so that the
+converge test will be mostly unaffected by problem-dependent variables, 
+like the system of units chosen for the simulation. 
+The automatic scaling comes with a small run time penalty, because two global vectors
+needs to be assembled instead of one whenever the model residual is computed.\\
+Actually, assuming $\T{f}(\T{x}) = \T{0}$ to be the nonlinear problem at hand, 
+the residual test is modified from the default
+\begin{equation}
+  \sqrt{\T{f}^{T}\T{f}} < \text{\nt{residual\_tolerance}} 
+\end{equation}
+to
+\begin{equation}
+  \dfrac{\sqrt{\T{f}^{T}\T{f}}}{\sqrt{\tilde{\T{f}}^{T}\tilde{\T{f}}}}
+  < \text{\nt{residual\_tolerance}}
+\end{equation}
+where $\tilde{\T{f}}$ is the vector in which the absolute values of all the contributions
+from the elements are assembled.\\
+The \kw{sepnorm} test is a generalization of \kw{relnorm}: the residual check is performed 
+independently for each set of equations with the same physical dimension, and the
+corresponding residual norm
+is automatically scaled. The worst residual among all the different sets of equations is returned.
+See the tecman for an exhaustive explanation of both approaches.
+A meaningful tolerance for both \kw{relnorm} and \kw{sepnorm} is generally in the range [1.E-6, 1.E-4].
+
 The optional parameter \kw{scale} is used to enable the scaling
 of the residual before performing the test; default scale factors 
 can be set for each type of degree of freedom owner, as seen for the control data item of Section~\ref{sec:CONTROLDATA:DEFAULTSCALE}; some
@@ -242,6 +273,11 @@ Currently, no scaling is allowed in the solution test.
     tolerance: 1.e-6, 1.e-9;
     # residual test with computation of solution norm
     tolerance: 1.e-6, null, test, norm;
+    # residual test relative to the magnitude of the norm vector
+    tolerance: 1.e-6, test, relnorm;
+    # residual test relative to the magnitude of the norm vector, computed on
+    # consistent physical domains
+    tolerance: 1.e-6, test, sepnorm;
 \end{verbatim}
 
 \subsubsection{Max Iterations}
@@ -307,68 +343,107 @@ fails since $2.18828\text{e$+$}15 > 1.66901\text{e$+$}06$.
 %\end{verbatim}
 modify the residual test taking in account the rate of change of the status.
 
+\subsubsection{Enforce Constraint Equations}
+%\begin{verbatim}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{card} ::= \kw{enforce constraint equations} : \{
+    	\kw{constraint violations} [, \kw{scale factor}, \bnt{scale_factor}] | 
+	\kw{constraint violation rates} 
+\} ;
+\end{Verbatim}
+%\end{verbatim}
+modify the residual test for the algebraic constraint equations only:
+if the option \kw{constraint violations} is chosen then the algebraic equations
+residual is multiplied by \bnt{dCoef} when computing the residual test.
+This compensates the fact that the algebraic equations are divided by 
+\bnt{dCoef} in order to improve the linear system condition number (cfr. MBDyn's
+technical manual), so that the residual tends to become bigger for very small time steps.
+If the optional keyword \kw{scale factor} is chosen then 
+the constraint equations are scaled by \bnt{scale\_factor} when computing the residual test.
+The default is to scale by \bnt{scale\_factor}=1./\bnt{initial\_time\_step}.
+If, instead, the option \kw{constraint violation rates} is chosen, then nothing changes.
+
 \subsubsection{Method}
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{card} ::= \kw{method} : \bnt{method_data} ;
 \end{Verbatim}
 %\end{verbatim}
-there are four multistep methods at present. 
 
-The first is Crank-Nicolson:
+where
+
+%\begin{verbatim}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{method_data} ::= \{ \{ \{ \kw{ms} | \kw{ms2} \} | \kw{ms3} | \kw{ms4} | \kw{hope} 
+    \kw{ss2} | \kw{ss3} | \kw{ss4} | \kw{Bathe} | \kw{msstc3} | 
+    \kw{mssth3} | \kw{msstc4} | \kw{mssth4} | \kw{msstc5} | \kw{mssth5} |
+        \{\kw{hybrid}, \bnt{defaul_hybrid_method} \} 
+        (\hty{DriveCaller}) \bnt{differential_radius}
+        [ , (\hty{DriveCaller}) \bnt{algebraic_radius} ] \} | 
+    \{ \kw{DIRK33} | \kw{DIRK43} | \kw{DIRK54} \} |
+    \kw{crank nicolson} | 
+    \kw{implicit euler} | 
+    \kw{bdf} [ , \kw{order} , \bnt{order} ]\end{Verbatim}
+%\end{verbatim}
+
+The first implemented method is Crank-Nicolson:
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{method_data} ::= \kw{crank nicolson}
 \end{Verbatim}
 %\end{verbatim}
 
-The second and the third are original 
-methods; the former is discussed in \cite{MASARATI-LANZ-MANTEGAZZA-2001},
+The following are original methods:
+\begin{itemize}
+\item \kw{ms} (\kw{ms2} is an alias) is discussed in \cite{MASARATI-LANZ-MANTEGAZZA-2001},
 see also
 \begin{quote}
 \htmladdnormallink{\texttt{http://www.aero.polimi.it/mbdyn/publications.html}}{http://www.aero.polimi.it/mbdyn/publications.html}
-\end{quote} 
-Those methods are unconditionally stable and can be tuned to give 
+\end{quote}
+\item \kw{ms3} is a three-step method, discussed in \cite{ZHANG-2021-COMPMECH-MS34}
+\item \kw{ms4} is a four-step method, discussed in \cite{ZHANG-2021-COMPMECH-MS34}
+\item \kw{hope} is a multi-stage method, in which a step is performed using Crank-Nicolson's method, and the following with the \kw{ms} method.
+\item \kw{ss2}, \kw{ss3} and \kw{ss4} are single step methods equivalent to the corresponding multi steps
+\item \kw{Bathe} is a 3-stage singly diagonally-implicit Runge--Kutta method with
+second-order accuracy, A-stability and tunable algorithmic dissipation
+\item \kw{msstc3}, \kw{msstc4} and \kw{msstc5} are $(n + 1)$-stage (with $n=3,4,5$ respecively) 
+singly diagonally-implicit Runge--Kutta methods with second-order accuracy, 
+tunable algorithmic dissipation, preserving low-frequency dynamics as much as
+possible. They employ the trapezoidal rule from the second to the nth stage, and a general
+formula in the last one. See \cite{zhang_optimization_2020, zhang_performance_2022} and MBDyn's technical manual for details.
+\item \kw{mssth3}, \kw{mssth4} and \kw{mssth5} are  $(n + 1)$-stage  (with $n=3,4,5$ respecively)
+singly diagonally-implicit Runge--Kutta methods designed to have $n$th-order accuracy, A-stability, and tunable algorithmic
+dissipation. They are designed so that
+\begin{itemize}
+\item each stage, from the second-one, has at least second-order accuracy;
+\item the overall accuracy is nth-order, and on this basis, the local truncation error is 
+minimized;
+\item A-stability and tunable algorithmic dissipation for linear analysis are achieved.
+\end{itemize}
+See \cite{zhang_optimization_2020, zhang_performance_2022} and MBDyn's technical manual for details.
+\end{itemize}
+The methods are unconditionally stable, at least second-order accurate, and can be tuned to give 
 the desired algorithmic dissipation
 by setting the value of the asymptotic spectral radius.
 The radius can be set independently for the differential
 and the algebraic variables, and a driver is used, to allow parameter 
 dependent radius variation.
-%\begin{verbatim}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{method_data} ::= \{ \kw{ms} | \kw{hope} \} ,
-        (\hty{DriveCaller}) \bnt{differential_radius}
-        [ , (\hty{DriveCaller}) \bnt{algebraic_radius} ]
-\end{Verbatim}
-%\end{verbatim}
-The first method proved to be more accurate at high values of asymptotic
-radius (low dissipation), while the second proved to be more accurate
+\begin{itemize}
+\item \kw{DIRK33}, \kw{DIRK34} and \kw{DIRK54} are third-order  four-stages, third-order 
+five stages and fourth-order six stages, L-stable stiffly-accurate methods from 
+\cite{kennedy_diagonally_2019}.
+\end{itemize}
+
+The \kw{ms} method proved to be more accurate at high values of asymptotic
+radius (low dissipation), while \kw{hope} shows some greater more accuracy
 at low values of the radius (high dissipation).
 They look nearly equivalent at radii close to 0.4, with the former
-giving the best compromise between algorithmic dissipation and accuracy 
+giving the best trade-off between algorithmic dissipation and accuracy 
 at about 0.6.
-The \nt{algebraic\_radius} can be omitted, defaulting to the same 
-as the differential one.
+The \nt{algebraic\_radius} can be omitted, defaulting to the same value used for 
+the differential one.
 It is unclear whether a different spectral radius can help in increasing
 accuracy or dissipation of the algebraic unknowns.
-
-The fourth method is experimental. It is a third-order,
-two stage unconditionally stable method, which can be tuned to give 
-the desired algorithmic dissipation by setting the value 
-of the asymptotic spectral radius, which should not be 
-too close to zero.
-Currently it is not possible to independently set the radius 
-for the differential and the algebraic variables.
-%\begin{verbatim}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{method_data} ::= \kw{third order} ,
-        \{ \kw{ad hoc} | (\hty{DriveCaller}) \bnt{differential_radius} \}
-\end{Verbatim}
-%\end{verbatim}
-When the keyword \kw{ad hoc} is used, a method equivalent
-to a Runge-Kutta Radau IIA results, with zero asymptotic
-spectral radius; otherwise, an original third-order
-integration method is used, with tunable algorithmic dissipation.
 
 \noindent
 The multistep method, when the asymptotic radius is zero, degenerates
@@ -391,6 +466,18 @@ It can also be selected using the shortcut
 \end{Verbatim}
 %\end{verbatim}
 
+The \kw{hybrid} method allows elements to select different integration methods for specific degrees of freedom.
+By default, the integration method defined after the \kw{hybrid} keyword is used for all other degrees of freedom.
+For example a model for elastohydrodynamic lubricated bearings could use the \kw{ms} method for all structural
+degrees of freedom, and the \kw{crank nicolson} method for the mass conserving cavitation model.
+At the moment only module-hydrodynamic\_plain\_bearing2 supports this option.
+
+%\begin{verbatim}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{default_hybrid_method} ::= \kw{implicit euler} | \kw{crank nicolson} | \kw{ms2} | \kw{hope}
+\end{Verbatim}
+%\end{verbatim}
+
 \subsubsection{Nonlinear Solver}
 The nonlinear solver solves a nonlinear problem $F(x)=0$.
 The syntax is
@@ -405,7 +492,7 @@ Currently available nonlinear solvers are:
 \paragraph{Newton-Raphson.}
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{nonlinear_solver_name} ::= \kw{newton raphson}
+    \bnt{nonlinear_solver_name} ::= \kw{Newton Raphson}
 
     \bnt{nonlinear_solver_data} ::=
         [ \{ \kw{true}
@@ -433,7 +520,12 @@ This nonlinear solver is well tested.
 \paragraph{Line search.}
 \emph{Author: Reinhard Resch}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{nonlinear_solver_name} ::= \kw{line search}
+    \bnt{nonlinear_solver_name} ::= \{\kw{line search} |
+                                 \kw{bfgs} |
+                                 \kw{mcp newton fb} |
+                                 \kw{mcp newton min fb} |
+                                 \kw{siconos newton fb} |
+                                 \kw{siconos newton min fb}\}
 
     \bnt{nonlinear_solver_data} ::= 
         [ \{ \kw{true}
@@ -452,11 +544,15 @@ This nonlinear solver is well tested.
         [ , \kw{divergence check} , \{ \kw{yes} | \kw{no} | (\ty{bool}) \bnt{divergence_check} \}
             [ , \kw{factor} , \bnt{factor} ] ]
         [ , \kw{algorithm} , \{ \kw{cubic} | \kw{factor} \} ]
-        [ , \kw{scale newton step} , \{ \kw{yes} | \kw{no} | (\ty{bool}) \bnt{scale\_newton\_step} \}
+        [ , \kw{scale Newton step} , \{ \kw{yes} | \kw{no} | (\ty{bool}) \bnt{scale\_Newton\_step} \}
             [ , \kw{min scale} , \bnt{min_scale} ] ]
         [ , \kw{print convergence info} , \{ \kw{yes} | \kw{no} | (\ty{bool}) \bnt{print_convergence_info} \} ]
         [ , \kw{verbose} , \{ \kw{yes} | \kw{no} | (\ty{bool}) \bnt{verbose} \} ]
-        [ , \kw{abort at lambda min} , \{ \kw{yes} | \kw{no} | (\ty{bool}) \bnt{abort_at_lambda_min} \} ] ;
+        [ , \kw{abort at lambda min} , \{ \kw{yes} | \kw{no} | (\ty{bool}) \bnt{abort_at_lambda_min} \} ]
+        [ , \kw{mcp tolerance}, (\ty{real}) \bnt{mcp_tolerance} ]
+        [ , \kw{mcp sigma} , (\ty{real}) \bnt{mcp_sigma} ]
+        [ , \kw{mcp rho} , (\ty{real}) \bnt{mcp_rho} ]
+        [ , \kw{mcp p} , (\ty{real}) \bnt{mcp_p} ] ;
 \end{Verbatim}
 \begin{itemize}
 \item $\nt{tolerance\_x} \ge 0$; default: $\nt{tolerance\_x}=10^{-7}$
@@ -468,10 +564,24 @@ This nonlinear solver is well tested.
 \item $\nt{max\_step} \ge 0$; default: $\nt{max\_step} = 100$
 \item $\nt{factor} \ge 0$; default: $\nt{factor} = 1$
 \item $0 \le \nt{min\_scale} \le 1$; default: $\nt{min\_scale}=10^{-3}$
+\item $\nt{mcp\_tolerance} \ge 0$; default: $\nt{mcp\_tolerance}=2.2\,10^{-16}$
+\item $1 \ge \nt{mcp\_sigma} \ge 0$; default: $\nt{mcp\_sigma}=0.9$
+\item $1 \ge \nt{mcp\_rho} \ge 0$; default: $\nt{mcp\_rho}=10^{-8}$
+\item $\nt{mcp\_p} \ge 0$; default: $\nt{mcp\_p}=2.1$
 \end{itemize}
 
 \subparagraph{Brief description of the solver}
-The line search solver should be used mainly if the Newton Raphson solver diverges and further reduction of the time step is not possible or not available (for example in the initial assembly phase). In many situations this solver is able to handle larger time steps or load increments than the ordinary Newton Raphson solver. However the total number of iterations can increase for large time steps.
+The line search solver should be used mainly if the Newton Raphson solver diverges and further reduction of the time step is not possible or not available. In many situations this solver is able to handle larger time steps or load increments than the ordinary Newton Raphson solver. However the total number of iterations can increase for large time steps.
+There are different variants of the line search solver.
+\begin{itemize}
+\item \kw{line search}; This is the original implementation based on \cite{NUMERICAL-RECIPES-IN-C}
+\item \kw{bfgs}; Another line search variant using Broyden updates which is also based on \cite{NUMERICAL-RECIPES-IN-C}
+\item \kw{mcp newton fb}; A line search solver which supports Mixed (nonlinear) Complementarity Problems based on a Fischer Burmeister reformulation. It is a re-implementation of \cite{SICONOS-WEBSITE}.
+\item \kw{mcp newton min fb}; Another MCP solver based on a Fischer Burmeister reformulation which uses a min reformulation of the descent direction. It is also a re-implementation of \cite{SICONOS-WEBSITE}.
+\item \kw{siconos mcp newton fb}; This MCP solver is equivalent to \kw{mcp newton fb} and is a wrapper for INRIA's Siconos library \cite{SICONOS-WEBSITE}.
+\item \kw{siconos mcp newton min fb}; A MCP solver equivalent to \kw{mcp newton min fb} which is also a wrapper for INRIA's Siconos library \cite{SICONOS-WEBSITE}.
+\end{itemize}
+MBDyn must be configured with \verb;--with-siconos; in order to use the \kw{siconos mcp newton fb} or \kw{siconos mcp newton min fb} solver.
 
 \subparagraph{The ordinary Newton Raphson strategy}
 The Newton Raphson Solver solves a problem of the form $\boldsymbol{F}\left(\boldsymbol{x}\right)=\boldsymbol{0}$ by means of the iteration $\delta\boldsymbol{x}=\boldsymbol{J}^{-1}\,\boldsymbol{F}$.
@@ -569,10 +679,151 @@ By specifying smaller values for $\nt{max\_step\_size}$ one can force the solver
 Like for other nonlinear solvers, the convergence can be printed to the standard output by means of a \kw{output}:~\kw{iterations} statement in the initial value section. Moreover this solver prints also the line search history if \kw{print~convergence~info},~\kw{yes} was specified. This could be helpful in order to decide whether to increase or decrease $\nt{lambda\_min}$ or the maximum number of iterations. If one wants detailed information about the decisions of the solver, \kw{verbose}, \kw{yes} should be specified.
 
 \subparagraph{General notes}
-If one specifies \kw{abort~at~lambda~min},~\kw{no}, \kw{scale~newton~step},~\kw{no}, \kw{divergence~check},~\kw{no} and $\nt{lambda\_min}=1$, one gets the same behavior like Newton Raphson. Moreover if $\nt{lambda\_min}<1$ and \kw{algorithm}, \kw{factor} was specified, the behavior will be similar to a damped Newton method.
+If one specifies \kw{abort~at~lambda~min},~\kw{no}, \kw{scale~Newton~step},~\kw{no}, \kw{divergence~check},~\kw{no} and $\nt{lambda\_min}=1$, one gets the same behavior like Newton Raphson. Moreover if $\nt{lambda\_min}<1$ and \kw{algorithm}, \kw{factor} was specified, the behavior will be similar to a damped Newton method.
 
+\subparagraph{Matrix free line search variant}
+A matrix free variant of the line search algorithm is based on the Broyden~Fletcher~Goldfarb~Shanno
+algorithm and QR updates of the Jacobian. The \kw{bfgs} algorithm has also been adapted from \cite{NUMERICAL-RECIPES-IN-C}.
+It can be used only together with the \kw{qr} or the \kw{spqr} linear solvers. If the solution is highly nonlinear but
+sufficiently continuous, then the number of Jacobian evaluations of the \kw{bfgs} solver is usually significanlty lower
+than the \kw{line search} solver.
 
+\subparagraph{MCP solvers}
+A Mixed (nonlinear) Complementarity problem involves the solution of a combined system of equations and inequalities.
+\begin{eqnarray}
+  \bold{F}_e\left(\bold{x}\right) & = & \bold{0} \\
+  \bold{F}_i\left(\bold{x}\right) & \ge & \bold{0} \\
+  \bold{x}_i & \ge & \bold{0} \\
+  \bold{F}_i\left(\bold{x}\right)^T \, \bold{x}_i & = & 0 \\
+  \bold{F}\left(\bold{x}\right) & = & \begin{pmatrix}
+    \bold{F}_e\left(\bold{x}\right) \\
+    \bold{F}_i\left(\bold{x}\right)
+  \end{pmatrix} \\
+  \bold{x} & = & \begin{pmatrix}
+    \bold{x}_e \\
+    \bold{x}_i
+  \end{pmatrix}
+\end{eqnarray}
+\begin{itemize}
+\item $\bold{F}_e$ \dots equations
+\item $\bold{F}_i$ \dots inequalities
+\item $\bold{x}_e$ \dots regular variables
+\item $\bold{x}_i$ \dots complementary variables
+\end{itemize}
+Typical applications involve unilateral contact between rigid bodies \verb;(module-uni_in_plane); or the solution of the Reynolds equation based on a mass conserving cavitation model \verb;(module-hydrodynamic_plain_bearing2);.
+In order to solve a MCP problem, it is required to add the statement \kw{enable mcp}, \kw{yes} to MCP capable elements and to use a MCP capable nonlinear solver.
+Nevertheless, MCP solvers could be used also to solve non MCP problems.
+All MCP capable solvers allow the following additional arguments:
+\begin{itemize}
+\item \kw{mcp\_tolerance} If the magnitude of a complementary variable is smaller than \kw{mcp\_tolerance}, it is considered as zero.
+\item \kw{mcp\_rho} Threshold for choosing the descent direction
+\item \kw{mcp\_sigma} Threshold for backtracking
+\item \kw{mcp\_p} Coefficient for choosing the descent direction
+\end{itemize}
 
+\paragraph{Trilinos NOX solver}
+\emph{Author: Reinhard Resch}
+
+The \verb;NOX; solver is based on Sandias Trilinos library \cite{TRILINOS-WEBSITE}. Support for Trilinos must be enabled during compilation by the \verb;--with-trilinos; flag. Although \verb;NOX; can be compiled with \verb;MPI; parallelism, MBDyn currently does not support a \verb;MPI; based solution using \verb;NOX;.
+Indeed \verb;NOX; is a huge library with many parameters and options. Within this section, only those parameters which are used by MBDyn, are listed. For a complete reference of the \verb;NOX; solver see also \href{https://trilinos.github.io/nox_and_loca.html}{NOX-website}.
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{nonlinear_solver_name} ::= \kw{nox}
+
+    \bnt{nonlinear_solver_data} ::=
+        [ \{ \kw{true}
+        | \kw{modified} , (\ty{integer}) \bnt{outer_iter_before_ass}
+            [ , \kw{keep jacobian matrix} ]
+            [ , \kw{honor element requests} ] \} ]
+        [ , \kw{linear solver}, \{ \kw{gmres} | \kw{cg} | \kw{cgs} | \kw{tfqmr} | \kw{bicgstab} \} ]
+        [ , \kw{linear solver tolerance}, (\ty{real}) \bnt{linsol_tol} ]
+        [ , \kw{linear solver max iterations}, (\ty{integer}) \bnt{linsol_max_iter} ]
+        [ , \kw{krylov subspace size}, (\ty{integer}) \bnt{krylov_subspace} ]
+        [ , \kw{inner iterations before assembly}, (\ty{integer}) \bnt{inner_iter_before_ass} ]
+        [ , \kw{weighted rms relative tolerance}, (\ty{real}) \bnt{wrms_rel_tol} ]
+        [ , \kw{weighted rms absolute tolerance}, (\ty{real}) \bnt{wrms_abs_tol} ]
+        [ , \kw{forcing term}, \{ \kw{constant} | \kw{type 1} | \kw{type 2} \} ]
+        [ , \kw{forcing term min tolerance}, (\ty{real}) \bnt{forcing_term_min_tol} ]
+        [ , \kw{forcing term max tolerance}, (\ty{real}) \bnt{forcing_term_max_tol} ]
+        [ , \kw{forcing term alpha}, (\ty{real}) \bnt{alpha} ]
+        [ , \kw{forcing term gamma}, (\ty{real}) \bnt{gamma} ]
+        [ , \kw{use preconditioner as solver}, \{ \kw{yes} | \kw{no} \} ]
+        [ , \kw{jacobian operator}, \{ \kw{newton} | \kw{newton krylov} \} ]
+        [ , \kw{direction}, \{ \kw{newton} |
+                         \kw{steepest descent} |
+                         \kw{nonlinear cg} |
+                         \kw{broyden} \} ]
+        [ , \kw{solver}, \{ \kw{line search based} |
+                      \kw{trust region based} |
+                      \kw{inexact trust region based} |
+                      \kw{tensor based} \} ]
+        [ , \kw{line search method}, \{ \kw{backtrack} |
+                                  \kw{polynomial} |
+                                  \kw{more thuente} \} ]
+        [ , \kw{sufficient decrease condition} \{ \kw{armijo goldstein} | \kw{ared pred} \}]
+        [ , \kw{line search max iterations} (\ty{integer}) \bnt{line_search_max_iter} ]
+        [ , \kw{minimum step}, (\ty{real}) \bnt{minimum_step} ]
+        [ , \kw{recovery step}, (\ty{real}) \bnt{recovery_step} ]
+        [ , \kw{recovery step type}, \{ \kw{constant} | \kw{last computed step} \} ]
+        [ , \kw{verbose}, \{ \kw{yes} | \kw{no} \} ]
+        [ , \kw{print convergence info}, \{ \kw{yes} | \kw{no} \} ] ;
+\end{Verbatim}
+\subparagraph{Linear solver and inner iterations}
+If the option \kw{direction} is set to \kw{newton}, an inexact Newton method is applied. This method uses iterative linear solvers to compute the Newton direction. The following linear solvers provided by \href{https://trilinos.github.io/aztecoo.html}{AztecOO} are supported:
+\begin{description}
+\item[\kw{gmres}] Restarted generalized minimal residual
+\item[\kw{cg}] Conjugate gradient (not applicable if the Jacobian is unsymmetrical which is the usual case)
+\item[\kw{cgs}] Conjugate gradient squared
+\item[\kw{tfqmr}] Transpose-free quasi-minimal residual
+\item[\kw{bicgstab}] Bi-conjugate gradient with stabilization
+\end{description}
+The \kw{gmres} solver is accepting also the parameter \bnt{krylov\_subspace} which defines the number of inner iterations before a restart.
+\subparagraph{Preconditioner}
+All linear solvers from the previous paragraph require proper preconditioning. For that purpose \verb;NOX; uses MBDyn's direct linear solvers defined in section~\ref{sec:LINEAR-SOLVER}. Since an update of the preconditioner might be expensive, it can be updated only after a fixed number of outer iterations defined by the parameter \bnt{outer\_iter\_before\_ass}, after the number of inner iterations exceeded \bnt{inner\_iter\_before\_ass} or on request by elements if \kw{honor element requests} is set. At the moment only the \kw{newton krylov} Jacobian operator and the \kw{broyden} direction are considering the parameter \bnt{outer\_iter\_before\_ass}. If the maximum number of inner iterations (\bnt{linsol\_max\_iter}) is exceeded, an update of the preconditioner is also enforced. If the flag \kw{use preconditioner as solver} is set, \verb;NOX; does not use any iterative solver. Instead MBDyn's own linear solvers from section~\ref{sec:LINEAR-SOLVER} are applied directly.
+\subparagraph{Convergence criteria for inner iterations}
+The convergence criteria of the linear solver is called \kw{forcing term}. If \kw{forcing term} is set to \kw{constant}, the parameter \bnt{linsol\_tol} defines the tolerance of the linear solver. Otherwise the actual tolerance can be adjusted automatically by the solver between \bnt{forcing\_term\_min\_tol} and \bnt{forcing\_term\_max\_tol}. In case of forcing term \kw{type 2}, the parameters \bnt{alpha} and \bnt{gamma} can be used to tune the linear solver. See also \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Direction_1_1Newton.html}{NOX::Direction::Newton} for further information.
+\subparagraph{Convergence criteria for outer iterations}
+In addition to the convergence criteria defined in section~\ref{sec:IVP:TOLERANCE}, \verb;NOX; also supports the parameters \bnt{wrms\_rel\_tol} and \bnt{wrms\_abs\_tol} which are based on the weighted root mean square norm for the solution update between iterations. See also \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1StatusTest_1_1NormWRMS.html}{NOX::StatusTest::NormWRMS} for further information.
+\subparagraph{Jacobian operator}
+\verb;NOX; is able to evaluate a Jacobian vector product, required for all iterative linear solvers, without the need to assemble the expensive Jacobian sparse matrix. This option will be used if \kw{jacobian operator} is set to \kw{newton krylov}. In contrast to the matrix free Jacobian operator implemented in the Trilinos library, which is based on a finite difference approximation, MBDyn implements an accurate and inexpensive automatic differentiation approach. If \kw{jacobian operator} is set to \kw{newton}, the sparse Jacobian matrix is used to evaluate the Jacobian vector product.
+\subparagraph{Newton like directions}
+
+\begin{description}
+\item[\kw{newton}] Uses traditional Newton step. See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Direction_1_1Newton.html}{NOX::Direction::Newton}.
+\item[\kw{steepest descent}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Direction_1_1SteepestDescent.html}{NOX::Direction::SteepestDescent}
+\item[\kw{nonlinear cg}] Uses a nonlinear conjugate gradient method. See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Direction_1_1NonlinearCG.html}{NOX::Direction::NonlinearCG}
+\item[\kw{broyden}] Uses a limited memory Broyden update which can be very efficient in some cases. See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Direction_1_1Broyden.html}{NOX::Direction::Broyden}
+\end{description}
+\subparagraph{Solvers}
+The following solvers are supported by \verb;NOX;:
+\begin{description}
+\item[\kw{line search based}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Solver_1_1LineSearchBased.html}{NOX::Solver::LineSearchBased}
+\item[\kw{trust region based}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Solver_1_1TrustRegionBased.html}{NOX::Solver::TrustRegionBased}
+\item[\kw{inexact trust region based}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Solver_1_1InexactTrustRegionBased.html}{NOX::Solver::InexactTrustRegionBased}
+\item[\kw{tensor based}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1Solver_1_1TensorBased.html}{NOX::Solver::TensorBased}
+\end{description}
+\subparagraph{Line search solver}
+The \kw{line search based} solver also supports the following options for backtracking:
+\begin{description}
+\item[\kw{backtrack}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1LineSearch_1_1Backtrack.html}{NOX::LineSearch::Backtrack}
+\item[\kw{polynomial}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1LineSearch_1_1Polynomial.html}{NOX::LineSearch::Polynomial}
+\item[\kw{more thuente}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1LineSearch_1_1MoreThuente.html}{NOX::LineSearch::MoreThuente}
+\end{description}
+\begin{description}
+\item[\kw{line search max iterations}] Maximum number of residual function evaluations.
+\item[\kw{minimum step}] Minimum acceptable step length (e.g. $\bnt{minimum\_step} = 1$ means full Newton step)
+\item[\kw{recovery step}] Step to take when the line search fails
+\item[\kw{recovery step type}] Determines the step size to take when the line search fails
+\end{description}
+Ţhe \kw{more thuente} and \kw{polynomial} option also allow different options for the \kw{sufficient decrease condition}.
+\begin{description}
+\item[\kw{armijo goldstein}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1LineSearch_1_1MoreThuente.html}{Armijo-Goldstein Condition}
+\item[\kw{ared pred}] See \href{https://docs.trilinos.org/latest-release/packages/nox/doc/html/classNOX_1_1LineSearch_1_1MoreThuente.html}{Ared/Pred Condition}
+\end{description}
+\subparagraph{Diagnostic output}
+\begin{description}
+\item[\kw{verbose}] Output only warning messages from the \verb;NOX; solver
+\item[\kw{print convergence info}] Print full status information for inner and outer iterations
+\end{description}
 
 \paragraph{Matrix free.}
 \emph{Author: Giuseppe Quaranta}
@@ -634,7 +885,8 @@ This nonlinear solver is experimental.
     \bnt{method} ::=
         \{ \kw{use lapack} [ , \kw{balance} , \{ \kw{no} | \kw{scale} | \kw{permute} | \kw{all} \} ]
             | \kw{use arpack} , \bnt{nev} , \bnt{ncv} , \bnt{tol}
-            | \kw{use jdqz} , \bnt{nev} , \bnt{ncv} , \bnt{tol} \} 
+            | \kw{use jdqz} , \bnt{nev} , \bnt{ncv} , \bnt{tol}
+            | \kw{use external} \} 
 \end{Verbatim}
 %\end{verbatim}
 Performs the direct eigenanalysis of the problem.
@@ -727,6 +979,10 @@ using the \kw{rigid body kinematics} card
 	It requires the same parameters of ARPACK;
 	actually, it allows a lot of tuning, but its input
 	is not formalized yet (experimental).
+\item \kw{use external} is a placeholder to tell MBDyn not to perform any eigenanalysis
+	but rather honor any of the ``output'' statements that can be honored without performing the analysis;
+	for example, writing the matrices (\kw{output matrices}, \kw{output sparse matrices}),
+	the geometry (\kw{output geometry}), and so on;
 \item \kw{lower frequency limit} only outputs those eigenvalues and eigenvectors
 	that are complex and whose imaginary part is larger than
 	\nt{lower} Hz;
@@ -835,7 +1091,27 @@ to the absolute reference frame;
 \item \texttt{idx}: a vector containing the reference row index
 of each structural node in the eigenvectors;
 \end{itemize}
-The contents of this file may change across versions.
+
+\emph{Caveat: the contents of this file may change across versions.}
+
+\paragraph{Interpretation of linearized problem.}
+The typical interpretation of the linearized problem
+\begin{align}
+	\T{f}_{/\dot{\T{x}}} \Delta\dot{\T{x}} + \T{f}_{/\T{x}} \Delta\T{x} &= \T{0}
+\end{align}
+in descriptor form is
+\begin{align}
+	\TT{E} \Delta\dot{\T{x}} &= \TT{A} \Delta\T{x}
+\end{align}
+with
+\begin{subequations}
+\begin{align}
+	\TT{E} &= \T{f}_{/\dot{\T{x}}} = \frac{\TT{J}_{(+c)} + \TT{J}_{(-c)}}{2}
+	\\
+	\TT{A} &= - \T{f}_{/\T{x}} = - \frac{\TT{J}_{(+c)} - \TT{J}_{(-c)}}{2 c}
+\end{align}
+\end{subequations}
+
 
 \paragraph{Example.}
 \begin{verbatim}
@@ -844,6 +1120,14 @@ The contents of this file may change across versions.
     # to plot the "y" component of each node of each eigenvector,
     # with respect to the reference "x" component of the position of the nodes
     octave:2> plot(X0(1:6:end), VR(idx + 2, :))
+    # to plot all components of eigenvector 5 in 3D,
+    # with an 'x' in the undeformed position
+    # and a 'o' in the deformed position, scaled by 0.1
+    octave:3> mode = 5; scale = 0.1;
+    octave:4> plot3(X0(1:6:end), X0(2:6:end), X0(3:6:end), 'x',
+                    X0(1:6:end) + scale*VR(idx + 1, mode), ...
+                    X0(2:6:end) + scale*VR(idx + 2, mode), ...
+                    X0(3:6:end) + scale*VR(idx + 3, mode), 'o')
 \end{verbatim}
 
 
@@ -880,15 +1164,24 @@ usually output.
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{card} ::= \kw{linear solver} :
-            \{ \kw{naive} | \kw{umfpack} | \kw{klu} | \kw{y12} | \kw{lapack} | \kw{superlu} | \kw{taucs} | \kw{watson} \}
+            \{ \kw{naive} | \kw{umfpack} | \kw{klu} | \kw{y12} | \kw{lapack} | \kw{superlu} | \kw{taucs} 
+                    | \kw{pardiso} | \kw{watson} | \kw{pastix} | \kw{qr} | \kw{spqr} | \kw{aztecoo} | \kw{amesos} \}
         [ , \{ \kw{map} | \kw{cc} | \kw{dir} \} ]
-        [ , \{ \kw{colamd} | \kw{mmdata} \} ]
+        [ , \{ \kw{colamd} | \kw{mmdata} | \kw{amd} | \kw{given} | \kw{metis} \} ]
         [ , \{ \kw{mt} | \kw{multithread} \} , \bnt{threads} ]
         [ , \kw{workspace size} , \bnt{workspace_size} ] 
         [ , \kw{pivot factor} , \bnt{pivot\_factor} ]
         [ , \kw{drop tolerance} , \bnt{drop\_tolerance} ]
         [ , \kw{block size} , \bnt{block_size} ]
-        [ , \kw{scale} , \{ \kw{no} | \kw{always} | \kw{once} | \kw{max} | \kw{sum} \} ]
+        [ , \kw{scale} , \{ \kw{no} | \kw{always} | \kw{once} | \kw{row max} | \kw{row sum} | \kw{column max} | \kw{column sum}
+                | \kw{lapack} | \kw{iterative} | \kw{row max column max} \}
+            [ , \kw{scale tolerance}, (\ty{real}) \bnt{scale_tolerance} ]
+            [ , \kw{scale iterations}, (\ty{integer}) \bnt{scale_max_iter} ]
+        ]
+        [ , \kw{tolerance}, (\ty{real}) \bnt{refine_tolerance} ]
+        [ , \kw{max iterations}, (\ty{integer}) \bnt{refine_max_iter} ]
+        [ , \kw{preconditioner}, \{ \kw{umfpack} | \kw{klu} | \kw{lapack} | \kw{ilut} | \kw{superlu} | \kw{mumps} | 
+            \kw{scalapack} | \kw{dscpack} | \kw{pardiso} | \kw{paraklete} | \kw{taucs} | \kw{csparse} \} ]
     ;
 \end{Verbatim}
 %\end{verbatim}
@@ -996,6 +1289,38 @@ the keyword \kw{mt} allows to enforce the desired number of \nt{threads}.
 See also the \kw{threads} keyword for more details on multi-threaded
 solution.
 
+\paragraph{PaStiX}
+The \kw{pastix} linear solver from the Institut~National~de~Recherche~en~informatique~et~Automatique
+is a high performance parallel solver for very large sparse linear systems based on direct methods.
+It is recommended to enable iterative refinement for this solver because it uses static pivoting.
+
+\paragraph{QR}
+The \kw{qr} linear solver is a dense linear solver based on $Q\,R$~decomposition instead of $L\,U$.
+See the book Numerical~Recipes~in~{C}~\cite{NUMERICAL-RECIPES-IN-C} for further information.
+It should be used mainly in combination with the \kw{bfgs} nonlinear solver for small Jacobian
+matrices but can be used like any other linear solver.
+
+\paragraph{SPQR}
+The SuiteSparseQR solver \kw{spqr} from \cite{SUITESPARSE-QR-2011} is an implementation
+of the multifrontal sparse $Q\,R$ factorization method. It can be used in combination
+with the \kw{bfgs} nonlinear solver for larger Jacobian matrices which cannot be
+handled efficiently by \kw{qr}. The \kw{spqr} solver is using a sparse representation
+of the Jacobian and it's $Q\,R$ factors as long as no BFGS update is applied.
+Once an BFGS update is applied to the $Q\,R$ factors, a dense upper triangular solver
+from Lapack is used until the Jacobian is rebuild. However, usually the most expensive
+part is the $Q\,R$ decomposition of the sparse Jacobian.
+
+\paragraph{Aztecoo}
+In contrast to most other solvers, \kw{aztecoo} is an iterative linear solver based on
+Sandia's Trilinos library \cite{TRILINOS-WEBSITE}. Different preconditioners are supported.
+However the incomplete LU~factorization option \kw{ilut} cannot be used if there are any
+joints in the model. This solver accepts a tolerance defined by $\bnt{refine\_tolerance}$ and
+a maximum number of iterations $\bnt{refine\_max\_iter}$.
+
+\paragraph{Amesos}
+Amesos is also based on Sandia's Trilinos library~\cite{TRILINOS-WEBSITE}.
+It provides interfaces to several direct linear solvers.
+
 \begin{comment}
 Another linear solver, that is available mostly for historical reasons, 
 is \kw{harwell}, with a \nt{workspace\_size}
@@ -1008,7 +1333,8 @@ the matrix fills up.
 
 \paragraph{Other.}
 Historically, MBDyn supported the \kw{meschach} and \kw{harwell} solvers.
-They are now deprecated and undocumented.
+\kw{Meschach} has been removed, while \kw{harwell}
+is now deprecated and undocumented.
 Other linear solvers may be supported for experimental reasons
 (for example, \kw{taucs}, \kw{watson});
 however, they are not documented as they are not intended for general use.
@@ -1043,16 +1369,17 @@ of \kw{cc} is quite limited ($\log_2\plbr{\bnt{nz}}$, where
 \nt{nz} is the number of non-zeroes in a column) so it is definitely
 comparable to that of \kw{cc}.
 \end{itemize}
-Only \kw{umfpack}, \kw{klu}, \kw{y12} and \kw{superlu}
+Only \kw{umfpack}, \kw{klu}, \kw{y12}, \kw{superlu} and \kw{pastix}
 linear solvers allow these settings.
 
-The keyword \kw{colamd} is honored by the \kw{naive} and SuperLU linear solvers;
+The keyword \kw{colamd} is honored by the \kw{naive}, \kw{spqr} and SuperLU linear solvers;
 it enables the column rearrangement that minimizes the sparsity
 of the factored matrix, as implemented in \texttt{libcolamd}
 (part of University of Florida's SparseSuite package).
 The keyword \kw{mmdata} is honored by 
 the scalar SuperLU linear solver only; it enables column rearrangement
 based on the MMD ordering of the symmetric matrix $A^T A$.
+Additional options are \kw{amd}, \kw{metis} and \kw{given} ordering which are supported by the \kw{spqr} linear solver.
 
 
 The \nt{pivot\_factor} is a real number, which in a heuristic sense 
@@ -1070,11 +1397,22 @@ Only \kw{umfpack} allows this setting.
 The keyword \kw{block size} is specific to \kw{umfpack}.
 See the related documentation for the meaning.
 
-The keyword \kw{scale} indicates whether the matrix and the right-hand side
-must be scaled before linear solution.
+The keyword \kw{scale} indicates whether the matrix, the right-hand side and the solution
+must be scaled before/after linear solution.
 By default no scaling takes place (\kw{no}).
-Only \kw{naive} allows this setting.
-It is experimental; it should only be used for development purposes.
+Only \kw{naive}, \kw{klu}, \kw{umfpack} and \kw{pastix} allows this setting.
+It can be used in order to improve the condition number of the Jacobian matrix.
+See also section~\ref{sec:PROBLEMS:OUTPUT}. If one of the keywords \kw{row max},
+\kw{column max}, \kw{row sum} or \kw{column sum} is used, either rows or columns
+of the Jacobian are scaled by their maximum absolute value or sum of absolute values.
+In order to scale rows and columns of the Jacobian at the same time, one can choose
+between Lapacks dgeequ algorithm (\kw{lapack}), the Sinkhorn-Knopp algorithm
+\cite{SINKHORN-KNOPP-1967} (\kw{row max column max}) and the algorithm from Amestoy et.al.
+\cite{PATRICK-AMESTOY-2008} (\kw{iterative}).
+
+In case of a high condition number of the Jacobian matrix, one should enable iterative
+refinement by means of the \bnt{refine\_max\_iter} option. It is supported by the \kw{umfpack} and
+\kw{pastix} solvers.
 
 Table~\ref{tab:linear-solvers-props} summarizes the properties that can be set
 for each type of linear solver; Table~\ref{tab:linear-solvers-memory}
@@ -1110,7 +1448,11 @@ summarizes how each linear solver deals with pivoting policies.
 %	Meschach	&         &         &         &           &         & $\surd$ &         \\
 	SuperLU		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &         & $\surd$ &	        \\
 	TAUCS		& ?       & ?       & ?       & ?         & ?       & ?       & $\surd$ \\
+	Pardiso		& $\surd$ &         &         & $\surd$   &         &         &	        \\
 	Watson		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &         & $\surd$ &	        \\
+	Pastix		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &         &         &	        \\
+	QR		&         &         &         &           &         &         &	        \\
+	SpQR		& $\surd$ &         &         &           &         &         &	        \\
 \hline
 \end{tabular}
 \end{table}
@@ -1140,6 +1482,9 @@ summarizes how each linear solver deals with pivoting policies.
 	SuperLU		& 			& dynamic 	&		\\
 	TAUCS		&			& ?		&		\\
 	Watson		&			& dynamic	&		\\
+	Pastix		&			& dynamic	&		\\
+	QR		&			& full		&		\\
+	SpQR		&			& dynamic	&		\\
 \hline
 \end{tabular}
 \end{table}
@@ -1154,7 +1499,7 @@ summarizes how each linear solver deals with pivoting policies.
 	\multicolumn{1}{c}{\textbf{\emph{Default}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Description}}} \\
 \hline\hline
-	Naive		& 1.0$\rightarrow$0.0		& 1.e$-8$	& \\
+	Naive		& 1.0$\rightarrow$0.0		& 1.e$-5$	& \\
 	Umfpack 	& 0.0$\rightarrow$1.0 		& 0.1 		& \\
 	KLU 		& 0.0$\rightarrow$1.0 		& 0.1 		& \\
 	Y12m 		& boolean: none=0.0, full=1.0	& full		& \\

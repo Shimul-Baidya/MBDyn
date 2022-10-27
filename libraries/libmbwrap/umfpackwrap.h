@@ -83,7 +83,8 @@ extern "C" {
 #include "spmapmh.h"
 #include "ccmh.h"
 #include "dgeequ.h"
-	
+#include "sp_gradient_spmh.h"
+
 /* UmfpackSolver - begin */
 
 class UmfpackSolver: public LinearSolver {
@@ -97,16 +98,16 @@ public:
 	};
 
 private:
-	integer iSize;
+	const integer iSize;
 	mutable doublereal *Axp;
 	mutable integer *Aip;
 	mutable integer *App;
-
-	void *Symbolic;
+        mutable integer iNumNonZeros;
+	mutable void *Symbolic;
 	mutable doublereal Control[UMFPACK_CONTROL];
 	mutable doublereal Info[UMFPACK_INFO];
 	mutable void *Numeric;
-	bool bHaveCond;
+	mutable bool bHaveCond;
 
 	bool bPrepareSymbolic(void);
 	
@@ -115,14 +116,18 @@ private:
 
 public:
 	UmfpackSolver(const integer &size,
-		const doublereal &dPivot,
-		const doublereal &dDropTolerance,
-		const unsigned blockSize,
-		Scale scale = SCALE_UNDEF,
-		integer iMaxIter=-1);
+		      const doublereal &dPivot,
+		      const doublereal &dDropTolerance,
+		      const unsigned blockSize,
+		      Scale scale = SCALE_UNDEF,
+		      integer iMaxIter = 0,
+		      integer iVerbose = 0);
 	~UmfpackSolver(void);
 
 	void Reset(void);
+        void ResetNumeric(void) const;
+        void ResetSymbolic(void) const;
+
 	void Solve(void) const;
 	void SolveT(void) const;
 
@@ -138,10 +143,10 @@ public:
 /* UmfpackSolver - end */
 
 /* UmfpackSparseSolutionManager - begin */
-
+template <typename SparseMatrixHandlerType>
 class UmfpackSparseSolutionManager: public SolutionManager {
 protected:
-	mutable SpMapMatrixHandler A;
+	mutable SparseMatrixHandlerType A;
 
 	std::vector<doublereal> x;
 	std::vector<doublereal> b;
@@ -171,13 +176,18 @@ protected:
 	/* Backward Substitution */
 	void BackSub(doublereal t_iniz = 0.);
    
+        UmfpackSolver* pGetSolver() {
+                ASSERT(dynamic_cast<UmfpackSolver*>(pLS) != 0);
+                return static_cast<UmfpackSolver*>(pLS);
+        }
 public:
 	UmfpackSparseSolutionManager(integer Dim,
-		doublereal dPivot = -1.,
-		doublereal dDropTolerance = 0.,
-		const unsigned blockSize = 0,
-		const ScaleOpt& scale = ScaleOpt(),
-		integer iMaxIter=-1);
+				     doublereal dPivot = -1.,
+				     doublereal dDropTolerance = 0.,
+				     const unsigned blockSize = 0,
+				     const ScaleOpt& scale = ScaleOpt(),
+				     integer iMaxIter = 0,
+				     integer iVerbose = 0);
 	virtual ~UmfpackSparseSolutionManager(void);
 #ifdef DEBUG
 	virtual void IsValid(void) const {
@@ -187,6 +197,7 @@ public:
 
 	/* Inizializzatore generico */
 	virtual void MatrReset(void);
+        virtual void MatrInitialize(void);
 	
 	/* Risolve il sistema Backward Substitution; fattorizza se necessario */
 	virtual void Solve(void);
@@ -207,7 +218,7 @@ public:
 /* UmfpackSparseCCSolutionManager - begin */
 
 template <class CC>
-class UmfpackSparseCCSolutionManager: public UmfpackSparseSolutionManager {
+class UmfpackSparseCCSolutionManager: public UmfpackSparseSolutionManager<SpMapMatrixHandler> {
 protected:
 	bool CCReady;
 	CC *Ac;
@@ -217,11 +228,12 @@ protected:
 	
 public:
 	UmfpackSparseCCSolutionManager(integer Dim,
-		doublereal dPivot = -1.,
-		doublereal dDropTolerance = 0.,
-		const unsigned& blockSize = 0,
-		const ScaleOpt& scale = ScaleOpt(),
-		integer iMaxIter=-1);
+				       doublereal dPivot = -1.,
+				       doublereal dDropTolerance = 0.,
+				       const unsigned& blockSize = 0,
+				       const ScaleOpt& scale = ScaleOpt(),
+				       integer iMaxIter = 0,
+				       integer iVerbose = 0);
 	virtual ~UmfpackSparseCCSolutionManager(void);
 
 	/* Inizializzatore "speciale" */

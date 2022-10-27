@@ -78,16 +78,6 @@ Beam2::Beam2(unsigned int uL,
 ElemGravityOwner(uL, fOut),
 InitialAssemblyElem(uL, fOut),
 od(ood),
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars...
-Var_X(0),
-Var_Phi(0),
-Var_F(0),
-Var_M(0),
-Var_Nu(0),
-Var_K(0),
-Var_NuP(0),
-Var_KP(0),
-#endif /* USE_NETCDFC */
 bFirstRes(false),
 bFirstIDRes(true)
 {
@@ -103,7 +93,7 @@ bFirstIDRes(true)
 	const_cast<Vec3&>(f[NODE2]) = F2;
 	const_cast<Mat3x3&>(RNode[NODE1]) = R1;
 	const_cast<Mat3x3&>(RNode[NODE2]) = R2;
-	RPrev = RRef = R = (Mat3x3&)r;
+	RPrev = RRef = R = r;
 
 	pD = NULL;
 	SAFENEWWITHCONSTRUCTOR(pD,
@@ -664,7 +654,8 @@ Beam2::OutputPrepare(OutputHandler &OH)
 			unsigned uOutputFlags = (fToBeOutput() & ToBeOutput::OUTPUT_PRIVATE_MASK);
 
 			if (uOutputFlags & Beam::OUTPUT_EP_X) {
-				Var_X = OH.CreateVar<Vec3>(name + "X", "m",
+				Var_X = OH.CreateVar<Vec3>(name + "X",
+					OutputHandler::Dimensions::Length,
 					"evaluation point global position vector (X, Y, Z)");
 			}
 
@@ -674,32 +665,38 @@ Beam2::OutputPrepare(OutputHandler &OH)
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_F) {
-				Var_F = OH.CreateVar<Vec3>(name + "F", "N",
+				Var_F = OH.CreateVar<Vec3>(name + "F",
+					OutputHandler::Dimensions::Force,
 					"evaluation point internal force in local frame (F_X, F_Y, F_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_M) {
-				Var_M = OH.CreateVar<Vec3>(name + "M", "Nm",
+				Var_M = OH.CreateVar<Vec3>(name + "M",
+					OutputHandler::Dimensions::Moment,
 					"evaluation point internal force in local frame (M_X, M_Y, M_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_NU) {
-				Var_Nu = OH.CreateVar<Vec3>(name + "nu", "-",
+				Var_Nu = OH.CreateVar<Vec3>(name + "nu",
+					OutputHandler::Dimensions::LinearStrain,
 					"evaluation point linear strain in local frame (nu_X, nu_Y, nu_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_K) {
-				Var_K = OH.CreateVar<Vec3>(name + "k", "1/m",
+				Var_K = OH.CreateVar<Vec3>(name + "k",
+					OutputHandler::Dimensions::AngularStrain,
 					"evaluation point angular strain in local frame (K_X, K_Y, K_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_NUP) {
-				Var_NuP = OH.CreateVar<Vec3>(name + "nuP", "1/s",
+				Var_NuP = OH.CreateVar<Vec3>(name + "nuP",
+					OutputHandler::Dimensions::LinearStrainRate,
 					"evaluation point linear strain rate in local frame (nuP_X, nuP_Y, nuP_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_KP) {
-				Var_KP = OH.CreateVar<Vec3>(name + "kP", "1/ms",
+				Var_KP = OH.CreateVar<Vec3>(name + "kP",
+					OutputHandler::Dimensions::AngularStrainRate,
 					"evaluation point angular strain rate in local frame (KP_X, KP_Y, KP_Z)");
 			}
 		}
@@ -715,12 +712,14 @@ Beam2::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::BEAMS)) {
-#if defined(USE_NETCDFC)
-			if (Var_X) {
-				Var_X->put_rec(p.pGetVec(), OH.GetCurrentStep());
+
+			unsigned uOutputFlags = (fToBeOutput() & ToBeOutput::OUTPUT_PRIVATE_MASK);
+
+			if (uOutputFlags & Beam::OUTPUT_EP_X) {
+				OH.WriteNcVar(Var_X, p);
 			}
 
-			if (Var_Phi) {
+			if (uOutputFlags & Beam::OUTPUT_EP_R) {
 				Vec3 E;
 				switch (od) {
 				case EULER_123:
@@ -753,11 +752,11 @@ Beam2::Output(OutputHandler& OH) const
 				case EULER_313:
 				case EULER_321:
 				case ORIENTATION_VECTOR:
-					Var_Phi->put_rec(E.pGetVec(), OH.GetCurrentStep());
+					OH.WriteNcVar(Var_Phi, E);
 					break;
 
 				case ORIENTATION_MATRIX:
-					Var_Phi->put_rec(R.pGetMat(), OH.GetCurrentStep());
+					OH.WriteNcVar(Var_Phi, R);
 					break;
 
 				default:
@@ -766,32 +765,29 @@ Beam2::Output(OutputHandler& OH) const
 				}
 			}
 
-			if (Var_F) {
-				Var_F->put_rec(AzLoc.GetVec1().pGetVec(), OH.GetCurrentStep());
+			if (uOutputFlags & Beam::OUTPUT_EP_F) {
+				OH.WriteNcVar(Var_F, AzLoc.GetVec1());
 			}
 
-			if (Var_M) {
-				Var_M->put_rec(AzLoc.GetVec2().pGetVec(), OH.GetCurrentStep());
+			if (uOutputFlags & Beam::OUTPUT_EP_M) {
+				OH.WriteNcVar(Var_M, AzLoc.GetVec2());
 			}
 
-			if (Var_Nu) {
-				Var_Nu->put_rec(DefLoc.GetVec1().pGetVec(), OH.GetCurrentStep());
+			if (uOutputFlags & Beam::OUTPUT_EP_NU) {
+				OH.WriteNcVar(Var_Nu, DefLoc.GetVec1());
 			}
 
-			if (Var_K) {
-				Var_K->put_rec(DefLoc.GetVec2().pGetVec(), OH.GetCurrentStep());
+			if (uOutputFlags & Beam::OUTPUT_EP_K) {
+				OH.WriteNcVar(Var_K, DefLoc.GetVec2());
 			}
 
-			if (Var_NuP) {
-				Var_NuP->put_rec(DefPrimeLoc.GetVec1().pGetVec(), OH.GetCurrentStep());
+			if (uOutputFlags & Beam::OUTPUT_EP_NUP) {
+				OH.WriteNcVar(Var_NuP, DefPrimeLoc.GetVec1());
 			}
 
-			if (Var_KP) {
-				Var_KP->put_rec(DefPrimeLoc.GetVec2().pGetVec(), OH.GetCurrentStep());
+			if (uOutputFlags & Beam::OUTPUT_EP_KP) {
+				OH.WriteNcVar(Var_KP, DefPrimeLoc.GetVec2());
 			}
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
 		}
 #endif /* USE_NETCDF */
 
@@ -1000,8 +996,12 @@ ViscoElasticBeam2::AssStiffnessMat(FullSubMatrixHandler& WMA,
 
 	/* offset nel riferimento globale */
 	Vec3 fTmp[NUMNODES];
+	doublereal omegafTmp[NUMNODES];
+	Mat3x3 omega_o_fTmp[NUMNODES];
 	for (unsigned int i = 0; i < NUMNODES; i++) {
 		fTmp[i] = pNode[i]->GetRCurr()*f[i];
+		omegafTmp[i] = pNode[i]->GetWRef() * fTmp[i];
+		omega_o_fTmp[i] = pNode[i]->GetWRef().Tens(fTmp[i]);
 	}
 
 	Mat6x6 AzTmp[NUMNODES];
@@ -1009,21 +1009,28 @@ ViscoElasticBeam2::AssStiffnessMat(FullSubMatrixHandler& WMA,
 
 	for (unsigned int i = 0; i < NUMNODES; i++) {
 		/* Delta - deformazioni */
-		AzTmp[i] = AzPrimeTmp[i] = Mat6x6(mb_deye<Mat3x3>(dN2P[i]*dsdxi),
-				Zero3x3,
-				Mat3x3(MatCross, L*dN2[i] - fTmp[i]*(dN2P[i]*dsdxi)),
-				mb_deye<Mat3x3>(dN2P[i]*dsdxi));
-
-		AzTmp[i] = DRef*AzTmp[i]*dCoef;
-
-		AzTmp[i] += ERef*Mat6x6(Mat3x3(MatCross, Omega*(-dN2P[i]*dsdxi*dCoef)),
-				Zero3x3,
-				(Mat3x3(MatCross, LPrime) - Mat3x3(MatCrossCross, Omega, L))*(dN2[i]*dCoef)
-					+ Mat3x3(MatCrossCross, Omega, fTmp[i]*(dN2P[i]*dsdxi*dCoef))
-					+ Mat3x3(MatCross, fTmp[i].Cross(pNode[i]->GetWCurr()*(dN2P[i]*dsdxi*dCoef))),
-				Mat3x3(MatCross, Omega*(-dN2P[i]*dsdxi*dCoef)));
-
-		AzPrimeTmp[i] = ERef*AzPrimeTmp[i];
+			/* Delta - deformazioni */
+			AzTmp[i] = AzPrimeTmp[i]
+				= Mat6x6(mb_deye<Mat3x3>(dN2P[i]*dsdxi),
+					Zero3x3,
+					Mat3x3(MatCross, L*dN2[i] - fTmp[i]*(dN2P[i]*dsdxi)),
+					mb_deye<Mat3x3>(dN2P[i]*dsdxi));
+			AzTmp[i] = DRef*AzTmp[i]*dCoef;
+			AzTmp[i] +=
+				ERef*Mat6x6(Mat3x3(MatCross, Omega*(-dN2P[i]*dsdxi*dCoef)),
+					Zero3x3,
+// 					(Mat3x3(MatCross, LPrime) - 
+// 					Mat3x3(MatCrossCross, Omega, L))*(dN2[i]*dCoef) //TEMO SIA SBAGLIATO
+					Mat3x3(MatCross, LPrime - Omega.Cross(L))*(dN2[i]*dCoef) //VERSIONE MIA
+						+ Mat3x3(MatCrossCross, Omega, fTmp[i]*(dN2P[i]*dsdxi*dCoef))
+						- Mat3x3(MatCrossCross, pNode[i]->GetWCurr(), fTmp[i]*(dN2P[i]*dsdxi*dCoef))
+						- mb_deye<Mat3x3>(omegafTmp[i]*dN2P[i]*dsdxi*dCoef)
+						+ omega_o_fTmp[i] * (dN2P[i]*dsdxi*dCoef)
+						+ mb_deye<Mat3x3>(OmegaRef*L*dN2[i]*dCoef)
+						- OmegaRef.Tens(L)*(dN2[i]*dCoef),
+					Mat3x3(MatCross, Omega*(-dN2P[i]*dsdxi*dCoef))
+					);
+			AzTmp[i] += ERef*AzPrimeTmp[i];
 
 		/* Correggo per la rotazione da locale a globale */
 		AzTmp[i].SubMat12(Mat3x3(MatCross, Az.GetVec1()*(dN2[i]*dCoef)));
@@ -1062,27 +1069,27 @@ ViscoElasticBeam2::AssStiffnessMat(FullSubMatrixHandler& WMA,
 				+ Mat3x3(MatCrossCross, Az.GetVec1()*(dCoef*dN2[i]), fTmp[i])
 				+ bTmp[NODE2].Cross(AzTmp[i].GetMat12()));
 
-		/* Equazione viscosa all'indietro: */
-		WMB.Sub(1, 6*i + 1, AzPrimeTmp[i].GetMat11());
-		WMB.Sub(1, 6*i + 4, AzPrimeTmp[i].GetMat12());
-
-		WMB.Sub(4, 6*i + 1,
-				AzPrimeTmp[i].GetMat21()
-				+ bTmp[NODE1].Cross(AzPrimeTmp[i].GetMat11()));
-		WMB.Sub(4, 6*i + 4,
-				AzPrimeTmp[i].GetMat22()
-				+ bTmp[NODE1].Cross(AzPrimeTmp[i].GetMat12()));
-
-		/* Equazione viscosa in avanti: */
-		WMB.Add(7, 6*i + 1, AzPrimeTmp[i].GetMat11());
-		WMB.Add(7, 6*i + 4, AzPrimeTmp[i].GetMat12());
-
-		WMB.Add(10, 6*i + 1,
-				AzPrimeTmp[i].GetMat21()
-				+ bTmp[NODE2].Cross(AzPrimeTmp[i].GetMat11()));
-		WMB.Add(10, 6*i + 4,
-				AzPrimeTmp[i].GetMat22()
-				+ bTmp[NODE2].Cross(AzPrimeTmp[i].GetMat12()));
+// 		/* Equazione viscosa all'indietro: */
+// 		WMB.Sub(1, 6*i + 1, AzPrimeTmp[i].GetMat11());
+// 		WMB.Sub(1, 6*i + 4, AzPrimeTmp[i].GetMat12());
+// 
+// 		WMB.Sub(4, 6*i + 1,
+// 				AzPrimeTmp[i].GetMat21()
+// 				+ bTmp[NODE1].Cross(AzPrimeTmp[i].GetMat11()));
+// 		WMB.Sub(4, 6*i + 4,
+// 				AzPrimeTmp[i].GetMat22()
+// 				+ bTmp[NODE1].Cross(AzPrimeTmp[i].GetMat12()));
+// 
+// 		/* Equazione viscosa in avanti: */
+// 		WMB.Add(7, 6*i + 1, AzPrimeTmp[i].GetMat11());
+// 		WMB.Add(7, 6*i + 4, AzPrimeTmp[i].GetMat12());
+// 
+// 		WMB.Add(10, 6*i + 1,
+// 				AzPrimeTmp[i].GetMat21()
+// 				+ bTmp[NODE2].Cross(AzPrimeTmp[i].GetMat11()));
+// 		WMB.Add(10, 6*i + 4,
+// 				AzPrimeTmp[i].GetMat22()
+// 				+ bTmp[NODE2].Cross(AzPrimeTmp[i].GetMat12()));
 	}
 
 	/* correzione alle equazioni */
@@ -1131,6 +1138,7 @@ ViscoElasticBeam2::AssStiffnessVec(SubVectorHandler& WorkVec,
 		}
 
 		Mat3x3 RDelta;
+		Mat3x3 GPrime;
 		Vec3 gGrad;
 		Vec3 gPrimeGrad;
 
@@ -1149,7 +1157,15 @@ ViscoElasticBeam2::AssStiffnessVec(SubVectorHandler& WorkVec,
 		/* Velocita' angolare della sezione */
 		gPrime = InterpState(gPrimeNod[NODE1], gPrimeNod[NODE2]);
 		Omega = Mat3x3(CGR_Rot::MatG, g)*gPrime + RDelta*OmegaRef;
-
+		
+		/* rate of MatG */
+		doublereal dtmp1 = 4.+g.Dot(); //(4./(4.+g.Dot()))
+		doublereal dtmp = dtmp1 * dtmp1;
+		dtmp = -4. / dtmp;
+		dtmp1 = 2. / dtmp1;
+		GPrime = (gPrime.Tens(g) + g.Tens(gPrime)) * dtmp 
+			+ Mat3x3(MatCross, gPrime) * dtmp1;
+		
 		/* Derivate della posizione */
 		L = InterpDeriv(xTmp[NODE1], xTmp[NODE2]);
 
@@ -1177,6 +1193,7 @@ ViscoElasticBeam2::AssStiffnessVec(SubVectorHandler& WorkVec,
 		 */
 		DefPrimeLoc = Vec6(R.MulTV(LPrime + L.Cross(Omega)),
 			R.MulTV(Mat3x3(CGR_Rot::MatG, g)*gPrimeGrad
+			+ GPrime * g
 			+ (Mat3x3(CGR_Rot::MatG, g)*gGrad).Cross(Omega))
 			+ DefPrimeLocRef.GetVec2());
 

@@ -67,6 +67,7 @@ class Beam
 	VISCOELASTIC,
 	PIEZOELECTRICELASTIC,
 	PIEZOELECTRICVISCOELASTIC,
+	FULLYCOUPLEDPIEZOELECTRICELASTIC,
 
 	LASTBEAMTYPE
     };
@@ -216,18 +217,18 @@ protected:
 		    const VectorHandler& XCurr,
 		    const VectorHandler& XPrimeCurr);
 
-    virtual void
-    AssStiffnessVec(SubVectorHandler& WorkVec,
-                    doublereal dCoef,
-		    const VectorHandler& XCurr,
-		    const VectorHandler& XPrimeCurr);
-
     /* Per le beam che aggiungono qualcosa alle az. interne */
     virtual void
     AddInternalForces(Vec6& /* AzLoc */ , unsigned int /* iSez */ ) {
         NO_OP;
     };
-
+     
+    virtual void
+    AssStiffnessVec(SubVectorHandler& WorkVec,
+                    doublereal dCoef,
+		    const VectorHandler& XCurr,
+		    const VectorHandler& XPrimeCurr);
+     
     virtual void
     AssInertiaMat(FullSubMatrixHandler& /* WMA */ ,
                   FullSubMatrixHandler& /* WMB */ ,
@@ -297,6 +298,11 @@ protected:
     virtual Elem::Type GetElemType(void) const {
         return Elem::BEAM;
     };
+    
+    /* Deformable element */
+    virtual bool bIsDeformable() const {
+        return true;
+    };
 
     /* Contributo al file di restart */
     virtual std::ostream& Restart(std::ostream& out) const;
@@ -365,7 +371,7 @@ protected:
 	   const VectorHandler& XCurr,
 	   const VectorHandler& XPrimeCurr);
 
-	virtual void OutputPrepare(OutputHandler &OH);
+    virtual void OutputPrepare(OutputHandler &OH);
 
     /* output; si assume che ogni tipo di elemento sappia, attraverso
      * l'OutputHandler, dove scrivere il proprio output */
@@ -446,7 +452,7 @@ protected:
 
 /* ViscoElasticBeam - begin */
 
-class ViscoElasticBeam : virtual public Elem, public Beam {
+class ViscoElasticBeam : virtual public Elem, virtual public Beam {
   protected:
 
     /* Derivate di deformazioni e curvature */
@@ -534,8 +540,8 @@ class ViscoElasticBeam : virtual public Elem, public Beam {
 
     /* Settings iniziali, prima della prima soluzione */
     void SetValue(DataManager *pDM,
-		    VectorHandler& /* X */ , VectorHandler& /* XP */ ,
-		    SimulationEntity::Hints *ph = 0);
+                  VectorHandler& /* X */ , VectorHandler& /* XP */ ,
+                  SimulationEntity::Hints *ph = 0);
 
     /* Prepara i parametri di riferimento dopo la predizione */
     virtual void

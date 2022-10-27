@@ -151,21 +151,71 @@ ScrewJoint::~ScrewJoint(void)
 // 	return out;
 // }
 
+void
+ScrewJoint::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Screw Joint", OH, name);
+
+			Var_dTheta = OH.CreateVar<doublereal>(name + "dTheta",
+				OutputHandler::Dimensions::rad,
+				"screw angle magnitude [deg]");
+			Var_Theta = OH.CreateVar<Vec3>(name + "Theta",
+				OutputHandler::Dimensions::Length,
+				"screw axis (x, y, z)");
+			if (fc) {
+				Var_vrel = OH.CreateVar<doublereal>(name + "vRel",
+					OutputHandler::Dimensions::Velocity,
+					"contact point sliding velocity");
+				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+					OutputHandler::Dimensions::Dimensionless,
+					"friction coefficient");
+				Var_MFR = OH.CreateVar<doublereal>(name + "MFR",
+					OutputHandler::Dimensions::Moment,
+					"friction moment");
+
+			}
+		}
+#endif // USE_NETCDF
+	}
+}
 
 void //TODO
 ScrewJoint::Output(OutputHandler& OH) const
 {
 	if (bToBeOutput()) {
 		Mat3x3 R1(pNode1->GetRCurr()*R1h);
-		std::ostream &of = Joint::Output(OH.Joints(), "ScrewJoint", GetLabel(),
-				F1 * dLambda, C1 * dLambda + e1hz*M3diff, 
-				R1*F1 * dLambda, R1*(C1 * dLambda + e1hz*M3diff) )
-			<< " " << dTheta*dRaDegr << " " << dD
-			<< " " << Theta << " " << D;
+		Vec3 FTilde(F1 * dLambda);
+		Vec3 MTilde(C1 * dLambda + e1hz*M3diff);
+		Vec3 F(R1*F1 * dLambda);
+		Vec3 M(R1*(C1 * dLambda + e1hz*M3diff));
+		
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			std::ostream &of = Joint::Output(OH.Joints(), "ScrewJoint", GetLabel(),
+					FTilde, MTilde, F, M)
+				<< " " << dTheta*dRaDegr << " " << dD
+				<< " " << Theta << " " << D;
 			if (fc) {
 				of << " " << vrel << " " << fc->fc() << " " << e1hz*M3diff;
 			}	
 			of << std::endl;
+		}
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, FTilde, MTilde, F, M);
+			OH.WriteNcVar(Var_dTheta, dD);
+			OH.WriteNcVar(Var_Theta, D);
+
+			if (fc) {
+				OH.WriteNcVar(Var_vrel, vrel);
+				OH.WriteNcVar(Var_fc, fc->fc());
+				OH.WriteNcVar(Var_MFR, e1hz*M3diff);
+			}
+		}
+#endif // USE_NETCDF
 	}
 }
 
@@ -355,7 +405,7 @@ ScrewJoint::DescribeEq(std::ostream& out,
 
 	return out;
 
-}
+} 
 
 void //TODO
 ScrewJoint::DescribeEq(std::vector<std::string>& desc,
@@ -818,7 +868,7 @@ ScrewJoint::AssVec(SubVectorHandler& WorkVec, doublereal dCoef,
 		try {
 			fc->AssRes(WorkVec,12+1,iFirstReactionIndex+1,modF,v,XCurr,XPrimeCurr);
 		}
-		catch (Elem::ChangedEquationStructure) {
+		catch (Elem::ChangedEquationStructure& err) {
 			ChangeJac = true;
 		}
 		doublereal f = fc->fc();
@@ -971,6 +1021,18 @@ ScrewJoint::InitialAssRes(SubVectorHandler& WorkVec,
 // 	WorkVec.Sub(15 + 1, ThetaPrime);
 
 	return WorkVec;
+}
+
+const OutputHandler::Dimensions
+ScrewJoint::GetEquationDimension(integer index) const {
+	// DOF is variable 
+	if (fc && fc->iGetNumDof() > 0) {
+		unsigned int i = index;
+		if (i >= 2 && i <= fc->iGetNumDof()) {
+			return fc->GetEquationDimension(index - 1);
+		}
+	}
+	return OutputHandler::Dimensions::UnknownDimension;
 }
 
 /* ScrewJoint - end */

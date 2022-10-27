@@ -233,18 +233,22 @@ AutomaticStructDispElem::OutputPrepare(OutputHandler &OH)
 {
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
-		if (OH.UseNetCDF(OutputHandler::INERTIA)) {
+		if (OH.UseNetCDF(OutputHandler::STRNODES)) {
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
 			std::ostringstream os;
-			os << "node.struct." << GetLabel() << ".";
+			os << "elem.autostruct." << GetLabel() << ".";
 
 			std::string name(os.str());
 
-			Var_B = OH.CreateVar<Vec3>(name + "B", "kg m/s", "momentum (X, Y, Z)");
-			Var_G = OH.CreateVar<Vec3>(name + "G", "kg m^2/s", "momenta moment (X, Y, Z)");
-			Var_BP = OH.CreateVar<Vec3>(name + "BP", "kg m/s^2", "momentum derivative (X, Y, Z)");
-			Var_GP = OH.CreateVar<Vec3>(name + "GP", "kg m^2/s^2", "momenta moment derivative (X, Y, Z)");
+			Var_B = OH.CreateVar<Vec3>(name + "B", 
+				OutputHandler::Dimensions::Momentum, "momentum (X, Y, Z)");
+			Var_G = OH.CreateVar<Vec3>(name + "G",  
+				OutputHandler::Dimensions::MomentaMoment, "momenta moment (X, Y, Z)");
+			Var_BP = OH.CreateVar<Vec3>(name + "BP",  
+				OutputHandler::Dimensions::MomentumDerivative, "momentum derivative (X, Y, Z)");
+			Var_GP = OH.CreateVar<Vec3>(name + "GP",  
+				OutputHandler::Dimensions::MomentaMomentDerivative, "momenta moment derivative (X, Y, Z)");
 		}
 #endif // USE_NETCDF
 	}
@@ -256,14 +260,10 @@ AutomaticStructDispElem::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::INERTIA)) {
-#if defined(USE_NETCDFC)
-			Var_B->put_rec(B.pGetVec(), OH.GetCurrentStep());
-			Var_G->put_rec(::Zero3.pGetVec(), OH.GetCurrentStep());
-			Var_BP->put_rec(BP.pGetVec(), OH.GetCurrentStep());
-			Var_GP->put_rec(::Zero3.pGetVec(), OH.GetCurrentStep());
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
+			OH.WriteNcVar(Var_B, B);
+			OH.WriteNcVar(Var_G, Zero3);
+			OH.WriteNcVar(Var_BP, BP);
+			OH.WriteNcVar(Var_GP, Zero3);
 		}
 #endif /* USE_NETCDF */
 
@@ -414,7 +414,7 @@ AutomaticStructElem::ComputeAccelerations(Vec3& XPP, Vec3& WP) const
 	Mat3x3 Jcg = J + Mat3x3(MatCrossCross, Xcg, S);
 	const Vec3& V = pNode->GetVCurr();
 	const Vec3& W = dynamic_cast<const DynamicStructNode *>(pNode)->GetWCurr();
-	ASSERT(Jcg.IsSymmetric()); // NOTE: should be a run time test
+	ASSERT(Jcg.IsSymmetric(sqrt(std::numeric_limits<doublereal>::epsilon()))); // NOTE: should be a run time test
 	WP = Jcg.LDLSolve(GP - Xcg.Cross(BP) - W.Cross(Jcg*W) + V.Cross(B));
 	XPP = (BP - WP.Cross(S) - W.Cross(W.Cross(S)))/m;
 }
@@ -458,8 +458,8 @@ AutomaticStructElem::Restart(std::ostream& out) const
 VariableSubMatrixHandler&
 AutomaticStructElem::AssJac(VariableSubMatrixHandler& WorkMat,
 	doublereal dCoef,
-	const VectorHandler& /* XCurr */ ,
-	const VectorHandler& /* XPrimeCurr */ )
+	const VectorHandler& XCurr ,
+	const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("AutomaticStructElem::AssJac");
 
@@ -512,7 +512,6 @@ AutomaticStructElem::AssJac(VariableSubMatrixHandler& WorkMat,
 	return WorkMat;
 }
 
-
 /* assemblaggio autoval */
 void
 AutomaticStructElem::AssMats(VariableSubMatrixHandler& WorkMatA,
@@ -558,12 +557,11 @@ AutomaticStructElem::AssMats(VariableSubMatrixHandler& WorkMatA,
 /* assemblaggio residuo */
 SubVectorHandler&
 AutomaticStructElem::AssRes(SubVectorHandler& WorkVec,
-	doublereal /* dCoef */ ,
+	doublereal dCoef,
 	const VectorHandler& XCurr,
 	const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("AutomaticStructElem::AssRes");
-
 	WorkVec.ResizeReset(12);
 
 	integer iFirstPositionIndex = pNode->iGetFirstPositionIndex();
@@ -612,7 +610,6 @@ AutomaticStructElem::AssRes(SubVectorHandler& WorkVec,
 	return WorkVec;
 }
 
-
 void
 AutomaticStructElem::OutputPrepare(OutputHandler &OH)
 {
@@ -626,10 +623,14 @@ AutomaticStructElem::OutputPrepare(OutputHandler &OH)
 
 			std::string name(os.str());
 
-			Var_B = OH.CreateVar<Vec3>(name + "B", "kg m/s", "momentum (X, Y, Z)");
-			Var_G = OH.CreateVar<Vec3>(name + "G", "kg m^2/s", "momenta moment (X, Y, Z)");
-			Var_BP = OH.CreateVar<Vec3>(name + "BP", "kg m/s^2", "momentum derivative (X, Y, Z)");
-			Var_GP = OH.CreateVar<Vec3>(name + "GP", "kg m^2/s^2", "momenta moment derivative (X, Y, Z)");
+			Var_B = OH.CreateVar<Vec3>(name + "B",  
+				OutputHandler::Dimensions::Momentum, "momentum (X, Y, Z)");
+			Var_G = OH.CreateVar<Vec3>(name + "G",  
+				OutputHandler::Dimensions::MomentaMoment, "momenta moment (X, Y, Z)");
+			Var_BP = OH.CreateVar<Vec3>(name + "BP",  
+				OutputHandler::Dimensions::MomentumDerivative, "momentum derivative (X, Y, Z)");
+			Var_GP = OH.CreateVar<Vec3>(name + "GP",   
+				OutputHandler::Dimensions::MomentaMomentDerivative, "momenta moment derivative (X, Y, Z)");
 		}
 #endif // USE_NETCDF
 	}

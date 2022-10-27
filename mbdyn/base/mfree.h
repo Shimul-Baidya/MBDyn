@@ -60,6 +60,7 @@ public:
 protected:
 	Preconditioner* pPM;
 	VectorHandler* 	pRes;
+	VectorHandler* pAbsRes;
 	doublereal IterTol;
 	integer MaxLinIt;
 	doublereal Tau;
@@ -76,7 +77,7 @@ public:
 			integer MaxIt,
 			doublereal etaMx,
 			doublereal T,
-			const NonlinearSolverOptions& options);
+			const NonlinearSolverTestOptions& options);
 
 	~MatrixFreeSolver(void);
 };

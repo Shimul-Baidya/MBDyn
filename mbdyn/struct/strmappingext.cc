@@ -113,7 +113,7 @@ m_p(3*uMappedPoints)
 	const StructDispNode *pNode = 0;
 	unsigned uNodes = 0;
 	std::vector<const StructDispNode *>::const_iterator p;
-	for (p = nodes.begin(); p != nodes.end(); ++p) {
+	for (p = nodes.cbegin(); p != nodes.cend(); ++p) {
 		if (*p != pNode) {
 			pNode = *p;
 			uNodes++;
@@ -121,7 +121,7 @@ m_p(3*uMappedPoints)
 	}
 
 	Nodes.resize(uNodes);
-	p = nodes.begin();
+	p = nodes.cbegin();
 	std::vector<const StructDispNode *>::const_iterator pPrev = p;
 	std::vector<NodeData>::iterator n = Nodes.begin();
 	while (true) {
@@ -165,7 +165,7 @@ m_p(3*uMappedPoints)
 
 	unsigned uPts = 0;
 	n = Nodes.begin();
-	std::vector<Vec3>::const_iterator o = offsets.begin();
+	std::vector<Vec3>::const_iterator o = offsets.cbegin();
 	std::vector<uint32_t>::iterator l = labels.begin();
 	for (; o != offsets.end(); ++o, uPts++) {
 		if (uPts == n->Offsets.size()) {
@@ -173,7 +173,7 @@ m_p(3*uMappedPoints)
 			uPts = 0;
 
 			if (dynamic_cast<const StructNode *>(n->pNode) == 0) {
-				for (std::vector<StructMappingExtForce::OffsetData>::const_iterator i = n->Offsets.begin();
+				for (std::vector<StructMappingExtForce::OffsetData>::const_iterator i = n->Offsets.cbegin();
 					i != n->Offsets.end(); i++)
 				{
 					if (!i->Offset.IsNull()) {
@@ -272,11 +272,11 @@ StructMappingExtForce::Prepare(ExtFileHandlerBase *pEFH)
 
 			uint32_ptr[1] = uPoints;
 
-			ssize_t rc = send(pEFH->GetOutFileDes(),
-				(const void *)buf, sizeof(buf),
+			ssize_t rc = sendn(pEFH->GetOutFileDes(),
+				(const char *)buf, sizeof(buf),
 				pEFH->GetSendFlags());
 			if (rc == -1) {
-				int save_errno = errno;
+				int save_errno = WSAGetLastError();
 				char *err_msg = strerror(save_errno);
 				silent_cerr("StructMappingExtForce(" << GetLabel() << "): "
 					"negotiation request send() failed "
@@ -296,13 +296,13 @@ StructMappingExtForce::Prepare(ExtFileHandlerBase *pEFH)
 		} break;
 
 	case ExtFileHandlerBase::NEGOTIATE_SERVER: {
-		unsigned uN;
-		unsigned uNodal;
-		bool bRef;
-		unsigned uRR;
-		unsigned uR;
-		bool bA;
-		bool bL;
+		unsigned uN = 0;
+		unsigned uNodal = 0;
+		bool bRef = false;
+		unsigned uRR = 0;
+		unsigned uR = 0;
+		bool bA = false;
+		bool bL = false;
 
 		std::istream *infp = pEFH->GetInStream();
 		if (infp) {
@@ -313,11 +313,11 @@ StructMappingExtForce::Prepare(ExtFileHandlerBase *pEFH)
 			char buf[sizeof(uint32_t) + sizeof(uint32_t)];
 			uint32_t *uint32_ptr;
 
-			ssize_t rc = recv(pEFH->GetInFileDes(),
-				(void *)buf, sizeof(buf),
+			ssize_t rc = recvn(pEFH->GetInFileDes(),
+				(char *)buf, sizeof(buf),
 				pEFH->GetRecvFlags());
 			if (rc == -1) {
-				int save_errno = errno;
+				int save_errno = WSAGetLastError();
 				char *err_msg = strerror(save_errno);
 				silent_cerr("StructMappingExtForce(" << GetLabel() << "): "
 					"negotiation response recv() failed "
@@ -610,30 +610,30 @@ StructMappingExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::SendWhen whe
 
 		if (bLabels) {
 			uint32_t l = pRefNode->GetLabel();
-			send(outfd, (void *)&l, sizeof(l), 0);
+			sendn(outfd, (const char *)&l, sizeof(l), 0);
 		}
 
-		send(outfd, (void *)xRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)xRef.pGetVec(), 3*sizeof(doublereal), 0);
 		switch (uRRot) {
 		case MBC_ROT_MAT:
-			send(outfd, (void *)RRef.pGetMat(), 9*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)RRef.pGetMat(), 9*sizeof(doublereal), 0);
 			break;
 
 		case MBC_ROT_THETA: {
 			Vec3 Theta(RotManip::VecRot(RRef));
-			send(outfd, (void *)Theta.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)Theta.pGetVec(), 3*sizeof(doublereal), 0);
 			} break;
 
 		case MBC_ROT_EULER_123: {
 			Vec3 E(MatR2EulerAngles123(RRef)*dRaDegr);
-			send(outfd, (void *)E.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)E.pGetVec(), 3*sizeof(doublereal), 0);
 			} break;
 		}
-		send(outfd, (void *)xpRef.pGetVec(), 3*sizeof(doublereal), 0);
-		send(outfd, (void *)wRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)xpRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)wRef.pGetVec(), 3*sizeof(doublereal), 0);
 		if (bOutputAccelerations) {
-			send(outfd, (void *)xppRef.pGetVec(), 3*sizeof(doublereal), 0);
-			send(outfd, (void *)wpRef.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)xppRef.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)wpRef.pGetVec(), 3*sizeof(doublereal), 0);
 		}
 
 		for (unsigned p3 = 0, n = 0; n < Nodes.size(); n++) {
@@ -732,27 +732,27 @@ StructMappingExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::SendWhen whe
 	}
 
 	if (bLabels) {
-		send(outfd, &m_qlabels[0], sizeof(uint32_t)*m_qlabels.size(), 0);
+		sendn(outfd, (const char *)&m_qlabels[0], sizeof(uint32_t)*m_qlabels.size(), 0);
 	}
 
 	if (pH) {
 		pH->MatVecMul(m_q, m_x);
 		pH->MatVecMul(m_qP, m_xP);
 
-		send(outfd, &m_q[0], sizeof(double)*m_q.size(), 0);
-		send(outfd, &m_qP[0], sizeof(double)*m_qP.size(), 0);
+		sendn(outfd, (const char *)&m_q[0], sizeof(double)*m_q.size(), 0);
+		sendn(outfd, (const char *)&m_qP[0], sizeof(double)*m_qP.size(), 0);
 
 		if (bOutputAccelerations) {
 			pH->MatVecMul(m_qPP, m_xPP);
-			send(outfd, &m_qPP[0], sizeof(double)*m_qPP.size(), 0);
+			sendn(outfd, (const char *)&m_qPP[0], sizeof(double)*m_qPP.size(), 0);
 		}
 
 	} else {
-		send(outfd, &m_x[0], sizeof(double)*m_x.size(), 0);
-		send(outfd, &m_xP[0], sizeof(double)*m_xP.size(), 0);
+		sendn(outfd, (const char *)&m_x[0], sizeof(double)*m_x.size(), 0);
+		sendn(outfd, (const char *)&m_xP[0], sizeof(double)*m_xP.size(), 0);
 
 		if (bOutputAccelerations) {
-			send(outfd, &m_xPP[0], sizeof(double)*m_xPP.size(), 0);
+			sendn(outfd, (const char *)&m_xPP[0], sizeof(double)*m_xPP.size(), 0);
 		}
 	}
 
@@ -842,9 +842,9 @@ StructMappingExtForce::RecvFromFileDes(int infd)
 
 		ulen += 6*sizeof(doublereal);
 
-		len = recv(infd, (void *)buf, ulen, pEFH->GetRecvFlags());
+		len = recvn(infd, (char *)buf, ulen, pEFH->GetRecvFlags());
 		if (len == -1) {
-			int save_errno = errno;
+			int save_errno = WSAGetLastError();
 			char *err_msg = strerror(save_errno);
 			silent_cerr("StructMappingExtForce(" << GetLabel() << "): "
 				"recv() failed (" << save_errno << ": "
@@ -880,10 +880,10 @@ StructMappingExtForce::RecvFromFileDes(int infd)
 
 	if (bLabels) {
 		// Hack!
-		ssize_t len = recv(infd, (void *)&m_p[0], sizeof(uint32_t)*m_p.size(),
+		ssize_t len = recvn(infd, (char *)&m_p[0], sizeof(uint32_t)*m_p.size(),
 			pEFH->GetRecvFlags());
 		if (len == -1) {
-			int save_errno = errno;
+			int save_errno = WSAGetLastError();
 			char *err_msg = strerror(save_errno);
 			silent_cerr("StructMappingExtForce(" << GetLabel() << "): "
 				"recv() failed (" << save_errno << ": "
@@ -920,9 +920,9 @@ StructMappingExtForce::RecvFromFileDes(int infd)
 		fsize = sizeof(double)*m_f.size();
 	}
 
-	ssize_t len = recv(infd, (void *)fp, fsize, pEFH->GetRecvFlags());
+	ssize_t len = recvn(infd, (char *)fp, fsize, pEFH->GetRecvFlags());
 	if (len == -1) {
-		int save_errno = errno;
+		int save_errno = WSAGetLastError();
 		char *err_msg = strerror(save_errno);
 		silent_cerr("StructMappingExtForce(" << GetLabel() << "): "
 			"recv() failed (" << save_errno << ": "
@@ -1059,7 +1059,7 @@ StructMappingExtForce::AssRes(SubVectorHandler& WorkVec,
 			iSize += 6;
 		}
 
-		ASSERT(iSize == m_uResSize);
+		ASSERT(static_cast<unsigned>(iSize) == m_uResSize);
 
 	} else {
 		integer iSize(0);
@@ -1086,7 +1086,7 @@ StructMappingExtForce::AssRes(SubVectorHandler& WorkVec,
 			iSize += iDim;
 		}
 
-		ASSERT(iSize == m_uResSize);
+		ASSERT(static_cast<unsigned>(iSize) == m_uResSize);
 	}
 
 	return WorkVec;
@@ -1371,30 +1371,30 @@ StructMembraneMappingExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::Send
 
 		if (bLabels) {
 			uint32_t l = pRefNode->GetLabel();
-			send(outfd, (void *)&l, sizeof(l), 0);
+			sendn(outfd, (const char *)&l, sizeof(l), 0);
 		}
 
-		send(outfd, (void *)xRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)xRef.pGetVec(), 3*sizeof(doublereal), 0);
 		switch (uRRot) {
 		case MBC_ROT_MAT:
-			send(outfd, (void *)RRef.pGetMat(), 9*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)RRef.pGetMat(), 9*sizeof(doublereal), 0);
 			break;
 
 		case MBC_ROT_THETA: {
 			Vec3 Theta(RotManip::VecRot(RRef));
-			send(outfd, (void *)Theta.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)Theta.pGetVec(), 3*sizeof(doublereal), 0);
 			} break;
 
 		case MBC_ROT_EULER_123: {
 			Vec3 E(MatR2EulerAngles123(RRef)*dRaDegr);
-			send(outfd, (void *)E.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)E.pGetVec(), 3*sizeof(doublereal), 0);
 			} break;
 		}
-		send(outfd, (void *)xpRef.pGetVec(), 3*sizeof(doublereal), 0);
-		send(outfd, (void *)wRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)xpRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)wRef.pGetVec(), 3*sizeof(doublereal), 0);
 		if (bOutputAccelerations) {
-			send(outfd, (void *)xppRef.pGetVec(), 3*sizeof(doublereal), 0);
-			send(outfd, (void *)wpRef.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)xppRef.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)wpRef.pGetVec(), 3*sizeof(doublereal), 0);
 		}
 
 		for (unsigned p3 = 0, n = 0; n < Nodes.size(); n++) {
@@ -1542,27 +1542,27 @@ StructMembraneMappingExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::Send
 	}
 
 	if (bLabels) {
-		send(outfd, &m_qlabels[0], sizeof(uint32_t)*m_qlabels.size(), 0);
+		sendn(outfd, (const char *)&m_qlabels[0], sizeof(uint32_t)*m_qlabels.size(), 0);
 	}
 
 	if (pH) {
 		pH->MatVecMul(m_q, m_x);
 		pH->MatVecMul(m_qP, m_xP);
 
-		send(outfd, &m_q[0], sizeof(double)*m_q.size(), 0);
-		send(outfd, &m_qP[0], sizeof(double)*m_qP.size(), 0);
+		sendn(outfd, (const char *)&m_q[0], sizeof(double)*m_q.size(), 0);
+		sendn(outfd, (const char *)&m_qP[0], sizeof(double)*m_qP.size(), 0);
 
 		if (bOutputAccelerations) {
 			pH->MatVecMul(m_qPP, m_xPP);
-			send(outfd, &m_qPP[0], sizeof(double)*m_qPP.size(), 0);
+			sendn(outfd, (const char *)&m_qPP[0], sizeof(double)*m_qPP.size(), 0);
 		}
 
 	} else {
-		send(outfd, &m_x[0], sizeof(double)*m_x.size(), 0);
-		send(outfd, &m_xP[0], sizeof(double)*m_xP.size(), 0);
+		sendn(outfd, (const char *)&m_x[0], sizeof(double)*m_x.size(), 0);
+		sendn(outfd, (const char *)&m_xP[0], sizeof(double)*m_xP.size(), 0);
 
 		if (bOutputAccelerations) {
-			send(outfd, &m_xPP[0], sizeof(double)*m_xPP.size(), 0);
+			sendn(outfd, (const char *)&m_xPP[0], sizeof(double)*m_xPP.size(), 0);
 		}
 	}
 
@@ -1640,9 +1640,9 @@ StructMembraneMappingExtForce::RecvFromFileDes(int infd)
 
 		ulen += 6*sizeof(doublereal);
 
-		len = recv(infd, (void *)buf, ulen, pEFH->GetRecvFlags());
+		len = recvn(infd, (char *)buf, ulen, pEFH->GetRecvFlags());
 		if (len == -1) {
-			int save_errno = errno;
+			int save_errno = WSAGetLastError();
 			char *err_msg = strerror(save_errno);
 			silent_cerr("StructMembraneMappingExtForce(" << GetLabel() << "): "
 				"recv() failed (" << save_errno << ": "
@@ -1678,10 +1678,10 @@ StructMembraneMappingExtForce::RecvFromFileDes(int infd)
 
 	if (bLabels) {
 		// Hack!
-		ssize_t len = recv(infd, (void *)&m_p[0], sizeof(uint32_t)*m_p.size(),
+		ssize_t len = recvn(infd, (char *)&m_p[0], sizeof(uint32_t)*m_p.size(),
 			pEFH->GetRecvFlags());
 		if (len == -1) {
-			int save_errno = errno;
+			int save_errno = WSAGetLastError();
 			char *err_msg = strerror(save_errno);
 			silent_cerr("StructMembraneMappingExtForce(" << GetLabel() << "): "
 				"recv() failed (" << save_errno << ": "
@@ -1718,9 +1718,9 @@ StructMembraneMappingExtForce::RecvFromFileDes(int infd)
 		fsize = sizeof(double)*m_f.size();
 	}
 
-	ssize_t len = recv(infd, (void *)fp, fsize, pEFH->GetRecvFlags());
+	ssize_t len = recvn(infd, (char *)fp, fsize, pEFH->GetRecvFlags());
 	if (len == -1) {
-		int save_errno = errno;
+		int save_errno = WSAGetLastError();
 		char *err_msg = strerror(save_errno);
 		silent_cerr("StructMembraneMappingExtForce(" << GetLabel() << "): "
 			"recv() failed (" << save_errno << ": "
@@ -2112,9 +2112,9 @@ ReadStructMappingExtForce(DataManager* pDM,
 
 		std::string surface;
 		std::string output;
-		int order;
-		int basenode;
-		int weight;
+		int order = 0;
+		int basenode = 0;
+		int weight = 0;
 		bool bWeightInf(false);
 
 		while (true) {

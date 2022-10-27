@@ -84,6 +84,8 @@ extern "C" {
 #include "ccmh.h"
 #include "dgeequ.h"
 #include "linsol.h"
+#include "sp_gradient_spmh.h"
+
 /* KLUSolver - begin */
 
 class KLUSolver: public LinearSolver {
@@ -93,14 +95,16 @@ private:
 	mutable integer *Aip;
 	mutable integer *App;
 
-	klu_symbolic *Symbolic;
+        mutable klu_symbolic *Symbolic;
 	mutable klu_common Control;
 	mutable klu_numeric *Numeric;
+        mutable integer iNumNonZeros;
 
 	bool bPrepareSymbolic(void);
 	
 	void Factor(void);
-
+        void ResetSymbolic(void) const;
+        void ResetNumeric(void) const;
 public:
 	enum Scale {
 		SCALE_NONE = 0,
@@ -116,10 +120,10 @@ public:
 	void Solve(void) const;
 
 	void MakeCompactForm(SparseMatrixHandler&,
-			std::vector<doublereal>& Ax,
-			std::vector<integer>& Ar,
-			std::vector<integer>& Ac,
-			std::vector<integer>& Ap) const;
+			     std::vector<doublereal>& Ax,
+			     std::vector<integer>& Ar,
+			     std::vector<integer>& Ac,
+			     std::vector<integer>& Ap) const;
 
 	virtual bool bGetConditionNumber(doublereal& dCond);
 };
@@ -127,63 +131,63 @@ public:
 /* KLUSolver - end */
 
 /* KLUSparseSolutionManager - begin */
-
+template <typename MatrixHandlerType>
 class KLUSparseSolutionManager: public SolutionManager {
 protected:
-	mutable SpMapMatrixHandler A;
+        mutable MatrixHandlerType A;
 
-	std::vector<doublereal> b;
+        std::vector<doublereal> b;
 
-	mutable MyVectorHandler bVH;
+        mutable MyVectorHandler bVH;
 
-	ScaleOpt scale;
-	MatrixScaleBase* pMatScale;
+        ScaleOpt scale;
+        MatrixScaleBase* pMatScale;
 
-	std::vector<doublereal> Ax;
-	std::vector<integer> Ai;
-	std::vector<integer> Adummy;
-	std::vector<integer> Ap;
+        std::vector<doublereal> Ax;
+        std::vector<integer> Ai;
+        std::vector<integer> Adummy;
+        std::vector<integer> Ap;
 
-	/* Passa in forma di Compressed Column (callback per solve,
-	 * richiesto da SpMap e CC Matrix Handler) */
-	virtual void MakeCompressedColumnForm(void);
+        /* Passa in forma di Compressed Column (callback per solve,
+         * richiesto da SpMap e CC Matrix Handler) */
+        virtual void MakeCompressedColumnForm(void);
 
-	template <typename MH>
-	void ScaleMatrixAndRightHandSide(MH& mh);
+        template <typename MH>
+        void ScaleMatrixAndRightHandSide(MH& mh);
 
-	template <typename MH>
-	MatrixScale<MH>& GetMatrixScale();
+        template <typename MH>
+        MatrixScale<MH>& GetMatrixScale();
 
-	void ScaleSolution(void);
-	
-	/* Backward Substitution */
-	void BackSub(doublereal t_iniz = 0.);
+        void ScaleSolution(void);
+        
+        /* Backward Substitution */
+        void BackSub(doublereal t_iniz = 0.);
 
 public:
-	KLUSparseSolutionManager(integer Dim,
-							 doublereal dPivot = -1.,
-							 const ScaleOpt& scale = ScaleOpt());
-	virtual ~KLUSparseSolutionManager(void);
+        KLUSparseSolutionManager(integer Dim,
+                                                         doublereal dPivot = -1.,
+                                                         const ScaleOpt& scale = ScaleOpt());
+        virtual ~KLUSparseSolutionManager(void);
 #ifdef DEBUG
-	virtual void IsValid(void) const {
-		NO_OP;
-	};
+        virtual void IsValid(void) const {
+                NO_OP;
+        };
 #endif /* DEBUG */
 
-	/* Inizializzatore generico */
-	virtual void MatrReset(void);
-	
-	/* Risolve il sistema Backward Substitution; fattorizza se necessario */
-	virtual void Solve(void);
+        /* Inizializzatore generico */
+        virtual void MatrReset(void);
+        
+        /* Risolve il sistema Backward Substitution; fattorizza se necessario */
+        virtual void Solve(void);
 
-	/* Rende disponibile l'handler per la matrice */
-	virtual MatrixHandler* pMatHdl(void) const;
+        /* Rende disponibile l'handler per la matrice */
+        virtual MatrixHandler* pMatHdl(void) const;
 
-	/* Rende disponibile l'handler per il termine noto */
-	virtual MyVectorHandler* pResHdl(void) const;
+        /* Rende disponibile l'handler per il termine noto */
+        virtual MyVectorHandler* pResHdl(void) const;
 
-	/* Rende disponibile l'handler per la soluzione */
-	virtual MyVectorHandler* pSolHdl(void) const;
+        /* Rende disponibile l'handler per la soluzione */
+        virtual MyVectorHandler* pSolHdl(void) const;
 };
 
 /* KLUSparseSolutionManager - end */
@@ -191,7 +195,7 @@ public:
 /* KLUSparseCCSolutionManager - begin */
 
 template <class CC>
-class KLUSparseCCSolutionManager: public KLUSparseSolutionManager {
+class KLUSparseCCSolutionManager: public KLUSparseSolutionManager<SpMapMatrixHandler> {
 protected:
 	bool CCReady;
 	CC *Ac;
@@ -201,8 +205,8 @@ protected:
 	
 public:
 	KLUSparseCCSolutionManager(integer Dim,
-							   doublereal dPivot = -1.,
-							   const ScaleOpt& scale = ScaleOpt());
+				   doublereal dPivot = -1.,
+				   const ScaleOpt& scale = ScaleOpt());
 	virtual ~KLUSparseCCSolutionManager(void);
 
 	/* Inizializzatore "speciale" */

@@ -40,7 +40,6 @@
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
 #include <unistd.h>
-#include "clock_time.h"
 #include "solver.h"
 #include "nr.h"  
 #ifdef USE_MPI
@@ -56,10 +55,10 @@
 #include <cstdlib>
 
 NewtonRaphsonSolver::NewtonRaphsonSolver(const bool bTNR,
-		const bool bKJ, 
-		const integer IterBfAss,
-		const NonlinearSolverOptions& options)
-: NonlinearSolver(options), pRes(NULL),
+                                         const bool bKJ, 
+                                         const integer IterBfAss,
+                                         const NonlinearSolverTestOptions& options)
+: NonlinearSolver(options), pRes(NULL),pAbsRes(NULL),
 pSol(NULL),
 bTrueNewtonRaphson(bTNR),
 IterationBeforeAssembly(IterBfAss),
@@ -92,21 +91,27 @@ NewtonRaphsonSolver::Solve(const NonlinearProblem *pNLP,
 	if ((!bKeepJac) || (pNLP != pPrevNLP)) {
 		iPerformedIterations = 0;
 	}
+
+        if (pNLP != pPrevNLP) {
+            ResetCond();
+        }
+        
 	pPrevNLP = pNLP;
 	dSolErr = 0.;
 
-	doublereal dOldErr;
+	bool bResConverged = pGetResTest()->GetType() == NonlinearSolverTest::NONE;
+	bool bSolConverged = pGetSolTest()->GetType() == NonlinearSolverTest::NONE;
+	doublereal dOldErr = 0.;
 	doublereal dErrFactor = 1.;
 	doublereal dErrDiff = 0.;
 	bool bJacBuilt = false;
-	doublereal dStartTimeCPU, dEndTimeCPU, dJacobianCPU, dResidualCPU = 0., dLinSolveCPU;
+        CPUStopWatch oCPUResidual(*this, CPU_RESIDUAL), oCPUJacobian(*this, CPU_JACOBIAN), oCPULinearSolver(*this, CPU_LINEAR_SOLVER);
 
-	while (true) {
-		if (outputCPUTime()) {
-			dStartTimeCPU = mbdyn_clock_time();
-		}
+        oCPUResidual.Tic();
                 
+	while (true) {
 		pRes = pSM->pResHdl();
+		pAbsRes = pGetResTest()->GetAbsRes();
 		pSol = pSM->pSolHdl();
 		Size = pRes->iGetSize();
 
@@ -115,11 +120,15 @@ NewtonRaphsonSolver::Solve(const NonlinearProblem *pNLP,
 #endif /* USE_EXTERNAL */
 
 		pRes->Reset();
+		if (pAbsRes) {
+			pAbsRes->Reset();
+		}
+
 		bool forceJacobian(false);
 		try {
-	      		pNLP->Residual(pRes);
+	      		pNLP->Residual(pRes, pAbsRes);
 		}
-		catch (SolutionDataManager::ChangedEquationStructure) {
+		catch (SolutionDataManager::ChangedEquationStructure& e) {
 			if (bHonorJacRequest) {
 				forceJacobian = true;
 			}
@@ -131,13 +140,7 @@ NewtonRaphsonSolver::Solve(const NonlinearProblem *pNLP,
 		 * in the output (maybe we could conditionally disable 
 		 * it?) */
 
-		bool bTest = MakeResTest(pS, pNLP, *pRes, Tol, dErr, dErrDiff);
-
-		if (outputCPUTime()) {
-			dEndTimeCPU = mbdyn_clock_time();
-			dResidualCPU += dEndTimeCPU - dStartTimeCPU;
-			AddTimeCPU(dResidualCPU, CPU_RESIDUAL);
-		}
+		bResConverged = MakeResTest(pS, pNLP, *pRes, Tol, dErr, dErrDiff);
 
 		if (outputRes()) {
 			pS->PrintResidual(*pRes, iIterCnt);
@@ -176,18 +179,18 @@ NewtonRaphsonSolver::Solve(const NonlinearProblem *pNLP,
 				}
 
 				if (outputCPUTime()) {
-					silent_cout(" CPU:" << dResidualCPU << "/" << dGetTimeCPU(CPU_RESIDUAL)
-						<< "+" << dJacobianCPU << "/" << dGetTimeCPU(CPU_JACOBIAN)
-						<< "+" << dLinSolveCPU << "/" << dGetTimeCPU(CPU_LINEAR_SOLVER));
+                                    silent_cout(" CPU:" << oCPUResidual
+                                                << "+" << oCPUJacobian
+                                                << "+" << oCPULinearSolver);
 				}
 
-				silent_cout(std::endl);
+				silent_cout('\n');
 			}
 		}
 		
 		pS->CheckTimeStepLimit(dErr, dErrDiff);
 
-		if (bTest) {
+		if (bResConverged && bSolConverged) {
 			return;
 		}
       		
@@ -202,11 +205,10 @@ NewtonRaphsonSolver::Solve(const NonlinearProblem *pNLP,
 		}
           
 		iIterCnt++;
-		bJacBuilt = false;
 
-		if (outputCPUTime()) {
-			dStartTimeCPU = mbdyn_clock_time();
-		}
+        oCPUJacobian.Tic(oCPUResidual);
+        
+      	bJacBuilt = false;
 
 		if (bTrueNewtonRaphson
 			|| (iPerformedIterations%IterationBeforeAssembly == 0)
@@ -216,7 +218,7 @@ NewtonRaphsonSolver::Solve(const NonlinearProblem *pNLP,
 rebuild_matrix:;
 			try {
       				pNLP->Jacobian(pSM->pMatHdl());
-			} catch (MatrixHandler::ErrRebuildMatrix) {
+			} catch (MatrixHandler::ErrRebuildMatrix& e) {
 				silent_cout("NewtonRaphsonSolver: "
 						"rebuilding matrix..."
 						<< std::endl);
@@ -234,12 +236,6 @@ rebuild_matrix:;
 			bJacBuilt = true;
 		}
 
-		if (outputCPUTime()) {
-			dEndTimeCPU = mbdyn_clock_time();
-			dJacobianCPU = dEndTimeCPU - dStartTimeCPU;
-			AddTimeCPU(dJacobianCPU, CPU_JACOBIAN);
-		}
-
 		iPerformedIterations++;
 
 #ifdef USE_MPI
@@ -248,8 +244,13 @@ rebuild_matrix:;
 		{
 			if (outputJac()) {
 				if (bJacBuilt) {
-					silent_cout("Jacobian:" << std::endl
-							<< *(pSM->pMatHdl()));
+                                        if (outputJac()) {
+                                                silent_cout("Jacobian:" << '\n');
+
+                                                if (silent_out) {
+                                                        pSM->pMatHdl()->Print(std::cout, MatrixHandler::MAT_PRINT_TRIPLET);
+                                                }
+                                        }
 				} else {
 					silent_cout("Jacobian: unchanged" << std::endl);
 				}
@@ -260,34 +261,19 @@ rebuild_matrix:;
 			}
 		}
 
-		if (outputCPUTime()) {
-			dStartTimeCPU = mbdyn_clock_time();
-		}
+                oCPULinearSolver.Tic(oCPUJacobian);
 
 		pSM->Solve();
-
-		if (outputCPUTime()) {
-			dEndTimeCPU = mbdyn_clock_time();
-			dLinSolveCPU = dEndTimeCPU - dStartTimeCPU;
-			AddTimeCPU(dLinSolveCPU, CPU_LINEAR_SOLVER);
-		}
 
 		if (outputSol()) {
 			pS->PrintSolution(*pSol, iIterCnt);
 		}		
 
-		if (outputCPUTime()) {
-			dStartTimeCPU = mbdyn_clock_time();
-		}
+                oCPUResidual.Tic(oCPULinearSolver);
 
 		pNLP->Update(pSol);
 		
-		bTest = MakeSolTest(pS, *pSol, SolTol, dSolErr);
-
-		if (outputCPUTime()) {
-			dEndTimeCPU = mbdyn_clock_time();
-			dResidualCPU = dEndTimeCPU - dStartTimeCPU;
-		}
+		bSolConverged = MakeSolTest(pS, *pSol, SolTol, dSolErr);
 
 		if (outputIters()) {
 #ifdef USE_MPI
@@ -299,8 +285,8 @@ rebuild_matrix:;
 			}
 		}
 
-		if (bTest) {
-			throw ConvergenceOnSolution(MBDYN_EXCEPT_ARGS);
+		if (bResConverged && bSolConverged) {
+		     return;
 		}
 
 		// allow to bail out in case of multiple CTRL^C

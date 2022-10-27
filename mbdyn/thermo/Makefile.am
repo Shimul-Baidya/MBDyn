@@ -10,6 +10,8 @@ thermalcapacitance.h \
 thermalcapacitance.cc \
 thermalnode.cc \
 thermalnode.h \
+thermalnodead.cc \
+thermalnodead.h \
 thermalresistance.h \
 thermalresistance.cc \
 thermalsource.h \
@@ -25,6 +27,7 @@ AM_CPPFLAGS = \
 -I$(srcdir)/../../libraries/libmbmath \
 -I$(srcdir)/../../libraries/libmbwrap \
 -I$(srcdir)/../../libraries/libcppad \
+-I$(srcdir)/../../libraries/libmbc \
 -I$(srcdir)/../../mbdyn \
 -I$(srcdir)/../../mbdyn/base \
 -I$(srcdir)/../../mbdyn/struct \

@@ -89,6 +89,22 @@ DriveHingeJoint::Restart(std::ostream& out) const
 	return out;
 }
 
+void
+DriveHingeJoint::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Drive Hinge", OH, name);
+
+			Var_Phi = OH.CreateVar<Vec3>(name + "Theta",
+				OutputHandler::Dimensions::rad,
+				"Relative orientation");
+		}
+#endif // USE_NETCDF
+	}
+}
 
 void
 DriveHingeJoint::Output(OutputHandler& OH) const
@@ -96,10 +112,21 @@ DriveHingeJoint::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 		Mat3x3 R1(pNode1->GetRCurr()*R1h);
 		Vec3 d(MatR2EulerAngles(R1.Transpose()*(pNode2->GetRCurr()*R2h)));
-		Joint::Output(OH.Joints(), "DriveHinge", GetLabel(),
-				Zero3, M, Zero3, R1*M)
-			<< " " << d*dRaDegr
-			<< " " << ThetaCurr << std::endl;
+		
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "DriveHinge", GetLabel(),
+					Zero3, M, Zero3, R1*M)
+				<< " " << d*dRaDegr
+				<< " " << ThetaCurr << std::endl;
+		}
+
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, Zero3, M, Zero3, R1*M);
+			OH.WriteNcVar(Var_Phi, ThetaCurr);
+		}
+#endif // USE_NETCDF
+
 	}
 }
 
@@ -620,4 +647,33 @@ DriveHingeJoint::InitialAssRes(SubVectorHandler& WorkVec,
 	return WorkVec;
 }
 
+const OutputHandler::Dimensions
+DriveHingeJoint::GetEquationDimension(integer index) const {
+	// DOF == 6
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+	case 1:
+		dimension = OutputHandler::Dimensions::rad;
+		break;
+	case 2:
+		dimension = OutputHandler::Dimensions::rad;
+		break;
+	case 3:
+		dimension = OutputHandler::Dimensions::rad;
+		break;
+	case 4:
+		dimension = OutputHandler::Dimensions::AngularVelocity;
+		break;
+	case 5:
+		dimension = OutputHandler::Dimensions::AngularVelocity;
+		break;
+	case 6:
+		dimension = OutputHandler::Dimensions::AngularVelocity;
+		break;
+	}
+
+	return dimension;
+}
 /* DriveHingeJoint - end */

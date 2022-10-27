@@ -52,7 +52,7 @@ protected:
 	bool bActive;
 
 public:
-	DrivenElem(DataManager *pDM, const DriveCaller* pDC,
+	DrivenElem(DataManager *pDM, const DriveCaller* pDC, bool b_active,
 			const Elem* pE, SimulationEntity::Hints *ph = 0);
 	~DrivenElem(void);
 
@@ -73,9 +73,9 @@ public:
 	 * Elaborazione vettori e dati prima e dopo la predizione
 	 * per MultiStepIntegrator */
 	virtual void BeforePredict(VectorHandler& X,
-			VectorHandler& XP,
-			VectorHandler& XPrev,
-			VectorHandler& XPPrev) const;
+		VectorHandler& XP,
+		std::deque<VectorHandler*>& qXPr,
+		std::deque<VectorHandler*>& qXPPr) const;
 
 	virtual void AfterPredict(VectorHandler& X, VectorHandler& XP);
 

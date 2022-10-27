@@ -18,8 +18,6 @@ lapackwrap.cc \
 lapackwrap.h \
 linsol.cc \
 linsol.h \
-mschwrap.cc \
-mschwrap.h \
 naivewrap.cc \
 naivewrap.h \
 parnaivewrap.cc \
@@ -30,12 +28,24 @@ superluwrap.cc \
 superluwrap.h \
 umfpackwrap.cc \
 umfpackwrap.h \
+pardisowrap.h \
+pardisowrap.cc \
+pastixwrap.cc \
+pastixwrap.h \
 taucswrap.cc \
 taucswrap.h \
 y12wrap.cc \
 y12wrap.h \
 wsmpwrap.cc \
-wsmpwrap.h
+wsmpwrap.h \
+qrwrap.h \
+qrwrap.cc \
+strumpackwrap.h \
+strumpackwrap.cc \
+aztecoowrap.h \
+aztecoowrap.cc \
+siconoswrap.h \
+siconoswrap.cc
 
 if USE_CHACO
 libmbwrap_la_SOURCES += \
@@ -57,15 +67,21 @@ libmbwrap_la_LIBADD = \
 ../libnaive/libnaive.la \
 @UMFPACK_LIBS@ \
 @KLU_LIBS@ \
-@MESCHACH_LIBS@ \
 @HARWELL_LIBS@ \
 @SUPERLU_LIBS@ \
 @TAUCS_LIBS@ \
+@PARDISO_LIBS@ \
 @WSMP_LIBS@ \
+@PASTIX_LIBS@ \
+@QRUPDATE_LIBS@ \
+@SUITESPARSEQR_LIBS@ \
+@STRUMPACK_LIBS@ \
 @LAPACK_LIBS@ \
 @Y12_LIBS@ \
 @METIS_LIBS@ \
 @BLAS_LIBS@ \
+@TRILINOS_LIBS@ \
+@SICONOS_LIBS@ \
 @LIBS@ \
 @FCLIBS@
 
@@ -81,7 +97,6 @@ wraptest_SOURCES = wraptest.cc
 wraptest_LDADD = \
 libmbwrap.la \
 @UMFPACK_LIBS@ \
-@MESCHACH_LIBS@ \
 @HARWELL_LIBS@ \
 @SUPERLU_LIBS@ \
 @TAUCS_LIBS@ \
@@ -96,7 +111,6 @@ cctest_SOURCES = cctest.cc
 cctest_LDADD = \
 libmbwrap.la \
 @UMFPACK_LIBS@ \
-@MESCHACH_LIBS@ \
 @HARWELL_LIBS@ \
 @SUPERLU_LIBS@ \
 @Y12_LIBS@ \
@@ -111,7 +125,6 @@ libmbwrap.la \
 @ARPACK_LIBS@ \
 @LAPACK_LIBS@ \
 @UMFPACK_LIBS@ \
-@MESCHACH_LIBS@ \
 @HARWELL_LIBS@ \
 @SUPERLU_LIBS@ \
 @Y12_LIBS@ \
@@ -129,6 +142,7 @@ AM_CPPFLAGS = \
 -I$(srcdir)/../libmbmath \
 -I$(srcdir)/../liby12 \
 -I$(srcdir)/../libcolamd \
--I$(srcdir)/../libnaive
+-I$(srcdir)/../libnaive \
+@PASTIX_INC@
 
 include $(top_srcdir)/build/bot.mk

@@ -182,12 +182,32 @@ class ContactJoint : virtual public Elem, public Joint {
       
       return WorkVec;
    };
-   
+  
+   void OutputPrepare(OutputHandler& OH) {
+	   if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			   std::string name;
+			   OutputPrepare_int("Contact", OH, name);
+		   }
+#endif // USE_NETCDF
+	   }
+   }
+
    virtual void Output(OutputHandler& OH) const {
-      Vec3 F(pNode1->GetRCurr()*(n*dF));
-      Joint::Output(OH.Joints(), "Contact", GetLabel(),
-		    Vec3(dF, 0., 0.), Zero3, F, Zero3)
-	<< " " << dD << endl;
+	   if (bToBeOutput()) {
+		   if (OH.UseText(OutputHandler::JOINTS)) {
+			   Vec3 F(pNode1->GetRCurr()*(n*dF));
+			   Joint::Output(OH.Joints(), "Contact", GetLabel(),
+					   Vec3(dF, 0., 0.), Zero3, F, Zero3);
+		   << " " << dD << endl;
+		   }
+#ifdef USE_NETCDF
+		   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			   Joint::NetCDFOutput(OH, Vec3(dF, 0., 0., ), Zero3, F, Zero3);
+		   }
+#endif // USE_NETCDF
+	   }
    };
 
    
@@ -236,6 +256,35 @@ class ContactJoint : virtual public Elem, public Joint {
      connectedNodes[1] = pNode2;
    };
    /* ************************************************ */
+
+   /* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const {
+      // DOF == 1
+      OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	   switch (index)
+	   {
+		   case 1:
+			   dimension = OutputHandler::Dimensions::Length;
+			   break;
+	   }
+
+	return dimension;
+   };
+
+   /* describes the dimension of components of equation */
+   virtual std::ostream& DescribeEq(std::ostream& out,
+		  const char *prefix = "",
+		  bool bInitial = false) const {
+
+           int iIndex = iGetFirstIndex();
+
+            out
+               << prefix << iIndex + 1 << ": " 
+               << "contact joint compenetration" << std::endl;
+            
+            return out;
+   }
 };
 
 /* ContactJoint - end */

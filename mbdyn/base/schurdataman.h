@@ -151,7 +151,7 @@ public:
 
 	/* Assembla il residuo */
 	void AssRes(VectorHandler& ResHdl, doublereal dCoef) 
-		throw(ChangedEquationStructure);
+		/*throw(ChangedEquationStructure)*/;
 
 	/* Assembla lo jacobiano */
 	void AssJac(MatrixHandler& JacHdl, doublereal dCoef);
@@ -159,7 +159,8 @@ public:
 	/* Funzioni di aggiornamento dati durante la simulazione */
 	void DerivativesUpdate(void) const;
 	void BeforePredict(VectorHandler& X, VectorHandler& XP, 
-			VectorHandler& XPrev, VectorHandler& XPPrev) const;
+		std::deque<VectorHandler*>& qXPr,
+		std::deque<VectorHandler*>& qXPPr) const;
 	void AfterPredict(void) const;
 	void Update(void) const;
 	void AfterConvergence(void) const;

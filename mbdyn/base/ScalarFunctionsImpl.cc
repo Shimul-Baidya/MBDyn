@@ -458,9 +458,11 @@ struct ExpSFR: public ScalarFunctionRead {
 CubicSplineScalarFunction::CubicSplineScalarFunction(
 	const std::vector<doublereal>& y_i,
 	const std::vector<doublereal>& x_i,
-	bool doNotExtrapolate)
+	bool doNotExtrapolate,
+	bool bailout)
 : Y_i(y_i), X_i(x_i),
-doNotExtrapolate(doNotExtrapolate)
+doNotExtrapolate(doNotExtrapolate),
+bailout(bailout)
 {
 	ASSERTMSGBREAK(Y_i.size() == X_i.size(),
 		"CubicSplineScalarFunction error, Y_i.size() != X_i.size()");
@@ -491,11 +493,19 @@ CubicSplineScalarFunction::operator()(const doublereal x) const
 {
 	if (doNotExtrapolate) {
 		if (x <= X_i[0]) {
+			if (bailout) throw ErrOutOfRange(MBDYN_EXCEPT_ARGS, 
+				"Trying to evaluate a CubicSplineScalarFunction outside "
+				"the range of definition with \"do not extrapolate\" and \"bailout\" set."
+				);
 			return Y_i[0];
 		}
 
 		int s = X_i.size() - 1;
 		if (x >= X_i[s]) {
+			if (bailout) throw ErrOutOfRange(MBDYN_EXCEPT_ARGS, 
+				"Trying to evaluate a Cubic Spline Scalar Function outside "
+				"the range of definition with \"do not extrapolate\" and \"bailout\" set."
+				);
 			return Y_i[s];
 		}
 	}
@@ -507,10 +517,18 @@ doublereal
 CubicSplineScalarFunction::ComputeDiff(const doublereal x, const integer order) const
 {
 	ASSERTMSGBREAK(order >=0, "Error in CubicSplineScalarFunction::ComputeDiff, order<0");
+	if ((x < X_i[0] || x > X_i[X_i.size()-1]) && (order != 0)) {
+		if (bailout) throw ErrOutOfRange(MBDYN_EXCEPT_ARGS, 
+			"Trying to evaluate a CubicSplineScalarFunction derivative outside "
+			"the range of definition with \"do not extrapolate\" and \"bailout\" set."
+			);
+		else
+			return 0;
+	}
 	switch (order) {
 	case 0: 
 		return this->operator()(x);
-
+		
 	case 1: 
 		return seval(x, X_i, Y_i, b, c, d, 1);
 
@@ -530,8 +548,12 @@ struct CubicSplineSFR: public ScalarFunctionRead {
 	virtual const BasicScalarFunction *
 	Read(DataManager* const pDM, MBDynParser& HP) const {
 		bool doNotExtrapolate(false);
+		bool bailout(false);
 		if (HP.IsKeyWord("do" "not" "extrapolate")) {
 			doNotExtrapolate = true;
+			if (HP.IsKeyWord("bailout")) {
+				bailout = true;
+			}
 		}
 		std::vector<doublereal> y_i;
 		std::vector<doublereal> x_i;
@@ -549,7 +571,7 @@ struct CubicSplineSFR: public ScalarFunctionRead {
 			y_i[size] = HP.GetReal();
 		}
 		return new CubicSplineScalarFunction(y_i, x_i,
-			doNotExtrapolate);
+			doNotExtrapolate, bailout);
 	};
 };
 
@@ -557,9 +579,11 @@ struct CubicSplineSFR: public ScalarFunctionRead {
 MultiLinearScalarFunction::MultiLinearScalarFunction(
 	const std::vector<doublereal>& y_i,
 	const std::vector<doublereal>& x_i,
-	bool doNotExtrapolate)
+	bool doNotExtrapolate,
+	bool bailout)
 : Y_i(y_i), X_i(x_i),
-doNotExtrapolate(doNotExtrapolate)
+doNotExtrapolate(doNotExtrapolate),
+bailout(bailout)
 {
 	ASSERTMSGBREAK(X_i.size() == Y_i.size(),
 		"MultiLinearScalarFunction error, Y_i.size() != X_i.size()");
@@ -589,11 +613,19 @@ MultiLinearScalarFunction::operator()(const doublereal x) const
 {
 	if (doNotExtrapolate) {
 		if (x <= X_i[0]) {
+			if (bailout) throw ErrOutOfRange(MBDYN_EXCEPT_ARGS, 
+				"Trying to evaluate a MultiLinearScalarFunction outside "
+				"the range of definition with \"do not extrapolate\" and \"bailout\" set."
+				);
 			return Y_i[0];
 		}
 		
 		int s = X_i.size() - 1;
 		if (x >= X_i[s]) {
+			if (bailout) throw ErrOutOfRange(MBDYN_EXCEPT_ARGS, 
+				"Trying to evaluate a MultiLinearScalarFunction outside "
+				"the range of definition with \"do not extrapolate\" and \"bailout\" set."
+				);
 			return Y_i[s];
 		}
 	}
@@ -605,6 +637,14 @@ doublereal
 MultiLinearScalarFunction::ComputeDiff(const doublereal x, const integer order) const
 {
 	ASSERTMSGBREAK(order >=0, "Error in MultiLinearScalarFunction::ComputeDiff, order<0");
+	if ((x < X_i[0] || x > X_i[X_i.size()-1]) && (order != 0)) {
+		if (bailout) throw ErrOutOfRange(MBDYN_EXCEPT_ARGS, 
+			"Trying to evaluate a MultiLinearScalarFunction derivative outside "
+			"the range of definition with \"do not extrapolate\" and \"bailout\" set."
+			);
+		else
+			return 0;
+	}
 	switch (order) {
 	case 0: 
 		return operator()(x);
@@ -622,8 +662,12 @@ struct MultiLinearSFR: public ScalarFunctionRead {
 	virtual const BasicScalarFunction *
 	Read(DataManager* const pDM, MBDynParser& HP) const {
 		bool doNotExtrapolate(false);
+		bool bailout(false);
 		if (HP.IsKeyWord("do" "not" "extrapolate")) {
 			doNotExtrapolate = true;
+			if (HP.IsKeyWord("bailout")) {
+				bailout = true;
+			}
 		}
 		std::vector<doublereal> y_i;
 		std::vector<doublereal> x_i;
@@ -641,7 +685,7 @@ struct MultiLinearSFR: public ScalarFunctionRead {
 			y_i[size] = HP.GetReal();
 		}
 		return new MultiLinearScalarFunction(y_i, x_i,
-			doNotExtrapolate);
+			doNotExtrapolate, bailout);
 	};
 };
 
@@ -995,6 +1039,169 @@ struct DivSFR: public ScalarFunctionRead {
 	};
 };
 
+
+// SineScalarFunction
+SineScalarFunction::SineScalarFunction(
+	const doublereal amplitude,
+	const doublereal frequency,
+	const doublereal phase) : amp(amplitude), freq(frequency), theta(phase)
+{
+	ASSERTMSGBREAK(frequency != 0., "SineScalarFunction error, null frequency");
+}
+
+SineScalarFunction::~SineScalarFunction(void)
+{
+	NO_OP;
+}
+
+doublereal
+SineScalarFunction::operator()(const doublereal x) const
+{
+	return amp*sin(freq*x + theta);
+}
+
+doublereal
+SineScalarFunction::ComputeDiff(const doublereal x, const integer order) const
+{
+	ASSERTMSGBREAK(order >=0, "Error in SineScalarFunction::ComputeDiff, order<0");
+	switch (order) {
+	case 0:
+		return this->operator()(x);
+
+	default:
+		return amp*pow(freq,order)*sin(freq*x + theta + order*M_PI_2);
+
+	}
+}
+
+// ScalarFunction parsing functional object
+struct SineSFR: public ScalarFunctionRead {
+	virtual const BasicScalarFunction *
+	Read(DataManager* const pDM, MBDynParser& HP) const {
+
+		doublereal amplitude = HP.GetReal();
+		doublereal frequency = HP.GetReal();
+		doublereal phase = HP.GetReal();
+
+		return new SineScalarFunction(amplitude, frequency, phase);
+	};
+};
+
+// CosineScalarFunction
+CosineScalarFunction::CosineScalarFunction(
+	const doublereal amplitude,
+	const doublereal frequency,
+	const doublereal phase) : amp(amplitude), freq(frequency), theta(phase)
+{
+	ASSERTMSGBREAK(frequency != 0., "CosineScalarFunction error, null frequency");
+}
+
+CosineScalarFunction::~CosineScalarFunction(void)
+{
+	NO_OP;
+}
+
+doublereal
+CosineScalarFunction::operator()(const doublereal x) const
+{
+	return amp*cos(freq*x + theta);
+}
+
+doublereal
+CosineScalarFunction::ComputeDiff(const doublereal x, const integer order) const
+{
+	ASSERTMSGBREAK(order >=0, "Error in CosineScalarFunction::ComputeDiff, order<0");
+	switch (order) {
+	case 0:
+		return this->operator()(x);
+
+	default:
+		return amp*pow(freq,order)*sin(freq*x + theta + (order+1)*M_PI_2);
+
+	}
+}
+
+// ScalarFunction parsing functional object
+struct CosineSFR: public ScalarFunctionRead {
+	virtual const BasicScalarFunction *
+	Read(DataManager* const pDM, MBDynParser& HP) const {
+
+		doublereal amplitude = HP.GetReal();
+		doublereal frequency = HP.GetReal();
+		doublereal phase = HP.GetReal();
+
+		return new CosineScalarFunction(amplitude, frequency, phase);
+	};
+};
+
+// PowFunScalarFunction
+PowFunScalarFunction::PowFunScalarFunction(
+	const BasicScalarFunction*const b1,
+	const BasicScalarFunction*const b2)
+: a1(ptr_cast<const DifferentiableScalarFunction*const>(b1)),
+a2(ptr_cast<const DifferentiableScalarFunction*const>(b2))
+{
+	NO_OP;
+}
+
+PowFunScalarFunction::~PowFunScalarFunction()
+{
+	NO_OP;
+}
+
+doublereal
+PowFunScalarFunction::operator()(const doublereal x) const
+{
+	doublereal base, exponent;
+	base = a1->operator()(x);
+	exponent = a2->operator()(x);
+    doublereal dummy;
+	if ((base < 0) && (modf(exponent, &dummy)!=0.)) {
+		/* TODO: cleanup exception handling */
+		silent_cerr("PowFunScalarFunction: negative base and decimal exponent" << std::endl);
+		throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+	return pow(base,exponent);
+}
+
+doublereal
+PowFunScalarFunction::ComputeDiff(const doublereal x, const integer order) const
+{
+	ASSERTMSGBREAK(order >= 0, "Error in PowFunScalarFunction::ComputeDiff, order<0");
+	switch (order) {
+	case 0: 
+		return this->operator()(x);
+
+	default:
+        doublereal base, exponent, baseder, exponentder;
+        base = a1->operator()(x);
+        exponent = a2->operator()(x);
+        doublereal dummy;
+        if ((base < 0) && (modf(exponent, &dummy)!=0.)) {
+            /* TODO: cleanup exception handling */
+            silent_cerr("PowFunScalarFunction: negative base and decimal exponent" << std::endl);
+            throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+        }
+        
+        baseder = a1->ComputeDiff(x, order);
+        exponentder = a2->ComputeDiff(x, order);
+        
+		return pow(base,exponent-1)*( exponent*baseder + base*log(base)*exponentder ); // thanks WolframAlpha
+	}
+}
+
+// ScalarFunction parsing functional object
+struct PowFunSFR: public ScalarFunctionRead {
+	virtual const BasicScalarFunction *
+	Read(DataManager* const pDM, MBDynParser& HP) const {
+		const BasicScalarFunction *const
+			f1(ParseScalarFunction(HP, pDM));
+		const BasicScalarFunction *const 
+			f2(ParseScalarFunction(HP, pDM));
+		return new PowFunScalarFunction(f1, f2);
+	};
+};
+
 //---------------------------------------
 
 typedef std::map<std::string, const ScalarFunctionRead *, ltstrcase> SFReadType;
@@ -1244,15 +1451,15 @@ ScalarFunctionIsotropicCLR<T, Tder>::Read(const DataManager* pDM,
 
 	CLType = ConstLawType::ELASTIC;
 
-	int n = 0;
+	//int n = 0;
 	if (typeid(T) == typeid(doublereal)) {
-		n = 1;
+		//n = 1;
 
 	} else if (typeid(T) == typeid(Vec3)) {
-		n = 3;
+		//n = 3;
 
 	} else if (typeid(T) == typeid(Vec6)) {
-		n = 6;
+		//n = 6;
 
 	} else {
 		silent_cerr("ScalarFunctionIsotropicCL"
@@ -1412,7 +1619,7 @@ InitSF(void)
 		return;
 	}
 
-	bool b;
+	bool b; (void)b; //silence set but not used warning: b used only with -DDEBUG
 
 	b = SetSF("const", new ConstSFR);
 	ASSERT(b);
@@ -1437,6 +1644,12 @@ InitSF(void)
 	b = SetSF("multilinear", new MultiLinearSFR);
 	ASSERT(b);
 	b = SetSF("chebychev", new ChebychevSFR);
+	ASSERT(b);
+	b = SetSF("sin", new SineSFR);
+	ASSERT(b);
+	b = SetSF("cos", new CosineSFR);
+	ASSERT(b);
+	b = SetSF("powfun", new PowFunSFR);
 	ASSERT(b);
 
 	/* this is about initializing the scalar function drive */

@@ -214,7 +214,7 @@ void ModLugreFriction::AssRes(
 	const doublereal F,
 	const doublereal v,
 	const VectorHandler& X,
-	const VectorHandler& XP) throw(Elem::ChangedEquationStructure) {
+	const VectorHandler& XP) /*throw(Elem::ChangedEquationStructure)*/ {
 	doublereal z = X(solution_startdof+1);
 	doublereal zp = XP(solution_startdof+1);
 	f = sigma0*z + sigma1*zp + sigma2*v;
@@ -262,6 +262,21 @@ void ModLugreFriction::AssJac(
  * 	callback: dfc[] = df/d{F,v,(z+dCoef,zp)}
  */
 };
+
+const OutputHandler::Dimensions
+ModLugreFriction::GetEquationDimension(integer index) const {
+	// DOF == 1
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+	}
+
+	return dimension;
+}
 
 //----------------------
 DiscreteCoulombFriction::DiscreteCoulombFriction(
@@ -378,7 +393,7 @@ void DiscreteCoulombFriction::AssRes(
 	const doublereal F,
 	const doublereal v,
 	const VectorHandler& X,
-	const VectorHandler& XP) throw(Elem::ChangedEquationStructure) {
+	const VectorHandler& XP) /*throw(Elem::ChangedEquationStructure)*/ {
 // 	std::cerr << "Chimata residuo. Status:" << status << std::endl;
 	f = X(solution_startdof+1);
 //	if ((std::fabs(f)-fss(0) > 1.0E-6) && (first_iter == false)) {
@@ -541,18 +556,35 @@ void DiscreteCoulombFriction::AssJac(
 	}
 };
 
+const OutputHandler::Dimensions
+DiscreteCoulombFriction::GetEquationDimension(integer index) const {
+	// DOF == 1
+	
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+	case 1:
+		dimension = OutputHandler::Dimensions::UnknownDimension;
+		break;
+	}
+
+	return dimension;
+}
+
 
 
 //------------------------
 doublereal SimpleShapeCoefficient::Sh_c(void) const {
-	return 1.;
+	return shc;
 }
 	
 doublereal SimpleShapeCoefficient::Sh_c(
 	const doublereal f,
 	const doublereal F,
 	const doublereal v) {
-	return f;
+	shc = f;
+	return shc;
 };
 
 void SimpleShapeCoefficient::dSh_c(
@@ -591,7 +623,8 @@ void SimplePlaneHingeJointSh_c::dSh_c(
 	const ExpandableRowVector& dfc,
 	const ExpandableRowVector& dF,
 	const ExpandableRowVector& dv) const {
-		doublereal dsh_fc = 1./std::sqrt(1.+f*f)-0.5*std::pow(1.+f*f,-3./2.)*f;
+//		doublereal dsh_fc = 1./std::sqrt(1.+f*f)-0.5*std::pow(1.+f*f,-3./2.)*f;
+		doublereal dsh_fc = 1./std::sqrt(1.+f*f)-f*f*std::pow(1.+f*f,-3./2.);
 // 		dShc.ReDim(2);
 // 		dShc.Set(0.,1);
 // 		dShc.Link(1,&dF);

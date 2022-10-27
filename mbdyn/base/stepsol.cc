@@ -188,9 +188,9 @@ ImplicitStepIntegrator::EvalProd(doublereal Tau, const VectorHandler& f0,
 #endif /* USE_EXTERNAL */
 	/* deal with throwing elements: do not honor their requests while perfoming matrix free update */
 	try {
-		Residual(&z);
+		Residual(&z, 0);
 	}
-	catch (DataManager::ChangedEquationStructure) {
+	catch (DataManager::ChangedEquationStructure& e) {
 	}
 	XTau.ScalarMul(XTau, -1.);
 
@@ -271,8 +271,8 @@ DerivativeSolver::Advance(Solver* pS,
 		const doublereal TStep,
 		const doublereal /* dAph */,
 		const StepChange /* StType */,
-		std::deque<MyVectorHandler*>& qX,
-		std::deque<MyVectorHandler*>& qXPrime,
+		std::deque<VectorHandler*>& qX,
+		std::deque<VectorHandler*>& qXPrime,
 		MyVectorHandler*const pX,
 		MyVectorHandler*const pXPrime,
 		integer& EffIter,
@@ -298,30 +298,35 @@ DerivativeSolver::Advance(Solver* pS,
 		doublereal dResErrMin = std::numeric_limits<doublereal>::max();
 		doublereal dSolErrMin = dResErrMin;
 		const integer iMaxPowerCoef = iMaxIterCoef > 0 ? 2 * iMaxIterCoef + 1 : 0;
+                integer MaxIterFact = 1;
 
 		for (int i = 0; i <= iMaxPowerCoef; ++i) {
 			const bool bLastChance = i == iMaxPowerCoef;
 
 			try {
 				Err = 0.;
+                                SolErr = 0.;
+
 				pS->pGetNonlinearSolver()->Solve(this,
 					pS,
-					MaxIters,
+                                                                 MaxIterFact * MaxIters,
 					dTol,
 					EffIter,
 					Err,
 					dSolTol,
 					SolErr);
 				bConverged = true;
-			} catch (NonlinearSolver::NoConvergence) {
+			} catch (NonlinearSolver::NoConvergence& e) {
 				if (bLastChance) {
 					throw;
 				}
-			} catch (NonlinearSolver::ErrSimulationDiverged) {
+			} catch (NonlinearSolver::ErrSimulationDiverged& e) {
 				if (bLastChance) {
 					throw;
 				}
-			} catch (LinearSolver::ErrFactor) {
+			} catch (LinearSolver::ErrFactor& e) {
+                                pDM->GetSolver()->pGetSolutionManager()->MatrReset();
+
 				if (bLastChance) {
 					throw;
 				}
@@ -338,14 +343,27 @@ DerivativeSolver::Advance(Solver* pS,
 				dCoefBest = dCoef;
 			}
 
-			/* Restore the state after assembly. */
+                        /* Restore the previous state after initial assembly. */
+                        
 			*pXCurr = *pX;
 			*pXPrimeCurr = *pXPrime;
 
 			pDM->LinkToSolution(*pXCurr, *pXPrimeCurr);
+                        pDM->DerivativesUpdate(); /* has to be called here because the first residual of the nonlinear solver will be incorrect otherwise */
 
-			/* Reset reference rotation parameters and angular velocities */
-			pDM->AfterPredict();
+#ifdef DEBUG
+                        for (integer i = 1; i <= pXCurr->iGetSize(); ++i) {
+                            DofOrder::Order eOrder = pDM->GetDofType(i);
+                            
+                            if (eOrder == DofOrder::DIFFERENTIAL && pXCurr->dGetCoef(i) != pX->dGetCoef(i)) {
+                                DEBUGCOUT("warning: XCurr(" << i << ") = " << pXCurr->dGetCoef(i) << " X(i)=" << pX->dGetCoef(i) << std::endl);
+                            }
+
+                            if (eOrder == DofOrder::ALGEBRAIC && pXPrimeCurr->dGetCoef(i) != pXPrime->dGetCoef(i)) {
+                                DEBUGCOUT("warning: XPrimeCurr(" << i << ") = " << pXPrimeCurr->dGetCoef(i) << " XPrime(i)=" << pXPrime->dGetCoef(i) << std::endl);
+                            }
+                        }
+#endif
 
 			/* Try different values for derivatives coefficient. */
 			if (i < iMaxIterCoef) {
@@ -363,6 +381,7 @@ DerivativeSolver::Advance(Solver* pS,
 				dCoef = dCoefBest;
 				dTol = dSafetyFactor * dResErrMin;
 				dSolTol = dSafetyFactor * dSolErrMin;
+                                MaxIterFact = 2;
 			}
 
 			silent_cout("Derivatives(" << i + 1  << '/' << 2 * iMaxIterCoef + 1
@@ -377,10 +396,13 @@ DerivativeSolver::Advance(Solver* pS,
 		*pX = *pXCurr;
 		*pXPrime = *pXPrimeCurr;
 
+                pDM->LinkToSolution(*pX, *pXPrime);
+
 		pXCurr = 0;
 		pXPrimeCurr = 0;
 	} catch (...) {
 		/* Clean up pointers to local variables */
+                pDM->LinkToSolution(*pX, *pXPrime);
 		pXCurr = 0;
 		pXPrimeCurr = 0;
 		throw;
@@ -390,10 +412,10 @@ DerivativeSolver::Advance(Solver* pS,
 }
 
 void
-DerivativeSolver::Residual(VectorHandler* pRes) const
+DerivativeSolver::Residual(VectorHandler* pRes, VectorHandler* pAbsRes) const
 {
 	ASSERT(pDM != NULL);
-	pDM->AssRes(*pRes, dCoef);
+	pDM->AssRes(*pRes, dCoef, pAbsRes);
 }
 
 void
@@ -401,6 +423,13 @@ DerivativeSolver::Jacobian(MatrixHandler* pJac) const
 {
 	ASSERT(pDM != NULL);
 	pDM->AssJac(*pJac, dCoef);
+}
+
+void DerivativeSolver::Jacobian(VectorHandler* pJac, const VectorHandler* pY) const
+{
+     ASSERT(pDM != nullptr);
+     
+     pDM->AssJac(*pJac, *pY, dCoef);
 }
 
 void
@@ -434,6 +463,11 @@ DerivativeSolver::Update(const VectorHandler* pSol) const
 	pDM->DerivativesUpdate();
 }
 
+doublereal DerivativeSolver::dGetCoef(unsigned int iDof) const
+{
+     return dCoef;
+}
+
 /* scale factor for tests */
 doublereal
 DerivativeSolver::TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const
@@ -461,10 +495,10 @@ StepNIntegrator::~StepNIntegrator(void)
 }
 
 void
-StepNIntegrator::Residual(VectorHandler* pRes) const
+StepNIntegrator::Residual(VectorHandler* pRes, VectorHandler* pAbsRes) const
 {
 	ASSERT(pDM != NULL);
-	pDM->AssRes(*pRes, db0Differential);
+	pDM->AssRes(*pRes, db0Differential, pAbsRes);
 }
 
 #include "naivemh.h"
@@ -474,7 +508,6 @@ StepNIntegrator::Jacobian(MatrixHandler* pJac) const
 	ASSERT(pDM != NULL);
 	pDM->AssJac(*pJac, db0Differential);
 
-#ifdef MBDYN_FDJAC
 	// Finite difference check of Jacobian matrix
 	// Uncomment this whenever you need to debug your new Jacobian
 	// NOTE: might not be safe!
@@ -484,7 +517,7 @@ StepNIntegrator::Jacobian(MatrixHandler* pJac) const
  		MyVectorHandler basesol(pJac->iGetNumRows());
  		MyVectorHandler incsol(pJac->iGetNumRows());
  		MyVectorHandler inc(pJac->iGetNumRows());
- 		Residual(&basesol);
+ 		Residual(&basesol, 0);
  		doublereal ddd = 0.001;
  		for (integer i = 1; i <= pJac->iGetNumRows(); i++) {
  			incsol.Reset();
@@ -509,7 +542,13 @@ StepNIntegrator::Jacobian(MatrixHandler* pJac) const
  		std::cerr << fdjac << std::endl;
  		std::cerr << "\n===============\n" << std::endl;
 	}
-#endif // MBDYN_FDJAC
+}
+
+void StepNIntegrator::Jacobian(VectorHandler* pJac, const VectorHandler* pY) const
+{
+        ASSERT(pDM != NULL);
+        
+        pDM->AssJac(*pJac, *pY, db0Differential);
 }
 
 void
@@ -544,6 +583,22 @@ StepNIntegrator::Update(const VectorHandler* pSol) const
 	pDM->Update();
 }
 
+doublereal StepNIntegrator::dGetCoef(unsigned int iDof) const
+{
+     ASSERT(iDof > 0);
+     ASSERT(iDof <= pDofs->size());
+
+     switch ((*pDofs)[iDof - 1].Order) {
+     case DofOrder::DIFFERENTIAL:
+          return db0Differential;
+     case DofOrder::ALGEBRAIC:
+          return db0Algebraic;
+     default:
+          ASSERT(0);
+          throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
+}
+
 doublereal StepNIntegrator::TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const
 {
 	const doublereal dDiffEqu = ImplicitStepIntegrator::TestScale(pTest, dAlgebraicEqu);
@@ -554,815 +609,6 @@ doublereal StepNIntegrator::TestScale(const NonlinearSolverTest *pTest, doublere
 
 /* StepNIntegrator - end */
 
-
-/* Step1Integrator - begin */
-
-Step1Integrator::Step1Integrator(const integer MaxIt,
-		const doublereal dT,
-		const doublereal dSolutionTol,
-		const bool bmod_res_test)
-: StepNIntegrator(MaxIt, dT, dSolutionTol, 1, bmod_res_test),
-pXPrev(NULL),
-pXPrimePrev(NULL)
-{
-	NO_OP;
-}
-
-Step1Integrator::~Step1Integrator(void)
-{
-	NO_OP;
-}
-
-/* predizione valida per tutti i metodi del second'ordine
-  a patto di utilizzare le giuste funzioni implementate per
-  ciascun metodo
-  */
-
-void Step1Integrator::PredictDof(const int DCount,
-	const DofOrder::Order Order,
-	const VectorHandler* const pSol) const
-{
-	if (Order == DofOrder::DIFFERENTIAL) {
-		doublereal dXnm1 = pXPrev->operator()(DCount);
-		doublereal dXPnm1 = pXPrimePrev->operator()(DCount);
-		doublereal dXPn = dPredDer(dXnm1, dXPnm1);
-		doublereal dXn = dPredState(dXnm1, dXPn, dXPnm1);
-		pXPrimeCurr->PutCoef(DCount, dXPn);
-		pXCurr->PutCoef(DCount, dXn);
-
-	} else if (Order == DofOrder::ALGEBRAIC) {
-		doublereal dXnm1 = pXPrev->operator()(DCount);
-		doublereal dXInm1 =
-			pXPrimePrev->operator()(DCount);
-
-		doublereal dXn = dPredDerAlg(dXInm1, dXnm1);
-		doublereal dXIn = dPredStateAlg(dXInm1, dXn, dXnm1);
-
-		pXCurr->PutCoef(DCount, dXn);
-		pXPrimeCurr->PutCoef(DCount, dXIn);
-
-	} else {
-		silent_cerr("Step1Integrator::"
-			"PredictDof(): "
-			"unknown order for local dof "
-			<< DCount << std::endl);
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	}
-}
-
-
-void
-Step1Integrator::Predict(void)
-{
-   	DEBUGCOUTFNAME("Step1Integrator::Predict");
-   	ASSERT(pDM != NULL);
-	UpdateLoop(this, &Step1Integrator::PredictDof);
-}
-
-doublereal
-Step1Integrator::Advance(Solver* pS,
-		const doublereal TStep,
-		const doublereal dAph, const StepChange StType,
-		std::deque<MyVectorHandler*>& qX,
-	 	std::deque<MyVectorHandler*>& qXPrime,
-		MyVectorHandler*const pX,
- 		MyVectorHandler*const pXPrime,
-		integer& EffIter,
-		doublereal& Err,
-		doublereal& SolErr)
-{
-	ASSERT(pDM != NULL);
-	pXCurr  = pX;
-	pXPrev  = qX[0];
-
-	pXPrimeCurr  = pXPrime;
-	pXPrimePrev  = qXPrime[0];
-
-	/* predizione */
-	SetCoef(TStep, dAph, StType);
-	Predict();
-	pDM->LinkToSolution(*pXCurr, *pXPrimeCurr);
-      	pDM->AfterPredict();
-
-#ifdef DEBUG
-      	integer iNumDofs = pDM->iGetNumDofs();
-	if (outputPred) {
-		std::cout << "After prediction, time=" << pDM->dGetTime() << std::endl;
-		std::cout << "Dof:      |    XCurr  ";
-		for (unsigned idx = 0; idx < qX.size(); idx++) {
-			std::cout << "|  XPrev[" << idx << "] ";
-		}
-		std::cout << "|   XPrime  ";
-		for (unsigned idx = 0; idx < qXPrime.size(); idx++) {
-			std::cout << "| XPPrev[" << idx << "] ";
-		}
-		std::cout << "|" << std::endl;
-		for (int iTmpCnt = 1; iTmpCnt <= iNumDofs; iTmpCnt++) {
-    			std::cout << std::setw(8) << iTmpCnt << ": ";
-			std::cout << std::setw(12) << pX->operator()(iTmpCnt);
-			for (unsigned int ivec = 0; ivec < qX.size(); ivec++) {
-				std::cout << std::setw(12)
-				<< (qX[ivec])->operator()(iTmpCnt);
-			}
-			std::cout << std::setw(12) << pXPrime->operator()(iTmpCnt);
-			for (unsigned int ivec = 0; ivec < qXPrime.size(); ivec++) {
-				std::cout << std::setw(12)
-				<< (qXPrime[ivec])->operator()(iTmpCnt);
-			}
-			std::cout << " " << pDM->DataManager::GetDofDescription(iTmpCnt) << std::endl;
- 		}
-	}
-#endif /* DEBUG */
-
-	Err = 0.;
-	pS->pGetNonlinearSolver()->Solve(this, pS, MaxIters, dTol,
-    			EffIter, Err, dSolTol, SolErr);
-
-	/* if it gets here, it surely converged */
-	pDM->AfterConvergence();
-
-	return Err;
-}
-
-/* Step1Integrator - end */
-
-
-/* Step2Integrator - begin */
-
-Step2Integrator::Step2Integrator(const integer MaxIt,
-		const doublereal dT,
-		const doublereal dSolutionTol,
-		const bool bmod_res_test)
-: StepNIntegrator(MaxIt, dT, dSolutionTol, 2, bmod_res_test),
-pXPrev(NULL),
-pXPrev2(NULL),
-pXPrimePrev(NULL),
-pXPrimePrev2(NULL)
-{
-	NO_OP;
-}
-
-Step2Integrator::~Step2Integrator(void)
-{
-	NO_OP;
-}
-
-/* predizione valida per tutti i metodi del second'ordine
-  a patto di utilizzare le giuste funzioni implementate per
-  ciascun metodo
-  */
-void Step2Integrator::PredictDof(const int DCount,
-	const DofOrder::Order Order,
-	const VectorHandler* const pSol) const
-{
-	if (Order == DofOrder::DIFFERENTIAL) {
-		doublereal dXnm1 = pXPrev->operator()(DCount);
-		doublereal dXnm2 = pXPrev2->operator()(DCount);
-		doublereal dXPnm1 = pXPrimePrev->operator()(DCount);
-
-		doublereal dXPnm2 =
-			pXPrimePrev2->operator()(DCount);
-		doublereal dXPn = dPredDer(dXnm1, dXnm2,
-				dXPnm1, dXPnm2);
-		doublereal dXn = dPredState(dXnm1, dXnm2,
-				dXPn, dXPnm1, dXPnm2);
-
-		pXPrimeCurr->PutCoef(DCount, dXPn);
-		pXCurr->PutCoef(DCount, dXn);
-
-	} else if (Order == DofOrder::ALGEBRAIC) {
-		doublereal dXnm1 = pXPrev->operator()(DCount);
-		doublereal dXnm2 = pXPrev2->operator()(DCount);
-		doublereal dXInm1 =
-			pXPrimePrev->operator()(DCount);
-
-		doublereal dXn = dPredDerAlg(dXInm1,
-				dXnm1, dXnm2);
-		doublereal dXIn = dPredStateAlg(dXInm1,
-				dXn, dXnm1, dXnm2);
-
-		pXCurr->PutCoef(DCount, dXn);
-		pXPrimeCurr->PutCoef(DCount, dXIn);
-
-	} else {
-		silent_cerr("Step2Integrator::"
-			"PredictDof(): "
-			"unknown order for local dof "
-			<< DCount << std::endl);
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	}
-}
-
-void
-Step2Integrator::Predict(void)
-{
-   	DEBUGCOUTFNAME("Step2Integrator::Predict");
-   	ASSERT(pDM != NULL);
-	UpdateLoop(this, &Step2Integrator::PredictDof);
-}
-
-doublereal
-Step2Integrator::Advance(Solver* pS,
-		const doublereal TStep,
-		const doublereal dAph, const StepChange StType,
-		std::deque<MyVectorHandler*>& qX,
-	 	std::deque<MyVectorHandler*>& qXPrime,
-		MyVectorHandler*const pX,
-		MyVectorHandler*const pXPrime,
-		integer& EffIter,
-		doublereal& Err,
-		doublereal& SolErr)
-{
-	ASSERT(pDM != NULL);
-	pXCurr  = pX;
-	pXPrev  = qX[0];
-	pXPrev2 = qX[1];
-
-	pXPrimeCurr  = pXPrime;
-	pXPrimePrev  = qXPrime[0];
-	pXPrimePrev2 = qXPrime[1];
-
-	/* predizione */
-	SetCoef(TStep, dAph, StType);
-	Predict();
-	pDM->LinkToSolution(*pXCurr, *pXPrimeCurr);
-      	pDM->AfterPredict();
-
-#ifdef DEBUG
-	integer iNumDofs = pDM->iGetNumDofs();
-	if (outputPred) {
-		std::cout << "After prediction, time=" << pDM->dGetTime() << std::endl;
-		std::cout << "Dof:      |    XCurr  ";
-		for (unsigned idx = 0; idx < qX.size(); idx++) {
-			std::cout << "|  XPrev[" << idx << "] ";
-		}
-		std::cout << "|   XPrime  ";
-		for (unsigned idx = 0; idx < qXPrime.size(); idx++) {
-			std::cout << "| XPPrev[" << idx << "] ";
-		}
-		std::cout << "|" << std::endl;
-		for (int iTmpCnt = 1; iTmpCnt <= iNumDofs; iTmpCnt++) {
-    			std::cout << std::setw(8) << iTmpCnt << ": ";
-			std::cout << std::setw(12) << pX->operator()(iTmpCnt);
-			for (unsigned int ivec = 0; ivec < qX.size(); ivec++) {
-				std::cout << std::setw(12)
-					<< (qX[ivec])->operator()(iTmpCnt);
-			}
-			std::cout << std::setw(12) << pXPrime->operator()(iTmpCnt);
-			for (unsigned int ivec = 0; ivec < qXPrime.size(); ivec++) {
-				std::cout << std::setw(12)
-					<< (qXPrime[ivec])->operator()(iTmpCnt);
-			}
-			std::cout << " " << pDM->DataManager::GetDofDescription(iTmpCnt) << std::endl;
- 		}
-	}
-#endif /* DEBUG */
-
-	Err = 0.;
-	pS->pGetNonlinearSolver()->Solve(this, pS, MaxIters, dTol,
-    			EffIter, Err, dSolTol, SolErr);
-
-	/* if it gets here, it surely converged */
-	pDM->AfterConvergence();
-
-	return Err;
-}
-
-/* Step2Integrator - end */
-
-
-/* CrankNicolson - begin */
-
-CrankNicolsonIntegrator::CrankNicolsonIntegrator(const doublereal dTl,
-		const doublereal dSolTl,
-		const integer iMaxIt,
-		const bool bmod_res_test)
-: Step1Integrator(iMaxIt, dTl, dSolTl, bmod_res_test)
-{
-	NO_OP;
-}
-
-CrankNicolsonIntegrator::~CrankNicolsonIntegrator(void)
-{
-	NO_OP;
-}
-
-void
-CrankNicolsonIntegrator::SetCoef(doublereal dT,
-		doublereal dAlpha,
-		enum StepChange /* NewStep */)
-{
-	db0Differential = db0Algebraic = dT*dAlpha/2.;
-}
-
-
-doublereal
-CrankNicolsonIntegrator::dPredictDerivative(const doublereal& /* dXm1 */,
-		const doublereal& dXPm1,
-		DofOrder::Order o) const
-{
-	return dXPm1;
-}
-
-doublereal
-CrankNicolsonIntegrator::dPredictState(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1,
-		DofOrder::Order o) const
-{
-	if (o == DofOrder::ALGEBRAIC) {
-		return db0Differential*(dXP + dXPm1);
-	} /* else if (o == DofOrder::DIFFERENTIAL) */
-	return dXm1 + db0Differential*(dXP + dXPm1);
-}
-
-/* Nota: usa predizione lineare per le derivate (massimo ordine possibile) */
-doublereal
-CrankNicolsonIntegrator::dPredDer(const doublereal& /* dXm1 */ ,
-	      const doublereal& dXPm1) const
-{
-	return dXPm1;
-}
-
-doublereal
-CrankNicolsonIntegrator::dPredState(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1) const
-{
-	return dXm1 + db0Differential*(dXP + dXPm1);
-}
-
-doublereal
-CrankNicolsonIntegrator::dPredDerAlg(const doublereal& /* dXm1 */ ,
-		const doublereal& dXPm1) const
-{
-	return dXPm1;
-}
-
-doublereal
-CrankNicolsonIntegrator::dPredStateAlg(const doublereal& /* dXm1 */ ,
-		const doublereal& dXP,
-		const doublereal& dXPm1) const
-{
-	return db0Differential*(dXP + dXPm1);
-}
-
-/* CrankNicolson - end */
-
-/* Implicit Euler - begin */
-
-ImplicitEulerIntegrator::ImplicitEulerIntegrator(const doublereal dTl,
-		const doublereal dSolTl,
-		const integer iMaxIt,
-		const bool bmod_res_test)
-: Step1Integrator(iMaxIt, dTl, dSolTl, bmod_res_test)
-{
-	NO_OP;
-}
-
-ImplicitEulerIntegrator::~ImplicitEulerIntegrator(void)
-{
-	NO_OP;
-}
-
-void
-ImplicitEulerIntegrator::SetCoef(doublereal dT,
-		doublereal dAlpha,
-		enum StepChange /* NewStep */)
-{
-	db0Differential = db0Algebraic = dT*dAlpha;
-}
-
-
-doublereal
-ImplicitEulerIntegrator::dPredictDerivative(const doublereal& /* dXm1 */,
-		const doublereal& dXPm1,
-		DofOrder::Order o) const
-{
-	return dXPm1;
-}
-
-doublereal
-ImplicitEulerIntegrator::dPredictState(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1,
-		DofOrder::Order o) const
-{
-	if (o == DofOrder::ALGEBRAIC) {
-		return db0Differential*dXP;
-	} /* else if (o == DofOrder::DIFFERENTIAL) */
-	return dXm1 + db0Differential*dXP;
-}
-
-/* Nota: usa predizione lineare per le derivate (massimo ordine possibile) */
-doublereal
-ImplicitEulerIntegrator::dPredDer(const doublereal& /* dXm1 */ ,
-	      const doublereal& dXPm1) const
-{
-	return dXPm1;
-}
-
-doublereal
-ImplicitEulerIntegrator::dPredState(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1) const
-{
-	return dXm1 + db0Differential*dXP;
-}
-
-doublereal
-ImplicitEulerIntegrator::dPredDerAlg(const doublereal& /* dXm1 */ ,
-		const doublereal& dXPm1) const
-{
-	return dXPm1;
-}
-
-doublereal
-ImplicitEulerIntegrator::dPredStateAlg(const doublereal& /* dXm1 */ ,
-		const doublereal& dXP,
-		const doublereal& dXPm1) const
-{
-	return db0Differential*dXP;
-}
-
-/* Implicit Euler - end */
-
-/* NostroMetodo - begin */
-
-MultistepSolver::MultistepSolver(const doublereal Tl,
-		const doublereal dSolTl,
-		const integer iMaxIt,
-		const DriveCaller* pRho,
-		const DriveCaller* pAlgRho,
-		const bool bmod_res_test)
-:Step2Integrator(iMaxIt, Tl, dSolTl, bmod_res_test),
-Rho(pRho), AlgebraicRho(pAlgRho)
-{
-	ASSERT(pRho != NULL);
-	ASSERT(pAlgRho != NULL);
-}
-
-MultistepSolver::~MultistepSolver(void)
-{
-	NO_OP;
-}
-
-void
-MultistepSolver::SetDriveHandler(const DriveHandler* pDH)
-{
-	Rho.pGetDriveCaller()->SetDrvHdl(pDH);
-	AlgebraicRho.pGetDriveCaller()->SetDrvHdl(pDH);
-}
-
-void
-MultistepSolver::SetCoef(doublereal dT,
-		doublereal dAlpha,
-		enum StepChange /* NewStep */)
-{
-	doublereal dRho = Rho.dGet();
-	doublereal dAlgebraicRho = AlgebraicRho.dGet();
-
-	doublereal dDen = 2.*(1.+dAlpha)-(1.-dRho)*(1.-dRho);
-	doublereal dBeta = dAlpha*((1.-dRho)*(1.-dRho)*(2.+dAlpha)
-		+2.*(2.*dRho-1.)*(1.+dAlpha))/dDen;
-	doublereal dDelta = .5*dAlpha*dAlpha*(1.-dRho)*(1.-dRho)/dDen;
-
-	mp[0] = -6.*dAlpha*(1.+dAlpha);
-	mp[1] = -mp[0];
-	np[0] = 1.+4.*dAlpha+3.*dAlpha*dAlpha;
-	np[1] = dAlpha*(2.+3.*dAlpha);
-
-	a[0][DIFFERENTIAL] = 1.-dBeta;
-	a[1][DIFFERENTIAL] = dBeta;
-	b[0][DIFFERENTIAL] = dT*(dDelta/dAlpha+dAlpha/2);
-	b[1][DIFFERENTIAL] = dT*(dBeta/2.+dAlpha/2.-dDelta/dAlpha*(1.+dAlpha));
-	b[2][DIFFERENTIAL] = dT*(dBeta/2.+dDelta);
-
-	DEBUGCOUT("Predict()" << std::endl
-			<< "Alpha = " << dAlpha << std::endl
-			<< "Differential coefficients:" << std::endl
-			<< "beta  = " << dBeta << std::endl
-			<< "delta = " << dDelta << std::endl
-			<< "a1    = " << a[0][DIFFERENTIAL] << std::endl
-			<< "a2    = " << a[1][DIFFERENTIAL] << std::endl
-			<< "b0    = " << b[0][DIFFERENTIAL] << std::endl
-			<< "b1    = " << b[1][DIFFERENTIAL] << std::endl
-			<< "b2    = " << b[2][DIFFERENTIAL] << std::endl);
-
-	/* Coefficienti del metodo - variabili algebriche */
-	if (dAlgebraicRho != dRho) {
-		dDen = 2.*(1.+dAlpha)-(1.-dAlgebraicRho)*(1.-dAlgebraicRho);
-		dBeta = dAlpha*((1.-dAlgebraicRho)*(1.-dAlgebraicRho)*(2.+dAlpha)
-				+2.*(2.*dAlgebraicRho-1.)*(1.+dAlpha))/dDen;
-		dDelta = .5*dAlpha*dAlpha*(1.-dAlgebraicRho)*(1.-dAlgebraicRho)/dDen;
-
-		a[1][ALGEBRAIC] = dBeta;
-		b[0][ALGEBRAIC] = dT*(dDelta/dAlpha+dAlpha/2.);
-		b[1][ALGEBRAIC] = dT*(dBeta/2.+dAlpha/2.-dDelta/dAlpha*(1.+dAlpha));
-		b[2][ALGEBRAIC] = dT*(dBeta/2.+dDelta);
-
-	} else {
-		a[1][ALGEBRAIC] = a[1][DIFFERENTIAL];
-		b[0][ALGEBRAIC] = b[0][DIFFERENTIAL];
-		b[1][ALGEBRAIC] = b[1][DIFFERENTIAL];
-		b[2][ALGEBRAIC] = b[2][DIFFERENTIAL];
-	}
-
-	DEBUGCOUT("Algebraic coefficients:" << std::endl
-			<< "beta  = " << dBeta << std::endl
-			<< "delta = " << dDelta << std::endl
-			<< "a2    = " << a[1][ALGEBRAIC] << std::endl
-			<< "b0    = " << b[0][ALGEBRAIC] << std::endl
-			<< "b1    = " << b[1][ALGEBRAIC] << std::endl
-			<< "b2    = " << b[2][ALGEBRAIC] << std::endl);
-
-	DEBUGCOUT("Asymptotic rho: "
-			<< -b[1][DIFFERENTIAL]/(2.*b[0][DIFFERENTIAL]) << std::endl
-			<< "Discriminant: "
-			<< b[1][DIFFERENTIAL]*b[1][DIFFERENTIAL]-4.*b[2][DIFFERENTIAL]*b[0][DIFFERENTIAL]
-			<< std::endl
-			<< "Asymptotic rho for algebraic variables: "
-			<< -b[1][ALGEBRAIC]/(2.*b[0][ALGEBRAIC]) << std::endl
-			<< "Discriminant: "
-			<< b[1][ALGEBRAIC]*b[1][ALGEBRAIC]-4.*b[2][ALGEBRAIC]*b[0][ALGEBRAIC]
-			<< std::endl);
-
-	/* Vengono modificati per la predizione, dopo che sono stati usati per
-	 * costruire gli altri coefficienti */
-	mp[0] /= dT;
-	mp[1] /= dT;
-
-	/* valori di ritorno */
-	db0Differential = b[0][DIFFERENTIAL];
-	db0Algebraic = b[0][ALGEBRAIC];
-}
-
-
-doublereal
-MultistepSolver::dPredictDerivative(const doublereal& dXm1,
-		const doublereal& dXm2,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2,
-		DofOrder::Order o) const
-{
-	if (o == DofOrder::ALGEBRAIC) {
-		return np[0]*dXPm1+np[1]*dXPm2-mp[1]*dXm1;
-	} /* else if (o == DofOrder::DIFFERENTIAL) */
-	return mp[0]*dXm1+mp[1]*dXm2+np[0]*dXPm1+np[1]*dXPm2;
-}
-
-doublereal
-MultistepSolver::dPredictState(const doublereal& dXm1,
-		const doublereal& dXm2,
-		const doublereal& dXP,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2,
-		DofOrder::Order o) const
-{
-	if (o == DofOrder::ALGEBRAIC) {
-		return b[0][ALGEBRAIC]*dXP+b[1][ALGEBRAIC]*dXPm1+b[2][ALGEBRAIC]*dXPm2
-			-a[1][ALGEBRAIC]*dXm1;
-	} /* else if (o == DofOrder::DIFFERENTIAL) */
-	return a[0][DIFFERENTIAL]*dXm1+a[1][DIFFERENTIAL]*dXm2
-		+b[0][DIFFERENTIAL]*dXP+b[1][DIFFERENTIAL]*dXPm1+b[2][DIFFERENTIAL]*dXPm2;
-}
-
-
-/* Nota: usa predizione cubica per le derivate (massimo ordine possibile) */
-doublereal
-MultistepSolver::dPredDer(const doublereal& dXm1,
-		const doublereal& dXm2,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2) const
-{
-	return mp[0]*dXm1+mp[1]*dXm2+np[0]*dXPm1+np[1]*dXPm2;
-}
-
-doublereal
-MultistepSolver::dPredState(const doublereal& dXm1,
-		const doublereal& dXm2,
-		const doublereal& dXP,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2) const
-{
-	return a[0][DIFFERENTIAL]*dXm1+a[1][DIFFERENTIAL]*dXm2
-		+b[0][DIFFERENTIAL]*dXP+b[1][DIFFERENTIAL]*dXPm1+b[2][DIFFERENTIAL]*dXPm2;
-}
-
-doublereal
-MultistepSolver::dPredDerAlg(const doublereal& dXm1,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2) const
-{
-	return np[0]*dXPm1+np[1]*dXPm2-mp[1]*dXm1;
-}
-
-doublereal
-MultistepSolver::dPredStateAlg(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2) const
-{
-	return b[0][ALGEBRAIC]*dXP+b[1][ALGEBRAIC]*dXPm1+b[2][ALGEBRAIC]*dXPm2
-		-a[1][ALGEBRAIC]*dXm1;
-}
-
-/* NostroMetodo - end */
-
-
-/* Hope - begin */
-
-HopeSolver::HopeSolver(const doublereal Tl,
-		const doublereal dSolTl,
-		const integer iMaxIt,
-		const DriveCaller* pRho,
-		const DriveCaller* pAlgRho,
-		const bool bmod_res_test)
-:Step2Integrator(iMaxIt, Tl, dSolTl, bmod_res_test),
-Rho(pRho), AlgebraicRho(pAlgRho), bStep(0)
-{
-	ASSERT(pRho != NULL);
-	ASSERT(pAlgRho != NULL);
-}
-
-HopeSolver::~HopeSolver(void)
-{
-	NO_OP;
-}
-
-void
-HopeSolver::SetDriveHandler(const DriveHandler* pDH)
-{
-	Rho.pGetDriveCaller()->SetDrvHdl(pDH);
-	AlgebraicRho.pGetDriveCaller()->SetDrvHdl(pDH);
-}
-
-void
-HopeSolver::SetCoef(doublereal dT,
-		doublereal dAlpha,
-		enum StepChange NewStep)
-{
-#if 0
-	if (dAlpha != 1.) {
-		cerr << "HOPE time step integrator is not implemented yet in variable step form" << std::endl;
-		throw ErrNotImplementedYet();
-	}
-#endif
-
-	if (NewStep == NEWSTEP) {
-		ASSERT(bStep == flag(0) || bStep == flag(1));
-		bStep = 1-bStep;	/* Commuta il valore di bStep */
-	}
-
-	doublereal dTMod = dT*dAlpha;
-
-	/* Differential coefficients */
-	mp[0] = -6.*dAlpha*(1.+dAlpha);
-	mp[1] = -mp[0];
-	np[0] = 1.+4.*dAlpha+3.*dAlpha*dAlpha;
-	np[1] = dAlpha*(2.+3.*dAlpha);
-
-	if (bStep) {
-		b[0][DIFFERENTIAL] = b[1][DIFFERENTIAL]
-			= b[0][ALGEBRAIC] = b[1][ALGEBRAIC]
-			= db0Algebraic = db0Differential = dTMod/2.;// dT/4.;
-
-	} else {
-		doublereal dRho = Rho.dGet();
-		doublereal dALPHA = 4.*dRho/(3.+dRho);
-
-		a[0][DIFFERENTIAL] = (4.-dALPHA)/3.;
-		a[1][DIFFERENTIAL] = (dALPHA-1.)/3.;
-		b[0][DIFFERENTIAL] = dTMod*(4.-dALPHA)/6.;// dT*(4.-dALPHA)/12.;
-		b[1][DIFFERENTIAL] = dTMod*dALPHA/2.;// dT*dALPHA/4.;
-
-		DEBUGCOUT("Predict()" << std::endl
-				<< "Alpha = " << dAlpha << std::endl
-				<< "Differential coefficients:" << std::endl
-				<< "HOPE-Alpha = " << dALPHA << std::endl
-				<< "a1    = " << a[0][DIFFERENTIAL] << std::endl
-				<< "a2    = " << a[1][DIFFERENTIAL] << std::endl
-				<< "b0    = " << b[0][DIFFERENTIAL] << std::endl
-				<< "b1    = " << b[1][DIFFERENTIAL] << std::endl);
-
-		/* Coefficienti del metodo - variabili algebriche */
-		doublereal dAlgebraicRho = AlgebraicRho.dGet();
-		doublereal dAlgebraicALPHA = 4.*dAlgebraicRho/(3.+dAlgebraicRho);
-
-		if (dAlgebraicRho != dRho) {
-			a[1][ALGEBRAIC] = (dAlgebraicALPHA-1.)/3.;
-			b[0][ALGEBRAIC] = dTMod*(4.-dAlgebraicALPHA)/6.; // dT*(4.-dAlgebraicALPHA)/12.;
-			b[1][ALGEBRAIC] = dTMod*dAlgebraicALPHA/2.; // dT*dAlgebraicALPHA/4.;
-
-		} else {
-			a[1][ALGEBRAIC] = a[1][DIFFERENTIAL];
-			b[0][ALGEBRAIC] = b[0][DIFFERENTIAL];
-			b[1][ALGEBRAIC] = b[1][DIFFERENTIAL];
-		}
-
-		DEBUGCOUT("Algebraic coefficients:" << std::endl
-				<< "HOPE-Alpha = " << dAlgebraicALPHA << std::endl
-				<< "a2    = " << a[1][ALGEBRAIC] << std::endl
-				<< "b0    = " << b[0][ALGEBRAIC] << std::endl
-				<< "b1    = " << b[1][ALGEBRAIC] << std::endl);
-
-		/* valori di ritorno */
-		db0Differential = b[0][DIFFERENTIAL];
-		db0Algebraic = b[0][ALGEBRAIC];
-	}
-
-	/* Vengono modificati per la predizione, dopo che sono stati usati per
-	 * costruire gli altri coefficienti */
-	mp[0] /= dT;
-	mp[1] /= dT;
-}
-
-doublereal
-HopeSolver::dPredictDerivative(const doublereal& dXm1,
-		const doublereal& dXm2,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2,
-		DofOrder::Order o) const
-{
-	if (o == DofOrder::ALGEBRAIC) {
-		return np[0]*dXPm1+np[1]*dXPm2-mp[1]*dXm1;
-	} /* else if (o == DofOrder::DIFFERENTIAL) */
-	return mp[0]*dXm1+mp[1]*dXm2+np[0]*dXPm1+np[1]*dXPm2;
-}
-
-doublereal
-HopeSolver::dPredictState(const doublereal& dXm1,
-		const doublereal& dXm2,
-		const doublereal& dXP,
-		const doublereal& dXPm1,
-		const doublereal& /* dXPm2 */ ,
-		DofOrder::Order o) const
-{
-	if (bStep) {
-		if (o == DofOrder::ALGEBRAIC) {
-			return b[0][ALGEBRAIC]*(dXP+dXPm1);
-		} /* else if (o == DofOrder::DIFFERENTIAL) */
-		return dXm1+b[0][ALGEBRAIC]*(dXP+dXPm1);
-
-	} else {
-		if (o == DofOrder::ALGEBRAIC) {
-			return b[0][ALGEBRAIC]*dXP+b[1][ALGEBRAIC]*dXPm1
-				-a[1][ALGEBRAIC]*dXm1;
-		} /* else if (o == DofOrder::DIFFERENTIAL) */
-		return a[0][DIFFERENTIAL]*dXm1+a[1][DIFFERENTIAL]*dXm2
-			+b[0][DIFFERENTIAL]*dXP+b[1][DIFFERENTIAL]*dXPm1;
-	}
-}
-
-/* Nota: usa predizione cubica per le derivate (massimo ordine possibile) */
-doublereal
-HopeSolver::dPredDer(const doublereal& dXm1,
-		const doublereal& dXm2,
-		const doublereal& dXPm1,
-		const doublereal& dXPm2) const
-{
-	return mp[0]*dXm1+mp[1]*dXm2+np[0]*dXPm1+np[1]*dXPm2;
-}
-
-doublereal
-HopeSolver::dPredState(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& /* dXPm2 */ ) const
-{
-	if (bStep) {
-		return dXm1+b[0][ALGEBRAIC]*(dXP+dXPm1);
-
-	} else {
-		return a[0][DIFFERENTIAL]*dXm1+a[1][DIFFERENTIAL]*dXm2
-			+b[0][DIFFERENTIAL]*dXP+b[1][DIFFERENTIAL]*dXPm1;
-	}
-}
-
-doublereal
-HopeSolver::dPredDerAlg(const doublereal& dXm1,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const
-{
-	return np[0]*dXPm1+np[1]*dXPm2-mp[1]*dXm1;
-}
-
-doublereal
-HopeSolver::dPredStateAlg(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1,
-		const doublereal& /* dXPm2 */ ) const
-{
-	if (bStep) {
-		return b[0][ALGEBRAIC]*(dXP+dXPm1);
-	} else {
-		return b[0][ALGEBRAIC]*dXP+b[1][ALGEBRAIC]*dXPm1
-			-a[1][ALGEBRAIC]*dXm1;
-	}
-}
-
-/* Hope - end */
 
 /* Inverse Dynamics - Begin */
 
@@ -1449,9 +695,9 @@ InverseDynamicsStepSolver::EvalProd(doublereal Tau, const VectorHandler& f0,
 #endif /* USE_EXTERNAL */
 	/* deal with throwing elements: do not honor their requests while perfoming matrix free update */
 	try {
-		Residual(&z);
+		Residual(&z, 0);
 	}
-	catch (DataManager::ChangedEquationStructure) {
+	catch (DataManager::ChangedEquationStructure& e) {
 	}
 	XTau.ScalarMul(XTau, -1.);
 
@@ -1571,7 +817,7 @@ InverseDynamicsStepSolver::Advance(InverseSolver* pS,
 	/* there's no need to check changes in
 	 * equation structure... it is already
 	 * performed by NonlinearSolver->Solve() */
-	Residual(pRes);
+	Residual(pRes, 0);
 
 	if (pS->outputRes()) {
 		silent_cout("Residual(velocity):" << std::endl);
@@ -1608,7 +854,7 @@ InverseDynamicsStepSolver::Advance(InverseSolver* pS,
 
 	pRes->Reset();
 	pSol->Reset();
-	Residual(pRes);
+	Residual(pRes, 0);
 
 	if (pS->outputRes()) {
 		silent_cout("Residual(acceleration):" << std::endl);
@@ -1640,7 +886,7 @@ InverseDynamicsStepSolver::Advance(InverseSolver* pS,
 
 	pRes->Reset();
 	pSol->Reset();
-	Residual(pRes);
+	Residual(pRes, 0);
 
 	if (pS->outputRes()) {
 		silent_cout("Residual(inverseDynamics):" << std::endl);
@@ -1680,7 +926,7 @@ InverseDynamicsStepSolver::Advance(InverseSolver* pS,
 }
 
 void
-InverseDynamicsStepSolver::Residual(VectorHandler* pRes) const
+InverseDynamicsStepSolver::Residual(VectorHandler* pRes, VectorHandler* pAbsRes) const
 {
 	ASSERT(pDM != NULL);
 	switch (iOrder) {
@@ -1699,6 +945,11 @@ InverseDynamicsStepSolver::Jacobian(MatrixHandler* pJac) const
 {
 	ASSERT(pDM != NULL);
 	pDM->AssConstrJac(*pJac);
+}
+
+void InverseDynamicsStepSolver::Jacobian(VectorHandler* pJac, const VectorHandler* pY) const
+{
+	throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
 }
 
 void
@@ -1778,6 +1029,11 @@ InverseDynamicsStepSolver::Update(const VectorHandler* pSol) const
 	default:
 		break;
 	}
+}
+
+doublereal InverseDynamicsStepSolver::dGetCoef(unsigned int) const
+{
+     throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
 }
 
 /* Inverse Dynamics - End */

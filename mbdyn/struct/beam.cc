@@ -44,6 +44,7 @@
 #include "constltp.h"
 #include "shapefnc.h"
 #include "beam.h"
+#include "beamad.h"
 #include "pzbeam.h"
 #include "Rot.hh"
 #include <sstream> // not sure why this is now needed...
@@ -192,16 +193,6 @@ void
 Beam::Init(void)
 {
 	for (unsigned i = 0; i < NUMSEZ; i++) {
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars...
-		Var_X[i] = 0;
-		Var_Phi[i] = 0;
-		Var_F[i] = 0;
-		Var_M[i] = 0;
-		Var_Nu[i] = 0;
-		Var_K[i] = 0;
-		Var_NuP[i] = 0;
-		Var_KP[i] = 0;
-#endif /* USE_NETCDFC */
 
 		Omega[i] = Zero3;
 		Az[i] = Zero6;
@@ -472,7 +463,6 @@ Beam::InterpDeriv(const Vec3& v1,
 			+ pv3[2]*dN3P[Sec][2])*dsdxi[Sec]);
 }
 
-
 void
 Beam::DsDxi(void)
 {
@@ -732,8 +722,10 @@ Beam::AssStiffnessVec(SubVectorHandler& WorkVec,
 		bFirstRes = false; /* AfterPredict ha gia' calcolato tutto */
 
 #ifdef DEBUG
+                DEBUGCOUT("beam3(" << GetLabel() << ")\n");
+                DEBUGCOUT("AssStiffnessVec bFirstRes = true" << std::endl);
+                
                 for (unsigned int iSez = 0; iSez < NUMSEZ; iSez++) {
-                    DEBUGCOUT("AssStiffnessVec bFirstRes = true" << std::endl);
                     DEBUGCOUT("p[" << iSez << "]=" << p[iSez] << std::endl);
                     DEBUGCOUT("g[" << iSez << "]=" << g[iSez] << std::endl);
                     DEBUGCOUT("RPrev[" << iSez << "]=" << RPrev[iSez] << std::endl);
@@ -756,6 +748,9 @@ Beam::AssStiffnessVec(SubVectorHandler& WorkVec,
 		Mat3x3 RDelta[NUMSEZ];
 		Vec3 gGrad[NUMSEZ];
 
+                DEBUGCOUT("beam3(" << GetLabel() << ")\n");
+                DEBUGCOUT("AssStiffnessVec bFirstRes = false" << std::endl);
+                
 		/* Aggiorna le grandezze della trave nei punti di valutazione */
 		for (unsigned int iSez = 0; iSez < NUMSEZ; iSez++) {
 
@@ -787,7 +782,6 @@ Beam::AssStiffnessVec(SubVectorHandler& WorkVec,
 			/* Porta le azioni interne nel sistema globale */
 			Az[iSez] = MultRV(AzLoc[iSez], R[iSez]);
 
-                        DEBUGCOUT("AssStiffnessVec bFirstRes = false" << std::endl);
                         DEBUGCOUT("p[" << iSez << "]=" << p[iSez] << std::endl);
                         DEBUGCOUT("g[" << iSez << "]=" << g[iSez] << std::endl);
                         DEBUGCOUT("RDelta[" << iSez << "]=" << RDelta[iSez] << std::endl);
@@ -812,7 +806,6 @@ Beam::AssStiffnessVec(SubVectorHandler& WorkVec,
 		- Az[SII].GetVec2());
 }
 
-
 /* assemblaggio jacobiano */
 VariableSubMatrixHandler&
 Beam::AssJac(VariableSubMatrixHandler& WorkMat,
@@ -821,7 +814,7 @@ Beam::AssJac(VariableSubMatrixHandler& WorkMat,
 	const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("Beam::AssJac => AssStiffnessMat");
-
+        
 	integer iNode1FirstMomIndex = pNode[NODE1]->iGetFirstMomentumIndex();
 	integer iNode1FirstPosIndex = pNode[NODE1]->iGetFirstPositionIndex();
 	integer iNode2FirstMomIndex = pNode[NODE2]->iGetFirstMomentumIndex();
@@ -861,7 +854,6 @@ Beam::AssJac(VariableSubMatrixHandler& WorkMat,
 
 	return WorkMat;
 }
-
 
 /* assemblaggio matrici per autovalori */
 void
@@ -926,13 +918,12 @@ Beam::AssMats(VariableSubMatrixHandler& WorkMatA,
 	}
 }
 
-
 /* assemblaggio residuo */
 SubVectorHandler&
 Beam::AssRes(SubVectorHandler& WorkVec,
-	doublereal dCoef,
-	const VectorHandler& XCurr,
-	const VectorHandler& XPrimeCurr)
+             doublereal dCoef,
+             const VectorHandler& XCurr,
+             const VectorHandler& XPrimeCurr)
 {
 	DEBUGCOUTFNAME("Beam::AssRes => AssStiffnessVec");
 
@@ -1158,7 +1149,8 @@ Beam::OutputPrepare(OutputHandler &OH)
 				std::string ep(os.str());
 
 				if (uOutputFlags & Beam::OUTPUT_EP_X) {
-					Var_X[iSez] = OH.CreateVar<Vec3>(name + "X_" + sez[iSez], "m",
+					Var_X[iSez] = OH.CreateVar<Vec3>(name + "X_" + sez[iSez], 
+						OutputHandler::Dimensions::Length,
 						ep + "global position vector (X, Y, Z)");
 				}
 
@@ -1168,32 +1160,38 @@ Beam::OutputPrepare(OutputHandler &OH)
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_F) {
-					Var_F[iSez] = OH.CreateVar<Vec3>(name + "F_" + sez[iSez], "N",
+					Var_F[iSez] = OH.CreateVar<Vec3>(name + "F_" + sez[iSez], 
+						OutputHandler::Dimensions::Force,
 						ep + "internal force in local frame (F_X, F_Y, F_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_M) {
-					Var_M[iSez] = OH.CreateVar<Vec3>(name + "M_" + sez[iSez], "Nm",
+					Var_M[iSez] = OH.CreateVar<Vec3>(name + "M_" + sez[iSez],  
+						OutputHandler::Dimensions::Moment,
 						ep + "internal moment in local frame (M_X, M_Y, M_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_NU) {
-					Var_Nu[iSez] = OH.CreateVar<Vec3>(name + "nu_" + sez[iSez], "-",
+					Var_Nu[iSez] = OH.CreateVar<Vec3>(name + "nu_" + sez[iSez],  
+						OutputHandler::Dimensions::LinearStrain,
 						ep + "linear strain in local frame (nu_X, nu_Y, nu_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_K) {
-					Var_K[iSez] = OH.CreateVar<Vec3>(name + "k_" + sez[iSez], "1/m",
+					Var_K[iSez] = OH.CreateVar<Vec3>(name + "k_" + sez[iSez],  
+						OutputHandler::Dimensions::AngularStrain,
 						ep + "angular strain in local frame (K_X, K_Y, K_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_NUP) {
-					Var_NuP[iSez] = OH.CreateVar<Vec3>(name + "nuP_" + sez[iSez], "1/s",
+					Var_NuP[iSez] = OH.CreateVar<Vec3>(name + "nuP_" + sez[iSez],  
+						OutputHandler::Dimensions::LinearStrainRate,
 						ep + "linear strain rate in local frame (nuP_X, nuP_Y, nuP_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_KP) {
-					Var_KP[iSez] = OH.CreateVar<Vec3>(name + "kP_" + sez[iSez], "1/ms",
+					Var_KP[iSez] = OH.CreateVar<Vec3>(name + "kP_" + sez[iSez],  
+						OutputHandler::Dimensions::AngularStrainRate,
 						ep + "angular strain rate in local frame (KP_X, KP_Y, KP_Z)");
 				}
 			}
@@ -1208,15 +1206,16 @@ void
 Beam::Output(OutputHandler& OH) const
 {
 	if (bToBeOutput()) {
+	unsigned uOutputFlags = (fToBeOutput() & ToBeOutput::OUTPUT_PRIVATE_MASK);
+
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::BEAMS)) {
-#if defined(USE_NETCDFC)
 			for (unsigned iSez = 0; iSez < NUMSEZ; iSez++) {
-				if (Var_X[iSez]) {
-					Var_X[iSez]->put_rec(p[iSez].pGetVec(), OH.GetCurrentStep());
+				if (uOutputFlags & Beam::OUTPUT_EP_X) {
+					OH.WriteNcVar(Var_X[iSez], p[iSez]);
 				}
 
-				if (Var_Phi[iSez]) {
+				if (uOutputFlags & Beam::OUTPUT_EP_R) {
 					Vec3 E;
 					switch (od) {
 					case EULER_123:
@@ -1248,11 +1247,11 @@ Beam::Output(OutputHandler& OH) const
 					case EULER_313:
 					case EULER_321:
 					case ORIENTATION_VECTOR:
-						Var_Phi[iSez]->put_rec(E.pGetVec(), OH.GetCurrentStep());
+						OH.WriteNcVar(Var_Phi[iSez], E);
 						break;
 
 					case ORIENTATION_MATRIX:
-						Var_Phi[iSez]->put_rec(R[iSez].pGetMat(), OH.GetCurrentStep());
+						OH.WriteNcVar(Var_Phi[iSez], R[iSez]);
 						break;
 
 					default:
@@ -1261,33 +1260,30 @@ Beam::Output(OutputHandler& OH) const
 					}
 				}
 
-				if (Var_F[iSez]) {
-					Var_F[iSez]->put_rec(AzLoc[iSez].GetVec1().pGetVec(), OH.GetCurrentStep());
+				if (uOutputFlags & Beam::OUTPUT_EP_F) {
+					OH.WriteNcVar(Var_F[iSez], AzLoc[iSez].GetVec1());
 				}
 
-				if (Var_M[iSez]) {
-					Var_M[iSez]->put_rec(AzLoc[iSez].GetVec2().pGetVec(), OH.GetCurrentStep());
+				if (uOutputFlags & Beam::OUTPUT_EP_M) {
+					OH.WriteNcVar(Var_M[iSez], AzLoc[iSez].GetVec2());
 				}
 
-				if (Var_Nu[iSez]) {
-					Var_Nu[iSez]->put_rec(DefLoc[iSez].GetVec1().pGetVec(), OH.GetCurrentStep());
+				if (uOutputFlags & Beam::OUTPUT_EP_NU) {
+					OH.WriteNcVar(Var_Nu[iSez], DefLoc[iSez].GetVec1());
 				}
 
-				if (Var_K[iSez]) {
-					Var_K[iSez]->put_rec(DefLoc[iSez].GetVec2().pGetVec(), OH.GetCurrentStep());
+				if (uOutputFlags & Beam::OUTPUT_EP_K) {
+					OH.WriteNcVar(Var_K[iSez], DefLoc[iSez].GetVec2());
 				}
 
-				if (Var_NuP[iSez]) {
-					Var_NuP[iSez]->put_rec(DefPrimeLoc[iSez].GetVec1().pGetVec(), OH.GetCurrentStep());
+				if (uOutputFlags & Beam::OUTPUT_EP_NUP) {
+					OH.WriteNcVar(Var_NuP[iSez], DefPrimeLoc[iSez].GetVec1());
 				}
 
-				if (Var_KP[iSez]) {
-					Var_KP[iSez]->put_rec(DefPrimeLoc[iSez].GetVec2().pGetVec(), OH.GetCurrentStep());
+				if (uOutputFlags & Beam::OUTPUT_EP_KP) {
+					OH.WriteNcVar(Var_KP[iSez], DefPrimeLoc[iSez].GetVec2());
 				}
 			}
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
 		}
 #endif /* USE_NETCDF */
 
@@ -1296,8 +1292,28 @@ Beam::Output(OutputHandler& OH) const
 				<< " " << AzLoc[S_I].GetVec1()
 				<< " " << AzLoc[S_I].GetVec2()
 				<< " " << AzLoc[SII].GetVec1()
-				<< " " << AzLoc[SII].GetVec2()
-				<< std::endl;
+				<< " " << AzLoc[SII].GetVec2();
+			if (uOutputFlags & Beam::OUTPUT_EP_NU) {
+				OH.Beams() << std::setw(8) 
+					<< " " << DefLoc[S_I].GetVec1()
+					<< " " << DefLoc[SII].GetVec1();
+			}
+			if (uOutputFlags & Beam::OUTPUT_EP_K) {
+				OH.Beams() << std::setw(8) 
+					<< " " << DefLoc[S_I].GetVec2()
+					<< " " << DefLoc[SII].GetVec2();
+			}
+			if (uOutputFlags & Beam::OUTPUT_EP_NUP) {
+				OH.Beams() << std::setw(8) 
+					<< " " << DefLoc[S_I].GetVec1()
+					<< " " << DefLoc[SII].GetVec1();
+			}
+			if (uOutputFlags & Beam::OUTPUT_EP_KP) {
+				OH.Beams() << std::setw(8) 
+					<< " " << DefLoc[S_I].GetVec2()
+					<< " " << DefLoc[SII].GetVec2();
+			}
+			OH.Beams() << std::endl;
 		}
 	}
 }
@@ -1485,8 +1501,12 @@ ViscoElasticBeam::AssStiffnessMat(FullSubMatrixHandler& WMA,
 
 	/* offset nel riferimento globale */
 	Vec3 fTmp[NUMNODES];
+	doublereal omegafTmp[NUMNODES];
+	Mat3x3 omega_o_fTmp[NUMNODES];
 	for (unsigned int i = 0; i < NUMNODES; i++) {
 		fTmp[i] = pNode[i]->GetRCurr()*f[i];
+		omegafTmp[i] = pNode[i]->GetWRef() * fTmp[i];
+		omega_o_fTmp[i] = pNode[i]->GetWRef().Tens(fTmp[i]);
 	}
 
 	Mat6x6 AzTmp[NUMSEZ][NUMNODES];
@@ -1505,11 +1525,18 @@ ViscoElasticBeam::AssStiffnessMat(FullSubMatrixHandler& WMA,
 			AzTmp[iSez][i] +=
 				ERef[iSez]*Mat6x6(Mat3x3(MatCross, Omega[iSez]*(-dN3P[iSez][i]*dsdxi[iSez]*dCoef)),
 					Zero3x3,
-					(Mat3x3(MatCross, LPrime[iSez]) - Mat3x3(MatCrossCross, Omega[iSez], L[iSez]))*(dN3[iSez][i]*dCoef)
+// 					(Mat3x3(MatCross, LPrime[iSez]) - 
+// 					Mat3x3(MatCrossCross, Omega[iSez], L[iSez]))*(dN3[iSez][i]*dCoef) //TEMO SIA SBAGLIATO
+					Mat3x3(MatCross, LPrime[iSez] - Omega[iSez].Cross(L[iSez]))*(dN3[iSez][i]*dCoef) //VERSIONE MIA
 						+ Mat3x3(MatCrossCross, Omega[iSez], fTmp[i]*(dN3P[iSez][i]*dsdxi[iSez]*dCoef))
-						+ Mat3x3(MatCross, fTmp[i].Cross(pNode[i]->GetWCurr()*(dN3P[iSez][i]*dsdxi[iSez]*dCoef))),
-					Mat3x3(MatCross, Omega[iSez]*(-dN3P[iSez][i]*dsdxi[iSez]*dCoef)));
-			AzPrimeTmp[iSez][i] = ERef[iSez]*AzPrimeTmp[iSez][i];
+						- Mat3x3(MatCrossCross, pNode[i]->GetWCurr(), fTmp[i]*(dN3P[iSez][i]*dsdxi[iSez]*dCoef))
+						- mb_deye<Mat3x3>(omegafTmp[i]*dN3P[iSez][i]*dsdxi[iSez]*dCoef)
+						+ omega_o_fTmp[i] * (dN3P[iSez][i]*dsdxi[iSez]*dCoef)
+						+ mb_deye<Mat3x3>(OmegaRef[iSez]*L[iSez]*dN3[iSez][i]*dCoef)
+						- OmegaRef[iSez].Tens(L[iSez])*(dN3[iSez][i]*dCoef),
+					Mat3x3(MatCross, Omega[iSez]*(-dN3P[iSez][i]*dsdxi[iSez]*dCoef))
+					);
+			AzTmp[iSez][i] += ERef[iSez]*AzPrimeTmp[iSez][i];
 
 			/* Correggo per la rotazione da locale a globale */
 			AzTmp[iSez][i].SubMat12(Mat3x3(MatCross, Az[iSez].GetVec1()*(dN3[iSez][i]*dCoef)));
@@ -1557,26 +1584,26 @@ ViscoElasticBeam::AssStiffnessMat(FullSubMatrixHandler& WMA,
 
 
 			/* Equazione viscosa all'indietro: */
-			WMB.Sub(iRow1, 6*i + 1, AzPrimeTmp[iSez][i].GetMat11());
-			WMB.Sub(iRow1, 6*i + 4, AzPrimeTmp[iSez][i].GetMat12());
+			//WMB.Sub(iRow1, 6*i + 1, AzPrimeTmp[iSez][i].GetMat11());
+			//WMB.Sub(iRow1, 6*i + 4, AzPrimeTmp[iSez][i].GetMat12());
 
-			WMB.Sub(iRow1 + 3, 6*i + 1,
-				AzPrimeTmp[iSez][i].GetMat21()
-				+ bTmp[0].Cross(AzPrimeTmp[iSez][i].GetMat11()));
-			WMB.Sub(iRow1 + 3, 6*i + 4,
-				AzPrimeTmp[iSez][i].GetMat22()
-				+ bTmp[0].Cross(AzPrimeTmp[iSez][i].GetMat12()));
+			//WMB.Sub(iRow1 + 3, 6*i + 1,
+			//	AzPrimeTmp[iSez][i].GetMat21()
+			//	+ bTmp[0].Cross(AzPrimeTmp[iSez][i].GetMat11()));
+			//WMB.Sub(iRow1 + 3, 6*i + 4,
+			//	AzPrimeTmp[iSez][i].GetMat22()
+			//	+ bTmp[0].Cross(AzPrimeTmp[iSez][i].GetMat12()));
 
 			/* Equazione viscosa in avanti: */
-			WMB.Add(iRow2, 6*i + 1, AzPrimeTmp[iSez][i].GetMat11());
-			WMB.Add(iRow2, 6*i + 4, AzPrimeTmp[iSez][i].GetMat12());
+			//WMB.Add(iRow2, 6*i + 1, AzPrimeTmp[iSez][i].GetMat11());
+			//WMB.Add(iRow2, 6*i + 4, AzPrimeTmp[iSez][i].GetMat12());
 
-			WMB.Add(iRow2 + 3, 6*i + 1,
-				AzPrimeTmp[iSez][i].GetMat21()
-				+ bTmp[1].Cross(AzPrimeTmp[iSez][i].GetMat11()));
-			WMB.Add(iRow2 + 3, 6*i + 4,
-				AzPrimeTmp[iSez][i].GetMat22()
-				+ bTmp[1].Cross(AzPrimeTmp[iSez][i].GetMat12()));
+			//WMB.Add(iRow2 + 3, 6*i + 1,
+			//	AzPrimeTmp[iSez][i].GetMat21()
+			//	+ bTmp[1].Cross(AzPrimeTmp[iSez][i].GetMat11()));
+			//WMB.Add(iRow2 + 3, 6*i + 4,
+			//	AzPrimeTmp[iSez][i].GetMat22()
+			//	+ bTmp[1].Cross(AzPrimeTmp[iSez][i].GetMat12()));
 		}
 
 		/* correzione alle equazioni */
@@ -1621,6 +1648,7 @@ ViscoElasticBeam::AssStiffnessVec(SubVectorHandler& WorkVec,
 		}
 
 		Mat3x3 RDelta[NUMSEZ];
+		Mat3x3 GPrime[NUMSEZ];
 		Vec3 gGrad[NUMSEZ];
 		Vec3 gPrimeGrad[NUMSEZ];
 
@@ -1645,7 +1673,14 @@ ViscoElasticBeam::AssStiffnessVec(SubVectorHandler& WorkVec,
 				gPrimeNod[NODE3], Beam::Section(iSez));
 			Omega[iSez] = Mat3x3(CGR_Rot::MatG, g[iSez])*gPrime[iSez]
 				+ RDelta[iSez]*OmegaRef[iSez];
-
+			/* rate of MatG */
+			doublereal dtmp1 = 4.+g[iSez].Dot(); //(4./(4.+g.Dot()))
+			doublereal dtmp = dtmp1 * dtmp1;
+			dtmp = -4. / dtmp;
+			dtmp1 = 2. / dtmp1;
+			GPrime[iSez] = (gPrime[iSez].Tens(g[iSez]) + g[iSez].Tens(gPrime[iSez])) * dtmp 
+				+ Mat3x3(MatCross, gPrime[iSez]) * dtmp1;
+			
 			/* Derivate della posizione */
 			L[iSez] = InterpDeriv(xTmp[NODE1],
 				xTmp[NODE2],
@@ -1673,6 +1708,7 @@ ViscoElasticBeam::AssStiffnessVec(SubVectorHandler& WorkVec,
 			/* Calcola le velocita' di deformazione nel sistema locale nei punti di valutazione */
 			DefPrimeLoc[iSez] = Vec6(R[iSez].MulTV(LPrime[iSez] + L[iSez].Cross(Omega[iSez])),
 				R[iSez].MulTV(Mat3x3(CGR_Rot::MatG, g[iSez])*gPrimeGrad[iSez]
+				+ GPrime[iSez] * g[iSez]
 				+ (Mat3x3(CGR_Rot::MatG, g[iSez])*gGrad[iSez]).Cross(Omega[iSez]))
 				+ DefPrimeLocRef[iSez].GetVec2());
 
@@ -1699,7 +1735,6 @@ ViscoElasticBeam::AssStiffnessVec(SubVectorHandler& WorkVec,
 	WorkVec.Add(16, Az[SII].GetVec1().Cross(p[SII] - pNode[NODE3]->GetXCurr())
 		- Az[SII].GetVec2());
 }
-
 
 /* Settings iniziali, prima della prima soluzione */
 void
@@ -1885,9 +1920,8 @@ ReadBeamCustomOutput(DataManager* pDM, MBDynParser& HP, unsigned int uLabel,
 		} else if (HP.IsKeyWord("angular" "strain" "rate")) {
 			uFlag = Beam::OUTPUT_EP_KP;
 
-		} else if (HP.IsKeyWord("strain rates")) {
+		} else if (HP.IsKeyWord("strain" "rates")) {
 			uFlag = Beam::OUTPUT_EP_STRAIN_RATES;
-
 		} else if (HP.IsKeyWord("all")) {
 			uFlag = Beam::OUTPUT_EP_ALL;
 
@@ -2109,16 +2143,26 @@ ReadBeam(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 
 	flag fPiezo(0);
 	Mat3xN PiezoMat[2][2];
+	MatNx3 PiezoMatQ[2][2];
+	MatNxN PiezoMatQV[2];
 	integer iNumElec = 0;
 	const ScalarDifferentialNode **pvElecDofs = 0;
 	if (HP.IsKeyWord("piezoelectric" "actuator")) {
 		fPiezo = flag(1);
 		DEBUGLCOUT(MYDEBUG_INPUT,
 			"Piezoelectric actuator beam is expected" << std::endl);
+	} else if (HP.IsKeyWord("piezoelectric" "beam")) {
+		Type = Beam::FULLYCOUPLEDPIEZOELECTRICELASTIC;
 
+		fPiezo = flag(2);
+		DEBUGLCOUT(MYDEBUG_INPUT,
+			"Fully coupled Piezoelectric beam is expected" << std::endl);
+		
+	}
+	if (fPiezo > 0) {
 		iNumElec = HP.GetInt();
 		DEBUGLCOUT(MYDEBUG_INPUT,
-			"piezo actuator " << uLabel << " has " << iNumElec
+			"piezo beam " << uLabel << " has " << iNumElec
 			<< " electrodes" << std::endl);
 		if (iNumElec <= 0) {
 			silent_cerr("PiezoElectricBeam(" << uLabel << "): "
@@ -2137,14 +2181,34 @@ ReadBeam(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 		PiezoMat[1][0].Resize(iNumElec);
 		PiezoMat[0][1].Resize(iNumElec);
 		PiezoMat[1][1].Resize(iNumElec);
-
+		if (fPiezo == 2) {
+			PiezoMatQ[0][0].Resize(iNumElec);
+			PiezoMatQ[1][0].Resize(iNumElec);
+			PiezoMatQ[0][1].Resize(iNumElec);
+			PiezoMatQ[1][1].Resize(iNumElec);
+			PiezoMatQV[0].Resize(iNumElec);
+			PiezoMatQV[1].Resize(iNumElec);
+		}
 		/* leggere le matrici (6xN sez. 1, 6xN sez. 2) */
 		HP.GetMat6xN(PiezoMat[0][0], PiezoMat[1][0], iNumElec);
+		if (fPiezo == 2) {
+			HP.GetMatNx6(PiezoMatQ[0][0], PiezoMatQ[1][0], iNumElec);
+			HP.GetMatNxN(PiezoMatQV[0], iNumElec);
+		}
 		if (HP.IsKeyWord("same")) {
 			PiezoMat[0][1].Copy(PiezoMat[0][0]);
 			PiezoMat[1][1].Copy(PiezoMat[1][0]);
+			if (fPiezo == 2) {
+				PiezoMatQ[0][1].Copy(PiezoMatQ[0][0]);
+				PiezoMatQ[1][1].Copy(PiezoMatQ[1][0]);
+				PiezoMatQV[1].Copy(PiezoMatQV[0]);
+			}
 		} else {
 			HP.GetMat6xN(PiezoMat[0][1], PiezoMat[1][1], iNumElec);
+			if (fPiezo == 2) {
+				HP.GetMatNx6(PiezoMatQ[0][1], PiezoMatQ[1][1], iNumElec);
+				HP.GetMatNxN(PiezoMatQV[1], iNumElec);
+			}
 		}
 
 #if 0
@@ -2187,10 +2251,40 @@ ReadBeam(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 
 	Elem* pEl = NULL;
 
-	if ((CLType_I == ConstLawType::ELASTIC)
+	if (fPiezo == 2) { //using fully coupled piezo
+			SAFENEWWITHCONSTRUCTOR(pEl,
+				PiezoBeam,
+				PiezoBeam(uLabel,
+					pNode1, pNode2, pNode3,
+					f1, f2, f3,
+					Rn1, Rn2, Rn3,
+					R_I, RII,
+					pD_I, pDII,
+					iNumElec,
+					pvElecDofs,
+					PiezoMat[0][0], PiezoMat[1][0],
+					PiezoMat[0][1], PiezoMat[1][1],
+					PiezoMatQ[0][0], PiezoMatQ[1][0],
+					PiezoMatQ[0][1], PiezoMatQ[1][1],
+					PiezoMatQV[0], PiezoMatQV[1],
+					od, fOut));
+	} else if ((CLType_I == ConstLawType::ELASTIC)
 		&& (CLTypeII == ConstLawType::ELASTIC))
 	{
 		if (fPiezo == 0) {
+                     if (pDM->bUseAutoDiff()) {
+                             SAFENEWWITHCONSTRUCTOR(pEl,
+                                                    BeamAd,
+                                                    BeamAd(uLabel,
+                                                           dynamic_cast<const StructNodeAd*>(pNode1),
+                                                           dynamic_cast<const StructNodeAd*>(pNode2),
+                                                           dynamic_cast<const StructNodeAd*>(pNode3),
+                                                           f1, f2, f3,
+                                                           Rn1, Rn2, Rn3,
+                                                           R_I, RII,
+                                                           pD_I, pDII,
+                                                           od, fOut));
+                     } else {
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				Beam,
 				Beam(uLabel,
@@ -2200,7 +2294,8 @@ ReadBeam(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 					R_I, RII,
 					pD_I, pDII,
 					od, fOut));
-		} else {
+                     }
+		} else if (fPiezo == 1){
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				PiezoActuatorBeam,
 				PiezoActuatorBeam(uLabel,
@@ -2215,19 +2310,32 @@ ReadBeam(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 					PiezoMat[0][1], PiezoMat[1][1],
 					od, fOut));
 		}
-
-	} else /* At least one is VISCOUS or VISCOELASTIC */ {
+	} else /* At least one is VISCOUS or VISCOELASTIC and not fully copled piezo*/ {
 		if (fPiezo == 0) {
-			SAFENEWWITHCONSTRUCTOR(pEl,
-				ViscoElasticBeam,
-				ViscoElasticBeam(uLabel,
-					pNode1, pNode2, pNode3,
-					f1, f2, f3,
-					Rn1, Rn2, Rn3,
-					R_I, RII,
-					pD_I, pDII,
-					od, fOut));
-		} else {
+                        if (pDM->bUseAutoDiff()) {
+                                SAFENEWWITHCONSTRUCTOR(pEl,
+                                                       ViscoElasticBeamAd,
+                                                       ViscoElasticBeamAd(uLabel,
+                                                                          dynamic_cast<const StructNodeAd*>(pNode1),
+                                                                          dynamic_cast<const StructNodeAd*>(pNode2),
+                                                                          dynamic_cast<const StructNodeAd*>(pNode3),
+                                                                          f1, f2, f3,
+                                                                          Rn1, Rn2, Rn3,
+                                                                          R_I, RII,
+                                                                          pD_I, pDII,
+                                                                          od, fOut));                                
+                        } else {
+                                SAFENEWWITHCONSTRUCTOR(pEl,
+                                                       ViscoElasticBeam,
+                                                       ViscoElasticBeam(uLabel,
+                                                                        pNode1, pNode2, pNode3,
+                                                                        f1, f2, f3,
+                                                                        Rn1, Rn2, Rn3,
+                                                                        R_I, RII,
+                                                                        pD_I, pDII,
+                                                                        od, fOut));
+                        }
+		} else if (fPiezo == 1) {
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				PiezoActuatorVEBeam,
 				PiezoActuatorVEBeam(uLabel,
@@ -2241,6 +2349,11 @@ ReadBeam(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 					PiezoMat[0][0], PiezoMat[1][0],
 					PiezoMat[0][1], PiezoMat[1][1],
 					od, fOut));
+		} else if (fPiezo != 2) {
+			silent_cerr("line " << HP.GetLineData()
+				<< ": Something went wrong reading the beam, flag fPiezo = " << fPiezo
+				<< std::endl);
+			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
 	}
 

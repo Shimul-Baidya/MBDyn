@@ -57,12 +57,6 @@ v(Zero3),
 dElle(0.),
 dEpsilon(0.),
 dEpsilonPrime(0.)
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars...
-,
-Var_v(0),
-Var_dElle(0),
-Var_dEllePrime(0)
-#endif // USE_NETCDFC
 {
 	/* Verifica di consistenza dei dati iniziali */
 	ASSERT(pNode1 != 0);
@@ -178,7 +172,7 @@ Rod::AssVec(SubVectorHandler& WorkVec)
 	try {
 		ConstitutiveLaw1DOwner::Update(dEpsilon);
 
-	} catch (Elem::ChangedEquationStructure) {
+	} catch (Elem::ChangedEquationStructure& err) {
 		ChangeJac = true;
 	}
 
@@ -303,13 +297,16 @@ Rod::OutputPrepare(OutputHandler& OH)
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			std::string name;
-			OutputPrepare_int("rod", OH, name);
+			OutputPrepare_int("Rod", OH, name);
 
-			Var_dElle = OH.CreateVar<doublereal>(name + "l", "m",
+			Var_dElle = OH.CreateVar<doublereal>(name + "l",
+				OutputHandler::Dimensions::Length,
 				"length of the element");
-			Var_dEllePrime = OH.CreateVar<doublereal>(name + "lP", "m/2",
+			Var_dEllePrime = OH.CreateVar<doublereal>(name + "lP",
+				OutputHandler::Dimensions::Velocity,
 				"lengthening velocity of the element");
-			Var_v = OH.CreateVar<Vec3>(name + "v", "m",
+			Var_v = OH.CreateVar<Vec3>(name + "v",
+				OutputHandler::Dimensions::Dimensionless,
 				"direction unit vector");
 			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, name + "CL");
 		}
@@ -330,30 +327,27 @@ Rod::Output(OutputHandler& OH) const
 
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-
 			Vec3 F = Vec3(d, 0., 0.);
 			Vec3 M = Zero3;
 			Vec3 FTmp = vTmp*d;
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec(F.pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec(M.pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec(FTmp.pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec(M.pGetVec(), OH.GetCurrentStep());
-			Var_dElle->put_rec(&dElle, OH.GetCurrentStep());
-			Var_dEllePrime->put_rec(&dEllePrime, OH.GetCurrentStep());
-			Var_v->put_rec(vTmp.pGetVec(), OH.GetCurrentStep());
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
+			
+			Joint::NetCDFOutput(OH, F, M, FTmp, M);
+			
+			OH.WriteNcVar(Var_dElle, dElle);
+			OH.WriteNcVar(Var_dEllePrime, dEllePrime);
+			OH.WriteNcVar(Var_v, vTmp);
+
+			ConstitutiveLaw1DOwner::NetCDFOutputAppend(OH);
 		}
 #endif // USE_NETCDF
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			std::ostream& out = OH.Joints();
 
-		std::ostream& out = OH.Joints();
-
-		Joint::Output(out, "Rod", GetLabel(),
-			Vec3(d, 0., 0.), Zero3, vTmp*d, Zero3)
-			<< " " << dElle << " " << vTmp << " " << dEpsilonPrime*dL0,
- 			ConstitutiveLaw1DOwner::OutputAppend(out, OH) << std::endl;
+			Joint::Output(out, "Rod", GetLabel(),
+					Vec3(d, 0., 0.), Zero3, vTmp*d, Zero3)
+				<< " " << dElle << " " << vTmp << " " << dEllePrime,
+				ConstitutiveLaw1DOwner::OutputAppend(out) << std::endl;
+		}
 	}
 }
 
@@ -521,6 +515,12 @@ Rod::dGetPrivData(unsigned int i) const
 	return ConstitutiveLaw1DOwner::dGetPrivData(i);
 }
 
+const OutputHandler::Dimensions
+Rod::GetEquationDimension(integer index) const {
+	// DOF == 0
+	return OutputHandler::Dimensions::UnknownDimension;
+}
+
 /* Rod - end */
 
 
@@ -671,7 +671,7 @@ ViscoElasticRod::AssRes(SubVectorHandler& WorkVec,
 	try {
 		ConstitutiveLaw1DOwner::Update(dEpsilon, dEpsilonPrime);
 
-	} catch (Elem::ChangedEquationStructure) {
+	} catch (Elem::ChangedEquationStructure& err) {
 		ChangeJac = true;
 	}
 	doublereal dF = GetF();
@@ -951,7 +951,7 @@ RodWithOffset::AssJac(VariableSubMatrixHandler& WorkMat,
 		K(iCnt, iCnt) += d;
 	}
 
-	Mat3x3 KPrime;
+	Mat3x3 KPrime(Zero3x3);
 	if (dFDEPrime != 0.) {
 		KPrime = v.Tens(v*((dFDEPrime)/(dL0*dElle*dElle)));
 	}
@@ -1083,7 +1083,7 @@ RodWithOffset::AssVec(SubVectorHandler& WorkVec)
 	try {
 		ConstitutiveLaw1DOwner::Update(dEpsilon, dEpsilonPrime);
 
-	} catch (Elem::ChangedEquationStructure) {
+	} catch (Elem::ChangedEquationStructure& err) {
 		ChangeJac = true;
 	}
 
@@ -1164,7 +1164,7 @@ RodWithOffset::InitialAssJac(VariableSubMatrixHandler& WorkMat,
 		K(iCnt, iCnt) += d;
 	}
 
-	Mat3x3 KPrime;
+	Mat3x3 KPrime(Zero3x3);
 	if (dFDEPrime != 0.) {
 		KPrime = v.Tens(v*((dFDEPrime)/(dL0*dElle*dElle)));
 	}

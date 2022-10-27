@@ -38,6 +38,7 @@
 #include <fstream>
 
 #include "ac/getopt.h"
+#include "task2cpu.h"
 
 extern "C" {
 #include <time.h>
@@ -155,6 +156,7 @@ struct mbdyn_proc_t {
 	InputSource CurrInputSource;
 	unsigned int nThreads;
 	bool using_mpi;
+        bool bNonlinCPUTime;
 #ifdef USE_MPI
 	int MyRank;
 	char *ProcessorName;
@@ -255,6 +257,7 @@ mbdyn_usage(const char *sShortOpts)
 		<< "  -v, --version             show version and exit" << std::endl
 		<< "  -w, --warranty            prints the warranty conditions" << std::endl
 		<< "  -W, --working-dir {dir}   sets the working directory" << std::endl
+                << "  -a, --affinity {0,1, ...} sets the CPU affinity to a comma separated list of indices" << std::endl
 		<< std::endl
 		<< "Usually mbdyn reads the input from stdin and writes messages on stdout; a log" << std::endl
 		<< "is put in '{file}.out', and data output is sent to various '{file}.<ext>'" << std::endl
@@ -288,10 +291,11 @@ mbdyn_welcome(void)
 }
 
 /* Dati di getopt */
-static char sShortOpts[] = "d:eE::f:hHlN:o:pPrRsS:tTvwW:";
+static char sShortOpts[] = "C:d:eE::f:hHlN:o:pPrRsS:tTvwW:a:";
 
 #ifdef HAVE_GETOPT_LONG
 static struct option LongOpts[] = {
+	{ "solver-time",    no_argument,       NULL,           int('C') },     
 	{ "debug",          required_argument, NULL,           int('d') },
 	{ "exceptions",     no_argument,       NULL,           int('e') },
 	{ "fp-mask",        optional_argument, NULL,           int('E') },
@@ -312,7 +316,7 @@ static struct option LongOpts[] = {
 	{ "version",        no_argument,       NULL,           int('v') },
 	{ "warranty",       no_argument,       NULL,           int('w') },
 	{ "working-dir",    required_argument, NULL,           int('W') },
-
+	{ "affinity",       required_argument, NULL,           int('a') },
 	{ NULL,             0,                 NULL,           0        }
 };
 #endif /* HAVE_GETOPT_LONG */
@@ -449,9 +453,11 @@ mbdyn_parse_arguments(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
 			mbp.FileStreamIn.open(mbp.sInputFileName.c_str());
 #endif
 			if (!mbp.FileStreamIn) {
+				int save_errno = errno;
 				silent_cerr(std::endl
-					<< "Unable to open file \""
-					<< mbp.sInputFileName << "\"");
+					<< "Unable to open file "
+					"\"" << mbp.sInputFileName << "\" (" << save_errno << ": " << strerror(save_errno) << ");"
+					" aborting..." << std::endl);
 #ifdef USE_MPI
 				if (mbp.using_mpi) {
 					silent_cerr(" on " << mbp.ProcessorName);
@@ -642,7 +648,35 @@ mbdyn_parse_arguments(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
 				<< std::endl);
 #endif /* !HAVE_CHDIR */
 			break;
+			
+		case int('C'):
+		        mbp.bNonlinCPUTime = true;
+		        break;
 
+		case int('a'): {
+		     static const char delims[] = ",";
+		     
+		     Task2CPU oCPUSet;
+		     
+		     for (char* p = strtok(optarg, delims); p; p = strtok(nullptr, delims)) {
+			  char* end;
+			  long iCPU = strtol(p, &end, 10);
+			  
+			  if (!(*end == '\0' && iCPU >= 0 && iCPU < Task2CPU::iGetMaxSize())) {
+			       silent_cerr("Invalid argument for option -" << char(iCurrOpt) << std::endl);
+			       mbdyn_usage(sShortOpts);
+			       throw NoErr(MBDYN_EXCEPT_ARGS);
+			  }
+
+			  oCPUSet.SetCPU(iCPU);			  
+		     }
+
+		     if (oCPUSet.bSetAffinity()) {
+			  Task2CPU::SetGlobalState(oCPUSet);
+		     } else {
+			  silent_cerr("warning: failed to set CPU affinity\n");
+		     }
+		} break;
 		case int('?'):
 			silent_cerr("Unknown option -" << char(optopt) << std::endl);
 			mbdyn_usage(sShortOpts);
@@ -832,7 +866,7 @@ mbdyn_program(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
 	int last = 0;
 	while (last == 0) {
 		if (mbp.CurrInputSource == MBFILE_STDIN) {
-			silent_cout("reading from stdin" << std::endl);
+			silent_cout("no input file(s) in the command line; reading from standard input (stdin)" << std::endl);
 			last = 1;
 
 		} else if (mbp.CurrInputSource == MBFILE_OPT) {
@@ -861,9 +895,10 @@ mbdyn_program(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
 				mbp.FileStreamIn.open(mbp.sInputFileName.c_str());
 #endif
 				if (!mbp.FileStreamIn) {
+					int save_errno = errno;
 					silent_cerr(std::endl
 						<< "Unable to open file "
-						"\"" << mbp.sInputFileName << "\";"
+						"\"" << mbp.sInputFileName << "\" (" << save_errno << ": " << strerror(save_errno) << ");"
 						" aborting..." << std::endl);
 					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 				}
@@ -925,11 +960,12 @@ mbdyn_program(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
 			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		} // switch (CurrInputFormat)
 
-		clock_t ct = 0;
-
 		if (pSolv != NULL) {
-			ct += pSolv->GetCPUTime();
-			SAFEDELETE(pSolv);
+		     if (mbp.bNonlinCPUTime && silent_out) {
+			  pSolv->PrintSolverTime(std::cout);
+		     }
+		     SAFEDELETE(pSolv);
+		     pSolv = NULL;
 		}
 
 		if (!mbp.bTable || currarg == argc) {
@@ -951,8 +987,9 @@ mbdyn_program(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
 		struct tms tmsbuf;
 		times(&tmsbuf);
 
-		ct += tmsbuf.tms_utime + tmsbuf.tms_cutime
-			+ tmsbuf.tms_stime + tmsbuf.tms_cstime;
+		// Do not add pSolv->GetCPUTime() because it is already included in tms_cutime and tms_cstime
+		clock_t ct = tmsbuf.tms_utime + tmsbuf.tms_cutime
+		           + tmsbuf.tms_stime + tmsbuf.tms_cstime;
 
 		long clk_tck = sysconf(_SC_CLK_TCK);
 		tSecs = ct/clk_tck;
@@ -1026,8 +1063,27 @@ main(int argc, char* argv[])
 	mbp.iSleepTime = -1;
 	mbp.CurrInputFormat = MBDYN;
 	mbp.CurrInputSource = MBFILE_UNKNOWN;
-
+	mbp.bNonlinCPUTime = false;
+#ifdef USE_MPI
+        mbp.using_mpi = true;
+#else
+        mbp.using_mpi = false;
+#endif
 	atexit(mbdyn_cleanup_destroy);
+
+#ifdef USE_SOCKET
+#ifdef _WIN32
+    // winsock requires initialisation
+    WSADATA wsa_data;
+    if (WSAStartup(MAKEWORD(2,2),&wsa_data) != 0)
+    {
+        silent_cerr("Winsock initialisation failed. Error Code: "
+                    << WSAGetLastError() << std::endl);
+        return -1;
+    }
+    silent_cout("Winsock initialised successfully" << std::endl);
+#endif /* _WIN32 */
+#endif /* USE_SOCKET */
 
 #ifdef USE_MPI
 	char	ProcessorName_[1024] = "localhost";
@@ -1094,15 +1150,19 @@ main(int argc, char* argv[])
 
     	try {
 		mbdyn_parse_arguments(mbp, argc, argv, currarg);
-	} catch (NoErr) {
+	} catch (NoErr& e) {
 		silent_cout("MBDyn terminated normally" << std::endl);
 		rc = EXIT_SUCCESS;
 		MB_EXIT(return, rc);
-	} catch (ErrInterrupted) {
+	} catch (ErrInterrupted& e) {
 		silent_cout("MBDyn was interrupted" << std::endl);
 		rc = 2;
 		MB_EXIT(exit, rc);
-    	}
+    	} catch (...) {
+                silent_cerr("An error occurred during the execution of MBDyn" << std::endl);
+                rc = EXIT_FAILURE;
+                MB_EXIT(exit, rc);
+        }
 
 	if (mbp.bException) {
 		mbdyn_program(mbp, argc, argv, currarg);
@@ -1111,16 +1171,33 @@ main(int argc, char* argv[])
 	    	/* The program is a big try block */
 	    	try {
 			mbdyn_program(mbp, argc, argv, currarg);
-		} catch (NoErr) {
+		} catch (NoErr& e) {
 			silent_cout("MBDyn terminated normally" << std::endl);
 			rc = EXIT_SUCCESS;
-		} catch (ErrInterrupted) {
+		} catch (ErrInterrupted& e) {
 			silent_cout("MBDyn was interrupted" << std::endl);
 			rc = 2;
-		} catch (std::ios::failure err) {
+		} catch (std::ios::failure& err) {
 			silent_cerr("An IO error occurred during the execution of MBDyn (" << err.what() << ");"
 				" aborting... " << std::endl);
 			rc = EXIT_FAILURE;
+		} catch (std::bad_alloc& err) {
+			silent_cerr("A memory allocation error occurred during the execution of MBDyn\n"
+				"(" << err.what() << ");\n"
+				"This means that - somewhere deep into the program - there was an allocation\n"
+				"request for an amount of memory larger than what is currently available in your\n"
+				"machine.\n\n"
+				"Check your input file\n\n"
+				"As a last resort, and to debug the issue, you can try to re-launch MBDyn \n"
+				"within a debugger and with the run-time option -e .\n\n"
+				"Aborting... " << std::endl);
+			rc = EXIT_FAILURE;
+#ifdef DEBUG
+		} catch (const std::exception& e) {
+			silent_cerr("An error occurred during the execution of MBDyn (" << e.what() << ");"
+				" aborting..." << std::endl);
+			rc = EXIT_FAILURE;
+#endif // DEBUG
 		} catch (...) {
 			silent_cerr("An error occurred during the execution of MBDyn;"
 				" aborting... " << std::endl);
@@ -1145,6 +1222,14 @@ main(int argc, char* argv[])
 		::rtmbdyn_rtai_task = NULL;
 	}
 #endif /* USE_RTAI */
+
+
+#ifdef USE_SOCKET
+#ifdef _WIN32
+    // winsock requires cleanup
+    WSACleanup();
+#endif /* _WIN32 */
+#endif /* USE_SOCKET */
 
 	mbdyn_cleanup();
 
@@ -1224,7 +1309,7 @@ RunMBDyn(MBDynParser& HP,
 	KeyWords cd;
 	try {
 		cd = KeyWords(HP.GetDescription());
-	} catch (EndOfFile) {
+	} catch (EndOfFile& e) {
 		throw NoErr(MBDYN_EXCEPT_ARGS);
 	}
 	/* looking for "begin"... */
@@ -1369,7 +1454,7 @@ endofcycle:
 			 * quale e' il master in modo da far calcolare la soluzione
 			 * solo su di esso
 			 */
-			MyRank = MBDynComm.Get_rank();
+			int MyRank = MBDynComm.Get_rank();
 			/* chiama il gestore dei dati generali della simulazione */
 
 			/*
@@ -1382,7 +1467,7 @@ endofcycle:
 
 			char buf[STRLENOF(".") + iRankLength + 1];
 			snprintf(buf, sizeof(buf), ".%.*d", iRankLength, MyRank);
-			sOutputFileName += buf;
+			const_cast<std::string&>(sOutputFileName) += buf;
 		}
 	}
 #endif /* USE_MPI */

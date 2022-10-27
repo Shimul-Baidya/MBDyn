@@ -60,7 +60,7 @@ BiCGStab::BiCGStab(const Preconditioner::PrecondType PType,
 		integer MaxIt,
 		doublereal etaMx,
 		doublereal T,
-		const NonlinearSolverOptions& options)
+		const NonlinearSolverTestOptions& options)
 : MatrixFreeSolver(PType, iPStep, ITol, MaxIt, etaMx, T, options)
 {
 	NO_OP;
@@ -102,6 +102,7 @@ BiCGStab::Solve(const NonlinearProblem* pNLP,
 	
 	pPrevNLP = pNLP;
         pRes = pSM->pResHdl();
+		pAbsRes = pGetResTest()->GetAbsRes();
 	Size = pRes->iGetSize();
 
 	doublereal eta = etaMax;
@@ -148,10 +149,13 @@ BiCGStab::Solve(const NonlinearProblem* pNLP,
 #endif /* USE_EXTERNAL */
 		
 		pRes->Reset();
-		try {
-	      		pNLP->Residual(pRes);
+		if (pAbsRes != 0) {
+			pAbsRes->Reset();
 		}
-		catch (SolutionDataManager::ChangedEquationStructure) {
+		try {
+	      		pNLP->Residual(pRes, pAbsRes);
+		}
+		catch (SolutionDataManager::ChangedEquationStructure& e) {
 			if (bHonorJacRequest) {
 				bBuildMat = true;
 			}
@@ -237,7 +241,7 @@ rebuild_matrix:;
 			try {
       				pNLP->Jacobian(pSM->pMatHdl());
 
-			} catch (MatrixHandler::ErrRebuildMatrix) {
+			} catch (MatrixHandler::ErrRebuildMatrix& e) {
 				silent_cout("NewtonRaphsonSolver: "
 						"rebuilding matrix..."
 						<< std::endl);

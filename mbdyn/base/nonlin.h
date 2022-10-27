@@ -45,7 +45,11 @@
 #include "nonlinpb.h"
 #include "solman.h"
 
+#include <iomanip>
+#include <chrono>
 #include <cfloat>
+#include <map>
+#include <set>
 #include <vector>
 
 /*
@@ -77,11 +81,15 @@ public:
 		NONE,
 		NORM,
 		MINMAX,
+		RELNORM,
+		SEPNORM,
 
 		LASTNONLINEARSOLVERTEST
 	};
 
 	virtual ~NonlinearSolverTest(void);
+
+        virtual Type GetType() const=0;
 
 	/* loops over the vector Vec */
 	virtual doublereal MakeTest(Solver *pS, const integer& Size,
@@ -102,10 +110,17 @@ public:
 
 	/* scales a single value */
 	virtual const doublereal& dScaleCoef(const integer& iIndex) const;
+
+	/* returns pointer to global vector for absolute residual*/
+	virtual VectorHandler* GetAbsRes() { return 0;}
+
+	/* returns pointer to map of dimension and corresponding equations */
+	virtual std::map<OutputHandler::Dimensions, std::set<integer>>* GetDimMap() { return 0; };
 };
 
 class NonlinearSolverTestNone : virtual public NonlinearSolverTest {
 public:
+        virtual Type GetType() const;
 	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
 			const integer& iIndex, doublereal dCoef) const;
 	virtual void TestMerge(doublereal& dResCurr,
@@ -117,6 +132,7 @@ public:
 
 class NonlinearSolverTestNorm : virtual public NonlinearSolverTest {
 public:
+        virtual Type GetType() const;
 	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
 			const integer& iIndex, doublereal dCoef) const;
 	virtual void TestMerge(doublereal& dResCurr,
@@ -124,8 +140,50 @@ public:
 	virtual doublereal TestPost(const doublereal& dRes) const;
 };
 
+class NonlinearSolverTestRelNorm : virtual public NonlinearSolverTest {
+public:
+	MyVectorHandler AbsRes;
+	virtual VectorHandler* GetAbsRes();
+		virtual Type GetType() const;
+	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
+			const integer& iIndex, doublereal dCoef) const;
+	virtual void TestMerge(doublereal& dResCurr,
+			const doublereal& dResNew) const;
+	virtual doublereal TestPost(const doublereal& dRes) const;
+
+	/* loops over Res and AbsRes */
+	virtual doublereal MakeTest(Solver *pS, const integer& Size,
+			const VectorHandler& Vec, bool bResidual = false,
+			doublereal dScaleAlgEqu = 1., doublereal* pTestDiff=0);
+};
+
+class NonlinearSolverTestSepNorm : virtual public NonlinearSolverTest {
+public:
+	/* Indices for corresponding dimensions */
+	std::map<OutputHandler::Dimensions, std::set<integer>> MapOfDimensionIndices;
+	virtual std::map<OutputHandler::Dimensions, std::set<integer>>* GetDimMap();
+
+	/* Vector of the absolute values */
+	MyVectorHandler AbsRes;
+	virtual VectorHandler* GetAbsRes();
+
+	virtual Type GetType() const;
+	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
+			const integer& iIndex, doublereal dCoef) const;
+	virtual void TestMerge(doublereal& dResCurr,
+			const doublereal& dResNew) const;
+	virtual doublereal TestPost(const doublereal& dRes) const;
+
+	/* loops over Res components seperately */
+	virtual doublereal MakeTest(Solver *pS, const integer& Size,
+			const VectorHandler& Vec, bool bResidual = false,
+			doublereal dScaleAlgEqu = 1., doublereal* pTestDiff=0);
+};
+
+
 class NonlinearSolverTestMinMax : virtual public NonlinearSolverTest {
 public:
+        virtual Type GetType() const;
 	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
 			const integer& iIndex, doublereal dCoef) const;
 	virtual void TestMerge(doublereal& dResCurr,
@@ -146,6 +204,27 @@ public:
 class NonlinearSolverTestScaleNorm : virtual public NonlinearSolverTestScale,
 	virtual public NonlinearSolverTestNorm {
 public:
+        virtual Type GetType() const;
+	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
+			const integer& iIndex, doublereal dCoef) const;
+	virtual void TestMerge(doublereal& dResCurr,
+			const doublereal& dResNew) const;
+	virtual const doublereal& dScaleCoef(const integer& iIndex) const;
+};
+
+class NonlinearSolverTestScaleRelNorm : virtual public NonlinearSolverTestScale,
+	virtual public NonlinearSolverTestNorm {
+public:
+	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
+			const integer& iIndex, doublereal dCoef) const;
+	virtual void TestMerge(doublereal& dResCurr,
+			const doublereal& dResNew) const;
+	virtual const doublereal& dScaleCoef(const integer& iIndex) const;
+};
+
+class NonlinearSolverTestScaleSepNorm : virtual public NonlinearSolverTestScale,
+	virtual public NonlinearSolverTestSepNorm {
+public:
 	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
 			const integer& iIndex, doublereal dCoef) const;
 	virtual void TestMerge(doublereal& dResCurr,
@@ -156,6 +235,7 @@ public:
 class NonlinearSolverTestScaleMinMax : virtual public NonlinearSolverTestScale,
 	virtual public NonlinearSolverTestMinMax {
 public:
+        virtual Type GetType() const;
 	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
 			const integer& iIndex, doublereal dCoef) const;
 	virtual void TestMerge(doublereal& dResCurr,
@@ -179,7 +259,7 @@ public:
 	virtual doublereal MakeTest(Solver *pS, const integer& Size,
 		const VectorHandler& Vec, bool bResidual = false);
 #endif
-
+        virtual Type GetType() const;
 	virtual void TestOne(doublereal& dRes, const VectorHandler& Vec,
 			const integer& iIndex, doublereal dCoef) const;
 
@@ -192,7 +272,7 @@ public:
 	void SetRange(integer iFirstIndex, integer iLastIndex);
 };
 
-struct NonlinearSolverOptions
+struct NonlinearSolverTestOptions
 {
 	bool bHonorJacRequest;
 
@@ -203,12 +283,32 @@ struct NonlinearSolverOptions
 
 	doublereal dScaleAlgebraic;
 
-	NonlinearSolverOptions(bool bHonorJacRequest = false,
-		enum ScaleFlags eScaleFlags = SCALE_ALGEBRAIC_EQUATIONS_NO,
-		doublereal dScaleAlgebraic = 1.);
+	NonlinearSolverTestOptions(bool bHonorJacRequest = false,
+                                   enum ScaleFlags eScaleFlags = SCALE_ALGEBRAIC_EQUATIONS_NO,
+                                   doublereal dScaleAlgebraic = 1.);
 };
 
-class NonlinearSolver : public SolverDiagnostics, protected NonlinearSolverOptions
+struct CommonNonlinearSolverParam
+{
+     enum CommonSolverFlags { 
+          VERBOSE_MODE           = 0x1, // reserved range from 0x1 to 0xF
+          PRINT_CONVERGENCE_INFO = 0x2
+     };
+     
+     CommonNonlinearSolverParam(unsigned uFlags = 0u,
+                                integer iIterBeforeAss = 0,
+                                bool bKeepJac = false)
+          :uFlags(uFlags),
+           iIterationsBeforeAssembly(iIterBeforeAss),
+           bKeepJacAcrossSteps(bKeepJac) {
+     }
+
+     unsigned uFlags;
+     integer iIterationsBeforeAssembly;
+     bool bKeepJacAcrossSteps;     
+};
+
+class NonlinearSolver : public SolverDiagnostics, protected NonlinearSolverTestOptions
 {
 public:
  	class ErrSimulationDiverged : MBDynErrBase {
@@ -241,7 +341,13 @@ public:
 
 		NEWTONRAPHSON,
 		MATRIXFREE,
+                NOX,
 		LINESEARCH,
+                BFGS,
+                MCP_NEWTON_FB,     
+                MCP_NEWTON_MIN_FB,
+                SICONOS_MCP_NEWTON_FB,
+                SICONOS_MCP_NEWTON_MIN_FB,
 		DEFAULT = NEWTONRAPHSON,
 
 		LASTSOLVERTYPE
@@ -272,23 +378,113 @@ protected:
 		CPU_LAST_TYPE
 	};
 
-	doublereal dGetCondMax()const { return dMaxCond; }
-	doublereal dGetCondMin()const { return dMinCond; }
-	doublereal dGetCondAvg()const { return dSumCond / iNumCond; }
-	inline doublereal dGetTimeCPU(CPUTimeType eType) const;
+	doublereal dGetCondMax() const { return dMaxCond; }
+	doublereal dGetCondMin() const { return dMinCond; }
+	doublereal dGetCondAvg() const { return dSumCond / iNumCond; }
+        inline std::chrono::nanoseconds dGetTimeCPU(CPUTimeType eType) const;
+	inline void AddCond(doublereal dCond) const;
+        inline void ResetCond() const;
+        inline void AddTimeCPU(std::chrono::nanoseconds dTime, CPUTimeType eType) const;
 
-	inline void AddCond(doublereal dCond);
-	inline void AddTimeCPU(doublereal dTime, CPUTimeType eType);
+    friend class CPUStopWatch;
+                
+    class CPUStopWatch  {
+    public:
+        explicit CPUStopWatch(const NonlinearSolver& oSolver, CPUTimeType eType)
+            :oSolver(oSolver),
+             eType(eType),
+	     eStatus(SWST_INACTIVE),	     
+             dStartTimeCPU(std::chrono::nanoseconds(0)),
+             dElapsedCPU(std::chrono::nanoseconds(0)) {
+        }
 
+        ~CPUStopWatch() {
+            Toc();
+        }
+        
+	std::chrono::time_point<std::chrono::high_resolution_clock> Tic() {
+            using namespace std::chrono;
+	    
+	    dStartTimeCPU = high_resolution_clock::now();
+	    eStatus = SWST_ACTIVE;
+
+            return dStartTimeCPU;
+        }
+
+	 std::chrono::time_point<std::chrono::high_resolution_clock> Tic(CPUStopWatch& oOther) {
+            ASSERT(&oSolver == &oOther.oSolver);
+	    
+            dStartTimeCPU = oOther.Toc();
+	    eStatus = SWST_ACTIVE;
+            
+            return dStartTimeCPU;
+        }
+        
+        std::chrono::time_point<std::chrono::high_resolution_clock> Toc() {
+            using namespace std::chrono;
+	    
+            time_point<high_resolution_clock> dEndTimeCPU = high_resolution_clock::now();
+	    
+	    if (eStatus == SWST_ACTIVE) {
+		 dElapsedCPU = dEndTimeCPU - dStartTimeCPU;
+		 oSolver.AddTimeCPU(dElapsedCPU, eType);
+            }
+
+	    eStatus = SWST_INACTIVE;
+
+            return dEndTimeCPU;
+        }
+
+        std::chrono::nanoseconds dGetElapsedCPU() const {
+            using namespace std::chrono;
+	    
+            if (eStatus == SWST_ACTIVE) {
+		 return duration_cast<nanoseconds>(high_resolution_clock::now() - dStartTimeCPU);
+            } else {
+                return dElapsedCPU;
+            }
+        }
+                   
+        friend inline std::ostream& operator<<(std::ostream& os, const CPUStopWatch& oWatch) {
+            return oWatch.Print(os);
+        }
+	 
+    private:
+        std::ostream& Print(std::ostream& os) const {
+	     using namespace std::chrono;
+	     typedef duration<float, std::ratio<1, 1> > FloatSec;
+	     
+	     auto flags = os.flags();
+	     auto prec = os.precision();
+	     os.setf(std::ios::scientific);
+	     os.precision(2);
+	     os << FloatSec(dGetElapsedCPU()).count() << "s/" << FloatSec(oSolver.dGetTimeCPU(eType)).count() << "s";	     
+	     os.flags(flags);
+	     os.precision(prec);
+	     
+	     return os;
+        }
+                   
+        const NonlinearSolver& oSolver;
+        const CPUTimeType eType;
+	enum StatusType {
+	      SWST_ACTIVE,
+	      SWST_INACTIVE
+	} eStatus;
+	 
+        std::chrono::time_point<std::chrono::high_resolution_clock> dStartTimeCPU;
+        std::chrono::nanoseconds dElapsedCPU;
+    };
+    
 private:
-	integer iNumCond;
-	doublereal dMaxCond;
-	doublereal dMinCond;
-	doublereal dSumCond;
-	doublereal dTimeCPU[CPU_LAST_TYPE];
+	mutable integer iNumCond;
+	mutable doublereal dMaxCond;
+	mutable doublereal dMinCond;
+	mutable doublereal dSumCond;
+        mutable std::chrono::nanoseconds dTimeCPU[CPU_LAST_TYPE];
 
 public:
-	explicit NonlinearSolver(const NonlinearSolverOptions& options);
+	explicit NonlinearSolver(const NonlinearSolverTestOptions& options);
 
 	virtual void SetTest(NonlinearSolverTest *pr, NonlinearSolverTest *ps);
 		
@@ -319,16 +515,65 @@ public:
 	virtual NonlinearSolverTest* pGetSolTest(void)	{
 		return pSolTest;
 	}
+
+        enum NonlinearSolverHintReal {
+                LINESEARCH_LAMBDA_MAX,
+                LINESEARCH_LAMBDA_CURR,
+                NONLINEAR_SOLVER_LAST_HINT_REAL
+        };
+
+        enum NonlinearSolverHintInteger {
+                LINESEARCH_ITERATION_CURR,
+                NONLINEAR_SOLVER_LAST_HINT_INTEGER
+        };
+
+
+    void SetNonlinearSolverHint(NonlinearSolverHintReal eType, doublereal dHint) {
+        ASSERT(eType >= 0);
+        ASSERT(eType < NONLINEAR_SOLVER_LAST_HINT_REAL);
+
+        oSolverHints.rgRealVal[eType] = dHint;
+    }
+    
+    doublereal GetNonlinearSolverHint(NonlinearSolverHintReal eType) const {
+        ASSERT(eType >= 0);
+        ASSERT(eType < NONLINEAR_SOLVER_LAST_HINT_REAL);
+        
+        return oSolverHints.rgRealVal[eType];
+    }
+
+    void SetNonlinearSolverHint(NonlinearSolverHintInteger eType, integer iHint) {
+        ASSERT(eType >= 0);
+        ASSERT(eType < NONLINEAR_SOLVER_LAST_HINT_INTEGER);
+
+        oSolverHints.rgIntegerVal[eType] = iHint;
+    }
+    
+    integer GetNonlinearSolverHint(NonlinearSolverHintInteger eType) const {
+        ASSERT(eType >= 0);
+        ASSERT(eType < NONLINEAR_SOLVER_LAST_HINT_INTEGER);
+        
+        return oSolverHints.rgIntegerVal[eType];
+    }
+
+     std::ostream& PrintSolverTime(std::ostream& os) const;
+     
 #ifdef USE_EXTERNAL
 	void SetExternal(const External::ExtMessage Ty);
 	
 protected:
 	void SendExternal(void);
 #endif /* USE_EXTERNAL */
+
+private:
+        struct SolverHints {
+           doublereal rgRealVal[NONLINEAR_SOLVER_LAST_HINT_REAL];
+           integer rgIntegerVal[NONLINEAR_SOLVER_LAST_HINT_INTEGER];
+        } oSolverHints;
 };
 
 inline void
-NonlinearSolver::AddCond(doublereal dCond)
+NonlinearSolver::AddCond(doublereal dCond) const
 {
 	iNumCond++;
 	dSumCond += dCond;
@@ -342,7 +587,16 @@ NonlinearSolver::AddCond(doublereal dCond)
 	}
 }
 
-inline doublereal
+inline void
+NonlinearSolver::ResetCond() const
+{
+    iNumCond = 0;
+    dSumCond = 0;
+    dMaxCond = 0;
+    dMinCond = std::numeric_limits<doublereal>::max();
+}
+        
+inline std::chrono::nanoseconds
 NonlinearSolver::dGetTimeCPU(CPUTimeType eType) const
 {
 	ASSERT(eType >= 0);
@@ -352,7 +606,7 @@ NonlinearSolver::dGetTimeCPU(CPUTimeType eType) const
 }
 
 inline void
-NonlinearSolver::AddTimeCPU(doublereal dTime, CPUTimeType eType)
+NonlinearSolver::AddTimeCPU(std::chrono::nanoseconds dTime, CPUTimeType eType) const
 {
 	ASSERT(eType >= 0);
 	ASSERT(eType < CPU_LAST_TYPE);

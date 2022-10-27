@@ -37,6 +37,7 @@
 #include "joint.h"
 #include "drive.h"
 #include "friction.h"
+#include "output.h"
 
 /* PlaneHingeJoint - begin */
 
@@ -61,8 +62,8 @@ class PlaneHingeJoint : virtual public Elem, public Joint {
 #ifdef USE_NETCDF
 	MBDynNcVar Var_Phi;
 	MBDynNcVar Var_Omega;
-//	MBDynNcVar Var_MFR;
-//	MBDynNcVar Var_MU;
+	MBDynNcVar Var_MFR;
+	MBDynNcVar Var_fc;
 #endif // USE_NETCDF
 
    bool calcInitdTheta;
@@ -196,6 +197,9 @@ class PlaneHingeJoint : virtual public Elem, public Joint {
      connectedNodes[1] = pNode2;
    };
    /* ************************************************ */
+
+   /* return s the dimension of the component */
+   const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* PlaneHingeJoint - end */
@@ -334,6 +338,9 @@ class PlaneRotationJoint : virtual public Elem, public Joint {
      connectedNodes[1] = pNode2;
    };
    /* ************************************************ */
+
+   /* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* PlaneRotationJoint - end */
@@ -368,8 +375,8 @@ public Joint, public DriveOwner {
 #ifdef USE_NETCDF
 	MBDynNcVar Var_Phi;
 	MBDynNcVar Var_Omega;
-//	MBDynNcVar Var_MFR;
-//	MBDynNcVar Var_MU;
+	MBDynNcVar Var_MFR;
+	MBDynNcVar Var_fc;
 #endif // USE_NETCDF
 
    /* friction related data */
@@ -509,6 +516,9 @@ public Joint, public DriveOwner {
      connectedNodes[1] = pNode2;
    };
    /* ************************************************ */
+
+   /* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* AxialRotationJoint - end */
@@ -601,7 +611,8 @@ class PlanePinJoint : virtual public Elem, public Joint {
 			    doublereal dCoef,
 			    const VectorHandler& XCurr, 
 			    const VectorHandler& XPrimeCurr);
-			    
+   
+   void OutputPrepare(OutputHandler& OH);
    virtual void Output(OutputHandler& OH) const;
  
    
@@ -637,6 +648,9 @@ class PlanePinJoint : virtual public Elem, public Joint {
      connectedNodes[0] = pNode;
    };
    /* ************************************************ */
+
+   /* return s the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* PlanePinJoint - end */

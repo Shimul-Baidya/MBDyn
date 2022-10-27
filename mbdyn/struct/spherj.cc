@@ -50,9 +50,6 @@ SphericalHingeJoint::SphericalHingeJoint(unsigned int uL, const DofOwner* pDO,
 : Elem(uL, fOut), 
 Joint(uL, pDO, fOut),
 pNode1(pN1), pNode2(pN2), 
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars...
-Var_Phi(0),
-#endif // USE_NETCDFC
 d1(dTmp1), R1h(RTmp1h),
 d2(dTmp2), R2h(RTmp2h), 
 F(Zero3),
@@ -225,9 +222,10 @@ SphericalHingeJoint::OutputPrepare(OutputHandler& OH)
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			std::string name;
-			OutputPrepare_int("spherical hinge", OH, name);
+			OutputPrepare_int("Spherical hinge", OH, name);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
+			Var_Phi = OH.CreateRotationVar(name, "", od, 
+					"relative orientation, in joint reference frame");
 
 		}
 #endif // USE_NETCDF
@@ -268,30 +266,23 @@ void SphericalHingeJoint::Output(OutputHandler& OH) const
       
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec((R1Tmp.MulTV(F)).pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec(F.pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
+			Joint::NetCDFOutput(OH, (R1Tmp.MulTV(F)), Zero3, F, Zero3);
 			switch (od) {
 			case EULER_123:
 			case EULER_313:
 			case EULER_321:
 			case ORIENTATION_VECTOR:
-				Var_Phi->put_rec(E.pGetVec(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, E);
 				break;
 
 			case ORIENTATION_MATRIX:
-				Var_Phi->put_rec(RTmp.pGetMat(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, RTmp);
 				break;
 
 			default:
 				/* impossible */
 				break;
 			}
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
 		}
 #endif // USE_NETCDF
 		if (OH.UseText(OutputHandler::JOINTS)) {
@@ -571,6 +562,40 @@ SphericalHingeJoint::InitialAssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+const OutputHandler::Dimensions
+SphericalHingeJoint::GetEquationDimension(integer index) const {
+	// DOF == 3
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+      case 3:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+SphericalHingeJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 3 << ": " <<
+			"relative position constraints" << std::endl;
+
+	return out;
+}
+
 /* SphericalHingeJoint - end */
 
 
@@ -580,7 +605,8 @@ PinJoint::PinJoint(unsigned int uL, const DofOwner* pDO,
 		   const StructNode* pN,
 		   const Vec3& X0Tmp, const Vec3& dTmp, flag fOut)
 : Elem(uL, fOut), 
-Joint(uL, pDO, fOut), pNode(pN), X0(X0Tmp), d(dTmp), F(Zero3)
+Joint(uL, pDO, fOut), pNode(pN), X0(X0Tmp), d(dTmp), 
+F(Zero3)
 {
    NO_OP;
 }
@@ -724,13 +750,42 @@ DofOrder::Order PinJoint::GetEqType(unsigned int i) const {
 	return DofOrder::ALGEBRAIC;
 }
 
+
+void
+PinJoint::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Spherical pin", OH, name);
+
+			Var_Phi = OH.CreateVar<Vec3>(name + "E",
+				OutputHandler::Dimensions::deg,
+				"node orientation (E123)");
+
+		}
+#endif // USE_NETCDF
+	}
+}
+
+
 /* Output (da mettere a punto) */
 void PinJoint::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) {
-      Joint::Output(OH.Joints(), "Pin", GetLabel(), F, Zero3, F, Zero3) 
-	<< " " << MatR2EulerAngles(pNode->GetRCurr())*dRaDegr << std::endl;
-   }   
+	if (bToBeOutput()) {
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "Pin", GetLabel(), F, Zero3, F, Zero3) 
+				<< " " << MatR2EulerAngles(pNode->GetRCurr())*dRaDegr << std::endl;
+			OH.Joints() << std::endl;
+		}
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, F, Zero3, F, Zero3);
+			OH.WriteNcVar(Var_Phi, MatR2EulerAngles(pNode->GetRCurr())*dRaDegr);
+		}
+#endif // USE_NETCDF
+	}
 }
 
 
@@ -875,4 +930,37 @@ PinJoint::InitialAssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+const OutputHandler::Dimensions
+PinJoint::GetEquationDimension(integer index) const {
+	// DOF == 3
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+      case 3:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+PinJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 3 << ": " <<
+			"position constraints" << std::endl;
+
+	return out;
+}
 /* PinJoint - end */

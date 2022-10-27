@@ -186,6 +186,7 @@ The following data are available:
 
 
 \section{Body}
+\label{sec:EL:BODY}
 The \kw{body} element describes a lumped rigid body when connected 
 to a regular, 6 degree of freedom structural node, or a point mass
 when connected to a rotationless, 3 degree of freedom structural node.
@@ -204,8 +205,7 @@ when connected to a rotationless, 3 degree of freedom structural node.
         (\ty{real}) \bnt{mass} , 
         (\hty{Vec3})   \bnt{relative_center_of_mass} ,
         (\hty{Mat3x3}) \bnt{inertia_matrix}
-        [ , \kw{inertial} , 
-            \{ \kw{node} | (\hty{OrientationMatrix}) \bnt{orientation_matrix} \} ]
+        [ , \kw{orientation} , \bnt{orientation_matrix}]
 
     \bnt{one_pointmass} ::=
         (\ty{real}) \bnt{mass}      # when \bnt{node_label} is a \kw{displacement} node
@@ -229,9 +229,8 @@ example, gravity will still act as if the mass was positive).
 
 The \nt{inertia\_matrix} is always referred to the center of mass of the
 mass that is being added. It can be rotated locally by means of the extra
-\nt{orientation\_matrix} supplied after the (optional) keyword \kw{inertial}.
-The keyword \kw{node} corresponds to the default, i.e.\ the inertia matrix
-is assumed to be input in the node reference frame.
+\nt{orientation\_matrix} supplied after the (optional) keyword 
+\kw{orientation}.
 
 Note: in many commercial finite element software, the off-diagonal elements 
 of the inertia matrix are defined with a minus sign; for instance, 
@@ -505,6 +504,7 @@ of the \kw{abstract} node.
         [ , \kw{initial current} , \bnt{i_0} ]
 \end{Verbatim}
 %\end{verbatim}
+This element implements a simple DC motor, whose equations are
 \begin{subequations}
 \begin{align}
 	\omega &= \T{e}^T \plbr{\T{\omega}_2 - \T{\omega}_1} \\
@@ -516,15 +516,20 @@ of the \kw{abstract} node.
 	i_2 &= i
 \end{align}
 \end{subequations}
-The motor applies an internal torque about direction
-$\T{e}=\nt{direction\_relative\_to\_node\_1}$
-to both the structural nodes it is connected to.
-The direction $\T{e}$ is internally normalized to unity.
-It also applies a current to both the electrical nodes it is connected to.
+where \nt{dL} is the inductance, \nt{dR} is the resistance, and \nt{dG} is the motor torque/back-EMF constant.
 
-The element assumes that the relative orientation between nodes 1 and 2
-can only change by rotating about direction $\T{e}$, so appropriate
-joints must be in place.
+The motor applies an internal torque, $C = \nt{dG} \, i$, about direction
+$\T{e}=\nt{direction\_relative\_to\_node\_1}$, with opposite sign
+to both the structural nodes it is connected to, namely \nt{struct\_node\_1\_label} and \nt{struct\_node\_2\_label}.
+The input vector that represents direction $\T{e}$ is internally normalized to unity.
+
+It also contributes with a current $i$ to both the electrical nodes it is connected to,
+the abstract nodes \nt{abstract\_node\_1\_label} and \nt{abstract\_node\_2\_label}.
+
+The element assumes that the only allowed relative motion between nodes 1 and 2 is a rotation about direction $\T{e}$,
+so appropriate joints (e.g.\ a \kw{total joint}, a \kw{revolute hinge}, or \kw{revolute pin}) must be in place.
+
+
 
 
 \subsection{Discrete control}\label{sec:EL:DISCCTRL}
@@ -2811,6 +2816,77 @@ and \kw{derivative}.
 The initialization of the derivative only makes sense when the filter
 is in descriptor form.
 
+\paragraph{Example.} \
+To model the same 2nd order Butterworth filter of Eq.~(\ref{eq:scalar-filter}), namely
+\begin{equation}
+	H\plbr{s} = \frac{
+		1
+	}{
+		\plbr{\cfrac{s}{\omega_c}}^2
+		+ \sqrt{2}\plbr{\cfrac{s}{\omega_c}}
+		+ 1
+	}
+\end{equation}
+i.e.
+\begin{subequations}
+\begin{align}
+	\cubr{\cvvect{
+		\dot{x}_1
+		\\
+		\dot{x}_2
+	}}
+	&=
+	\sqbr{\matr{cc}{
+		0 & 1
+		\\
+		-\omega_c^2 & -\sqrt{2} \omega_c
+	}}
+	\cubr{\cvvect{
+		x_1
+		\\
+		x_2
+	}}
+	+
+	\sqbr{\cvvect{
+		0
+		\\
+		1
+	}}
+	u
+	\\
+	y
+	&=
+	\sqbr{\matr{cc}{
+		\omega_c^2 & 0
+	}}
+	\cubr{\cvvect{
+		x_1
+		\\
+		x_2
+	}}
+	\label{eq:scalar-filter-ss}
+\end{align}
+\end{subequations}
+use
+\begin{verbatim}
+    set: real OMEGA_C = 1.*2*pi;                    # filter at 1Hz
+    genel: 1, state space SISO,
+        100, abstract, algebraic,                   # output node
+        drive, sine, 0., 2.*pi, 1., forever, 0.,    # input drive
+        2,
+        matrix A,
+            0., 1.,
+            -(OMEGA_C^2), -sqrt(2.)*OMEGA_C,
+        matrix B,
+            0.,
+            1.,
+        matrix C,
+            0, 1., 
+        gain, OMEGA_C^2,
+        balance, yes;
+\end{verbatim}
+Note that in \verb1-(OMEGA_C^2)1 the brackets are necessary because the unary minus takes precedence over the power operator.
+
 
 
 \subsection{Special Rotorcraft \textsc{Genel} Elements}
@@ -3221,9 +3297,10 @@ at the sides of the valve body and participate in the force balance.
 
     \bnt{hydr_elem_data} ::=
         \bnt{node_1} , \bnt{node_2} ,
-        \bnt{orifice_area} ,
-        [ \kw{area} , \bnt{pipe_area} , ]
-        [ \kw{reynolds} , \bnt{critical_reynolds_number} , ]
+        \bnt{pipe_diameter} ,
+        \bnt{orifice_area} , # diaphragm area
+        [ \kw{area} , \bnt{pipe_area} , ] # defaults to (\bnt{pipe_diameter}/2)^2*pi
+        [ \kw{reynolds} , \bnt{critical_reynolds_number} , ] # defaults to 10
         \kw{fluid} , (\hty{HydraulicFluid}) \bnt{fluid}
 \end{Verbatim}
 %\end{verbatim}
@@ -3647,7 +3724,7 @@ As a result, torque is transmitted about axis 1 of both nodes.
 The relative position is constrained as well.
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{joint_type} ::= \kw{cardano hinge}
+    \bnt{joint_type} ::= \kw{Cardano hinge}
 
     \bnt{joint_arglist} ::= 
         \bnt{node_1_label} ,
@@ -3661,7 +3738,7 @@ The relative position is constrained as well.
 The joint is shown in Figure~\ref{fig:el:joint:CARDANO} where the origins and orientations of \nt{node\_1} and \nt{node\_2} are given by axes 1, 2, 3 and 1$^\prime$, 2$^\prime$, 3$^\prime$, respectively. The central, constrained, axes 3 and 2$^\prime$ are obtained after having applied \nt{relative\_offset} and \nt{relative\_orientation\_matrix} transformations to \nt{node\_1} and \nt{node\_2}, respectively.
 \begin{figure}
 \centering
-\includegraphics[width=.5\textwidth]{cardano}
+\includegraphics[width=.5\textwidth]{Cardano}
 \caption{Cardano hinge.}
 \label{fig:el:joint:CARDANO}
 \end{figure}
@@ -3672,7 +3749,7 @@ velocity about axis 1 for the other node.
 The constant velocity joint is implemented by the \kw{gimbal joint}
 (Section~\ref{sec:EL:JOINT:GIMBALROTATION}), which essentially consists
 of a sequence of two
-\hyperref{\kw{cardano hinge}}{\kw{cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
+\hyperref{\kw{Cardano hinge}}{\kw{Cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
 joints with the hinges in reversed order, assembled
 in a manner that the deflection is split half and half
 between the two joints.
@@ -3684,7 +3761,7 @@ The absolute position is also constrained.
 See above for details about the formulation.
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{joint_type} ::= \kw{cardano pin}
+    \bnt{joint_type} ::= \kw{Cardano pin}
 
     \bnt{joint_arglist} ::= 
         \bnt{node_label} ,
@@ -3695,7 +3772,7 @@ See above for details about the formulation.
 \end{Verbatim}
 %\end{verbatim}
 \emph{Note: this is equivalent to a
-\hyperref{\kw{cardano hinge}}{\kw{cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
+\hyperref{\kw{Cardano hinge}}{\kw{Cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
 when one node is grounded.
 }
 
@@ -3704,10 +3781,10 @@ when one node is grounded.
 This joint implements a ``Cardano'' joint, which is made of a sequence
 of two revolute hinges orthogonal to each other.
 The relative position is not constrained.
-See the \kw{cardano hinge} for more details.
+See the \kw{Cardano hinge} for more details.
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{joint_type} ::= \kw{cardano rotation}
+    \bnt{joint_type} ::= \kw{Cardano rotation}
 
     \bnt{joint_arglist} ::= 
         \bnt{node_1_label}
@@ -3718,11 +3795,11 @@ See the \kw{cardano hinge} for more details.
 %\end{verbatim}
 
 \emph{Note: this is equivalent to a
-\hyperref{\kw{cardano hinge}}{\kw{cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
+\hyperref{\kw{Cardano hinge}}{\kw{Cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
 without position constraint.
 Or, in other words, a 
-\hyperref{\kw{cardano hinge}}{\kw{cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
-is made of a \kw{cardano rotation} on top of a 
+\hyperref{\kw{Cardano hinge}}{\kw{Cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}
+is made of a \kw{Cardano rotation} on top of a 
 \hyperref{\kw{spherical hinge}}{\kw{spherical hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:SPHERICAL_HINGE}.
 }
 
@@ -3773,10 +3850,10 @@ instead.
 
 \subsection{Deformable Axial Joint}
 \label{sec:EL:JOINT:DEFORMABLEAXIAL}
-This joint implements a configuration dependent moment that is exchanged
+This joint implements a configuration (i.e.\ relative motion) dependent moment that is exchanged
 between two nodes about an axis rigidly attached to the first node.
-It is intended to be used in conjunction with another joint that
-constrains the relative rotation between the two nodes about the other axes,
+It is intended to be used in conjunction with another joint (for example a \kw{revolute hinge} or a \kw{total joint})
+that constrains the relative rotation between the two nodes about the other axes,
 although no check is in place.
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -3792,6 +3869,8 @@ although no check is in place.
         (\htybkw{ConstitutiveLaw}{1D}) \bnt{const_law}
 \end{Verbatim}
 %\end{verbatim}
+The relative rotation is assumed to take place about axis 3 in the local reference frame of the joint,
+as defined by \nt{relative\_orientation\_matrix\_1}.
 
 \subsubsection{Private Data}
 The following data are available:
@@ -3987,12 +4066,13 @@ changes during the analysis.
             [ , \kw{position} , (\hty{Vec3}) \bnt{relative_position_2} ]
             [ , \kw{orientation} , (\hty{OrientationMatrix}) \bnt{relative_orientation_matrix_2} ] ,
         (\htybkw{ConstitutiveLaw}{3D}) \bnt{const_law}
-        [ , \kw{orientation description} ,
-            \{ \kw{euler123} | \kw{euler313} | \kw{euler 321}
-                | \kw{orientation vector} | \kw{orientation matrix} \} ]
+        [ , \kw{orientation description} , \bnt{orientation_type} ]
 \end{Verbatim}
 %\end{verbatim}
 \noindent
+The \nt{orientation\_type} is defined
+in Section~\ref{sec:CONTROLDATA:DEFAULTORIENTATION}.
+
 Note: a variant of this element has been developed,
 which refers the material reference frame to an orientation 
 that is intermediate between those of the two nodes.
@@ -4113,11 +4193,11 @@ in combining a \kw{deformable hinge} and a \kw{deformable displacement joint}.
             \kw{position} , (\hty{Vec3}) \bnt{relative_offset_2}
             [ , \kw{orientation} , (\hty{OrientationMatrix}) \bnt{relative_orientation_matrix_2} ] ,
         (\htybkw{ConstitutiveLaw}{6D}) \bnt{const_law}
-        [ , \kw{orientation description} ,
-            \{ \kw{euler123} | \kw{euler313} | \kw{euler 321}
-                | \kw{orientation vector} | \kw{orientation matrix} \} ]
+        [ , \kw{orientation description} , \bnt{orientation_type} ]
 \end{Verbatim}
 %\end{verbatim}
+The \nt{orientation\_type} is defined
+in Section~\ref{sec:CONTROLDATA:DEFAULTORIENTATION}.
 
 \subsubsection{Private Data}
 The following data are available:
@@ -4230,7 +4310,8 @@ For example, to smoothly change the distance from the initial value to a desired
 \subsubsection{Output}
 The extra output is:
 \begin{itemize}
-    \item the three components of the imposed distance in the global frame
+    \item the three components of unit vector representing the imposed 
+      distance direction in the global frame
     \item the norm of the imposed distance
 \end{itemize}
 
@@ -4400,10 +4481,10 @@ this joint, in conjunction with a
 \hyperref{\kw{spherical hinge}}{\kw{spherical hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:SPHERICAL_HINGE}
 joint, should be used to implement an ideal tiltrotor gimbal
 instead of a
-\hyperref{\kw{cardano rotation}}{\kw{cardano rotation} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_ROTATION}.
+\hyperref{\kw{Cardano rotation}}{\kw{Cardano rotation} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_ROTATION}.
 See the technical manual and \cite{GIMBAL-2008} for details.
 It is equivalent to a series of two Cardano's joints
-(the \hyperref{\kw{cardano hinge}}{\kw{cardano hinge}, see Section~}{}{sec:EL:STRUCT:JOINT:CARDANO_HINGE})
+(the \hyperref{\kw{Cardano hinge}}{\kw{Cardano hinge}, see Section~}{}{sec:EL:STRUCT:JOINT:CARDANO_HINGE})
 rotated 90 degrees apart, each accounting for half the relative rotation
 between axis 3 of each side of the joint.
 %\begin{verbatim}
@@ -4415,11 +4496,12 @@ between axis 3 of each side of the joint.
         [ , \kw{orientation} , (\hty{OrientationMatrix}) \bnt{relative_orientation_matrix_1} ] ,
         \bnt{node_2_label}
         [ , \kw{orientation} , (\hty{OrientationMatrix}) \bnt{relative_orientation_matrix_2} ]
-        [ , \kw{orientation description} ,
-            \{ \kw{euler123} | \kw{euler313} | \kw{euler321}
-                | \kw{orientation vector} | \kw{orientation matrix} \} ]
+        [ , \kw{orientation description} , \bnt{orientation_type} ]
 \end{Verbatim}
 %\end{verbatim}
+The \nt{orientation\_type} is defined
+in Section~\ref{sec:CONTROLDATA:DEFAULTORIENTATION}.
+
 This joint allows nodes 1 and 2 to rotate about relative axes 1 and 2.
 
 \subsubsection{Output}
@@ -4577,7 +4659,9 @@ The output occurs in the \texttt{.jnt} file, according to default joint output
 for the first 13 columns; and if friction is present:
 \begin{itemize}
 \item column 14: the friction force along the line of the joint (applied in negative and positive directions for nodes 1 and 2, respectively);
-\item subsequent columns: any friction model specific data (quite possibly the friction coefficient).
+\item column 15: the friction coefficient;
+\item column 16: the relative sliding velocity;
+\item column 17: the relative sliding displacement.
 \end{itemize}
 
 
@@ -4733,7 +4817,7 @@ and orientation of the corresponding FEM nodes.
         [ \kw{initial value} ,
             \{ \kw{mode} , \bnt{j} , \bnt{q_j} , \bnt{qP_j} [ , ... ]  # 1 <= \nt{j} <= \nt{mode_number}
                 | \bnt{q_1} , \bnt{qP_1} [ , ... ] \} , ]
-        \{ \bnt{fem_node_number} | \kw{from file} \} ,
+        \{ \bnt{FEM_node_number} | \kw{from file} \} ,
         [ \{ \kw{no damping}
             | \kw{damping from file}
             | \kw{rayleigh damping} , \bnt{mass_damping_coef} , \bnt{stiffness_damping_coef}
@@ -4741,21 +4825,24 @@ and orientation of the corresponding FEM nodes.
             | \kw{diag damping} ,
                 \{ \kw{all} , \bnt{damping_factor} [ , ...]
                 | \bnt{num_damped_modes} , \bnt{mode_damping} [ , ... ] \} \} , ]
-        " \bnt{fem_data_file} " ,
+        " \bnt{FEM_data_file} " ,
         [ [ \{ \kw{mass} | \kw{damping} | \kw{stiffness} \} ] \kw{threshold} , \bnt{threshold} , ]
         [ \{ \kw{create binary} | \kw{use binary} | \kw{update binary} \}
             [ , ... ] , ]
-        [ \kw{echo} , " \bnt{echo_fem_data_file} " [ , \kw{precision} , \bnt{precision_digits} ] , ]
+        [ \kw{echo} , " \bnt{echo_FEM_data_file} " [ , \kw{precision} , \bnt{precision_digits} ] , ]
         [ \kw{use invariant 9} , ]
         [ \{ \kw{origin node} , \bnt{origin_node} | \kw{origin position} , (\hty{Vec3}) \bnt{pos} \} , ]
 	\bnt{interface_nodes_number} ,
 	    [ \kw{output} , \{ \kw{yes} | \kw{no} | (\ty{bool})\bnt{output_flag_for_all_interfaces} \} , ]
+            [ \kw{interface tolerance} , \bnt{interface_tolerance} , ]
 	    \bnt{interface_node} [ , ... ]
 
     \bnt{mode_damping} ::= \bnt{mode_index} , \bnt{mode_damping_factor}
 
     \bnt{interface_node} ::=
-        \{ " \bnt{fem_node_label} " | (\ty{integer}) \bnt{fem_node_label} \} ,
+        \{ " \bnt{FEM_node_label} "
+                | (\ty{integer}) \bnt{FEM_node_label}
+                | \kw{find closest} [ , \kw{interface tolerance} , \bnt{interface_tolerance} ] \} ,
             \bnt{multibody_label} , (\hty{Vec3}) \bnt{offset_of_FEM_node}
 	        [ , \kw{output} , \{ \kw{yes} | \kw{no} | (\ty{bool})\bnt{output_flag_for_this_interface} \} ]
 \end{Verbatim}
@@ -4808,10 +4895,10 @@ in case of a clamped modal element.
 
 Note that having the \kw{modal} node coincident with a FEM node
 does not guarantee that the two remain coincident during the analysis.
-This is only true if the modal shapes corresponding to the FEM node
+This is only true if the modal shape displacements and rotations of the FEM node
 are identically zero (i.e.\ in case of \emph{attached modes}).
 Otherwise, the FEM node initially coincident with the \kw{modal} node
-departs from it as long as the modal coordinates are non-zero.
+departs from it as long as the modal coordinates (the mode shape multipliers) are non-zero.
 
 The FEM labels can be strings made of any character,
 provided they do not contain blanks.
@@ -4819,19 +4906,28 @@ The strings must be enclosed in double quotes.
 For legacy reasons, a label not enclosed in double quotes
 is accepted, provided it is an integer.
 
-If any of \kw{mass threshold}, \kw{damping threshold}, \kw{stiffness threshold} are given,
-elements whose absolute value is lower than the threshold
-are discarded from the mass, damping and stiffness matrices, respectively.
-The keyword \kw{threshold} is a catchall for all,
-meaning that the same threshold is used for all matrices.
-
 The list of matchings between FEM and multibody nodes needs
 special care.
 The \nt{offset\_of\_FEM\_node} field contains the distance
 of the FEM node from the respective multibody node; by default,
 this is expressed in the reference frame of the multibody node.
 
-The \nt{fem\_data\_file} can be generated by NASTRAN, 
+Each FEM node which needs to be exposed in the multibody domain must be 
+in the list of ``interface nodes'', where it is paired with the corresponding multibody node.
+It is suggested that the latter be defined as a \kw{static} node, unless additional mass needs to be attached to it in the multibody domain,
+since the multibody node will be ``clamped'' to the \kw{modal} joint.
+Each \nt{interface\_node} can be defined using its \nt{FEM\_node\_label} (the FEM node label, either a string or an integer),
+or using the special keyword \kw{find closest}.
+In the latter case, the FEM node which is closest to the multibody node (including the offset)
+is looked up.
+
+If any of \kw{mass threshold}, \kw{damping threshold}, \kw{stiffness threshold} are given,
+matrix elements whose absolute value is lower than the threshold
+are discarded from the mass, damping and stiffness matrices, respectively.
+The keyword \kw{threshold} is a catchall for all,
+meaning that the same threshold is used for all matrices.
+
+The \nt{FEM\_data\_file} can be generated by NASTRAN, 
 following the procedure illustrated
 in Appendix~\ref{sec:APP:EL:STRUCT:JOINT:MODAL:NASTRAN}.
 
@@ -4867,7 +4963,7 @@ One trick is to build models incrementally.
 should be avoided unless strictly required.}
 
 \textbf{Note about the FEM file:}
-the format of the \nt{fem\_data\_file} is relatively straightforward;
+the format of the \nt{FEM\_data\_file} is relatively straightforward;
 it is reported
 in Appendix~\ref{sec:APP:EL:STRUCT:JOINT:MODAL:FORMAT}.
 Initial modal displacements and velocities can be added,
@@ -4876,13 +4972,13 @@ is discouraged, unless strictly required.
 
 
 \textbf{Note about large FEM files:}
-using a very large \nt{fem\_data\_file} may require long time for
+using a very large \nt{FEM\_data\_file} may require long time for
 reading and parsing ASCII floats.
 The keyword \kw{use binary} instructs MBDyn to use a binary version
-of the \nt{fem\_data\_file}.
+of the \nt{FEM\_data\_file}.
 This binary version is automatically generated by MBDyn if requested
 by means of the keyword \kw{create binary}.
-The binary version of the \nt{fem\_data\_file} is used only if its
+The binary version of the \nt{FEM\_data\_file} is used only if its
 timestamp is more recent than that of the ASCII version.
 The keyword \kw{update binary} instructs MBDyn to regenerate the
 binary version when the ASCII version is more recent.
@@ -4973,7 +5069,7 @@ For example, if the \kw{modal} joint was defined as
         3, list, 1, 7, 9, # only use modes 1, 7 and 9 of a larger basis
         from file,
         "modal.fem",
-        0;                # no fem nodes
+        0;                # no FEM nodes
 \end{verbatim}
 the output will look like
 \begin{verbatim}
@@ -5380,6 +5476,16 @@ is defined as
 	F = EA \frac{l - l_0}{l_0} ,
 \end{displaymath}
 where $EA$ is the axial stiffness of the rod.
+The corresponding syntax would be:
+\begin{verbatim}
+    set: const real L0 = 0.35;   # reference length
+    set: const real EA = 1.0e+6; # axial stiffness
+    joint: 99, rod,
+        1, position, null,
+        2, position, null,
+        L0,
+        linear elastic, EA;
+\end{verbatim}
 
 For further details on the supported constitutive laws, 
 see Section~\ref{sec:ConstitutiveLaw}.
@@ -5391,20 +5497,20 @@ see Section~\ref{sec:ConstitutiveLaw}.
 
 
 \subsubsection{Current}
-When parsing the constitutive law, the following values are made available
-through the \kw{model::current} interface:
+When parsing the constitutive law, the following run-time computed values are made available
+through the \kw{model::current}\texttt{(\bnt{string})} model namespace interface:
 \begin{itemize}
 \item
-\kw{"L0"}:
+\nt{string}\texttt{ ::= }\kw{"L0"}:
 the length of the rod \nt{rod\_length} as input by the user,
 or computed from the distance between the points connected by the rod when \kw{from nodes} is used;
 
 \item
-\kw{"L"}: 
+\nt{string}\texttt{ ::= }\kw{"L"}: 
 the length of the rod computed from the distance between the points connected by the rod;
 identical to \kw{"L0"} when \kw{from nodes} is used.
 \end{itemize}
-For example, if one knows the value of $EA$ and wants the stiffness
+For example, if one knows the value of $K$ and wants the axial stiffness
 in a linear elastic constitutive law to reflect its dependence
 on the reference length of the rod as computed from the initial configuration,
 the following syntax does the trick:
@@ -5412,13 +5518,13 @@ the following syntax does the trick:
     set: const integer ROD = 99;
     set: const integer NODE1 = 1;
     set: const integer NODE2 = 2;
-    set: const real EA = 1.e+6;
+    set: const real K = 1.e+6;
     # ...
     joint: ROD, rod,
         NODE1, position, null,
         NODE2, position, null,
-        from nodes,                              # compute length from nodes
-        linear elastic, EA/model::current("L0"); # compute K as EA/rod_length
+        from nodes,                             # compute length from nodes
+        linear elastic, K*model::current("L0"); # compute EA as K*rod_length
 \end{verbatim}
 
 
@@ -5478,99 +5584,99 @@ The syntax is:
 Analogous to the \kw{rod} joint with the optional offsets;
 see Section~\ref{sec:EL:STRUCT:JOINT:ROD} for details.
 
-\subsection{Rod Bezier}
-\label{sec:EL:STRUCT:JOINT:ROD_BEZIER}
-This joint, in analogy with the \kw{rod} joint, represents a force 
-that acts between two points each rigidly attached to a 
-\htmlref{\kw{structural node}}{sec:NODE:STRUCTURAL}.\\ The force on 
-node 1 acts along the line connecting the insertion point, 
-defined in the reference frame of the node by 
-\bnt{relative\_offset\_1} and a first intermediate point defined,
-also in the reference frame of the node, by \bnt{relative\_offset\_2}.
-In the same way, the force on node 2 is applied at the insertion 
-point of the element, defined in the reference frame of node 2 by
-\bnt{relative\_offset\_4} and acts along the line connecting a
-second intermediate point defined by \bnt{relative\_offset\_3}. \\
-The element internally is represented as a B\'ezier spline of order 3,
-which length and instantaneous lengthening velocity are calculated
-using Gauss-Legendre quadrature.\\ The absolute value of the force
-depends on the strain and strain rate of the curve as in the
-standard \kw{rod} element (see Section~\ref{sec:EL:STRUCT:JOINT:ROD})
-as determined by the 
-\htybkw{ConstitutiveLaw}{1D} 
-\bnt{const\_law}.
-
-\begin{figure}
-\centering
-\includegraphics[width=.7\textwidth]{rod_bezier}
-\caption{The \kw{rod bezier} element}
-\label{fig:EL:STRUCT:JOINT:ROD_BEZIER}
-\end{figure}
-
-The syntax is:
-%\begin{verbatim}
-\begin{Verbatim}[commandchars=\\\{\}]
-	\bnt{joint_type} ::= \kw{rod bezier}
-
-	\bnt{joint_arglist} ::=
-		\bnt{node_1_label} ,
-			(\hty{Vec3}) \bnt{relative_offset_1} ,
-			(\hty{Vec3}) \bnt{relative_offset_2} ,
-		\bnt{node_2_label} ,
-			(\hty{Vec3}) \bnt{relative_offset_3} ,
-			(\hty{Vec3}) \bnt{relative_offset_4} ,
-		\{ (\ty{real}) \bnt{rod_length} | \kw{from nodes} \} ,
-		[ \kw{integration order} , (\ty{integer}) \bnt{order} ] ,
-		[ \kw{integration segments} , (\ty{integer}) \bnt{segments} ] ,
-        (\htybkw{ConstitutiveLaw}{1D}) \bnt{const_law}
-\end{Verbatim}
-%\end{verbatim}			
-Optional parameters \kw{integration order} and \kw{integration segments}
-modify the behavior Gauss-Legendre quadrature rule used to 
-calculate the length and the instantaneous lengthening velocity of the
-element. As the name suggests, the first argument controls the order of
-the integration scheme; if not specified, it defaults to 2. The maximum
-order of integration currently implemented is 10. \\
-The second argument sets the number of segments in which the B\'ezier curve
-is split in the integration; it not specified, it defaults to 3.
-
-\subsubsection{Output}
-The output occurs in the \texttt{.jnt} file, which contains:
-\begin{itemize}
-\item column 1: the label
-
-\item columns 2--4: the three components of the internal force in the 
-	reference frame of the element (column 2, component $x$, 
-	contains the force)
-
-\item columns 5--7: the three components of the internal moment in the 
-	reference frame of the element (always zero)
-
-\item columns 8--10: the three components of the force acting on node 1 
-	in the global reference frame
-
-\item columns 11--13: the three components of the internal moment in 
-	the global reference frame (always zero)
-
-\item columns 14--16: the three components of the force acting on node 2 
-	in the global reference frame
-
-\item column 17: the length of the rod
-
-\item columns 18--20: the three components of the line of action of the force 
-acting on node 1 in the global reference frame (a unit vector)
-
-\item columns 21--23: the three components of the line of action of the force 
-acting on node 2 in the global reference frame (a unit vector)
-
-\item column 24: the length rate of the rot (derivative of length wrt/ time)
-
-\item optional data appended by the constitutive law
-\end{itemize}
-
-\subsubsection{Private Data}
-The element exposes its private data in analogy with what happens in 
-the \kw{rod} element (see Section~\ref{sec:EL:STRUCT:JOINT:ROD}).
+%\subsection{Rod Bezier}
+%\label{sec:EL:STRUCT:JOINT:ROD_BEZIER}
+%This joint, in analogy with the \kw{rod} joint, represents a force 
+%that acts between two points each rigidly attached to a 
+%\htmlref{\kw{structural node}}{sec:NODE:STRUCTURAL}.\\ The force on 
+%node 1 acts along the line connecting the insertion point, 
+%defined in the reference frame of the node by 
+%\bnt{relative\_offset\_1} and a first intermediate point defined,
+%also in the reference frame of the node, by \bnt{relative\_offset\_2}.
+%In the same way, the force on node 2 is applied at the insertion 
+%point of the element, defined in the reference frame of node 2 by
+%\bnt{relative\_offset\_4} and acts along the line connecting a
+%second intermediate point defined by \bnt{relative\_offset\_3}. \\
+%The element internally is represented as a B\'ezier spline of order 3,
+%which length and instantaneous lengthening velocity are calculated
+%using Gauss-Legendre quadrature.\\ The absolute value of the force
+%depends on the strain and strain rate of the curve as in the
+%standard \kw{rod} element (see Section~\ref{sec:EL:STRUCT:JOINT:ROD})
+%as determined by the 
+%\htybkw{ConstitutiveLaw}{1D} 
+%\bnt{const\_law}.
+%
+%\begin{figure}
+%\centering
+%\includegraphics[width=.7\textwidth]{rod_bezier}
+%\caption{The \kw{rod bezier} element}
+%\label{fig:EL:STRUCT:JOINT:ROD_BEZIER}
+%\end{figure}
+%
+%The syntax is:
+%%\begin{verbatim}
+%\begin{Verbatim}[commandchars=\\\{\}]
+%	\bnt{joint_type} ::= \kw{rod bezier}
+%
+%	\bnt{joint_arglist} ::=
+%		\bnt{node_1_label} ,
+%			(\hty{Vec3}) \bnt{relative_offset_1} ,
+%			(\hty{Vec3}) \bnt{relative_offset_2} ,
+%		\bnt{node_2_label} ,
+%			(\hty{Vec3}) \bnt{relative_offset_3} ,
+%			(\hty{Vec3}) \bnt{relative_offset_4} ,
+%		\{ (\ty{real}) \bnt{rod_length} | \kw{from nodes} \} ,
+%		[ \kw{integration order} , (\ty{integer}) \bnt{order} ] ,
+%		[ \kw{integration segments} , (\ty{integer}) \bnt{segments} ] ,
+%        (\htybkw{ConstitutiveLaw}{1D}) \bnt{const_law}
+%\end{Verbatim}
+%%\end{verbatim}			
+%Optional parameters \kw{integration order} and \kw{integration segments}
+%modify the behavior Gauss-Legendre quadrature rule used to 
+%calculate the length and the instantaneous lengthening velocity of the
+%element. As the name suggests, the first argument controls the order of
+%the integration scheme; if not specified, it defaults to 2. The maximum
+%order of integration currently implemented is 10. \\
+%The second argument sets the number of segments in which the B\'ezier curve
+%is split in the integration; it not specified, it defaults to 3.
+%
+%\subsubsection{Output}
+%The output occurs in the \texttt{.jnt} file, which contains:
+%\begin{itemize}
+%\item column 1: the label
+%
+%\item columns 2--4: the three components of the internal force in the 
+%	reference frame of the element (column 2, component $x$, 
+%	contains the force)
+%
+%\item columns 5--7: the three components of the internal moment in the 
+%	reference frame of the element (always zero)
+%
+%\item columns 8--10: the three components of the force acting on node 1 
+%	in the global reference frame
+%
+%\item columns 11--13: the three components of the internal moment in 
+%	the global reference frame (always zero)
+%
+%\item columns 14--16: the three components of the force acting on node 2 
+%	in the global reference frame
+%
+%\item column 17: the length of the rod
+%
+%\item columns 18--20: the three components of the line of action of the force 
+%acting on node 1 in the global reference frame (a unit vector)
+%
+%\item columns 21--23: the three components of the line of action of the force 
+%acting on node 2 in the global reference frame (a unit vector)
+%
+%\item column 24: the length rate of the rot (derivative of length wrt/ time)
+%
+%\item optional data appended by the constitutive law
+%\end{itemize}
+%
+%\subsubsection{Private Data}
+%The element exposes its private data in analogy with what happens in 
+%the \kw{rod} element (see Section~\ref{sec:EL:STRUCT:JOINT:ROD}).
 
 \subsection{Spherical hinge}
 \label{sec:EL:STRUCT:JOINT:SPHERICAL_HINGE}
@@ -6045,21 +6151,21 @@ TODO
 \subsection{Universal hinge}
 \label{sec:EL:STRUCT:JOINT:UNIVERSAL_HINGE}
 Deprecated in favour of the
-\hyperref{\kw{cardano hinge}}{\kw{cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}.
+\hyperref{\kw{Cardano hinge}}{\kw{Cardano hinge} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_HINGE}.
 
 
 
 \subsection{Universal pin}
 \label{sec:EL:STRUCT:JOINT:UNIVERSAL_PIN}
 Deprecated in favour of the
-\hyperref{\kw{cardano pin}}{\kw{cardano pin} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_PIN}.
+\hyperref{\kw{Cardano pin}}{\kw{Cardano pin} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_PIN}.
 
 
 
 \subsection{Universal rotation}
 \label{sec:EL:STRUCT:JOINT:UNIVERSAL_ROTATION}
 Deprecated in favour of the
-\hyperref{\kw{cardano rotation}}{\kw{cardano rotation} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_ROTATION}.
+\hyperref{\kw{Cardano rotation}}{\kw{Cardano rotation} (see Section~}{)}{sec:EL:STRUCT:JOINT:CARDANO_ROTATION}.
 
 \subsection{Viscous body}
 \label{sec:EL:STRUCT:JOINT:VISCOUS_BODY}
@@ -6069,7 +6175,7 @@ Deprecated in favour of the
 
     \bnt{joint_arglist} ::=
         \bnt{node_label} ,
-            [ \kw{position} , (\hty{Vec3}) \bnt{relative_offset} , ]
+            [ \kw{position} ] , (\hty{Vec3}) \bnt{relative_offset} ,
             [ \kw{orientation} , (\hty{OrientationMatrix}) \bnt{relative_orientation} , ]
             (\htybkw{ConstitutiveLaw}{6D}) \bnt{const_law}
 \end{Verbatim}
@@ -6114,7 +6220,7 @@ problems.
 
     <normal_arglist> ::= <type> , <data>
 
-    <type> ::= { tikhonov | dynamic }
+    <type> ::= { Tikhonov | dynamic }
 
     <data> ::= { <coef> | list , <coef_1> [ , ... ] }
 \end{verbatim}
@@ -6125,7 +6231,7 @@ problems.
 
     \bnt{normal_arglist} ::= \bnt{type} [ , \bnt{data} ]
 
-    \bnt{type} ::= \kw{tikhonov}
+    \bnt{type} ::= \kw{Tikhonov}
 
     \bnt{data} ::= \{ \bnt{coef} | \kw{list} , \bnt{coef_1} [ , ... ] \}
 \end{Verbatim}
@@ -6141,7 +6247,7 @@ If the keyword \kw{list} is used, the coefficients for each internal state
 are expected; the number of coefficients is determined by the joint.
 
 \subsection{Tikhonov}
-The \kw{tikhonov} joint regularization type consists in modifying
+The \kw{Tikhonov} joint regularization type consists in modifying
 a constraint, expressed by an algebraic equation $\T{\Phi}\plbr{\T{x}, t}$
 and the corresponding Lagrangian multipliers $\T{\lambda}$, namely
 \begin{align}
@@ -6322,7 +6428,7 @@ which can be used as a starting point to build a custom module.
 
 \paragraph{Example.} \
 \begin{verbatim}
-    module load: "libmodule-template2"
+    module load: "libmodule-template2";
 
     user defined: 1000, template2, help;
 \end{verbatim}
@@ -6866,6 +6972,7 @@ The syntax for a driven element is:
     \bnt{elem_type} ::= \kw{driven}
 
     \bnt{normal_arglist} ::= (\hty{DriveCaller}) \bnt{element_driver} ,
+        [ \kw{initial state} , \{ \kw{from drive} | \kw{active} | \kw{inactive} | (\ty{bool}) \bnt{state} \} ]
         [ \kw{hint} , " \bnt{hint} " [ , ... ] ] ,
         \bnt{driven_element}
 
@@ -6884,6 +6991,10 @@ For consistency with the syntax, and for more flexibility,
 even when wrapping an existing element the output flags can be set
 at the end of the card.
 This flag overrides the one set when the driven element was instantiated.
+
+The \kw{initial state} keyword overrides the evaluation of the \nt{element\_driver}
+during the initialization.  The value \kw{from drive} is the default behavior;
+the other keywords and the boolean value \nt{state} are self-explanatory.
 
 Otherwise, a regular element is read after the driving element's declaration;
 it is then instantiated and wrapped by the \kw{driven} element wrapper.

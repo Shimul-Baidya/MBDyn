@@ -199,14 +199,12 @@ private:
 		FrictionAmpl = p->FrictionAmpl;
 	};
    
-#if defined(USE_NETCDFC)
-	NcVar *Var_dPressure;
-	NcVar *Var_dArea;
-	NcVar *Var_dFelastic;
-	NcVar *Var_dFviscous;
-#elif defined(USE_NETCDF4) /*! USE_NETCDFC */
-// TODO: netCDF4 output
-#endif /* USE_NETCDF4 */
+#if defined(USE_NETCDF)
+	MBDynNcVar Var_dPressure;
+	MBDynNcVar Var_dArea;
+	MBDynNcVar Var_dFelastic;
+	MBDynNcVar Var_dFviscous;
+#endif /* USE_NETCDF */
 public:
 	ShockAbsorberConstitutiveLaw(
 			const DataManager* pDM,
@@ -218,14 +216,6 @@ public:
 	bPenalty(false),
 	pAreaPinPlus(NULL), pAreaPinMinus(NULL), pAreaOrifices(NULL),
 	EpsPrimeRef(1.), FrictionAmpl(0.), dPressure(0.) 
-#if defined(USE_NETCDFC)
-	, Var_dPressure(0),
-	Var_dArea(0),
-	Var_dFelastic(0),
-	Var_dFviscous(0)
-#elif defined(USE_NETCDF4) /*! USE_NETCDFC */
-// TODO: netCDF4 output
-#endif /* USE_NETCDF4 */
 	{
 		if (HP.IsKeyWord("help")) {
 
@@ -623,33 +613,37 @@ public:
 	};
 
 	virtual void OutputAppendPrepare(OutputHandler& OH, const std::string& name) {
-#if defined(USE_NETCDFC)
+#if defined(USE_NETCDF)
 		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 		if (OH.UseNetCDF(OutputHandler::NETCDF)) {
-			Var_dPressure = OH.CreateVar<doublereal>(name + ".p", "Pa", "Gas pressure");
-			Var_dArea = OH.CreateVar<doublereal>(name + ".A", "m^2", "Metering area");
-			Var_dFelastic = OH.CreateVar<doublereal>(name + ".Fe", "N", "Elastic force");
-			Var_dFviscous = OH.CreateVar<doublereal>(name + ".Fv", "N", "Viscous force");
+			Var_dPressure = OH.CreateVar<doublereal>(name + ".p", 
+				OutputHandler::Dimensions::Pressure, "Gas pressure");
+			Var_dArea = OH.CreateVar<doublereal>(name + ".A", 
+				OutputHandler::Dimensions::Area, "Metering area");
+			Var_dFelastic = OH.CreateVar<doublereal>(name + ".Fe", 
+				OutputHandler::Dimensions::Force, "Elastic force");
+			Var_dFviscous = OH.CreateVar<doublereal>(name + ".Fv", 
+				OutputHandler::Dimensions::Force, "Viscous force");
 		}
-#elif defined(USE_NETCDF4) /*! USE_NETCDFC */
-// TODO: netCDF4 output
-#endif /* USE_NETCDF4 */
+#endif /* USE_NETCDF */
 	}
 
-	virtual std::ostream& OutputAppend(std::ostream& out, OutputHandler& OH) const {
-#if defined(USE_NETCDFC)
-		if (OH.UseNetCDF(OutputHandler::NETCDF)) {
-			Var_dPressure->put_rec(&dPressure, OH.GetCurrentStep());
-			Var_dArea->put_rec(&dArea, OH.GetCurrentStep());
-			Var_dFelastic->put_rec(&dFelastic, OH.GetCurrentStep());
-			Var_dFviscous->put_rec(&dFviscous, OH.GetCurrentStep());
-		}
-#elif defined(USE_NETCDF4) /*! USE_NETCDFC */
-// TODO: netCDF4 output
-#endif /* USE_NETCDF4 */
+	virtual std::ostream& OutputAppend(std::ostream& out) const {
 		return out << " " << dPressure << " " << dArea
 			<< " " << dFelastic << " " << dFviscous;
-	};
+	}
+
+	virtual void NetCDFOutputAppend(OutputHandler& OH) const {
+#if defined(USE_NETCDF)
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+		if (OH.UseNetCDF(OutputHandler::NETCDF)) {
+			OH.WriteNcVar(Var_dPressure, dPressure);
+			OH.WriteNcVar(Var_dArea, dArea);
+			OH.WriteNcVar(Var_dFelastic, dFelastic);
+			OH.WriteNcVar(Var_dFviscous, dFviscous);
+		}
+#endif /* USE_NETCDF */
+	}
 };
 
 /* ShockAbsorberConstitutiveLaw - begin */

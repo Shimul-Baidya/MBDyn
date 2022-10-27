@@ -37,9 +37,10 @@
 /* include generali */
 #include "parser.h"
 #include <sstream>
-#ifdef USE_EE
+#include <memory>
+#ifndef DO_NOT_USE_EE
 #include <thread>
-#endif // USE_EE
+#endif // DO_NOT_USE_EE
 
 /* include per il debug */
 #include "myassert.h"
@@ -62,7 +63,7 @@ private:
 	// we keep the string just in case...
 	const std::string sEvalStr;
 
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 	// "smart" shared pointer; needs -std=c++11
 
 	// TODO: actually, all drive callers could be wrapped in shared pointers
@@ -79,10 +80,10 @@ private:
 	typedef std::shared_ptr<const SharedExpr> SharedExprPtr_t;
 
 	SharedExprPtr_t m_expr;
-#endif // USE_EE
+#endif // DO_NOT_USE_EE
 
 public:
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 	StringDriveCaller(const DriveHandler* pDH, const std::string& sTmpStr, const ExpressionElement *expr);
 	StringDriveCaller(const DriveHandler* pDH, const std::string& sTmpStr, SharedExprPtr_t expr);
 #else // ! USE_EE
@@ -112,7 +113,7 @@ StringDriveCaller::dGet(const doublereal& dVar) const
 inline doublereal
 StringDriveCaller::dGet(void) const
 {
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 	doublereal val;
 	try {
 		val = m_expr->Get()->Eval().GetReal();
@@ -497,6 +498,82 @@ StepDriveCaller::dGetP(const doublereal& dVar) const
 }
 
 /* StepDriveCaller - end */
+
+
+/* Step5DriveCaller - begin */
+
+class Step5DriveCaller : public DriveCaller {
+private:
+	doublereal dStepTime0;
+	doublereal dStepTime1;
+	doublereal dFinalValue;
+	doublereal dInitialValue;
+
+public:
+	Step5DriveCaller(const DriveHandler* pDH,
+		doublereal t0, doublereal h0, doublereal t1, doublereal h1);
+	~Step5DriveCaller(void);
+
+	/* Copia */
+	virtual DriveCaller* pCopy(void) const;
+
+	/* Scrive il contributo del DriveCaller al file di restart */
+	virtual std::ostream& Restart(std::ostream& out) const;
+
+	inline doublereal dGet(const doublereal& dVar) const;
+#if 0
+	inline doublereal dGet(void) const;
+#endif
+
+	/* this is about drives that are differentiable */
+	virtual bool bIsDifferentiable(void) const;
+	virtual doublereal dGetP(const doublereal& dVar) const;
+#if 0
+	virtual inline doublereal dGetP(void) const;
+#endif
+};
+
+inline doublereal
+Step5DriveCaller::dGet(const doublereal& dVar) const
+{
+	if (dVar >= dStepTime1) {
+		return dFinalValue;
+	}
+
+	if (dVar <= dStepTime0) {
+		return dInitialValue;
+	}
+
+	/* else */
+	doublereal dXi = (dVar - dStepTime0)/(dStepTime1 - dStepTime0);
+	return dInitialValue + (dFinalValue - dInitialValue)*dXi*dXi*dXi*(10. - 15.*dXi + 6.*dXi*dXi);
+}
+
+inline bool
+Step5DriveCaller::bIsDifferentiable(void) const
+{
+	return true;
+}
+
+inline doublereal 
+Step5DriveCaller::dGetP(const doublereal& dVar) const
+{
+	if (dVar >= dStepTime1 || dVar <= dStepTime0) {
+		return 0.;
+	}
+
+	/* else */
+	doublereal dT = dStepTime1 - dStepTime0;
+	doublereal dXi = (dVar - dStepTime0)/dT;
+	doublereal dXim1 = 1 - dXi;
+	/*
+		f = 10*x^3 - 15*x^4 + 6*x^5
+		f' = 30*x^2 - 60*x^3 + 30*x^4
+	*/
+	return (dFinalValue - dInitialValue)*dXi*dXi*30.*dXim1*dXim1/dT;
+}
+
+/* Step5DriveCaller - end */
 
 
 /* DoubleStepDriveCaller - begin */
@@ -1208,8 +1285,8 @@ ExpDriveCaller::dGetP(const doublereal& dVar) const
 		return 0.;
 	}
 
-	doublereal dVal = -dAmplitude/dTimeConst*exp((dStartTime - dVar)/dTimeConst);
-	if (dVal == dStartTime) {
+	doublereal dVal = dAmplitude/dTimeConst*exp((dStartTime - dVar)/dTimeConst);
+	if (dVar == dStartTime) {
 		dVal /= 2.;
 	}
 

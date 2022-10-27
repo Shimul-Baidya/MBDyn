@@ -46,18 +46,9 @@
 #include <fstream>
 #include <vector>
 #include <typeinfo>
+#include <unordered_map>
 
 #if defined(USE_NETCDF)
-#if defined(USE_NETCDFC)
-#include <netcdfcpp.h>
-typedef const NcDim * MBDynNcDim;
-typedef NcVar * MBDynNcVar;
-typedef NcFile MBDynNcFile;
-typedef NcType MBDynNcType;
-#define MBDynNcInt ncLong
-#define MBDynNcDouble ncDouble
-#define MBDynNcChar ncChar
-#elif defined(USE_NETCDF4)
 #include <netcdf>
 typedef netCDF::NcDim MBDynNcDim; // not const because cannot be if not a pointer (in this case)
 typedef netCDF::NcVar MBDynNcVar;
@@ -66,7 +57,6 @@ typedef netCDF::NcType MBDynNcType;
 #define MBDynNcInt netCDF::NcType::nc_INT /**< replaces long in netcdf4 */
 #define MBDynNcDouble netCDF::NcType::nc_DOUBLE
 #define MBDynNcChar netCDF::NcType::nc_CHAR
-#endif
 #define MbNcInt MBDynNcType(MBDynNcInt) /**< creates a NcType object for a int, makes the notation simpler */
 #define MbNcDouble MBDynNcType(MBDynNcDouble) /**< creates a NcType object for a double, makes the notation simpler */
 #define MbNcChar MBDynNcType(MBDynNcChar) /**< makes the notation simpler */
@@ -76,6 +66,8 @@ typedef netCDF::NcType MBDynNcType;
 #include "except.h"
 #include "solman.h"
 #include "filename.h"
+
+class MBDynParser;
 
 /* OutputHandler - begin */
 
@@ -119,6 +111,53 @@ public:
 		EIGENANALYSIS,			// NOTE: ALWAYS LAST!
 		LASTFILE			// 33
 	};
+	enum struct Dimensions {
+		Dimensionless,
+		Boolean,
+		Length,
+		Mass,
+		Time,
+		Current,
+		Temperature,
+		Angle,
+		Area,
+		Force,
+		Velocity,
+		Acceleration,
+		AngularVelocity,
+		AngularAcceleration,
+
+		Momentum,
+		MomentaMoment,
+		MomentumDerivative,
+		MomentaMomentDerivative,
+
+		StaticMoment,
+		MomentOfInertia,
+
+		LinearStrain,
+		AngularStrain,
+		LinearStrainRate,
+		AngularStrainRate,
+		
+		ForceUnitSpan,
+
+		Work,
+		Power,
+		Pressure,
+		Moment,
+		Voltage,
+		Charge,
+		Frequency,
+		deg,
+		rad,
+
+		/* added for GetEquationDimension method of DofOwnerOwner class */
+		MassFlow,
+		Jerk,
+		VoltageDerivative,
+		UnknownDimension
+	};
 
 private:
 	long currentStep;
@@ -129,11 +168,9 @@ public:
 	};
 	inline void IncCurrentStep(void) {
 		currentStep++;
-#if defined(USE_NETCDFC)
-		ncStart1[0] = this->GetCurrentStep();
-#elif defined(USE_NETCDF4)
+#if defined(USE_NETCDF)
 		ncStart1[0] = ncStart1x3[0] = ncStart1x3x3[0] = this->GetCurrentStep();
-#endif  /* USE_NETCDF4 */
+#endif  /* USE_NETCDF */
 	};
        	inline long GetCurrentStep(void) const {
 		return currentStep;
@@ -151,6 +188,9 @@ private:
 		OUTPUT_USE_TEXT			= 0x20U,
 		OUTPUT_MAY_USE_NETCDF		= 0x40U,
 		OUTPUT_USE_NETCDF		= 0x80U,
+
+// REMEMBER TO MODIFY OUTPUT_PRIVATE AND OUTPUT_MASK WHEN THE ABOVE MASKS
+// BECOME GRATER THAN OUTPUT_PRIVATE !
 
 		LAST
 	};
@@ -226,12 +266,17 @@ public:
 	void Init(const char* sFName, int iExtNum = -1);
 
 	virtual ~OutputHandler(void);
+	
+	void ReadOutputUnits(MBDynParser& HP);
 
 	/* Aggiungere qui le funzioni che aprono i singoli stream */
-	bool Open(const OutputHandler::OutFiles out);
+	void Open(const OutputHandler::OutFiles out);
+#ifdef USE_NETCDF
+	void NetCDFOpen(const OutputHandler::OutFiles out, const netCDF::NcFile::FileFormat NetCDF_Format);
+#endif
 
 	/* Overload for eigenanalysis text output */
-	bool Open(const int out, const std::string& postfix);
+	void Open(const int out, const std::string& postfix);
 	bool IsOpen(const OutputHandler::OutFiles out) const;
 	bool UseDefaultPrecision(const OutputHandler::OutFiles out) const;
 	bool UseScientific(const OutputHandler::OutFiles out) const;
@@ -248,11 +293,11 @@ public:
 
 	bool Close(const OutputHandler::OutFiles out);
 
-	bool OutputOpen(void);
+	void OutputOpen(void);
 	bool RestartOpen(bool openResXSol = false);
 
-	bool PartitionOpen(void);
-	bool LogOpen(void);
+	void PartitionOpen(void);
+	void LogOpen(void);
 
 	/* Aggiungere qui le funzioni che ritornano gli stream desiderati */
 	inline std::ostream& Get(const OutputHandler::OutFiles f);
@@ -321,13 +366,12 @@ public:
 	inline MBDynNcDim DimV3(void) const;
 
 	std::vector<size_t> ncStart1;
-#if defined(USE_NETCDF4)
+
 	std::vector<size_t> ncCount1;	
 	std::vector<size_t> ncStart1x3;
 	std::vector<size_t> ncCount1x3;
 	std::vector<size_t> ncStart1x3x3;
 	std::vector<size_t> ncCount1x3x3;
-#endif  /* USE_NETCDF4 */
 
 	MBDynNcVar
 	CreateVar(const std::string& name, const MBDynNcType& type,
@@ -337,11 +381,27 @@ public:
 	WriteNcVar(const MBDynNcVar&, const Vec3&);
 
 	void
+	WriteNcVar(const MBDynNcVar&, const Vec3&, const size_t&);
+
+	void
 	WriteNcVar(const MBDynNcVar&, const Mat3x3&);
+
+	void
+	WriteNcVar(const MBDynNcVar&, const Mat3x3&, const size_t&);
 
 	template <class Tvar>
 	void
 	WriteNcVar(const MBDynNcVar&, const Tvar&);
+	
+	template <class Tvar, class Tstart>
+	void
+	WriteNcVar(const MBDynNcVar&, const Tvar&, const Tstart&);
+
+	template <class Tvar, class Tstart>
+	void
+	WriteNcVar(const MBDynNcVar&, const Tvar&, 
+			const std::vector<Tstart>&, 
+			const std::vector<size_t>& = std::vector<size_t>(1,1));
 	
 	MBDynNcVar
 	CreateVar(const std::string& name, const std::string& type);
@@ -349,7 +409,7 @@ public:
 	template <class T>
 	MBDynNcVar
 	CreateVar(const std::string& name,
-		const std::string& units, const std::string& description);
+		const Dimensions phys_dim, const std::string& description);
 
 	MBDynNcVar
 	CreateRotationVar(const std::string& name_prefix,
@@ -357,18 +417,28 @@ public:
 		OrientationDescription od,
 		const std::string& description);
 #endif /* USE_NETCDF */
+/* Unit system related stuff */
+private:
+	std::unordered_map<Dimensions, std::string> Units;
+	void SetDerivedUnits(std::unordered_map<Dimensions, std::string>& Units );
+	void SetUnspecifiedUnits(std::unordered_map<Dimensions, std::string>& Units);
+	void SetMKSUnits(std::unordered_map<Dimensions, std::string>& Units);
+	void SetCGSUnits(std::unordered_map<Dimensions, std::string>& Units);
+	void SetMMTMSUnits(std::unordered_map<Dimensions, std::string>& Units);
+	void SetMMKGMSUnits(std::unordered_map<Dimensions, std::string>& Units);
 }; /* End class OutputHandler */
 
 #ifdef USE_NETCDF
 template <class T>
 MBDynNcVar
 OutputHandler::CreateVar(const std::string& name,
-	const std::string& units, const std::string& description)
+	const Dimensions phys_dim, const std::string& description)
 {
 	AttrValVec attrs(3);
 	NcDimVec dims(1);
 
-	attrs[0] = AttrVal("units", units);
+	//attrs[0] = AttrVal("units", units);
+	attrs[0] = AttrVal("units", Units[phys_dim]);
 	attrs[2] = AttrVal("description", description);
 	dims[0] = DimTime();
 	
@@ -679,11 +749,11 @@ public:
 		OUTPUT = 0x1U,
 
 		// use OUTPUT_MASK to isolate public output flags
-		OUTPUT_MASK = 0xFU,
+		OUTPUT_MASK = 0xFFU,
 
 		// reserve values up to OUTPUT_PRIVATE for public use;
 		// reserved output flags can start from OUTPUT_PRIVATE up
-		OUTPUT_PRIVATE = 0x10U,
+		OUTPUT_PRIVATE = 0x100U,
 
 		// use OUTPUT_PRIVATE_MASK to isolate private output flags
 		OUTPUT_PRIVATE_MASK = ~OUTPUT_MASK

@@ -1275,6 +1275,20 @@ MBDynParser::ModuleLoad_int(void)
 #endif // ! USE_RUNTIME_LOADING
 }
 
+void
+MBDynParser::GetRefByLabel(ReferenceFrame& rf)
+{
+	unsigned int uLabel((unsigned int)GetInt());
+	RFType::const_iterator i = RF.find(uLabel);
+	if (i == RF.end()) {
+		silent_cerr("reference " << uLabel << " is undefined at line " 
+			<< GetLineData() << std::endl);
+		throw MBDynParser::ErrReferenceUndefined(MBDYN_EXCEPT_ARGS);
+	}
+
+	rf = *(i->second);
+}
+
 MBDynParser::Frame 
 MBDynParser::GetRef(ReferenceFrame& rf)
 {
@@ -2029,6 +2043,15 @@ MBDynParser::GetDrive(unsigned uLabel) const
 	return i->second;
 }
 
+void
+MBDynParser::SetDrive(unsigned uLabel, const DriveCaller *pDC)
+{
+	if (!DC.insert(DCType::value_type(uLabel, pDC)).second) {
+		silent_cerr("drive caller " << uLabel << " already defined" << std::endl);
+		throw MBDynParser::ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+}
+
 DriveCaller *
 MBDynParser::GetDriveCaller(bool bDeferred)
 {
@@ -2037,7 +2060,7 @@ MBDynParser::GetDriveCaller(bool bDeferred)
 		try {
 			pDC = ReadDriveCallerData(pDM, *this, bDeferred);
 		}
-		catch (DataManager::ErrNeedDataManager) {
+		catch (DataManager::ErrNeedDataManager& e) {
 			silent_cerr("the required drive caller must appear "
 					"inside or after the \"control data\" "
 					"block"
@@ -2133,7 +2156,7 @@ MBDynParser::GetTplDriveCaller(void)
 				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 		}
-		catch (DataManager::ErrNeedDataManager) {
+		catch (DataManager::ErrNeedDataManager& e) {
 			silent_cerr("the required drive caller must appear "
 				"inside or after the \"control data\" block"
 				<< std::endl);
@@ -2349,6 +2372,13 @@ MBDynParser::GetMatR2vec(void)
 		doublereal phi3 = GetReal();
 
 		return RotManip::Rot(Vec3(phi1, phi2, phi3));
+	}
+
+	if (IsKeyWord("null")) {
+		silent_cerr("Line " << GetLineData()
+			<< ": \"null\" is not a valid orientation matrix"
+			<< std::endl);
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
 
 	int i1 = GetInt();
@@ -2780,6 +2810,74 @@ MBDynParser::GetMat6xN(Mat3xN& m1, Mat3xN& m2, integer iNumCols)
 
 			m1 *= d;
 			m2 *= d;
+		}
+	}
+}
+
+void
+MBDynParser::GetMatNx6(MatNx3& m1, MatNx3& m2, integer iNumRows)
+{
+	ASSERT(iNumRows > 0);
+	ASSERT(m1.iGetNumRows() == iNumRows);
+	ASSERT(m2.iGetNumRows() == iNumRows);
+
+	if (IsKeyWord("null")) {
+		m1.Reset();
+		m2.Reset();
+
+	} else {
+		int vi[] = { 1, 2, 3 };
+
+		if (IsKeyWord("anba")) {
+			vi[0] = 2;
+			vi[1] = 3;
+			vi[2] = 1;
+
+		} else if (IsKeyWord("matr")) {
+			/* eat it; not required */
+			NO_OP;
+		}
+
+		for (integer j = 1; j <= iNumRows; j++) {
+			for (int i = 0; i < 3; i++) {
+				m1.Put(j, vi[i], GetReal());
+			}
+			for (int i = 0; i < 3; i++) {
+				m2.Put(j, vi[i], GetReal());
+			}
+		}
+
+		if (IsKeyWord("scale")) {
+			doublereal d = GetReal(1.);
+			m1 *= d;
+			m2 *= d;
+		}
+	}
+}
+
+void
+MBDynParser::GetMatNxN(MatNxN& m, integer iNumRows)
+{
+	ASSERT(iNumRows > 0);
+	ASSERT(m.iGetNumRows() == iNumRows);
+	
+	if (IsKeyWord("null")) {
+		m.Reset();
+
+	} else {
+		if (IsKeyWord("matr")) {
+			/* eat it; not required */
+			NO_OP;
+		}
+
+		for (int i = 1; i <= iNumRows; i++) {
+			for (integer j = 1; j <= iNumRows; j++) {
+				m.Put(i, j, GetReal());
+			}
+		}
+		if (IsKeyWord("scale")) {
+			doublereal d = GetReal(1.);
+			m *= d;
 		}
 	}
 }

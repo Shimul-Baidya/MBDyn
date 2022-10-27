@@ -66,6 +66,10 @@ protected:
 	Mat3x3 MDE;
 	Mat3x3 MDEPrime;
 
+#ifdef USE_NETCDF
+	MBDynNcVar Var_Theta;
+	MBDynNcVar Var_Omega;
+#endif // USE_NETCDF
 	/* Jacobian matrix helpers */
 	virtual void
 	AssMatM(FullSubMatrixHandler& WMA, doublereal dCoef);
@@ -92,6 +96,11 @@ public:
 
 	/* Distruttore */
 	virtual ~DeformableAxialJoint(void);
+    
+	/* Deformable element */
+	virtual bool bIsDeformable() const {
+		return true;
+	};
 
 	/* Tipo di Joint */
 	virtual Joint::Type GetJointType(void) const {
@@ -101,6 +110,7 @@ public:
 	/* Contributo al file di restart */
 	virtual std::ostream& Restart(std::ostream& out) const;
 
+	void OutputPrepare(OutputHandler& OH);
 	virtual void Output(OutputHandler& OH) const;
 
 	/* Aggiorna le deformazioni ecc. */
@@ -149,6 +159,9 @@ public:
 	virtual unsigned int iGetNumPrivData(void) const;
 	virtual unsigned int iGetPrivDataIdx(const char *s) const;
 	virtual doublereal dGetPrivData(unsigned int i) const;
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* DeformableAxialJoint - end */

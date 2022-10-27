@@ -145,17 +145,23 @@ unsigned short int	port = 0;
 int
 send_message(const char *message)
 {
-	int sock;
+	SOCKET sock;
 	struct sockaddr_in peer_name;
 	FILE *fd;
 
 	/* Create the socket. */
 	if (path) {
-		sock = mbdyn_make_named_socket(0, path, 0, NULL);
+#ifndef _WIN32
+		(void)mbdyn_make_named_socket(&sock, 0, path, 0, NULL);
+#else
+		fprintf(stderr, "Unix named sockets not supported on windows.\n");
+		return -1;
+#endif /* !_WIN32 */
+
 	} else {
-		sock = mbdyn_make_inet_socket(0, host, port, 0, NULL);
+		(void)mbdyn_make_inet_socket(&sock, 0, host, port, 0, NULL);
 	}
-	if (sock < 0) {
+	if (sock == INVALID_SOCKET) {
 		return -1;
 	}
 
@@ -239,6 +245,7 @@ main(int argc, char *argv[])
 		case 'S':
 			sasl++;
 #ifndef HAVE_SASL2
+			(void)mech; // silence set but not used warning since it's used only if HAVE_SASL2
 			fprintf(stderr, "SASL not supported\n");
 			exit(EXIT_FAILURE);
 #endif /* ! HAVE_SASL2 */

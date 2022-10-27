@@ -114,6 +114,7 @@ protected:
 
 	/* Parametri usati durante l'assemblaggio iniziale */
 	bool bInitialJointAssemblyToBeDone;
+	bool bNotDeformableInitial;
 	bool bSkipInitialJointAssembly;
 	bool bOutputFrames;
 	bool bOutputAccels;
@@ -179,13 +180,11 @@ protected:
 	DriveCaller *pOutputMeter;
 	mutable integer iOutputCount;
 
-#ifdef MBDYN_FDJAC
 protected:
 	DriveCaller *pFDJacMeter;
 
 public:
 	bool bFDJac(void) const;
-#endif // MBDYN_FDJAC
 
 	/* specialized output stuff */
 public:
@@ -203,6 +202,7 @@ protected:
 #ifdef USE_NETCDF
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 	/* NetCDF stuff */
+	netCDF::NcFile::FileFormat NetCDF_Format;
 	bool bNetCDFsync;
 	bool bNetCDFnoText;
 	MBDynNcVar Var_Step;
@@ -341,18 +341,24 @@ public:
 	MathParser& GetMathParser(void) const { return MathPar; };
 	MBDynParser& GetMBDynParser(void) const { return MBPar; };
 	const Solver *GetSolver(void) const { return pSolver; };
-
+        NonlinearSolver* pGetNonlinearSolver() const;
 	bool PushCurrData(const std::string& name, const TypedValue& value);
 	bool PopCurrData(const std::string& name);
 
 	/* Assembla lo jacobiano */
 	virtual void AssJac(MatrixHandler& JacHdl, doublereal dCoef);
 
+        virtual void AssJac(VectorHandler& JacY, const VectorHandler& Y, doublereal dCoef);
+                
 	/* Assembla le matrici per gli autovalori */
 	virtual void AssMats(MatrixHandler& A_Hdl, MatrixHandler& B_Hdl);
 
 	/* Assembla il residuo */
-	virtual void AssRes(VectorHandler &ResHdl, doublereal dCoef);
+	virtual void AssRes(VectorHandler &ResHdl, doublereal dCoef, VectorHandler*const pAbsResHdl = 0);
+
+	/* sets the dimesnions of the equation components */
+	virtual void SetElemDimensionIndices(std::map<OutputHandler::Dimensions, std::set<integer>>* pDimMap);
+	virtual void SetNodeDimensionIndices(std::map<OutputHandler::Dimensions, std::set<integer>>* pDimMap);
 
 	// inverse dynamics
 	/* Constraints residual, switch iOrder*/
@@ -367,6 +373,9 @@ public:
 	// end of inverse dynamics
 
 protected:
+        void NodesUpdateJac(doublereal dCoef, VecIter<Node *>& Iter);
+        void NodesUpdateJac(const VectorHandler& Y, doublereal dCoef, VecIter<Node *>& Iter);
+     
 	/* specialized functions, called by above general helpers */
 	virtual void AssJac(MatrixHandler& JacHdl, doublereal dCoef,
 			VecIter<Elem *> &Iter,
@@ -377,7 +386,14 @@ protected:
 			VariableSubMatrixHandler& WorkMatB);
 	virtual void AssRes(VectorHandler &ResHdl, doublereal dCoef,
 			VecIter<Elem *> &Iter,
-			SubVectorHandler& WorkVec);
+			SubVectorHandler& WorkVec,
+			VectorHandler*const pAbsResHdl = 0);
+
+        virtual void AssJac(VectorHandler& JacY,
+                            const VectorHandler& Y,
+                            doublereal dCoef,
+                            VecIter<Elem *> &Iter,
+                            VariableSubMatrixHandler& WorkMat);
 
 	// inverse dynamics
 	void AssConstrJac(MatrixHandler& JacHdl,
@@ -441,6 +457,7 @@ public:
 			const MatrixHandler* pmMatB,
 			const unsigned uCurrEigSol,
 			const int iMatrixPrecision);
+     
 	void
 	OutputEigNaiveMatrices(const MatrixHandler* pmMatA,
 			const MatrixHandler* pmMatB,
@@ -466,7 +483,8 @@ public:
 	virtual void MakeRestart(void);
 	virtual void DerivativesUpdate(void) const;
 	virtual void BeforePredict(VectorHandler& X, VectorHandler& XP,
-			VectorHandler& XPrev, VectorHandler& XPPrev) const;
+		std::deque<VectorHandler*>& qXPr,
+		std::deque<VectorHandler*>& qXPPr) const;
 	virtual void AfterPredict(void) const;
 	virtual void Update(void) const;
 	virtual void AfterConvergence(void) const;
@@ -496,7 +514,7 @@ public:
 
 	/* socket select stuff */
 #ifdef USE_SOCKET
-protected:
+protected:     
 	std::map<int, UseSocket *> SocketUsers;
 	time_t SocketUsersTimeout;
 
@@ -609,6 +627,7 @@ protected:
 	ElemVecType Elems;
 
 	/* NOTE: will be removed? */
+        mutable VecIter<Node *> NodeIter;
 	mutable VecIter<Elem *> ElemIter;
 	/* end of NOTE: will be removed? */
 
@@ -646,6 +665,11 @@ protected:
 			const std::string& sName,
 			int CurrType);
 
+#ifdef USE_NETCDF
+        void
+        OutputEigSparseMatrixNc(const MBDynNcVar& var,
+                                const MatrixHandler& mh);
+#endif
 public:
 	/* ricerca drives */
 	Drive* pFindDrive(Drive::Type Typ, unsigned int uL) const;
@@ -866,6 +890,11 @@ public:
 	virtual const std::string& GetEqDescription(int i) const;
 	virtual DofOrder::Order GetDofType(int i) const;
 	virtual DofOrder::Order GetEqType(int i) const;
+        virtual DofOrder::Equality GetEqualityType(int iDof) const;
+        doublereal dGetStepIntegratorCoef(unsigned int iDof) const;     
+        bool bUseAutoDiff() const { return bAutoDiff; }
+private:
+        bool bAutoDiff; // Create nodes and elements with support for automatic differentiation if applicable
 };
 
 // if bActive is true, the cast only succeeds when driven element is active
@@ -1117,6 +1146,6 @@ extern OrientationDescription
 ReadOrientationDescription(MBDynParser& HP);
 
 extern OrientationDescription
-ReadOptionalOrientationDescription(DataManager *pDM, MBDynParser& HP);
+ReadOptionalOrientationDescription(DataManager *pDM, MBDynParser& HP, OrientationDescription od = UNKNOWN_ORIENTATION_DESCRIPTION);
 
 #endif /* DATAMAN_H */

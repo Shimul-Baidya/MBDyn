@@ -44,7 +44,7 @@
 
 class TotalJoint :
 virtual public Elem, public Joint {
-private:
+protected:
 	const StructNode* pNode1;
 	const StructNode* pNode2;
 	Vec3 f1;
@@ -66,7 +66,8 @@ private:
 	TplDriveOwner<Vec3> ThetaDrv;
 	TplDriveOwner<Vec3> OmegaDrv;
 	TplDriveOwner<Vec3> OmegaPDrv;
-	
+     
+protected:	
 	unsigned int nConstraints;
 	unsigned int nPosConstraints;
 	unsigned int nRotConstraints;
@@ -92,6 +93,7 @@ private:
 	MBDynNcVar Var_Omega;
 #endif // USE_NETCDF
 
+protected:
 	mutable Vec3 M;
 	mutable Vec3 F;
 	mutable Vec3 ThetaDelta;
@@ -175,8 +177,9 @@ public:
 
 	void
 	WorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
-		*piNumCols = *piNumRows = 12 + nConstraints ;
-	};
+		*piNumRows = 12 + nConstraints ;
+                *piNumCols = *piNumRows;
+	}
 
 	VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat,
@@ -189,7 +192,7 @@ public:
 		doublereal dCoef,
 		const VectorHandler& XCurr,
 		const VectorHandler& XPrimeCurr);
-
+     
 	/* inverse dynamics capable element */
 	virtual bool bInverseDynamics(void) const;
 
@@ -250,6 +253,9 @@ public:
 		connectedNodes[1] = pNode2;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* TotalJoint - end */
@@ -258,7 +264,7 @@ public:
 
 class TotalPinJoint :
 virtual public Elem, public Joint {
-private:
+protected:
 	const StructNode* pNode;
 	Vec3 Xc;
 	Mat3x3 Rch;
@@ -306,6 +312,7 @@ private:
 	MBDynNcVar Var_Omega;
 #endif // USE_NETCDF
 
+protected:
 	mutable Vec3 M;
 	mutable Vec3 F;
 	mutable Vec3 ThetaDelta;
@@ -387,21 +394,22 @@ public:
 
 	void
 	WorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
-		*piNumCols = *piNumRows = 6 + nConstraints ;
-	};
+		*piNumRows = 6 + nConstraints ;
+                *piNumCols = *piNumRows;
+	}
 
 	VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat,
 		doublereal dCoef,
 		const VectorHandler& XCurr,
 		const VectorHandler& XPrimeCurr);
-
+                
 	SubVectorHandler&
 	AssRes(SubVectorHandler& WorkVec,
 		doublereal dCoef,
 		const VectorHandler& XCurr,
 		const VectorHandler& XPrimeCurr);
-
+     
 	/* inverse dynamics capable element */
 	virtual bool bInverseDynamics(void) const;
 
@@ -463,6 +471,9 @@ public:
 		connectedNodes[0] = pNode;
 	};
 	/* ************************************************ */
+
+	/* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* TotalPinJoint - end */

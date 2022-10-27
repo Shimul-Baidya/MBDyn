@@ -33,6 +33,7 @@
 
 #include "mynewmem.h"
 #include "node.h"
+#include "nodead.h"
 #include "solman.h"
 
 
@@ -102,6 +103,14 @@ str2nodetype(const char *const s)
 	return Node::UNKNOWN;
 }
 
+void Node::UpdateJac(doublereal dCoef)
+{
+}
+
+void Node::UpdateJac(const VectorHandler& Y, doublereal dCoef)
+{
+}
+
 /* Node - end */
 
 
@@ -144,6 +153,33 @@ ScalarNode::AfterPredict(VectorHandler& X, VectorHandler& XP)
 	Update(X, XP);
 }
 
+const OutputHandler::Dimensions 
+ScalarNode::GetEquationDimension(integer index) const {
+   // DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::UnknownDimension;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+ScalarNode::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"scalar node equation" << std::endl;
+
+	return out;
+}
 /* ScalarNode - end */
 
 
@@ -339,6 +375,34 @@ ScalarDifferentialNode::dGetPrivData(unsigned int i) const
 	throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 }
 
+const OutputHandler::Dimensions 
+ScalarDifferentialNode::GetEquationDimension(integer index) const {
+   // DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::UnknownDimension;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+ScalarDifferentialNode::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"scalar differential node equation" << std::endl;
+
+	return out;
+}
+
 /* ScalarDifferentialNode - end */
 
 
@@ -497,7 +561,9 @@ ParameterNode::ParameterNode(unsigned int uL,
 	const DofOwner* pDO,
 	doublereal dx,
 	flag fOut)
-: ScalarAlgebraicNode(uL, pDO, dx, fOut)
+     : ScalarNode(uL, pDO, fOut),
+       ScalarAlgebraicNode(uL, pDO, dx, fOut)
+       
 {
 	NO_OP;
 }

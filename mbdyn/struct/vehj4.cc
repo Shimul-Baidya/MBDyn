@@ -131,6 +131,27 @@ DeformableAxialJoint::Restart(std::ostream& out) const
 }
 
 void
+DeformableAxialJoint::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Deformable axial joint", OH, name);
+
+			Var_Theta = OH.CreateVar<doublereal>(name + "Theta",
+				OutputHandler::Dimensions::rad,
+				"relative angle");
+
+			Var_Omega = OH.CreateVar<doublereal>(name + "Omega",
+				OutputHandler::Dimensions::AngularVelocity,
+				"relative angular velocity");
+		}
+#endif // USE_NETCDF
+	}
+}
+
+void
 DeformableAxialJoint::Output(OutputHandler& OH) const
 {
 	if (bToBeOutput()) {
@@ -139,14 +160,25 @@ DeformableAxialJoint::Output(OutputHandler& OH) const
 		Mat3x3 R(R1h.MulTM(R2h));
 
 		Vec3 v(0., 0., GetF());
-		Joint::Output(OH.Joints(), "DeformableHinge", GetLabel(),
-			Zero3, v, Zero3, R1h*v) << " " << RotManip::VecRot(R)(3);
 
-		if (GetConstLawType() & ConstLawType::VISCOUS) {
-			OH.Joints() << " " << R1h.GetVec(3).Dot(pNode2->GetWCurr() - pNode1->GetWCurr());
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "DeformableHinge", GetLabel(),
+					Zero3, v, Zero3, R1h*v) << " " << RotManip::VecRot(R)(3);
+			if (GetConstLawType() & ConstLawType::VISCOUS) {
+				OH.Joints() << " " << R1h.GetVec(3).Dot(pNode2->GetWCurr() - pNode1->GetWCurr());
+			}
+
+			OH.Joints() << std::endl;
 		}
 
-		OH.Joints() << std::endl;
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, Zero3, v, Zero3, R1h*v);
+			OH.WriteNcVar(Var_Theta, RotManip::VecRot(R)(3));
+			OH.WriteNcVar(Var_Omega, R1h.GetVec(3).Dot(pNode2->GetWCurr() - pNode1->GetWCurr()));
+		}
+#endif // USE_NETCDF
+
 	}
 }
 
@@ -291,6 +323,12 @@ DeformableAxialJoint::dGetPrivData(unsigned int i) const
 	default:
 		return ConstitutiveLaw1DOwner::dGetPrivData(i - 3);
 	}
+}
+
+const OutputHandler::Dimensions
+DeformableAxialJoint::GetEquationDimension(integer index) const {
+	// DOF == 0
+	return OutputHandler::Dimensions::UnknownDimension;
 }
 
 /* DeformableAxialJoint - end */

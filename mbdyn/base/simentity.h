@@ -43,7 +43,7 @@
 #include "drive.h"
 #include "hint.h"
 #include "invdyn.h"
-
+#include "solverbase.h"
 /* SimulationEntity - begin */
 
 /*
@@ -135,13 +135,11 @@ public:
 	 * Complementare di GetDofType(); dice che tipo di equazione
 	 * corrisponde al dof i (ALGEBRAIC o DIFFERENTIAL).
 	 */
-	virtual DofOrder::Order GetEqType(unsigned int i) const 
-#if 0
-		= 0
-#else
-	{ return DofOrder::DIFFERENTIAL; }
-#endif
-	;
+        virtual DofOrder::Order GetEqType(unsigned int i) const;
+
+        virtual DofOrder::Equality GetEqualityType(unsigned int i) const;
+
+        virtual SolverBase::StepIntegratorType GetStepIntegrator(unsigned int i) const;
 
 	/* Metodi legati all'integrazione */
 	
@@ -163,8 +161,8 @@ public:
 	 */
 	virtual void BeforePredict(VectorHandler& /* X */ ,
 	   		      VectorHandler& /* XP */ ,
-			      VectorHandler& /* XPrev */ ,
-			      VectorHandler& /* XPPrev */ ) const;
+		std::deque<VectorHandler*>& /* qXPr */ ,
+		std::deque<VectorHandler*>& /* qXPPr */ ) const;
 	
 	/*
 	 * Elaborazione vettori e dati dopo la predizione.
@@ -221,7 +219,7 @@ public:
 	 * Contributes to output on a stream and/or NetCDF
 	 */
 	virtual std::ostream& OutputAppend(std::ostream& out) const;
-	virtual std::ostream& OutputAppend(std::ostream& out, OutputHandler& OH) const;
+	virtual void NetCDFOutputAppend(OutputHandler& OH) const;
 	virtual void OutputAppendPrepare(OutputHandler& OH, const std::string& name);
 
 	virtual void ReadInitialState(MBDynParser& HP);

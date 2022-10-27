@@ -81,9 +81,9 @@ ReadShellConstLaw(MBDynParser& HP, Shell::fmh& pD, Shell::vh& PreStress)
 		}
 
 	} else if (HP.IsKeyWord("isotropic")) {
-		doublereal dE;
-		doublereal dnu;
-		doublereal dG;
+		doublereal dE = 0.;
+		doublereal dnu = 0.;
+		doublereal dG = 0.;
 		doublereal dh;
 		doublereal das = 1.;
 		doublereal dat = .01;
@@ -351,7 +351,8 @@ Eshell =
 				dBeta = HP.GetReal();
 
 				// temporary
-				silent_cerr("Shell plane stress orthotropic constitutive law: fiber angle \"beta\" not supported yet" << std::endl);
+				silent_cerr("Shell plane stress orthotropic constitutive law: fiber angle \"beta\" = " <<
+				dBeta << "not supported yet" << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 
 			} else if (HP.IsKeyWord("thickness")) {

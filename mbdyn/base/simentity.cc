@@ -59,6 +59,21 @@ SimulationEntity::bIsValidIndex(unsigned int i) const
 	return false;
 }
 
+DofOrder::Order SimulationEntity::GetEqType(unsigned int i) const
+{
+     return DofOrder::DIFFERENTIAL;
+}
+
+DofOrder::Equality SimulationEntity::GetEqualityType(unsigned int i) const
+{
+     return DofOrder::EQUALITY;
+}
+
+SolverBase::StepIntegratorType SimulationEntity::GetStepIntegrator(unsigned int i) const
+{
+     return SolverBase::INT_DEFAULT;
+}
+
 void 
 SimulationEntity::SetValue(DataManager *pDM,
 		VectorHandler& X, VectorHandler& XP,
@@ -81,8 +96,8 @@ SimulationEntity::ParseHint(DataManager *pDM, const char *s) const
 void 
 SimulationEntity::BeforePredict(VectorHandler& /* X */ ,
 		VectorHandler& /* XP */ ,
-		VectorHandler& /* XPrev */ ,
-		VectorHandler& /* XPPrev */ ) const
+		std::deque<VectorHandler*>& /* qXPr */ ,
+		std::deque<VectorHandler*>& /* qXPPr */ ) const
 {
 	NO_OP;
 }
@@ -158,10 +173,10 @@ SimulationEntity::OutputAppend(std::ostream& out) const
 	return out;
 }
 
-std::ostream&
-SimulationEntity::OutputAppend(std::ostream& out, OutputHandler& OH) const
+void
+SimulationEntity::NetCDFOutputAppend(OutputHandler& OH) const
 {
-	return out;
+	NO_OP;
 }
 
 void

@@ -42,7 +42,10 @@
 #define MH_H
 
 #include <cmath>
+#include <functional>
 #include <iostream>
+#include <vector>
+
 #include "ac/f2c.h"
 
 /* per il debugging */
@@ -51,6 +54,7 @@
 #include "except.h"
 
 #include "vh.h"
+#include "sp_gradient_base.h"
 
 class SubMatrixHandler;
 class VariableSubMatrixHandler;
@@ -151,6 +155,18 @@ public:
 	/* */
 	virtual MatrixHandler& ScalarMul(const doublereal& d);
 
+        enum MatPrintFormat {
+              MAT_PRINT_FULL,
+              MAT_PRINT_TRIPLET,
+              MAT_PRINT_SPCONVERT
+        };
+             
+        virtual std::ostream& Print(std::ostream& os, MatPrintFormat eFormat = MAT_PRINT_FULL) const;
+
+        typedef void EnumerateNzCallback(integer, integer, doublereal);
+                
+        virtual void EnumerateNz(const std::function<EnumerateNzCallback>& func) const;
+                
         /* Matrix Matrix product */
 protected:
 	virtual MatrixHandler&
@@ -187,6 +203,10 @@ protected:
 				const doublereal& dCoef),
 			VectorHandler& out, const VectorHandler& in) const;
 
+        template <typename T>
+        static void IteratorScale(T& oMH,
+				  const std::vector<doublereal>& oRowScale,
+				  const std::vector<doublereal>& oColScale);
 public:
 	virtual VectorHandler&
 	MatVecMul(VectorHandler& out, const VectorHandler& in) const;
@@ -202,6 +222,13 @@ public:
 	MatTVecDecMul(VectorHandler& out, const VectorHandler& in) const;
 	virtual doublereal ConditionNumber(enum Norm_t eNorm = NORM_1) const;
 	virtual doublereal Norm(enum Norm_t eNorm = NORM_1) const;
+        virtual void Scale(const std::vector<doublereal>& oRowScale, const std::vector<doublereal>& oColScale);
+        virtual MatrixHandler* Copy() const=0;
+        virtual bool AddItem(integer iRow, const sp_grad::SpGradient& oItem);
+        virtual bool SubItem(integer iRow, const sp_grad::SpGradient& oItem);
+private:
+        template <typename Operation>
+        inline bool ItemOperation(integer iRow, const Operation oper, const sp_grad::SpGradient& oItem);
 };
 
 /* Restituisce un puntatore all'array di reali della matrice */
@@ -229,6 +256,32 @@ inline integer*
 MatrixHandler::piGetCols(void) const
 {
 	return NULL;
+}
+
+template <typename T>
+void MatrixHandler::IteratorScale(T& oMH, const std::vector<doublereal>& oRowScale, const std::vector<doublereal>& oColScale)
+{
+     static_assert(std::is_base_of<MatrixHandler, T>::value, "argument oMH must be a matrix handler");
+     
+     const bool bScaleRows = !oRowScale.empty();
+     const bool bScaleCols = !oColScale.empty();
+
+     ASSERT(!bScaleRows || oRowScale.size() == static_cast<size_t>(oMH.iGetNumRows()));
+     ASSERT(!bScaleCols || oColScale.size() == static_cast<size_t>(oMH.iGetNumCols()));
+
+     for (const auto& oItem: oMH) {
+	  doublereal dCoef = oItem.dCoef;
+
+	  if (bScaleRows) {
+	       dCoef *= oRowScale[oItem.iRow];
+	  }
+
+	  if (bScaleCols) {
+	       dCoef *= oColScale[oItem.iCol];
+	  }
+
+	  oMH(oItem.iRow + 1, oItem.iCol + 1) = dCoef;
+     }
 }
 
 extern std::ostream&

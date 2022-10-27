@@ -50,9 +50,7 @@
 #include "solman.h"
 #include "withlab.h"
 
-#ifdef USE_AUTODIFF
-#include <gradient.h>
-#endif
+#include <sp_gradient.h>
 
 extern const char* psDriveNames[];
 extern const char* psReadControlDrivers[];
@@ -148,11 +146,8 @@ public:
 	doublereal dGetP(const doublereal& dVar) const;
 	doublereal dGetP(void) const;
 
-#ifdef USE_AUTODIFF
-	inline void dGet(doublereal x, doublereal& y) const;
-	template <int N>
-	inline void dGet(const grad::Gradient<N>& x, grad::Gradient<N>& y) const;
-#endif
+        inline void dGet(const sp_grad::SpGradient& x, sp_grad::SpGradient& y) const;
+        inline void dGetP(const sp_grad::SpGradient& x, sp_grad::SpGradient& y) const;
 };
 
 /* DriveOwner - end */
@@ -311,9 +306,9 @@ public:
 	void PutSymbolTable(Table& T);
 	void SetVar(const doublereal& dVar);
 
-#ifndef USE_EE
+#ifdef DO_NOT_USE_EE
 	doublereal dGet(InputStream& InStr) const;
-#endif // ! USE_EE
+#endif // DO_NOT_USE_EE
 
 	inline doublereal dGetTime(void) const;
 	inline doublereal dGetTimeStep(void) const;
@@ -514,12 +509,13 @@ public:
 	virtual doublereal dGet(const doublereal& dVar) const = 0;
 	virtual inline doublereal dGet(void) const;
 
-#ifdef USE_AUTODIFF
 	inline void dGet(doublereal x, doublereal& y) const;
-	template <int N>
-	inline void dGet(const grad::Gradient<N>& x, grad::Gradient<N>& y) const;
-#endif
-
+        inline void dGetP(doublereal x, doublereal& yP) const;
+	inline void dGet(const sp_grad::SpGradient& x, sp_grad::SpGradient& y) const;
+	inline void dGetP(const sp_grad::SpGradient& gx, sp_grad::SpGradient& gyP) const;
+	inline void dGet(const sp_grad::GpGradProd& x, sp_grad::GpGradProd& y) const;     
+     	inline void dGetP(const sp_grad::GpGradProd& gx, sp_grad::GpGradProd& gyP) const;
+     
 	/* this is about drives that are differentiable */
 	virtual bool bIsDifferentiable(void) const;
 	virtual doublereal dGetP(const doublereal& dVar) const;
@@ -550,40 +546,55 @@ DriveCaller::dGetP(void) const
 	return dGetP(pDrvHdl->dGetTime());
 }
 
-#ifdef USE_AUTODIFF
 inline void DriveCaller::dGet(doublereal x, doublereal& y) const
 {
 	y = dGet(x);
 }
 
-template <int N>
-inline void DriveCaller::dGet(const grad::Gradient<N>& gx, grad::Gradient<N>& gy) const
+inline void DriveCaller::dGetP(doublereal x, doublereal& yP) const
 {
-	using namespace grad;
+	yP = dGetP(x);
+}
+
+inline void DriveOwner::dGet(const sp_grad::SpGradient& x, sp_grad::SpGradient& y) const
+{
+	pDriveCaller->dGet(x, y);
+}
+
+inline void DriveOwner::dGetP(const sp_grad::SpGradient& x, sp_grad::SpGradient& y) const
+{
+	pDriveCaller->dGetP(x, y);
+}
+
+inline void DriveCaller::dGet(const sp_grad::SpGradient& gx, sp_grad::SpGradient& gy) const
+{
 	const doublereal x = gx.dGetValue();
 	const doublereal y = dGet(x);
 	const doublereal dy_dx = dGetP(x);
 
-	gy.SetValuePreserve(y);
-	gy.DerivativeResizeReset(gx.pGetDofMap(), gx.iGetStartIndexLocal(), gx.iGetEndIndexLocal(), MapVectorBase::LOCAL, 0.);
-
-	for (index_type i = gx.iGetStartIndexLocal(); i < gx.iGetEndIndexLocal(); ++i) {
-		gy.SetDerivativeLocal(i, dy_dx * gx.dGetDerivativeLocal(i));
-	}
+	gy.ResizeReset(y, gx.iGetSize());
+	gx.InsertDeriv(gy, dy_dx);
 }
 
-inline void DriveOwner::dGet(doublereal x, doublereal& y) const
+inline void DriveCaller::dGetP(const sp_grad::SpGradient& gx, sp_grad::SpGradient& gyP) const
 {
-	pDriveCaller->dGet(x, y);
+     gyP.ResizeReset(dGetP(gx.dGetValue()), 0); // FIXME: There is no dGetPP needed for the gradient of yP
 }
 
-template <int N>
-inline void DriveOwner::dGet(const grad::Gradient<N>& x, grad::Gradient<N>& y) const
+inline void DriveCaller::dGet(const sp_grad::GpGradProd& gx, sp_grad::GpGradProd& gy) const
 {
-	pDriveCaller->dGet(x, y);
-}
-#endif
+	const doublereal x = gx.dGetValue();
+	const doublereal y = dGet(x);
+	const doublereal dy_dx = dGetP(x);
 
+	gy.Reset(y, dy_dx * gx.dGetDeriv());
+}
+
+inline void DriveCaller::dGetP(const sp_grad::GpGradProd& gx, sp_grad::GpGradProd& gyP) const
+{
+     gyP.Reset(dGetP(gx.dGetValue()), 0.); // FIXME: There is no dGetPP needed for the gradient of yP
+}
+	
 /* DriveCaller - end */
 
 inline doublereal

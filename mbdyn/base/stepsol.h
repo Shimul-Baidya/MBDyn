@@ -58,6 +58,7 @@
 #define STEPSOL_H
 
 #include <unistd.h>
+#include <array>
 #include <cfloat>
 #include <cmath>
 #include <deque>
@@ -117,7 +118,7 @@ public:
 	
 	virtual ~StepIntegrator(void);
 
-	void SetDataManager(DataManager* pDatMan);
+	virtual void SetDataManager(DataManager* pDatMan);
 		
 	virtual integer GetIntegratorNumPreviousStates(void) const;
 	
@@ -128,7 +129,9 @@ public:
 	virtual doublereal GetIntegratorDTol(void) const;
 	
 	virtual doublereal GetIntegratorDSolTol(void) const;
-	
+
+	virtual doublereal dGetCoef(unsigned int iDof) const=0;
+     
 	virtual void OutputTypes(const bool fpred);
 	
 	virtual void SetDriveHandler(const DriveHandler* pDH);
@@ -138,8 +141,8 @@ public:
 			const doublereal TStep, 
 			const doublereal dAlph, 
 			const StepChange StType,
-			std::deque<MyVectorHandler*>& qX,
- 			std::deque<MyVectorHandler*>& qXPrime,
+			std::deque<VectorHandler*>& qX,
+ 			std::deque<VectorHandler*>& qXPrime,
 			MyVectorHandler*const pX,
  			MyVectorHandler*const pXPrime,
 			integer& EffIter,
@@ -208,26 +211,31 @@ public:
 			const doublereal TStep, 
 			const doublereal /* dAph */, 
 			const StepChange /* StType */,
-			std::deque<MyVectorHandler*>& qX,
- 			std::deque<MyVectorHandler*>& qXPrime,
+			std::deque<VectorHandler*>& qX,
+ 			std::deque<VectorHandler*>& qXPrime,
 			MyVectorHandler*const pX,
  			MyVectorHandler*const pXPrime,
 			integer& EffIter,
 			doublereal& Err,
 			doublereal& SolErr);
 
- 	void Residual(VectorHandler* pRes) const;
+ 	void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const;
 
 	void Jacobian(MatrixHandler* pJac) const;
+
+	void Jacobian(VectorHandler* pJac, const VectorHandler* pY) const;
 	
 	void Update(const VectorHandler* pSol) const;
 
+	virtual doublereal dGetCoef(unsigned int iDof) const override;
+     
 	/* scale factor for tests */
 	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const;
 };
 
 
-/* classe di base per gli integratori di ordine qualsiasi */ 
+/* Base class for integrators of arbitrary order */ 
+// FIXME: could probably be merged into the template class tplStepNIntegrator?
 class StepNIntegrator :   
 	public ImplicitStepIntegrator
 {
@@ -235,11 +243,30 @@ public:
 	doublereal db0Differential;
 	doublereal db0Algebraic;
 
-protected:
+	enum IDX_A {
+		IDX_A1 = 0,
+		IDX_A2 = 1,
+		IDX_A3 = 2,
+		IDX_A4 = 3,
+		IDX_A5 = 4
+		// add as needed
+	};
+
+	enum IDX_B {
+		IDX_B0 = 0,
+		IDX_B1 = 1,
+		IDX_B2 = 2,
+		IDX_B3 = 3,
+		IDX_B4 = 4,
+		IDX_B5 = 5
+		// add as needed
+	};
+
+public:
 	void UpdateDof(const int DCount,
 		const DofOrder::Order Order,
 		const VectorHandler* const pSol = 0) const;
-public:
+     
 	StepNIntegrator(const integer MaxIt,
 			const doublereal dT,
 			const doublereal dSolutionTol,
@@ -248,418 +275,23 @@ public:
 
 	virtual ~StepNIntegrator(void);
 
-	virtual void Residual(VectorHandler* pRes) const;
+	virtual void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const;
 
 	virtual void Jacobian(MatrixHandler* pJac) const;
 	
+        virtual void Jacobian(VectorHandler* pJac, const VectorHandler* pY) const override;
+     
 	virtual void Update(const VectorHandler* pSol) const;
 
+	virtual doublereal dGetCoef(unsigned int iDof) const override;
+     
 	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const;
 
-protected:
 	virtual void SetCoef(doublereal dT, 
 			doublereal dAlpha,
 			enum StepChange NewStep) = 0;
 };
 
-/* classe di base per gli integratori del second'ordine */ 
-class Step1Integrator :   
-	public StepNIntegrator
-{
-protected:
-	VectorHandler *pXPrev;
-	VectorHandler *pXPrimePrev; 
-
-public:
-	Step1Integrator(const integer MaxIt,
-			const doublereal dT,
-			const doublereal dSolutionTol,
-			const bool bmod_res_test);
-
-	virtual ~Step1Integrator(void);
-
-	virtual doublereal
-	Advance(Solver* pS, 
-			const doublereal TStep, 
-			const doublereal dAlph, 
-			const StepChange StType,
-			std::deque<MyVectorHandler*>& qX,
-	 		std::deque<MyVectorHandler*>& qXPrime,
-			MyVectorHandler*const pX,
- 			MyVectorHandler*const pXPrime,
-			integer& EffIter,
-			doublereal& Err,
-			doublereal& SolErr);
-
-protected:
-	void PredictDof(const int DCount,
-		const DofOrder::Order Order,
-		const VectorHandler* const pSol = 0) const;
-	virtual void Predict(void);
-
-	/* Overridden by dedicated inline functions */
-	virtual doublereal 
-     	dPredictDerivative(const doublereal& dXm1,
-			const doublereal& dXPm1,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const = 0;
-   
-   	/* Overridden by dedicated inline functions */
-   	virtual doublereal 
-     	dPredictState(const doublereal& dXm1,
-		   const doublereal& dXP,
-		   const doublereal& dXPm1,
-		   DofOrder::Order o = DofOrder::DIFFERENTIAL) const = 0;
- 
-   	virtual doublereal 
-     	dPredDer(const doublereal& dXm1,
-	      const doublereal& dXPm1) const = 0;
-   
-   	virtual doublereal 
-     	dPredState(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1) const = 0;   
-
-   	virtual doublereal 
-     	dPredDerAlg(const doublereal& dXm1,
-		 const doublereal& dXPm1)  const = 0;
-		    
-   	virtual doublereal 
-     	dPredStateAlg(const doublereal& dXm1,
-		   const doublereal& dXP,
-		   const doublereal& dXPm1) const = 0;
-};
-
-
-class CrankNicolsonIntegrator: 
-	public Step1Integrator
-{
-public:
-	CrankNicolsonIntegrator(const doublereal Tl, 
-			const doublereal dSolTl, 
-			const integer iMaxIt,
-			const bool bmod_res_test);
-
-	~CrankNicolsonIntegrator(void);
-
-protected:
-	void SetCoef(doublereal dT, 
-			doublereal dAlpha,
-			enum StepChange NewStep);
-  
-   	doublereal 
-     	dPredictDerivative(const doublereal& dXm1,
-			const doublereal& dXPm1,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const;
-   
-	doublereal 
-	dPredictState(const doublereal& dXm1,
-		   const doublereal& dXP,
-		   const doublereal& dXPm1,
-		   DofOrder::Order o = DofOrder::DIFFERENTIAL) const;
-   
-	/* Note: uses linear prediction for derivatives 
-	 * (highest possible order) */
-	doublereal 
-	dPredDer(const doublereal& dXm1,
-	      const doublereal& dXPm1) const;
-   
-	doublereal 
-	dPredState(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1) const;
-   
-	doublereal 
-	dPredDerAlg(const doublereal& dXm1,
-		 const doublereal& dXPm1) const;
-   
-	doublereal 
-	dPredStateAlg(const doublereal& dXm1,
-		   const doublereal& dXP,
-		   const doublereal& dXPm1) const;
-};
-
-class ImplicitEulerIntegrator: 
-	public Step1Integrator
-{
-public:
-	ImplicitEulerIntegrator(const doublereal Tl, 
-			const doublereal dSolTl, 
-			const integer iMaxIt,
-			const bool bmod_res_test);
-
-	~ImplicitEulerIntegrator(void);
-
-protected:
-	void SetCoef(doublereal dT, 
-			doublereal dAlpha,
-			enum StepChange NewStep);
-  
-   	doublereal 
-     	dPredictDerivative(const doublereal& dXm1,
-			const doublereal& dXPm1,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const;
-   
-	doublereal 
-	dPredictState(const doublereal& dXm1,
-		   const doublereal& dXP,
-		   const doublereal& dXPm1,
-		   DofOrder::Order o = DofOrder::DIFFERENTIAL) const;
-   
-	/* Note: uses linear prediction for derivatives 
-	 * (highest possible order) */
-	doublereal 
-	dPredDer(const doublereal& dXm1,
-	      const doublereal& dXPm1) const;
-   
-	doublereal 
-	dPredState(const doublereal& dXm1,
-		const doublereal& dXP,
-		const doublereal& dXPm1) const;
-   
-	doublereal 
-	dPredDerAlg(const doublereal& dXm1,
-		 const doublereal& dXPm1) const;
-   
-	doublereal 
-	dPredStateAlg(const doublereal& dXm1,
-		   const doublereal& dXP,
-		   const doublereal& dXPm1) const;
-};
-
-/* classe di base per gli integratori del second'ordine */ 
-class Step2Integrator :   
-	public StepNIntegrator
-{
-protected:
-	VectorHandler *pXPrev, *pXPrev2;
-	VectorHandler *pXPrimePrev, *pXPrimePrev2; 
-
-public:
-	Step2Integrator(const integer MaxIt,
-			const doublereal dT,
-			const doublereal dSolutionTol,
-			const bool bmod_res_test);
-
-	virtual ~Step2Integrator(void);
-
-	virtual doublereal
-	Advance(Solver* pS, 
-			const doublereal TStep, 
-			const doublereal dAlph, 
-			const StepChange StType,
-			std::deque<MyVectorHandler*>& qX,
-	 		std::deque<MyVectorHandler*>& qXPrime,
-			MyVectorHandler*const pX,
- 			MyVectorHandler*const pXPrime,
-			integer& EffIter,
-			doublereal& Err,
-			doublereal& SolErr);
-
-protected:
-	void PredictDof(const int DCount,
-		const DofOrder::Order Order,
-		const VectorHandler* const pSol = 0) const;
-	virtual void Predict(void);
-
-	/* Overridden by dedicated inline functions */
-	virtual doublereal 
-     	dPredictDerivative(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const = 0;
-   
-   	/* Overridden by dedicated inline functions */
-   	virtual doublereal 
-     	dPredictState(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const = 0;
- 
-   	virtual doublereal 
-     	dPredDer(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const = 0;
-   
-   	virtual doublereal 
-     	dPredState(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const = 0;   
-   	virtual doublereal 
-     	dPredDerAlg(const doublereal& dXm1,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2)  const = 0;
-		    
-   	virtual doublereal 
-     	dPredStateAlg(const doublereal& dXm1,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const = 0;
-
-	virtual void SetCoef(doublereal dT, 
-			doublereal dAlpha,
-			enum StepChange NewStep) = 0;
-};
-
-/* NostroMetodo - begin */
-
-class MultistepSolver: 
-	public Step2Integrator
-{
-protected:
-	DriveOwner Rho;
-	DriveOwner AlgebraicRho;
-   
-	doublereal a[2][2];
-	doublereal b[3][2];
-
-	doublereal mp[2];
-	doublereal np[2];
-   
-public:
-	MultistepSolver(const doublereal Tl, 
-			const doublereal dSolTol, 
-			const integer iMaxIt,
-			const DriveCaller* pRho,
-			const DriveCaller* pAlgRho,
-			const bool bmod_res_test);
-
-	~MultistepSolver(void);
-
-protected:
-	void SetCoef(doublereal dT, 
-			doublereal dAlpha,
-			enum StepChange NewStep);
-
-	void SetDriveHandler(const DriveHandler* pDH);
-
-	doublereal 
-	dPredictDerivative(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const;
-
-	doublereal 
-	dPredictState(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const;
-   
-	/* Note: uses cubic prediction for derivatives
-	 * (highest possible order) */
-	doublereal 
-	dPredDer(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-   
-	doublereal 
-	dPredState(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-
-	doublereal 
-	dPredDerAlg(const doublereal& dXm1,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-
-	doublereal 
-	dPredStateAlg(const doublereal& dXm1,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-};
-
-/* NostroMetodo - end */
-
-
-/* Hope - begin */
-
-class HopeSolver : 
-	public Step2Integrator 
-{
-protected:
-	DriveOwner Rho;
-	DriveOwner AlgebraicRho;
-   
-	bool bStep;
-   
-	doublereal a[2][2];
-	doublereal b[2][2];
-   
-	doublereal mp[2];
-	doublereal np[2];
-   
-public:
-	HopeSolver(const doublereal Tl, 
-			const doublereal dSolTol, 
-			const integer iMaxIt,
-			const DriveCaller* pRho,
-			const DriveCaller* pAlgRho,
-			const bool bmod_res_test);
-
-	~HopeSolver(void);
-
-protected:
-	void SetCoef(doublereal dT,
-			doublereal dAlpha,
-			enum StepChange NewStep);
-
-	void SetDriveHandler(const DriveHandler* pDH);
-
-	doublereal 
-	dPredictDerivative(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const;
-
-	doublereal 
-	dPredictState(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2,
-			DofOrder::Order o = DofOrder::DIFFERENTIAL) const;      
-
-	/* Note: uses cubic prediction for derivatives
-	 * (highest possible order) */
-	doublereal 
-	dPredDer(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-
-	doublereal 
-	dPredState(const doublereal& dXm1,
-			const doublereal& dXm2,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-
-	doublereal 
-	dPredDerAlg(const doublereal& dXm1,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-
-	doublereal 
-	dPredStateAlg(const doublereal& dXm1,
-			const doublereal& dXP,
-			const doublereal& dXPm1,
-			const doublereal& dXPm2) const;
-};
-
-/* Hope - end */
 
 /* InverseDynamics - Begin*/
 
@@ -709,8 +341,8 @@ public:
 			const doublereal TStep, 
 			const doublereal dAlph, 
 			const StepChange StType,
-			std::deque<MyVectorHandler*>& qX,
-	 		std::deque<MyVectorHandler*>& qXPrime,
+			std::deque<VectorHandler*>& qX,
+	 		std::deque<VectorHandler*>& qXPrime,
 			MyVectorHandler*const pX,
  			MyVectorHandler*const pXPrime,
 			integer& EffIter,
@@ -734,12 +366,16 @@ public:
 			doublereal& Err,
 			doublereal& SolErr);
  	
-	void Residual(VectorHandler* pRes) const ;
+	void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const ;
 
 	void Jacobian(MatrixHandler* pJac) const ;
+
+        virtual void Jacobian(VectorHandler* pJac, const VectorHandler* pY) const override;
 	
 	void Update(const VectorHandler* pSol) const  ;
-	
+
+        virtual doublereal dGetCoef(unsigned int iDof) const override;
+     
 	void SetOrder(InverseDynamics::Order iOrder);
 
 	InverseDynamics::Order GetOrder(void) const;

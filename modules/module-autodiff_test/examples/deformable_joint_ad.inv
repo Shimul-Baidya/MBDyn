@@ -3,7 +3,7 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2020
  *
  * Pierangelo Masarati	<masarati@aero.polimi.it>
  * Paolo Mantegazza	<mantegazza@aero.polimi.it>
@@ -30,8 +30,8 @@
  */
 
 /*
- AUTHOR: Reinhard Resch <r.resch@secop.com>
-        Copyright (C) 2013(-2017) all rights reserved.
+ AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+        Copyright (C) 2013(-2020) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -43,23 +43,31 @@
 
 	time step: (final_time-initial_time)/number_of_time_steps;
 	max iterations: 100;
-	tolerance: 1e-6;
+	tolerance: 1e-10, 1e-10;
 	method: ms, 0.6;
     derivatives tolerance: 1e-2;
     derivatives max iterations: 100;
     derivatives coefficient: 1e-9;
 
-    linear solver: naive, colamd, pivot factor, 0.1;	
-#    linear solver: umfpack, colamd, scale, iterative, always, max iterations, 100;
-#    nonlinear solver: line search, abort at lambda min, no, non negative slope continue, yes, divergence check, yes, factor, 10, scale newton step, no, print convergence info, no, verbose, no;
-    nonlinear solver: newton raphson;
-#    output: iterations;
-#    output: jacobian;
-#    output: residual;
-
+    linear solver: naive, colamd;	
+    nonlinear solver: nox,
+              modified, 50,
+              keep jacobian matrix,
+              jacobian operator, newton krylov,
+              forcing term, type 2,
+              solver, line search based,
+              line search method, backtrack,
+              weighted rms absolute tolerance, 0.,
+              weighted rms relative tolerance, 0.,
+              verbose, yes,
+              inner iterations before assembly, 4,
+              use preconditioner as solver, no;
 	eigenanalysis: list, 11, 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.,
+        suffix width, 2,
 	output matrices,
 	output eigenvectors, output geometry,lower frequency limit, 0, upper frequency limit, 100000,
 	parameter, 1,
 	use lapack,balance, permute;
 
+        threads: assembly, 1;
+        

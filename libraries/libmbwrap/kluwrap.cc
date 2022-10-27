@@ -74,6 +74,7 @@
 #include "dirccmh.h"
 #include "kluwrap.h"
 #include "dgeequ.h"
+#include "cscmhtpl.h"
 
 /* KLUSolver - begin */
 	
@@ -84,7 +85,8 @@ Axp(0),
 Aip(0),
 App(0),
 Symbolic(0),
-Numeric(0)
+Numeric(0),
+iNumNonZeros(-1)
 {
 	klu_defaults(&Control);
 
@@ -123,23 +125,31 @@ KLUSolver::~KLUSolver(void)
 }
 
 void
-KLUSolver::Reset(void)
+KLUSolver::ResetSymbolic(void) const
 {
 	if (Symbolic) {
-		// FIXME: This code might be an performance issue!
-		// However if we do not reset the symbolic object
-		// the code will fail if zero entries become nonzero
-		// during simulation.
 		klu_free_symbolic(&Symbolic, &Control);
 		ASSERT(Symbolic == 0);
 	}
 
+        ResetNumeric();
+}
+
+void
+KLUSolver::ResetNumeric(void) const
+{
 	if (Numeric) {
 		klu_free_numeric(&Numeric, &Control);
 		ASSERT(Numeric == 0);
 	}
 
 	bHasBeenReset = true;
+}
+
+void
+KLUSolver::Reset(void)
+{
+        ResetNumeric();
 }
 
 void
@@ -232,6 +242,10 @@ KLUSolver::MakeCompactForm(SparseMatrixHandler& mh,
 	
 	mh.MakeCompressedColumnForm(Ax, Ai, Ap, 0);
 
+        if (iNumNonZeros != mh.Nz()) {
+                ResetSymbolic();
+        }
+        
 	Axp = &(Ax[0]);
 	Aip = &(Ai[0]);
 	App = &(Ap[0]);
@@ -272,11 +286,11 @@ bool KLUSolver::bGetConditionNumber(doublereal& dCond)
 /* KLUSolver - end */
 
 /* KLUSparseSolutionManager - begin */
-
-KLUSparseSolutionManager::KLUSparseSolutionManager(integer Dim,
-												   doublereal dPivot,
-												   const ScaleOpt& s)
-: A(Dim),
+template <typename MatrixHandlerType>
+KLUSparseSolutionManager<MatrixHandlerType>::KLUSparseSolutionManager(integer Dim,
+								      doublereal dPivot,
+								      const ScaleOpt& s)
+     : A(Dim, Dim),
 b(Dim),
 bVH(Dim, &b[0]),
 scale(s),
@@ -317,28 +331,35 @@ pMatScale(0)
 	pLS->SetSolutionManager(this);
 }
 
-
-KLUSparseSolutionManager::~KLUSparseSolutionManager(void)
+template <typename MatrixHandlerType>
+KLUSparseSolutionManager<MatrixHandlerType>::~KLUSparseSolutionManager(void)
 {
-	SAFEDELETE(pMatScale);
+	if (pMatScale) {
+		SAFEDELETE(pMatScale);
+	}
 }
 
+template <typename MatrixHandlerType>
 void
-KLUSparseSolutionManager::MatrReset(void)
+KLUSparseSolutionManager<MatrixHandlerType>::MatrReset(void)
 {
 	pLS->Reset();
 }
 
+template <typename MatrixHandlerType>
 void
-KLUSparseSolutionManager::MakeCompressedColumnForm(void)
+KLUSparseSolutionManager<MatrixHandlerType>::MakeCompressedColumnForm(void)
 {
-	ScaleMatrixAndRightHandSide(A);
-
 	pLS->MakeCompactForm(A, Ax, Ai, Adummy, Ap);
+
+        CSCMatrixHandlerTpl<doublereal, integer, 0> Acsc(&Ax.front(), &Ai.front(), &Ap.front(), A.iGetNumCols(), A.Nz());
+        
+        ScaleMatrixAndRightHandSide(Acsc);
 }
 
+template <typename MatrixHandlerType>
 template <typename MH>
-void KLUSparseSolutionManager::ScaleMatrixAndRightHandSide(MH& mh)
+void KLUSparseSolutionManager<MatrixHandlerType>::ScaleMatrixAndRightHandSide(MH& mh)
 {
 	if (scale.when != SCALEW_NEVER) {
 		MatrixScale<MH>& rMatScale = GetMatrixScale<MH>();
@@ -361,8 +382,9 @@ void KLUSparseSolutionManager::ScaleMatrixAndRightHandSide(MH& mh)
 	}
 }
 
+template <typename MatrixHandlerType>
 template <typename MH>
-MatrixScale<MH>& KLUSparseSolutionManager::GetMatrixScale()
+MatrixScale<MH>& KLUSparseSolutionManager<MatrixHandlerType>::GetMatrixScale()
 {
 	if (pMatScale == 0) {
 		pMatScale = MatrixScale<MH>::Allocate(scale);
@@ -372,7 +394,8 @@ MatrixScale<MH>& KLUSparseSolutionManager::GetMatrixScale()
 	return dynamic_cast<MatrixScale<MH>&>(*pMatScale);
 }
 
-void KLUSparseSolutionManager::ScaleSolution(void)
+template <typename MatrixHandlerType>
+void KLUSparseSolutionManager<MatrixHandlerType>::ScaleSolution(void)
 {
 	if (scale.when != SCALEW_NEVER) {
 		ASSERT(pMatScale != 0);
@@ -382,8 +405,9 @@ void KLUSparseSolutionManager::ScaleSolution(void)
 }
 
 /* Risolve il sistema  Fattorizzazione + Backward Substitution */
+template <typename MatrixHandlerType>
 void
-KLUSparseSolutionManager::Solve(void)
+KLUSparseSolutionManager<MatrixHandlerType>::Solve(void)
 {
 	MakeCompressedColumnForm();
 
@@ -393,25 +417,31 @@ KLUSparseSolutionManager::Solve(void)
 }
 
 /* Rende disponibile l'handler per la matrice */
+template <typename MatrixHandlerType>
 MatrixHandler*
-KLUSparseSolutionManager::pMatHdl(void) const
+KLUSparseSolutionManager<MatrixHandlerType>::pMatHdl(void) const
 {
 	return &A;
 }
 
 /* Rende disponibile l'handler per il termine noto */
+template <typename MatrixHandlerType>
 MyVectorHandler*
-KLUSparseSolutionManager::pResHdl(void) const
+KLUSparseSolutionManager<MatrixHandlerType>::pResHdl(void) const
 {
 	return &bVH;
 }
 
 /* Rende disponibile l'handler per la soluzione */
+template <typename MatrixHandlerType>
 MyVectorHandler*
-KLUSparseSolutionManager::pSolHdl(void) const
+KLUSparseSolutionManager<MatrixHandlerType>::pSolHdl(void) const
 {
 	return &bVH;
 }
+
+template class KLUSparseSolutionManager<SpMapMatrixHandler>;
+template class KLUSparseSolutionManager<SpGradientSparseMatrixHandler>;
 
 /* KLUSparseSolutionManager - end */
 
@@ -419,7 +449,7 @@ template <class CC>
 KLUSparseCCSolutionManager<CC>::KLUSparseCCSolutionManager(integer Dim,
 		doublereal dPivot,
 		const ScaleOpt& scale)
-: KLUSparseSolutionManager(Dim, dPivot, scale),
+     : KLUSparseSolutionManager<SpMapMatrixHandler>(Dim, dPivot, scale),
 CCReady(false),
 Ac(0)
 {

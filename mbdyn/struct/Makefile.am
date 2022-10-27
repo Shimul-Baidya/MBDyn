@@ -9,14 +9,20 @@ accj.cc \
 accj.h \
 autostr.cc \
 autostr.h \
+autostrad.cc \
+autostrad.h \
 beam.cc \
 beam.h \
+beamad.cc \
+beamad.h \
 beam2.cc \
 beam2.h \
 beamslider.h \
 beamslider.cc \
 body.cc \
 body.h \
+bodyad.cc \
+bodyad.h \
 body_vm.cc \
 body_vm.h \
 brake.cc \
@@ -59,6 +65,8 @@ membraneeas.h \
 membraneeas.cc \
 modal.cc \
 modal.h \
+modalad.cc \
+modalad.h \
 modaledge.cc \
 modaledge.h \
 modalext.cc \
@@ -105,12 +113,16 @@ strforce.h \
 strforce_impl.h \
 strnode.cc \
 strnode.h \
+strnodead.cc \
+strnodead.h \
 tdclw.cc \
 tdclw.h \
 totalequation.cc \
 totalequation.h \
 totalj.cc \
 totalj.h \
+totaljad.cc \
+totaljad.h \
 univj.cc \
 univj.h \
 vb.cc \
@@ -135,17 +147,36 @@ $(srcdir)/../../modules/module-wheel2/module-wheel2.h \
 $(srcdir)/../../modules/module-asynchronous_machine/module-asynchronous_machine.cc \
 $(srcdir)/../../modules/module-asynchronous_machine/module-asynchronous_machine.h \
 \
-$(srcdir)/../../modules/module-hydrodynamic_plain_bearing/module-hydrodynamic_plain_bearing.cc \
-$(srcdir)/../../modules/module-hydrodynamic_plain_bearing/module-hydrodynamic_plain_bearing.h \
-$(srcdir)/../../modules/module-hydrodynamic_plain_bearing/diffsizes.f95 \
-$(srcdir)/../../modules/module-hydrodynamic_plain_bearing/hydrodynamic_plain_bearing_force.f95 \
-$(srcdir)/../../modules/module-hydrodynamic_plain_bearing/hydrodynamic_plain_bearing_force_dv.f95 \
-\
 $(srcdir)/../../modules/module-inline_friction/module-inline_friction.cc \
 $(srcdir)/../../modules/module-inline_friction/module-inline_friction.h \
 \
 $(srcdir)/../../modules/module-nodedistdrive/module-nodedistdrive.cc \
-$(srcdir)/../../modules/module-nodedistdrive/module-nodedistdrive.h
+$(srcdir)/../../modules/module-nodedistdrive/module-nodedistdrive.h \
+\
+$(srcdir)/../../modules/module-multi_step_drive/module-multi_step_drive.cc \
+$(srcdir)/../../modules/module-multi_step_drive/module-multi_step_drive.h \
+\
+$(srcdir)/../../modules/module-switch_drive/module-switch_drive.cc \
+$(srcdir)/../../modules/module-switch_drive/module-switch_drive.h
+
+nodist_libstruct_la_SOURCES += \
+$(srcdir)/../../modules/module-hydrodynamic_plain_bearing/module-hydrodynamic_plain_bearing.cc \
+$(srcdir)/../../modules/module-hydrodynamic_plain_bearing/module-hydrodynamic_plain_bearing.h \
+\
+$(srcdir)/../../modules/module-hydrodynamic_plain_bearing2/module-hydrodynamic_plain_bearing2.cc \
+$(srcdir)/../../modules/module-hydrodynamic_plain_bearing2/module-hydrodynamic_plain_bearing2.h \
+\
+$(srcdir)/../../modules/module-journal_bearing/module-journal_bearing.h \
+$(srcdir)/../../modules/module-journal_bearing/module-journal_bearing.cc \
+\
+$(srcdir)/../../modules/module-uni_in_plane/module-uni_in_plane.h \
+$(srcdir)/../../modules/module-uni_in_plane/module-uni_in_plane.cc \
+\
+$(srcdir)/../../modules/module-ballbearing_contact/module-ballbearing_contact.h \
+$(srcdir)/../../modules/module-ballbearing_contact/module-ballbearing_contact.cc \
+\
+$(srcdir)/../../modules/module-triangular_contact/module-triangular_contact.h \
+$(srcdir)/../../modules/module-triangular_contact/module-triangular_contact.cc
 
 # add more...
 endif
@@ -167,6 +198,7 @@ AM_CPPFLAGS = \
 -I$(srcdir)/../../libraries/libmbutil \
 -I$(srcdir)/../../libraries/libmbmath \
 -I$(srcdir)/../../libraries/libmbwrap \
+-I$(srcdir)/../../libraries/libmbc \
 -I$(srcdir)/../../mbdyn \
 -I$(srcdir)/../../mbdyn/base \
 -I$(srcdir)/../../mbdyn/struct \

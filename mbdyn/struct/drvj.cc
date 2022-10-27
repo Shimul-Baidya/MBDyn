@@ -47,7 +47,8 @@ LinearVelocityJoint::LinearVelocityJoint(unsigned int uL,
 : Elem(uL, fOut), 
 Joint(uL, pDO, fOut), 
 DriveOwner(pDC),
-pNode(pN), Dir(TmpDir), dF(0.)
+pNode(pN), Dir(TmpDir), 
+dF(0.)
 {
    NO_OP;
 }
@@ -166,13 +167,48 @@ LinearVelocityJoint::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;   
 }
 
-   
+
+void 
+LinearVelocityJoint::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#if USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Linear velocity", OH, name);
+
+			Var_dv = OH.CreateVar<doublereal>(name + "dv",
+					OutputHandler::Dimensions::Dimensionless,
+					"direction of imposed velocity");
+
+			Var_v = OH.CreateVar<doublereal>(name + "v",
+					OutputHandler::Dimensions::Velocity,
+					"magnitude of imposed velocity");
+		}
+#endif // USE_NETCDF
+	}
+}
+
 void LinearVelocityJoint::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) {      
-      Joint::Output(OH.Joints(), "LinearVelocity", GetLabel(),
-		    Vec3(dF, 0., 0.), Zero3, Dir*dF, Zero3)
-	<< " " << Dir << " " << dGet() << std::endl;
+   if (bToBeOutput()) {
+
+	   Vec3 FTmp = Vec3(dF, 0., 0.);
+
+	   if (OH.UseText(OutputHandler::JOINTS)) {
+		   Joint::Output(OH.Joints(), "LinearVelocity", GetLabel(),
+				   FTmp, Zero3, Dir*dF, Zero3)
+			   << " " << Dir << " " << dGet() << std::endl;
+	   }
+
+#ifdef USE_NETCDF
+	   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+		   Joint::NetCDFOutput(OH, FTmp, Zero3, Dir*dF, Zero3);
+		   OH.WriteNcVar(Var_dv, Dir);
+		   OH.WriteNcVar(Var_v, dGet());
+	   }
+#endif // USE_NETCDF
+
    }   
 }
  
@@ -244,6 +280,39 @@ LinearVelocityJoint::InitialAssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+const OutputHandler::Dimensions
+LinearVelocityJoint::GetEquationDimension(integer index) const {
+	// DOF == 6
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+LinearVelocityJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 3 << ": " <<
+			"velocity error" << std::endl;
+
+	return out;
+}
 /* LinearVelocity - end */
 
 
@@ -259,7 +328,8 @@ AngularVelocityJoint::AngularVelocityJoint(unsigned int uL,
 : Elem(uL, fOut), 
 Joint(uL, pDO, fOut), 
 DriveOwner(pDC), 
-pNode(pN), Dir(TmpDir), dM(0.)
+pNode(pN), Dir(TmpDir), 
+dM(0.)
 {
    NO_OP;
 }
@@ -383,15 +453,48 @@ AngularVelocityJoint::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;   
 }
 
+void
+AngularVelocityJoint::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#if USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Angular velocity", OH, name);
+
+			Var_dOmega = OH.CreateVar<doublereal>(name + "dOmega",
+					OutputHandler::Dimensions::AngularVelocity,
+					"magnitude imposed angular velocity");
+
+			Var_w = OH.CreateVar<Vec3>(name + "w",
+					OutputHandler::Dimensions::Dimensionless,
+					"direction of imposed angular velocity");
+		}
+#endif // USE_NETCDF
+	}
+}
    
 void AngularVelocityJoint::Output(OutputHandler& OH) const
 {
    if(bToBeOutput()) {      
-      Vec3 Tmp(pNode->GetRCurr()*Dir);
-      
-      Joint::Output(OH.Joints(), "AngularVelocity", GetLabel(),
-		    Zero3, Vec3(dM, 0., 0.), Zero3, Tmp*dM)
-	<< " " << Tmp << " " << dGet() << std::endl;      
+	   Vec3 Tmp(pNode->GetRCurr()*Dir);
+	   Vec3 MTmp = Vec3(dM, 0., 0.);
+
+
+	   if (OH.UseText(OutputHandler::JOINTS)) {
+		   Joint::Output(OH.Joints(), "AngularVelocity", GetLabel(),
+				   Zero3, MTmp, Zero3, Tmp*dM)
+			   << " " << Tmp << " " << dGet() << std::endl;     
+	   }
+
+#ifdef USE_NETCDF
+	   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+		   Joint::NetCDFOutput(OH, Zero3, MTmp, Zero3, Tmp*dM);
+		   OH.WriteNcVar(Var_w, Tmp);
+		   OH.WriteNcVar(Var_dOmega, dGet());
+	   }
+#endif // USE_NETCDF
+
    }   
 }
  
@@ -469,4 +572,37 @@ AngularVelocityJoint::InitialAssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+const OutputHandler::Dimensions
+AngularVelocityJoint::GetEquationDimension(integer index) const {
+	// DOF == 1
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::AngularVelocity;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::AngularVelocity;
+			break;
+		case 3:
+			dimension = OutputHandler::Dimensions::AngularVelocity;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+AngularVelocityJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << "->" << iIndex + 3 << ": " <<
+			"angular velocity error" << std::endl;
+
+	return out;
+}
 /* AngularVelocity - end */

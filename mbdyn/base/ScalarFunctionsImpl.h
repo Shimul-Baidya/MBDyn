@@ -1,6 +1,6 @@
 /* $Header$ */
-/* 
- * HmFe (C) is a FEM analysis code. 
+/*
+ * HmFe (C) is a FEM analysis code.
  *
  * Copyright (C) 1996-2017
  *
@@ -17,11 +17,11 @@
  *
  */
 /*
- * MBDyn (C) is a multibody analysis code. 
+ * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
  * Copyright (C) 1996-2017
- * 
+ *
  * This code is a partial merge of HmFe and MBDyn.
  *
  * Pierangelo Masarati  <masarati@aero.polimi.it>
@@ -36,7 +36,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation (version 2 of the License).
- * 
+ *
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -123,11 +123,13 @@ private:
 	std::vector<doublereal> X_i;
 	std::vector<doublereal> b, c, d;
 	bool doNotExtrapolate;
+	bool bailout;
 public:
 	CubicSplineScalarFunction(
 		const std::vector<doublereal>& y_i,
 		const std::vector<doublereal>& x_i,
-		bool doNotExtrapolate = false);
+		bool doNotExtrapolate = false,
+		bool bailout = false);
 	virtual ~CubicSplineScalarFunction(void);
 	virtual doublereal operator()(const doublereal x) const;
 	virtual doublereal ComputeDiff(const doublereal t, const integer order = 1) const;
@@ -138,11 +140,13 @@ private:
 	std::vector<doublereal> Y_i;
 	std::vector<doublereal> X_i;
 	bool doNotExtrapolate;
+	bool bailout;
 public:
 	MultiLinearScalarFunction(
 		const std::vector<doublereal>& y_i,
 		const std::vector<doublereal>& x_i,
-		bool doNotExtrapolate = false);
+		bool doNotExtrapolate = false,
+		bool bailout = false);
 	virtual ~MultiLinearScalarFunction(void);
 	virtual doublereal operator()(const doublereal x) const;
 	virtual doublereal ComputeDiff(const doublereal t, const integer order = 1) const;
@@ -214,6 +218,50 @@ public:
 		const BasicScalarFunction *const b2
 	);
 	virtual ~DivScalarFunction(void);
+	virtual doublereal operator()(const doublereal x) const;
+	virtual doublereal ComputeDiff(const doublereal t, const integer order = 1) const;
+};
+
+class SineScalarFunction : public DifferentiableScalarFunction {
+private:
+	doublereal amp;
+	doublereal freq;
+	doublereal theta;
+public:
+	SineScalarFunction(
+	const doublereal amplitude,
+	const doublereal frequency,
+	const doublereal phase);
+	virtual ~SineScalarFunction(void);
+	virtual doublereal operator()(const doublereal x) const;
+	virtual doublereal ComputeDiff(const doublereal t, const integer order = 1) const;
+};
+
+class CosineScalarFunction : public DifferentiableScalarFunction {
+private:
+	doublereal amp;
+	doublereal freq;
+	doublereal theta;
+public:
+	CosineScalarFunction(
+	const doublereal amplitude,
+	const doublereal frequency,
+	const doublereal phase);
+	virtual ~CosineScalarFunction(void);
+	virtual doublereal operator()(const doublereal x) const;
+	virtual doublereal ComputeDiff(const doublereal t, const integer order = 1) const;
+};
+
+class PowFunScalarFunction : public DifferentiableScalarFunction {
+private:
+	const DifferentiableScalarFunction *const a1;
+	const DifferentiableScalarFunction *const a2;
+public:
+	PowFunScalarFunction(
+		const BasicScalarFunction *const b1,
+		const BasicScalarFunction *const b2
+	);
+	virtual ~PowFunScalarFunction(void);
 	virtual doublereal operator()(const doublereal x) const;
 	virtual doublereal ComputeDiff(const doublereal t, const integer order = 1) const;
 };

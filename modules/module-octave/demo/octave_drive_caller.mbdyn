@@ -30,7 +30,7 @@
 # 
 #################################################################
 ##
-## AUTHOR: Reinhard Resch <r.resch@secop.com>
+## AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
 ##        Copyright (C) 2011(-2017) all rights reserved.
 ##
 ##        The copyright of this code is transferred
@@ -67,6 +67,7 @@ begin: initial value;
 #    derivatives coefficient: 1e-3;
 #    derivatives tolerance: 1e1;
     derivatives max iterations: 10;
+    threads: assembly, 1;
 #    output: residual;
     output: counter;
 end: initial value;

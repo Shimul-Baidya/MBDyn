@@ -46,9 +46,9 @@
 #include "mathp.h"
 #include "parser.h"
 
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 #include "evaluator_impl.h"
-#endif // USE_EE
+#endif // DO_NOT_USE_EE
 
 
 /* helper per le funzioni built-in */
@@ -3096,7 +3096,19 @@ start_parsing:;
 #else /* !HAVE_STRTOL */
 			value.Set(Int(atoi(s)));
 #endif /* !HAVE_STRTOL */
-
+			// check for undeflow or overflow.
+			// this is required because 
+			//   1) Int is not a long, thus we can have underflow/overflow with Int(l)
+			//      even if the return value of atol is checked
+			//   2) if atol is not available we fallback to atoi
+			std::string check_string = std::to_string(value.GetInt());
+			if (check_string.compare(std::string(s, endptr - s))) {
+				throw ErrGeneric(this,
+					MBDYN_EXCEPT_ARGS,
+					std::string("integer value ") + std::string(s, endptr - s) + " underflow or overflow " +
+					 " leading to " + check_string
+				);
+			}
 		} else {
 			value.SetType(TypedValue::VAR_REAL);
 #ifdef HAVE_STRTOD
@@ -3305,7 +3317,110 @@ MathParser::bNameValidate(const std::string& s) const
 	return true;
 }
 
-#ifndef USE_EE
+const char *
+MathParser::token2str(Token token) const
+{
+	switch (token)
+	{
+	case ENDOFFILE:
+		return "EOF";
+
+	case UNKNOWNTOKEN:
+		return "UNKNOWN";
+
+	case MP_INT:
+		return "INTEGER";
+
+	case MP_REAL:
+		return "REAL";
+
+	case MP_STRING:
+		return "STRING";
+
+	case NUM:
+		return "NUMBER";
+
+	case NAME:
+		return "NAME";
+
+	case EXP:
+		return "EXPONENT";
+
+	case MULT:
+		return "MULTIPLICATION";
+
+	case DIV:
+		return "DIVISION";
+
+	case MOD:
+		return "MODULUS";
+
+	case MINUS:
+		return "MINUS";
+
+	case PLUS:
+		return "PLUS";
+
+	case GT:
+		return "GREATER_THAN";
+
+	case GE:
+		return "GREATER_THAN_OR_EQUAL_TO";
+
+	case EQ:
+		return "EQUAL_TO";
+
+	case LE:
+		return "LESS_THAN_OR_EQUAL_TO";
+
+	case LT:
+		return "LESS_THAN";
+
+	case NE:
+		return "NOT_EQUAL";
+
+	case NOT:
+		return "LOGICAL_NOT";
+
+	case AND:
+		return "LOGICAL_AND";
+
+	case OR:
+		return "LOGICAL_OR";
+
+	case XOR:
+		return "LOGICA_EXCLUSIVE_OR";
+
+	case OBR:
+		return "OPEN_BRACKET";
+
+	case CBR:
+		return "CLOSE_BRACKET";
+
+	case OPGIN:
+		return "OPEN_PLUGIN";
+
+	case CPGIN:
+		return "CLOSE_PLUGIN";
+
+	case STMTSEP:
+		return "STATEMENT_SEPARATOR";
+
+	case ARGSEP:
+		return "ARGUMENT_SEPARATOR";
+
+	case NAMESPACESEP:
+		return "NAMESPACE_SEPARATOR";
+
+	case ASSIGN:
+		return "ASSIGNMENT";
+
+	default:
+		return "unknown token";
+	};
+}
+
+#ifdef DO_NOT_USE_EE
 TypedValue
 MathParser::logical(void)
 {
@@ -3925,12 +4040,12 @@ MathParser::stmt(void)
 						if (v->GetType() != type) {
 							silent_cerr("warning, skipping redefinition of \"" << name.c_str() << "\""
 								<< " from " << v->GetTypeName() << " to " << TypedValue::GetTypeName(type)
-								<< " (orig=" << v->GetVal() << ", unchanged; new=" << d << ")"
+								<< " (orig=" << v->GetVal() << ", unchanged; new=" << d << ", discarded)"
 								<< " at line " << mbdyn_get_line_data() << std::endl);
 
 						} else {
 							silent_cerr("warning, skipping redefinition of " << v->GetTypeName() << " \"" << name.c_str() << "\""
-								<< " (orig=" << v->GetVal() << ", unchanged; new=" << d << ")"
+								<< " (orig=" << v->GetVal() << ", unchanged; new=" << d << ", discarded)"
 								<< " at line " << mbdyn_get_line_data() << std::endl);
 						}
 					}
@@ -4406,7 +4521,7 @@ MathParser::GetLastStmt(Real d, Token t)
 	}
 
 	for (;;) {
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 		ExpressionElement *e = stmtlist();
 		d = e->Eval().GetReal();
 		if (pedantic_out) {
@@ -4444,7 +4559,7 @@ MathParser::GetLastStmt(const InputStream& strm, Real d, Token t)
 	return d;
 }
 
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 ExpressionElement *
 MathParser::GetExpr(void)
 {
@@ -4490,7 +4605,7 @@ MathParser::GetExpr(const InputStream& strm)
 	// NOTE: caller must explicitly delete it
 	return e;
 }
-#endif // USE_EE
+#endif // DO_NOT_USE_EE
 
 Real
 MathParser::Get(Real d)
@@ -4512,7 +4627,7 @@ TypedValue
 MathParser::Get(const TypedValue& /* v */ )
 {
 	GetToken();
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 	ExpressionElement *e = stmt();
 	TypedValue vv = e->Eval();
 	if (pedantic_out) {
@@ -4536,7 +4651,7 @@ MathParser::Get(const InputStream& strm, const TypedValue& v)
 	GetToken();
 	TypedValue vv = v;
 	if (currtoken != STMTSEP && currtoken != ARGSEP) {
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 		ExpressionElement *e = stmt();
 		vv = e->Eval();
 		if (pedantic_out) {
@@ -4627,7 +4742,7 @@ MathParser::GetNameSpace(const std::string& name) const
 	return i->second;
 }
 
-#ifdef USE_EE
+#ifndef DO_NOT_USE_EE
 /*
  * Evaluator code 
  * Each function return ExpressionElement * for constructing a tree
@@ -5022,6 +5137,7 @@ MathParser::expr(void)
 				return new EE_Value(v->GetVal());
 			}
 
+#if 0
 			switch (currtoken) {
 			case NAME:
 				throw ErrGeneric(this, MBDYN_EXCEPT_ARGS, std::string("unexpected name \"") + namebuf + "\"");
@@ -5030,6 +5146,8 @@ MathParser::expr(void)
 				// TODO: output token!
 				throw ErrGeneric(this, MBDYN_EXCEPT_ARGS, "unexpected token");
 			}
+#endif
+			throw ErrGeneric(this, MBDYN_EXCEPT_ARGS, std::string("unexpected name \"") + name + "\" followed by " + token2str(currtoken));
 		}
 
 		throw ErrGeneric(this, MBDYN_EXCEPT_ARGS, std::string("unknown name \"") + name + "\"");
@@ -5237,12 +5355,12 @@ MathParser::stmt(void)
 						if (v->GetType() != type) {
 							silent_cerr("warning, skipping redefinition of \"" << name.c_str() << "\""
 								<< " from " << v->GetTypeName() << " to " << TypedValue::GetTypeName(type)
-								<< " (orig=" << v->GetVal() << ", unchanged; new=" << e->Eval() << ")"
+								<< " (orig=" << v->GetVal() << ", unchanged; new=" << e->Eval() << ", discarded)"
 								<< " at line " << mbdyn_get_line_data() << std::endl);
 
 						} else {
 							silent_cerr("warning, skipping redefinition of " << v->GetTypeName() << " \"" << name.c_str() << "\""
-								<< " (orig=" << v->GetVal() << ", unchanged; new=" << e->Eval() << ")"
+								<< " (orig=" << v->GetVal() << ", unchanged; new=" << e->Eval() << ", discarded)"
 								<< " at line " << mbdyn_get_line_data() << std::endl);
 						}
 					}
@@ -5592,4 +5710,4 @@ last_arg:
 	return new EE_Var(v, defaultNameSpace);
 }
 
-#endif // USE_EE
+#endif // DO_NOT_USE_EE

@@ -42,8 +42,6 @@
 /* FullMatrixHandler - begin */
 
 class FullMatrixHandler : public MatrixHandler {
-	friend std::ostream&
-	operator << (std::ostream& out, const FullMatrixHandler& m);
 	friend std::ostream& Write(std::ostream& out,
 		const FullMatrixHandler& m,
 		const char* s, const char* s2);
@@ -96,6 +94,47 @@ public:
 	};
 
 private:
+#ifdef USE_LAPACK
+        typedef void (VectorHandler::*VectorOperation)(integer iRow, const doublereal& dCoef);
+        typedef void (MatrixHandler::*MatrixOperation)(integer iRow, integer iCol, const doublereal& dCoef);
+        
+        void BlasMatrixOp(const char* TRANSA,
+                            const char* TRANSB,
+                            integer m,
+                            integer n,
+                            integer k,
+                            integer lda,
+                            doublereal* pout,
+                            integer lda_out,
+                            const doublereal* pin,
+                            integer lda_in,
+                            doublereal ALPHA,
+                            doublereal BETA) const;
+        
+        void BlasMatrixOp(const char* TRANSA,
+                            const char* TRANSB,
+                            integer m,
+                            integer n,
+                            integer k,
+                            integer lda,
+                            doublereal* pout,
+                            integer lda_out,
+                            const doublereal* pin,
+                            integer lda_in,
+                            VectorOperation op) const;
+        
+        void BlasMatrixOp(const char* TRANSA,
+                            const char* TRANSB,
+                            integer m,
+                            integer n,
+                            integer k,
+                            integer lda,
+                            doublereal* pout,
+                            integer lda_out,
+                            const doublereal* pin,
+                            integer lda_in,
+                            MatrixOperation op) const;
+#endif
 	const_iterator m_end;
 
 public:
@@ -557,10 +596,8 @@ public:
 		const FullMatrixHandler & source, 
 		integer source_start_row, integer source_end_row,
 		integer source_start_col, integer source_end_col);
+        virtual FullMatrixHandler* Copy() const override;
 };
-
-extern std::ostream&
-operator << (std::ostream& out, const FullMatrixHandler& m);
 
 extern std::ostream& Write(std::ostream& out,
 	const FullMatrixHandler& m,

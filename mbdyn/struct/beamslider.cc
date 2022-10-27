@@ -144,17 +144,53 @@ BeamSliderJoint::Restart(std::ostream& out) const
 		<< "beam slider;" << std::endl;
 }
 
+void
+BeamSliderJoint::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Beam slider", OH, name);
+			
+			Var_Beam = OH.CreateVar<integer>(name + "Beam",
+				OutputHandler::Dimensions::Dimensionless,
+				"current beam label");
+
+			Var_sRef = OH.CreateVar<doublereal>(name + "sRef",
+				OutputHandler::Dimensions::Dimensionless,
+				"current curvilinear abscissa");
+
+			Var_l = OH.CreateVar<Vec3>(name + "l",
+				OutputHandler::Dimensions::Dimensionless,
+				"local direction vector (x, y, z)");
+		}
+#endif // USE_NETCDF
+	}
+}
+
 void 
 BeamSliderJoint::Output(OutputHandler& OH) const
 {
 	if (bToBeOutput()) {
 		Mat3x3 RTmp(pNode->GetRCurr()*R);
 		Mat3x3 RTmpT(RTmp.Transpose());
-		
-		Joint::Output(OH.Joints(), "BeamSlider", GetLabel(),
-				RTmpT*F, M, F, RTmp*M)
-			<< " " << ppBeam[iCurrBeam]->pGetBeam()->GetLabel()
-			<< " " << sRef << " " << l << std::endl;
+	
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "BeamSlider", GetLabel(),
+					RTmpT*F, M, F, RTmp*M)
+				<< " " << ppBeam[iCurrBeam]->pGetBeam()->GetLabel()
+				<< " " << sRef << " " << l << std::endl;
+		}
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, RTmpT*F, M, F, RTmp*M);
+
+			OH.WriteNcVar(Var_Beam, (int)(ppBeam[iCurrBeam]->pGetBeam()->GetLabel()));
+			OH.WriteNcVar(Var_sRef, sRef);
+			OH.WriteNcVar(Var_l, l);
+		}
+#endif // USE_NETCDF
 	}
 }
 
@@ -737,5 +773,62 @@ BeamSliderJoint::InitialAssRes(
 	return WorkVec;
 }
 
+const OutputHandler::Dimensions
+BeamSliderJoint::GetEquationDimension(integer index) const {
+	// DOF is unknown
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Force;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 4:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 5:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 6:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 7:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+BeamSliderJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"reaction force component tangent to the beam" << std::endl
+		<< prefix << iIndex + 2 << "->" << iIndex + 4 << ": "
+			"contact position along the beam" << std::endl;
+
+		if (iType == BeamSliderJoint::Type::CLASSIC) {
+			out
+				<< prefix << iIndex + 5 << "->" << iIndex + 6 << ": "
+				"orientation constraints" << std::endl;
+		}
+		if (iType == BeamSliderJoint::Type::SPLINE) {
+			out
+				<< prefix << iIndex + 5 << "->" << iIndex + 7 << ": "
+				"orientation constraints" << std::endl;
+		}
+
+	return out;
+}
 /* BeamSliderJoint - end */
 

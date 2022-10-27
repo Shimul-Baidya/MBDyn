@@ -36,23 +36,29 @@
 #ifdef USE_SOCKET
 
 #include <stdio.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 #include <ctype.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/un.h>
-#include <arpa/inet.h>
+
+#ifdef _WIN32
+  /* See http://stackoverflow.com/questions/12765743/getaddrinfo-on-win32 */
+  #ifndef _WIN32_WINNT
+    #define _WIN32_WINNT 0x0501  /* Windows XP. */
+  #endif
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <errno.h>
+  #include <unistd.h>
+  #include <fcntl.h>
+  #include <sys/types.h>
+  #include <netdb.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <sys/un.h>
+  #include <arpa/inet.h>
+#endif /* _WIN32 */
 
 #include "sock.h"
 
@@ -77,8 +83,8 @@ pFlags(NULL)
 
    	/* Create the socket and set it up to accept connections. */
 	data.Port = p;
-   	sock = mbdyn_make_inet_socket(0, NULL, data.Port, 1, &save_errno);
-   	if (sock == -1) {
+   	int serr = mbdyn_make_inet_socket(&sock, 0, NULL, data.Port, 1, &save_errno);
+   	if (serr == -1) {
 		const char	*err_msg = strerror(save_errno);
 
       		silent_cerr("SocketDrive(" << GetLabel()
@@ -87,7 +93,7 @@ pFlags(NULL)
 			<< std::endl);
       		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 
-   	} else if (sock == -2) {
+   	} else if (serr == -2) {
 		const char	*err_msg = strerror(save_errno);
 
       		silent_cerr("SocketDrive(" << GetLabel()
@@ -100,6 +106,7 @@ pFlags(NULL)
    	Init();
 }
 
+#ifndef _WIN32
 SocketDrive::SocketDrive(unsigned int uL, const DriveHandler* pDH,
 	const char *path,
 	integer nd, const std::vector<doublereal>& v0)
@@ -108,7 +115,8 @@ type(AF_LOCAL),
 auth(NULL),
 pFlags(NULL)
 {
-	int			save_errno;
+	int save_errno;
+	int rc;
 
    	ASSERT(path != NULL);
    	ASSERT(nd > 0);
@@ -117,21 +125,30 @@ pFlags(NULL)
 
    	/* Create the socket and set it up to accept connections. */
 	SAFESTRDUP(data.Path, path);
-   	sock = mbdyn_make_named_socket(0, data.Path, 1, &save_errno);
-   	if (sock == -1) {
+   	rc = mbdyn_make_named_socket(&sock, 0, data.Path, 1, &save_errno);
+   	if (rc == -1) {
 		const char	*err_msg = strerror(save_errno);
 
       		silent_cerr("SocketDrive(" << GetLabel()
-			<< "): socket failed "
+			<< "): socket(\"" << data.Path << "\") failed "
 			"(" << save_errno << ": "<< err_msg << ")"
 			<< std::endl);
       		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 
-   	} else if (sock == -2) {
+   	} else if (rc == -2) {
 		const char	*err_msg = strerror(save_errno);
 
       		silent_cerr("SocketDrive(" << GetLabel()
-			<< "): bind failed "
+			<< "): bind(\"" << data.Path << "\") failed "
+			"(" << save_errno << ": "<< err_msg << ")"
+			<< std::endl);
+      		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+
+   	} else if (rc < 0) {
+		const char	*err_msg = strerror(save_errno);
+
+      		silent_cerr("SocketDrive(" << GetLabel()
+			<< "): mbdyn_make_named_socket(\"" << data.Path << "\") failed "
 			"(" << save_errno << ": "<< err_msg << ")"
 			<< std::endl);
       		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
@@ -139,11 +156,24 @@ pFlags(NULL)
 
 	Init();
 }
+#endif /* ! _WIN32 */
 
 void
 SocketDrive::Init(void)
 {
    	/* non-blocking */
+#ifdef _WIN32
+    bool blocking = false;
+    unsigned long mode = blocking ? 0 : 1;
+   	int result = ioctlsocket(sock, FIONBIO, &mode);
+
+   	if (result != 0) {
+		silent_cerr("SocketDrive(" << GetLabel()
+				<< ": unable to set socket to non-blocking mode"
+				<< std::endl);
+      		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+   	}
+#else
    	int oldflags = fcntl(sock, F_GETFL, 0);
    	if (oldflags == -1) {
 		silent_cerr("SocketDrive(" << GetLabel()
@@ -158,6 +188,7 @@ SocketDrive::Init(void)
 				<< std::endl);
       		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
    	}
+#endif
 
    	if (listen(sock, 1) < 0) {
       		silent_cerr("SocketDrive(" << GetLabel()
@@ -175,16 +206,21 @@ SocketDrive::Init(void)
 SocketDrive::~SocketDrive(void)
 {
    	/* some shutdown stuff ... */
+#ifdef _WIN32
+   	shutdown(sock, SD_BOTH /* 2 */ );
+#else
    	shutdown(sock, SHUT_RDWR /* 2 */ );
+#endif /* _WIN32 */
 
 	switch (type) {
+#ifndef _WIN32
 	case AF_LOCAL:
 		if (data.Path) {
 			unlink(data.Path);
 			SAFEDELETEARR(data.Path);
 		}
 		break;
-
+#endif /* _WIN32 */
 	default:
 		NO_OP;
 		break;
@@ -193,6 +229,8 @@ SocketDrive::~SocketDrive(void)
    	if (auth != NULL) {
       		SAFEDELETE(auth);
    	}
+
+        SAFEDELETEARR(pFlags);
 }
 
 static char *
@@ -296,11 +334,11 @@ void
 SocketDrive::ServePending(const doublereal& /* t */ )
 {
    	struct sockaddr_in client_name;
-   	socklen_t socklen;
+        socklen_t socklen = sizeof(client_name);
 
    	/* prova */
    	for (integer iCnt = 1; iCnt <= iNumDrives; iCnt++) {
-      		if (pFlags[iCnt] & SocketDrive::IMPULSIVE) {
+		if (pFlags[iCnt] == SocketDrive::IMPULSIVE) {
 	 		pdVal[iCnt] = 0.;
       		}
    	}
@@ -389,20 +427,28 @@ SocketDrive::ServePending(const doublereal& /* t */ )
 	    			continue;
 	 		}
       		} else {
-	 		strncpy(buf, nextline, bufsize);
+			size_t l_nextline = strlen(nextline);
+			if (l_nextline >= bufsize) {
+	 			silent_cerr(
+					"SocketDrive(" << GetLabel() << "): "
+					"nextline too long for buffer" << std::endl);
+	 			fclose(fd);
+	 			continue;
+			}
+	 		strcpy(buf, nextline);
 	 		free(nextline);
       		}
       		nextline = buf;
 
       		/* legge la label */
-      		if (strncasecmp(nextline, "label:", 6) != 0) {
+      		if (strncasecmp(nextline, "label:", STRLENOF("label:")) != 0) {
 	 		silent_cerr("SocketDrive(" << GetLabel() << "): "
 				"missing label" << std::endl);
 	 		fclose(fd);
 	 		continue;
       		}
 
-	 	char *p = nextline + 6;
+	 	char *p = nextline + STRLENOF("label:");
 	 	while (isspace(p[0])) {
 	    		p++;
 	 	}
@@ -437,8 +483,8 @@ SocketDrive::ServePending(const doublereal& /* t */ )
 	       			break;
 	    		}
 
-	    		if (strncasecmp(nextline, "value:", 6) == 0) {
-	       			char *p = nextline+6;
+	    		if (strncasecmp(nextline, "value:", STRLENOF("value:")) == 0) {
+	       			char *p = nextline + STRLENOF("value:");
 	       			while (isspace(p[0])) {
 	 				p++;
 				}
@@ -452,75 +498,79 @@ SocketDrive::ServePending(const doublereal& /* t */ )
 				}
 				got_value = 1;
 
-    			} else if (strncasecmp(nextline, "inc:", 4) == 0) {
-       				char *p = nextline+4;
+    			} else if (strncasecmp(nextline, "inc:", STRLENOF("inc:")) == 0) {
+       				char *p = nextline + STRLENOF("inc:");
        				while (isspace(p[0])) {
 	  				p++;
        				}
 
-       				if (strncasecmp(p, "yes", 3) == 0) {
-	  				pFlags[label] |= SocketDrive::INCREMENTAL;
-       				} else if (strncasecmp(p, "no", 2) == 0) {
-	  				pFlags[label] &= !SocketDrive::INCREMENTAL;
-       				} else {
-	  				silent_cerr("SocketDrive(" << GetLabel() << "): "
+       				if (strncasecmp(p, "yes", STRLENOF("yes")) == 0) {
+					pFlags[label] = SocketDrive::INCREMENTAL;
+
+				} else if (strncasecmp(p, "no", STRLENOF("no")) == 0) {
+					pFlags[label] = SocketDrive::DEFAULT;
+
+				} else {
+					silent_cerr("SocketDrive(" << GetLabel() << "): "
 						"\"inc\" line in "
 						"\"" << nextline << "\" "
 						"looks corrupted"
 						<< std::endl);
-	  				fclose(fd);
-	  				break;
-       				}
-       				nextline = NULL;
+					fclose(fd);
+					break;
+				}
+				nextline = NULL;
 
-    			} else if (strncasecmp(nextline, "imp:", 4) == 0) {
-       				char *p = nextline+4;
-       				while (isspace(p[0])) {
-	  				p++;
-       				}
+			} else if (strncasecmp(nextline, "imp:", STRLENOF("imp:")) == 0) {
+				char *p = nextline + STRLENOF("imp:");
+				while (isspace(p[0])) {
+					p++;
+				}
 
-       				if (strncasecmp(p, "yes", 3) == 0) {
-	  				pFlags[label] |= SocketDrive::IMPULSIVE;
-       				} else if (strncasecmp(p, "no", 2) == 0) {
-	  				pFlags[label] &= !SocketDrive::IMPULSIVE;
-       				} else {
-	  				silent_cerr("SocketDrive(" << GetLabel() << "): "
+				if (strncasecmp(p, "yes", STRLENOF("yes")) == 0) {
+					pFlags[label] = SocketDrive::IMPULSIVE;
+
+				} else if (strncasecmp(p, "no", STRLENOF("no")) == 0) {
+					pFlags[label] = SocketDrive::DEFAULT;
+
+				} else {
+					silent_cerr("SocketDrive(" << GetLabel() << "): "
 						"\"imp\" line" " in "
 						"\"" << nextline << "\""
 						" looks corrupted"
 						<< std::endl);
-	  				fclose(fd);
-	  				break;
-       				}
-       				nextline = NULL;
-    			}
+					fclose(fd);
+					break;
+				}
+				nextline = NULL;
+			}
 
-	 		/* usa i valori */
+			/* usa i valori */
 	 		if (got_value) {
-	    			if (pFlags[label] & SocketDrive::INCREMENTAL) {
-	       				silent_cout("SocketDrive(" << GetLabel() << "): "
+				if (pFlags[label] == SocketDrive::INCREMENTAL) {
+					silent_cout("SocketDrive(" << GetLabel() << "): "
 						"adding " << value
 						<< " to label " << label
 						<< std::endl);
-	       				pdVal[label] += value;
+					pdVal[label] += value;
 
-	    			} else {
-	       				silent_cout("SocketDrive(" << GetLabel() << "): "
+				} else {
+					silent_cout("SocketDrive(" << GetLabel() << "): "
 						"setting label " << label
 						<< " to value " << value
 						<< std::endl);
-	       				pdVal[label] = value;
-	    			}
+					pdVal[label] = value;
+				}
 	 		}
-      		}
-   	}
+		}
+	}
 }
 
 /* Scrive il contributo del DriveCaller al file di restart */
 std::ostream&
 SocketDrive::Restart(std::ostream& out) const
 {
-   	return out << "SocketDrive not implemented yet" << std::endl;
+	return out << "SocketDrive not implemented yet" << std::endl;
 }
 
 /* legge i drivers tipo socket */
@@ -543,9 +593,16 @@ SocketDR::Read(unsigned uLabel, const DataManager *pDM, MBDynParser& HP)
 	}
 
 	if (HP.IsKeyWord("local")) {
+#ifdef _WIN32
+     silent_cerr("SocketDrive(" << uLabel << "): "
+            "local sockets are not supported on Windows, you must use inet "
+            "at line " << HP.GetLineData()
+            << std::endl);
+        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+#else /* _WIN32 */
 		path = HP.GetFileName();
 		ASSERT(path != NULL);
-
+#endif /* _WIN32 */
 	} else if (HP.IsKeyWord("port")) {
 		port = HP.GetInt();
 #ifdef IPPORT_USERRESERVED
@@ -577,12 +634,15 @@ SocketDR::Read(unsigned uLabel, const DataManager *pDM, MBDynParser& HP)
 			SocketDrive,
 			SocketDrive(uLabel, pDM->pGetDrvHdl(),
 				port, pAuth, idrives, v0));
-
+#ifndef _WIN32
 	} else {
 		SAFENEWWITHCONSTRUCTOR(pDr,
 			SocketDrive,
 			SocketDrive(uLabel, pDM->pGetDrvHdl(),
 				path, idrives, v0));
+#else
+
+#endif /* _WIN32 */
 	}
 
 	return pDr;

@@ -64,7 +64,6 @@
 #include "invsolver.h"
 #include "dataman.h"
 #include "mtdataman.h"
-#include "thirdorderstepsol.h"
 #include "nr.h"
 #include "bicg.h"
 #include "gmres.h"
@@ -115,8 +114,9 @@ InverseSolver::Prepare(void)
 	if (pRTSolver) {
 		pRTSolver->Setup();
 	}
-
+#ifdef USE_MPI
 	int mpi_finalize = 0;
+#endif /* USE_MPI */
 
 #ifdef USE_SCHUR
 	if (bParallel) {
@@ -145,7 +145,7 @@ InverseSolver::Prepare(void)
 		if (nThreads > 1) {
 			if (!(CurrLinearSolver.GetSolverFlags() & LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS)) {
 				/* conservative: dir may use too much memory */
-				if (!CurrLinearSolver.AddSolverFlags(LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS)) {
+			        if (!CurrLinearSolver.AddSolverFlags(LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS, LinSol::SOLVER_FLAGS_ALLOWS_MT_ASS)) {
 					bool b;
 
 #if defined(USE_UMFPACK)
@@ -539,6 +539,10 @@ InverseSolver::Advance(void)
 {
 	DEBUGCOUTFNAME("InverseSolver::Advance");
 
+#ifdef USE_MPI
+	int mpi_finalize = 0;
+#endif /* USE_MPI */
+        
 	// consistency check
 	if (eStatus != SOLVER_STATUS_STARTED) {
 		silent_cerr("Started() must be called first" << std::endl);
@@ -624,7 +628,7 @@ IfStepIsToBeRepeated:
 				iStIter, dTest, dSolTest);
 	}
 
-	catch (NonlinearSolver::NoConvergence) {
+	catch (NonlinearSolver::NoConvergence& e) {
 		if (dCurrTimeStep > dMinTimeStep) {
 			/* Riduce il passo */
 			CurrStep = StepIntegrator::REPEATSTEP;
@@ -654,7 +658,7 @@ IfStepIsToBeRepeated:
 		throw ErrMaxIterations(MBDYN_EXCEPT_ARGS);
 	}
 
-	catch (NonlinearSolver::ErrSimulationDiverged) {
+	catch (NonlinearSolver::ErrSimulationDiverged& e) {
 		/*
 		 * Mettere qui eventuali azioni speciali
 		 * da intraprendere in caso di errore ...
@@ -673,7 +677,7 @@ IfStepIsToBeRepeated:
 			<< "aborting..." << std::endl);
 		throw SimulationDiverged(MBDYN_EXCEPT_ARGS);
 	}
-	catch (NonlinearSolver::ConvergenceOnSolution) {
+	catch (NonlinearSolver::ConvergenceOnSolution& e) {
 		bSolConv = true;
 	}
 
@@ -1458,15 +1462,15 @@ InverseSolver::ReadData(MBDynParser& HP)
 			case MODIFIED:
 				bTrueNewtonRaphson = 0;
 				if (HP.IsArg()) {
-					iIterationsBeforeAssembly = HP.GetInt();
+					oLineSearchParam.iIterationsBeforeAssembly = HP.GetInt();
 				} else {
-					iIterationsBeforeAssembly = ::iDefaultIterationsBeforeAssembly;
+					oLineSearchParam.iIterationsBeforeAssembly = ::iDefaultIterationsBeforeAssembly;
 				}
 				DEBUGLCOUT(MYDEBUG_INPUT, "Modified "
 						"Newton-Raphson will be used; "
 						"matrix will be assembled "
 						"at most after "
-						<< iIterationsBeforeAssembly
+						<< oLineSearchParam.iIterationsBeforeAssembly
 						<< " iterations" << std::endl);
 				break;
 
@@ -1477,7 +1481,7 @@ InverseSolver::ReadData(MBDynParser& HP)
 			/* no break: fall-thru to next case */
 			case NR_TRUE:
 				bTrueNewtonRaphson = 1;
-				iIterationsBeforeAssembly = 0;
+				oLineSearchParam.iIterationsBeforeAssembly = 0;
 				break;
 			}
 			break;
@@ -1547,19 +1551,19 @@ InverseSolver::ReadData(MBDynParser& HP)
 			switch (NonlinearSolverType) {
 			case NonlinearSolver::NEWTONRAPHSON:
 				bTrueNewtonRaphson = true;
-				bKeepJac = false;
-				iIterationsBeforeAssembly = 0;
+				oLineSearchParam.bKeepJacAcrossSteps = false;
+				oLineSearchParam.iIterationsBeforeAssembly = 0;
 
 				if (HP.IsKeyWord("modified")) {
 					bTrueNewtonRaphson = false;
-					iIterationsBeforeAssembly = HP.GetInt();
+					oLineSearchParam.iIterationsBeforeAssembly = HP.GetInt();
 
 					if (HP.IsKeyWord("keep" "jacobian")) {
 						pedantic_cout("Use of deprecated \"keep jacobian\" at line " << HP.GetLineData() << std::endl);
-						bKeepJac = true;
+						oLineSearchParam.bKeepJacAcrossSteps = true;
 
 					} else if (HP.IsKeyWord("keep" "jacobian" "matrix")) {
-						bKeepJac = true;
+						oLineSearchParam.bKeepJacAcrossSteps = true;
 					}
 
 					DEBUGLCOUT(MYDEBUG_INPUT, "modified "
@@ -1568,7 +1572,7 @@ InverseSolver::ReadData(MBDynParser& HP)
 							"matrix will be "
 							"assembled at most "
 							"after "
-							<< iIterationsBeforeAssembly
+							<< oLineSearchParam.iIterationsBeforeAssembly
 							<< " iterations"
 							<< std::endl);
 					if (HP.IsKeyWord("honor" "element" "requests")) {

@@ -90,6 +90,27 @@ ViscousBody::Restart(std::ostream& out) const
 	return pGetConstLaw()->Restart(out) << ';' << std::endl;
 }
 
+void
+ViscousBody::OutputPrepare(OutputHandler& OH)
+{	
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("viscous body", OH, name);
+
+			Var_v = OH.CreateVar<Vec3>(name + "V",
+				OutputHandler::Dimensions::Velocity,
+				"local relative linear velocity (x, y, z)");
+			
+			Var_omega = OH.CreateVar<Vec3>(name + "Omega",
+				OutputHandler::Dimensions::AngularVelocity,
+				"local relative angular velocity (x, y, z)");
+		}
+#endif // USE_NETCDF
+	}
+}
+
 
 void
 ViscousBody::Output(OutputHandler& OH) const
@@ -99,10 +120,21 @@ ViscousBody::Output(OutputHandler& OH) const
 		Vec3 F(GetF().GetVec1());
 		Vec3 M(GetF().GetVec2());
 
-		Joint::Output(OH.Joints(), "ViscousBody", GetLabel(),
-				F, M, Rh*F, Rh*M);
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "ViscousBody", GetLabel(),
+					F, M, Rh*F, Rh*M);
 
-		OH.Joints() << " " << tilde_kPrime << " " << std::endl;
+			OH.Joints() << " " << tilde_kPrime << " " << std::endl;
+		}
+
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, F, M, Rh*F, Rh*M);
+			OH.WriteNcVar(Var_v, tilde_kPrime.GetVec1());
+			OH.WriteNcVar(Var_omega, tilde_kPrime.GetVec2());
+		}
+#endif // USE_NETCDF
+
 	}
 }
 
@@ -503,5 +535,10 @@ ViscousBody::InitialAssJac(VariableSubMatrixHandler& WorkMat,
 	return WorkMat;
 }
 
+const OutputHandler::Dimensions
+ViscousBody::GetEquationDimension(integer index) const {
+	// DOF == 0
+	return OutputHandler::Dimensions::UnknownDimension;
+}
 /* ViscousBody - end */
 

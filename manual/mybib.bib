@@ -31,6 +31,10 @@
 	JCND = {J.\ of Computational and Nonlinear Dynamics}
 }
 
+@string{
+	COMPMECH = {Computational Mechanics}
+}
+
 @ARTICLE{ANDRIGHETTONI98,
 	author = "M. Andrighettoni and Paolo Mantegazza",
 	year = 1998,
@@ -2900,7 +2904,8 @@
 	booktitle = "{XVII Congresso Nazionale AIDAA}",
 	month = "September 15--19",
 	address = "Rome, Italy",
-	note = "http://mbdyn.aero.polimi.it/\~{}masarati/Publications/SliderAIDA A2003.pdf"
+	xnote = "http://mbdyn.aero.polimi.it/\~{}masarati/Publications/SliderAIDAA2003.pdf",
+	note = {https://home.aero.polimi.it/masarati/Publications/SliderAIDAA2003.pdf}
 }
 
 @BOOK{MODELICA-TILLER-2001,
@@ -3050,6 +3055,41 @@
 	year = {1992}
 }
 
+@MANUAL{TRILINOS-WEBSITE,
+        title = {The {T}rilinos {P}roject {W}ebsite},
+        author = {The {T}rilinos {P}roject {T}eam},
+        year = {2020 (acccessed May 22, 2020)},
+        url = {https://trilinos.github.io}
+}
+
+@MANUAL{SICONOS-WEBSITE,
+        title = {Siconos: nonsmooth numerical simulation},
+        author = {Vincent Acary and Maurice Bremond and Olivier Huber and Franck Perignon and Roger Pissard-Gibollet},
+        year = {2022 (acccessed July 16, 2022)},
+        url = {https://github.com/siconos/siconos}
+}
+
+@article{SINKHORN-KNOPP-1967,
+        author = {R. Sinkhorn and P. Knopp},
+        title = {Concerning nonnegative matrices and doubly stochastic matrices},
+        journal = {Pacific Journal of Mathematics, 21(2)},
+        year = {1967}
+}
+
+@article{PATRICK-AMESTOY-2008,
+        author = {Amestoy P.R. and Duff I.S. and Ruiz D. and Ucar B},
+        title = {A parallel Matrix Scaling Algorithm},
+        journal = {High Performance Computing for Computational Science - VECPAR 2008},
+        year = {2008}
+}
+
+@article{SUITESPARSE-QR-2011,
+       author = {Timothy A. Davis},
+       title = {SuiteSparseQR: Multifrontal multithreaded rank-revealing sparse QR factorization},
+       journal = {ACM Transactions on Mathematical Software},
+       year = {2011}
+}
+
 @article{FUMAGALLI-CND-2011,
 	author = {A. Fumagalli and P. Masarati and M. Morandini and P. Mantegazza},
 	title = {Control Constraint Realization for Multibody Systems},
@@ -3151,3 +3191,79 @@
 	note = {{doi:10.1007/s00466-008-0307-x}}
 }
 
+@article{DEGROOTE-2017-SRS,
+	title = {Contribution of muscle short-range stiffness to initial changes in joint kinetics and kinematics during perturbations to standing balance: {A} simulation study},
+	volume = {55},
+	issn = {00219290},
+	shorttitle = {Contribution of muscle short-range stiffness to initial changes in joint kinetics and kinematics during perturbations to standing balance},
+	url = {https://linkinghub.elsevier.com/retrieve/pii/S0021929017301045},
+	doi = {10.1016/j.jbiomech.2017.02.008},
+	language = {en},
+	urldate = {2019-12-20},
+	journal = {Journal of Biomechanics},
+	author = {De Groote, Friedl and Allen, Jessica L. and Ting, Lena H.},
+	month = apr,
+	year = {2017},
+	pages = {71--77},
+}
+
+@article{ZHANG-2021-COMPMECH-MS34,
+	author = {Huimin Zhang and Runsen Zhang and Pierangelo Masarati},
+	title = {Improved second-order unconditionally stable schemes of linear multi-step and equivalent single-step integration methods},
+	year = {2021},
+	volume = {67},
+	number = {1},
+	pages = {289--313},
+	journal = COMPMECH,
+	note = {{doi:10.1007/s00466-020-01933-y}}
+}
+
+@article{zhang_performance_2022,
+	title = {Performance of implicit {A}-stable time integration methods for multibody system dynamics},
+	volume = {54},
+	issn = {1573-272X},
+	url = {https://doi.org/10.1007/s11044-021-09806-9},
+	doi = {10.1007/s11044-021-09806-9},
+	language = {en},
+	number = {3},
+	urldate = {2022-08-26},
+	journal = {Multibody System Dynamics},
+	author = {Zhang, Huimin and Zhang, Runsen and Zanoni, Andrea and Masarati, Pierangelo},
+	month = mar,
+	year = {2022},
+	pages = {263--301}
+}
+
+
+@article{kennedy_diagonally_2019,
+	title = {Diagonally implicit {Runge}--{Kutta} methods for stiff {ODEs}},
+	volume = {146},
+	issn = {0168-9274},
+	url = {https://www.sciencedirect.com/science/article/pii/S0168927419301801},
+	doi = {10.1016/j.apnum.2019.07.008},
+	language = {en},
+	urldate = {2022-08-26},
+	journal = {Applied Numerical Mathematics},
+	author = {Kennedy, Christopher A. and Carpenter, Mark H.},
+	month = dec,
+	year = {2019},
+	keywords = {Embedded method, L-stability, L-stable, Simplifying assumptions, Singular perturbation equations},
+	pages = {221--244}
+}
+
+@article{zhang_optimization_2020,
+	title = {On the optimization of n-sub-step composite time integration methods},
+	volume = {102},
+	issn = {1573-269X},
+	url = {https://doi.org/10.1007/s11071-020-06020-8},
+	doi = {10.1007/s11071-020-06020-8},
+	language = {en},
+	number = {3},
+	urldate = {2022-08-26},
+	journal = {Nonlinear Dynamics},
+	author = {Zhang, Huimin and Zhang, Runsen and Xing, Yufeng and Masarati, Pierangelo},
+	month = nov,
+	year = {2020},
+	keywords = {Energy-conserving, High-accuracy, n-Sub-step composite method, Optimization},
+	pages = {1939--1962}
+}

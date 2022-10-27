@@ -121,17 +121,17 @@ LinearAccelerationJoint::AssJac(VariableSubMatrixHandler& WorkMat,
    integer iIndex = iGetFirstIndex();
       
    doublereal d = Dir.dGet(1);
-   WorkMat.PutItem(1, iIndex+1, iNodeColIndex+1, d);
-   WorkMat.PutItem(2, iNodeRowIndex+1, iIndex+2, d);
+   WM.PutItem(1, iIndex+1, iNodeColIndex+1, d);
+   WM.PutItem(2, iNodeRowIndex+1, iIndex+2, d);
    d = Dir.dGet(2);
-   WorkMat.PutItem(3, iIndex+1, iNodeColIndex+2, d);
-   WorkMat.PutItem(4, iNodeRowIndex+2, iIndex+2, d);
+   WM.PutItem(3, iIndex+1, iNodeColIndex+2, d);
+   WM.PutItem(4, iNodeRowIndex+2, iIndex+2, d);
    d = Dir.dGet(3);
-   WorkMat.PutItem(5, iIndex+1, iNodeColIndex+3, d);
-   WorkMat.PutItem(6, iNodeRowIndex+3, iIndex+2, d);
-   
-   WorkMat.PutItem(7, iIndex+1, iIndex+1, -dCoef);
-   WorkMat.PutItem(8, iIndex+2, iIndex+1, 1.);   
+   WM.PutItem(5, iIndex+1, iNodeColIndex+3, d);
+   WM.PutItem(6, iNodeRowIndex+3, iIndex+2, d);
+
+   WM.PutItem(7, iIndex+1, iIndex+1, -dCoef);
+   WM.PutItem(8, iIndex+2, iIndex+1, 1.);
    
    return WorkMat;
 }
@@ -163,12 +163,37 @@ LinearAccelerationJoint::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+void
+LinearAccelerationJoint::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Linear acceleration", OH, name);
+
+			Var_a = OH.CreateVar<Vec3>(name + "a", 
+				OutputHandler::Dimensions::Acceleration, "imposed acceleration (x, y, z)");
+		}
+#endif // USE_NETCDF
+	}
+}
 
 void LinearAccelerationJoint::Output(OutputHandler& OH) const
 {
-   Joint::Output(OH.Joints(), "LinearAcc", GetLabel(), 
-		 Vec3(dF, 0., 0.), Zero3, Dir*dF, Zero3) 
-     << " " << dGet() << std::endl;
+	if (bToBeOutput()) {
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "LinearAcc", GetLabel(), 
+		 		Vec3(dF, 0., 0.), Zero3, Dir*dF, Zero3) 
+     			<< " " << dGet() << std::endl;
+		}
+	#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+   			Joint::NetCDFOutput(OH, Vec3(dF, 0., 0.), Zero3, Dir*dF, Zero3);
+			OH.WriteNcVar(Var_a, dGet());
+		}
+	#endif // USE_NETCDF
+	}
 }
  
 void
@@ -256,6 +281,39 @@ LinearAccelerationJoint::dGetPrivData(unsigned int i) const
    }
 }
 
+const OutputHandler::Dimensions
+LinearAccelerationJoint::GetEquationDimension(integer index) const {
+	// DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Velocity;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Acceleration;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+LinearAccelerationJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"velocity component along prescribed direction" << std::endl
+      
+      << prefix << iIndex + 2 << ": " <<
+			"acceleration value error" << std::endl;
+
+	return out;
+}
 /* LinearAccelerationJoint - end */
 
 
@@ -347,17 +405,17 @@ AngularAccelerationJoint::AssJac(VariableSubMatrixHandler& WorkMat,
    Vec3 TmpDir = pNode->GetRRef()*Dir;
    
    doublereal d = TmpDir.dGet(1);
-   WorkMat.PutItem(1, iIndex+1, iNodeColIndex+4, d);
-   WorkMat.PutItem(2, iNodeRowIndex+4, iIndex+2, d);
+   WM.PutItem(1, iIndex+1, iNodeColIndex+4, d);
+   WM.PutItem(2, iNodeRowIndex+4, iIndex+2, d);
    d = TmpDir.dGet(2);
-   WorkMat.PutItem(3, iIndex+1, iNodeColIndex+5, d);
-   WorkMat.PutItem(4, iNodeRowIndex+5, iIndex+2, d);
+   WM.PutItem(3, iIndex+1, iNodeColIndex+5, d);
+   WM.PutItem(4, iNodeRowIndex+5, iIndex+2, d);
    d = TmpDir.dGet(3);
-   WorkMat.PutItem(5, iIndex+1, iNodeColIndex+6, d);
-   WorkMat.PutItem(6, iNodeRowIndex+6, iIndex+2, d);     
-   
-   WorkMat.PutItem(7, iIndex+1, iIndex+1, -dCoef);
-   WorkMat.PutItem(8, iIndex+2, iIndex+1, 1.);      
+   WM.PutItem(5, iIndex+1, iNodeColIndex+6, d);
+   WM.PutItem(6, iNodeRowIndex+6, iIndex+2, d);
+
+   WM.PutItem(7, iIndex+1, iIndex+1, -dCoef);
+   WM.PutItem(8, iIndex+2, iIndex+1, 1.);
    
    return WorkMat;
 }
@@ -390,12 +448,38 @@ AngularAccelerationJoint::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
-   
+void
+AngularAccelerationJoint::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Angular acceleration", OH, name);
+
+			Var_wP = OH.CreateVar<Vec3>(name + "wP", 
+				OutputHandler::Dimensions::AngularAcceleration,
+				"imposed angular acceleration (x, y, z)");
+		}
+#endif // USE_NETCDF
+	}
+}
+  
 void AngularAccelerationJoint::Output(OutputHandler& OH) const
 {
-   Joint::Output(OH.Joints(), "AngularAcc", GetLabel(), 
-		 Vec3(dM, 0., 0.), Zero3, Dir*dM, Zero3) 
-     << " " << dGet() << std::endl;   
+	if (bToBeOutput()) {
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "AngularAcc", GetLabel(), 
+				Zero3, Vec3(dM, 0., 0.), Zero3, Dir*dM)
+				<< " " << dGet() << std::endl;   
+		}
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, Zero3, Vec3(dM, 0., 0.), Zero3, Dir*dM);
+			OH.WriteNcVar(Var_wP, dGet());
+		}
+#endif // USE_NETCDF
+	}
 }
  
 void
@@ -481,6 +565,40 @@ AngularAccelerationJoint::dGetPrivData(unsigned int i) const
     default:
       throw ErrGeneric(MBDYN_EXCEPT_ARGS);
    }
+}
+
+const OutputHandler::Dimensions
+AngularAccelerationJoint::GetEquationDimension(integer index) const {
+	// DOF == 2
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::AngularVelocity;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::AngularAcceleration;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+AngularAccelerationJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"angular velocity component along prescribed direction" << std::endl
+      
+      << prefix << iIndex + 2 << ": " <<
+			"angular acceleration" << std::endl;
+
+	return out;
 }
 
 /* AngularAccelerationJoint - end */

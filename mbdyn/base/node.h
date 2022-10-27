@@ -62,10 +62,11 @@ extern const char* psReadControlNodes[];
  */
 extern const char* psReadNodesNodes[];
 
-/* Node - begin */
+/* Node - begin */ 
 
 class Node : public WithLabel, public SimulationEntity,
-public DofOwnerOwner, public ToBeOutput {
+public DofOwnerOwner, public ToBeOutput
+{
 public:
 	/* Enumerazione dei tipi di nodi */
 	enum Type {
@@ -201,7 +202,17 @@ public:
 	virtual doublereal dGetPrivData(unsigned int i) const {
 		return dGetDofValue(i);
 	};
-	
+
+        /* 
+         * Automatic differentiation support:
+         * Called on each node before assembly of the Jacobian 
+         */
+        virtual void UpdateJac(doublereal dCoef);
+        /* 
+         * Automatic differentiation support:
+         * Called on each node before assembly of the Jacobian vector product Jac * Y 
+         */
+        virtual void UpdateJac(const VectorHandler& Y, doublereal dCoef);
 };
 
 Node::Type str2nodetype(const char *const s);
@@ -262,6 +273,14 @@ public:
 	virtual const doublereal& dGetXPrime(void) const = 0;
 
 	virtual void AfterPredict(VectorHandler& X, VectorHandler& XP);
+
+	 /* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+	/* describes the dimension of components of equation */
+        virtual std::ostream& DescribeEq(std::ostream& out,
+                                         const char *prefix = "",
+                                         bool bInitial = false) const;
 };
 
 /* ScalarNode - end */
@@ -269,7 +288,7 @@ public:
 
 /* ScalarDifferentialNode - begin */
 
-class ScalarDifferentialNode : public ScalarNode {
+class ScalarDifferentialNode : virtual public ScalarNode {
 protected:
 	/* Valore del DoF */
 	mutable doublereal dX;
@@ -380,6 +399,14 @@ public:
 	 * with 0 < i <= iGetNumPrivData()
 	 */
 	virtual doublereal dGetPrivData(unsigned int i) const;
+
+	 /* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+	/* describes the dimension of components of equation */
+        virtual std::ostream& DescribeEq(std::ostream& out,
+                                         const char *prefix = "",
+                                         bool bInitial = false) const;
 };
 
 inline const doublereal&
@@ -394,12 +421,11 @@ ScalarDifferentialNode::dGetXPrime(void) const
 {
 	return dXP;
 }
-
 /* ScalarDifferentialNode - end */
 
 /* ScalarAlgebraicNode - begin */
 
-class ScalarAlgebraicNode : public ScalarNode {
+class ScalarAlgebraicNode: virtual public ScalarNode {
 protected:
 	/* Valore del DoF */
 	mutable doublereal dX;

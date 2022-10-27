@@ -1,5 +1,5 @@
-/* 
- * MBDyn (C) is a multibody analysis code. 
+/*
+ * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
  * Copyright (C) 1996-2017
@@ -16,7 +16,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation (version 2 of the License).
- * 
+ *
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,18 +34,34 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <strings.h>
-#include <signal.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <sys/un.h>
-#include <arpa/inet.h>
+
+#if defined (__cplusplus) && __cplusplus <= 199711L
+  #include <thread>
+  #include <chrono>
+#endif // __cplusplus
+
+#ifdef _WIN32
+  /* See http://stackoverflow.com/questions/12765743/getaddrinfo-on-win32 */
+  #ifndef _WIN32_WINNT
+    #define _WIN32_WINNT 0x0501  /* Windows XP. */
+  #endif
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <unistd.h>
+  #include <signal.h>
+  #include <errno.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <netdb.h>
+  #include <sys/un.h>
+  #include <arpa/inet.h>
+#endif /* _WIN32 */
 
 #include "mbc.h"
 #include "sock.h"
+
 
 /* private flags for internal use */
 enum sock_flags_t {
@@ -99,10 +115,50 @@ mbc_get_cmd(mbc_t *mbc)
 {
 	ssize_t rc;
 
-	rc = recv(mbc->sock, (void *)&mbc->cmd, sizeof(mbc->cmd),
-		mbc->recv_flags);
-	if (rc != sizeof(mbc->cmd)) {
-		fprintf(stderr, "recv(cmd=%lu) failed\n", (unsigned long)mbc->cmd);
+#ifdef _WIN32
+	// ensure no blocking for duration of recv call (like MSG_NO
+	unsigned long mode = 0;
+	int ioctlresult = ioctlsocket(mbc->sock, FIONBIO, &mode);
+	if (ioctlresult != NO_ERROR) {
+		long int errcode = WSAGetLastError();
+		char msg[100];
+		winsock_err_string(errcode, msg);
+		fprintf(stderr, "ioctlsocket set to blocking failed with error: %ld, msg: %s\n", errcode, msg);
+	}
+#endif /* _WIN32 */
+
+	rc = recvn(mbc->sock, (char *)&mbc->cmd, sizeof(mbc->cmd),
+		  mbc->recv_flags);
+
+	if (rc == SOCKET_ERROR) {
+		int err = WSAGetLastError();
+		char msg[100];
+
+#ifdef _WIN32
+		winsock_err_string(err, msg);
+#else
+		msg[0] = '\0';
+#endif /* _WIN32 */
+
+		fprintf(stderr, "recv(cmd=%lu) failed, rc: %d, sizeof(mbc->cmd): %d, errno: %d, err msg: %s\n",
+			(unsigned long)mbc->cmd, (int)rc, (int)sizeof(mbc->cmd), err, msg);
+		return -1;
+	}
+
+#ifdef _WIN32
+    mode = 1;
+    ioctlresult = ioctlsocket(mbc->sock, FIONBIO, &mode);
+    if (ioctlresult != NO_ERROR) {
+        long int errcode = WSAGetLastError();
+        char msg[100];
+        winsock_err_string(errcode, msg);
+        fprintf(stderr, "ioctlsocket set back to blocking failed with error: %ld, msg: %s\n", errcode, msg);
+    }
+#endif /* _WIN32 */
+
+    if (rc != sizeof(mbc->cmd)) {
+		fprintf(stderr, "recv(cmd=%lu) failed, expected %d bytes, received %d bytes\n",
+          (unsigned long)mbc->cmd, (int)sizeof(mbc->cmd), (int)rc);
 		return -1;
 	}
 
@@ -131,10 +187,18 @@ mbc_put_cmd(mbc_t *mbc)
 			(unsigned long)mbc->cmd, mbc_cmd2str(mbc->cmd));
 	}
 
-	rc = send(mbc->sock, (const void *)&mbc->cmd, sizeof(mbc->cmd),
+	rc = sendn(mbc->sock, (const char *)&mbc->cmd, sizeof(mbc->cmd),
 		mbc->send_flags);
+
+	if (rc == SOCKET_ERROR){
+		int save_errno = WSAGetLastError();
+		fprintf(stderr, "send(cmd=%lu) failed (%ld), error was %s\n", (unsigned long)mbc->cmd, (long)rc, strerror(save_errno));
+		return -1;
+	}
+
 	if (rc != sizeof(mbc->cmd)) {
-		fprintf(stderr, "send(cmd=%lu) failed (%ld)\n", (unsigned long)mbc->cmd, (long)rc);
+		fprintf(stderr, "send(cmd=%lu) failed, expected (%ld) bytes, received %ld\n",
+			(unsigned long)mbc->cmd, (long)sizeof(mbc->cmd), (long)rc);
 		return -1;
 	}
 
@@ -148,23 +212,31 @@ mbc_init(mbc_t *mbc, struct sockaddr *addr, socklen_t socklen)
 	unsigned long timeout = mbc->timeout*1000000;
 	unsigned long useconds = 100000;
 
-	if (mbc->sock < 0) {
+	if (mbc->sock == INVALID_SOCKET) {
 		fprintf(stderr, "unable to create socket\n");
 		return -1;
 	}
 
 	for ( ; ; ) {
-		if (connect(mbc->sock, addr, socklen) < 0) {
-			int save_errno = errno;
-			const char *msg;
+		if (connect(mbc->sock, addr, socklen) == SOCKET_ERROR) {
+			int save_errno = WSAGetLastError();
+
 
 			if (timeout != 0) {
 				switch (save_errno) {
+#ifdef _WIN32
+				case WSAECONNREFUSED:
+
+					Sleep(useconds * 1000);
+#else
 				case ECONNREFUSED:	/* inet */
 				case ENOENT:		/* unix */
-					/* Socket does not exist yet; retry */
-					/* TODO: replace usleep with nanosleep */
+
+				    /* TODO: replace usleep with nanosleep */
 					usleep(useconds);
+#endif /* _WIN32 */
+					/* Socket does not exist yet; retry */
+
 					if (mbc->timeout > 0) {
 						timeout -= useconds;
 					}
@@ -173,20 +245,34 @@ mbc_init(mbc_t *mbc, struct sockaddr *addr, socklen_t socklen)
 			}
 
 			/* Connect failed */
+#ifdef _WIN32
+			char msg[100];
+			winsock_err_string (save_errno, msg);
+#else
+			const char *msg;
 			msg = strerror(save_errno);
+#endif /* _WIN32 */
 			fprintf(stderr, "unable to connect to peer (%ld: %s)\n",
 				(long)save_errno, msg);
 			return -1;
+		} else {
+			if (mbc->verbose) {
+				fprintf(stdout, "Socket connect succeeded\n");
+			}
 		}
 
 		break;
 	}
+#ifndef _WIN32
+	/* MSG_WAITALL blocks recv() until all data is available */
+	mbc->recv_flags |= MSG_WAITALL;
+#endif
 
-	/* MSG_NOSIGNAL disables SIGPIPE
-	 * MSG_WAITALL blocks recv() until all data is available
-	 */
-	mbc->recv_flags |= (MSG_NOSIGNAL | MSG_WAITALL);
+#ifdef MSG_NOSIGNAL
+	/* MSG_NOSIGNAL disables SIGPIPE */
+	mbc->recv_flags |= MSG_NOSIGNAL;
 	mbc->send_flags |= MSG_NOSIGNAL;
+#endif /* HAVE_MSG_NOSIGNAL */
 
 	mbc->sock_flags = MBC_SF_VALID;
 
@@ -201,6 +287,19 @@ mbc_init(mbc_t *mbc, struct sockaddr *addr, socklen_t socklen)
 int
 mbc_inet_init(mbc_t *mbc, const char *host, short unsigned port)
 {
+
+#ifdef _WIN32
+	WSADATA wsa;
+
+	fprintf(stdout, "Initialising Winsock...\n");
+	if (WSAStartup(MAKEWORD(2,2),&wsa) != 0)
+	{
+		printf("Failed. Error Code : %d", WSAGetLastError());
+		return -1;
+	}
+	fprintf(stdout, "Winsock initialised\n");
+#endif /* _WIN32 */
+
 	struct sockaddr_in addr = { 0 };
 
 	if (host == NULL) {
@@ -213,7 +312,16 @@ mbc_inet_init(mbc_t *mbc, const char *host, short unsigned port)
 		return -1;
 	}
 
-	mbc->sock = mbdyn_make_inet_socket(&addr, host, port, 0, NULL);
+	int sock_err;
+	int serr = mbdyn_make_inet_socket(&mbc->sock, &addr, host, port, 0, &sock_err);
+	if (serr != 0) {
+		fprintf( stderr,
+		         "unable to make inet socket, mbdyn_make_inet_socket Err code was %d\nsocket error code was %d\nSocket error message string is %s\n",
+		         serr,
+		         sock_err,
+		         sock_err_string(sock_err));
+		return -1;
+	}
 
 	return mbc_init(mbc, (struct sockaddr *)&addr, sizeof(addr));
 }
@@ -223,9 +331,11 @@ mbc_inet_init(mbc_t *mbc, const char *host, short unsigned port)
  * mbc must be a pointer to a valid mbc_t structure
  * path must be defined
  */
+#ifndef _WIN32
 int
 mbc_unix_init(mbc_t *mbc, const char *path)
 {
+	int rc;
 	struct sockaddr_un addr = { 0 };
 
 	if (path == NULL) {
@@ -233,10 +343,13 @@ mbc_unix_init(mbc_t *mbc, const char *path)
 		return -1;
 	}
 
-	mbc->sock = mbdyn_make_named_socket(&addr, path, 0, NULL);
-
-	return mbc_init(mbc, (struct sockaddr *)&addr, sizeof(addr));
+	rc = mbdyn_make_named_socket(&mbc->sock, &addr, path, 0, NULL);
+	if (rc == 0) {
+		rc = mbc_init(mbc, (struct sockaddr *)&addr, sizeof(addr));
+	}
+	return rc;
 }
+#endif /* _WIN32 */
 
 /* destroy communication
  *
@@ -246,9 +359,16 @@ static int
 mbc_destroy(mbc_t *mbc)
 {
 	/* TODO: send "abort"? */
-	if (mbc->sock >= 0) {
+	if (mbc->sock != INVALID_SOCKET) {
+#ifdef _WIN32
+        /*shutdown(mbc->sock, SD_BOTH); */
+		closesocket(mbc->sock);
+		WSACleanup();
+#else
+        /*shutdown(mbc->sock, SHUT_RDWR); */
 		close(mbc->sock);
-		mbc->sock = -1;
+#endif /* _WIN23 */
+        	mbc->sock = INVALID_SOCKET;
 	}
 
 	return 0;
@@ -279,7 +399,7 @@ mbc_rigid_init(mbc_rigid_t *mbc, unsigned refnode,
 	mbc->r_d_label = -1;
 	mbc->r_d_f = -1;
 	mbc->r_d_m = -1;
-	
+
 	if (!refnode) {
 		return 0;
 	}
@@ -388,25 +508,64 @@ mbc_nodal_get_motion(mbc_nodal_t *mbc)
 	if (mbc->mbc.cmd != ES_GOTO_NEXT_STEP) {
 		if (MBC_F_REF_NODE(mbc)) {
 			ssize_t rc;
-
-			rc = recv(mbc->mbc.sock, (void *)MBC_R_KINEMATICS(mbc),
+#ifdef _WIN32
+			// make blocking
+			unsigned long mode = 0;
+			int ioctlresult = ioctlsocket(mbc->mbc.sock, FIONBIO, &mode);
+#endif
+			rc = recvn(mbc->mbc.sock, (void *)MBC_R_KINEMATICS(mbc),
 				MBC_R_KINEMATICS_SIZE(mbc), mbc->mbc.recv_flags);
+
+			if (rc == SOCKET_ERROR){
+				int save_errno = WSAGetLastError();
+				char* msg = sock_err_string(save_errno);
+				fprintf(stderr, "recv(%lu) reference node failed with error code %d, msg: \"%s\"\n",
+					(unsigned long)MBC_R_KINEMATICS_SIZE(mbc), save_errno, msg);
+				return -1;
+			}
+
 			if (rc != MBC_R_KINEMATICS_SIZE(mbc)) {
 				fprintf(stderr, "recv(%lu) reference node failed (%ld)\n",
 					(unsigned long)MBC_R_KINEMATICS_SIZE(mbc), (long)rc);
 				return -1;
 			}
+#ifdef _WIN32
+			// make non-blocking
+			mode = 1;
+			ioctlresult = ioctlsocket(mbc->mbc.sock, FIONBIO, &mode);
+#endif
 		}
 
 		if (mbc->nodes > 0) {
 			ssize_t rc;
-
-			rc = recv(mbc->mbc.sock, (void *)MBC_N_KINEMATICS(mbc),
+#ifdef _WIN32
+            // make blocking
+			unsigned long mode = 0;
+			int ioctlresult = ioctlsocket(mbc->mbc.sock, FIONBIO, &mode);
+#endif
+			rc = recvn(mbc->mbc.sock, (void *)MBC_N_KINEMATICS(mbc),
 				MBC_N_KINEMATICS_SIZE(mbc), mbc->mbc.recv_flags);
+			if (rc == SOCKET_ERROR){
+				int save_errno = WSAGetLastError();
+				char* msg = sock_err_string(save_errno);
+				fprintf(stderr, "recv(%lu) x, theta, xP, omega failed with error code %d, msg: \"%s\"\n",
+					(unsigned long)MBC_N_KINEMATICS_SIZE(mbc), save_errno, msg);
+				return -1;
+			}
+#ifdef _WIN32
+            // make non-blocking
+            mode = 1;
+            ioctlresult = ioctlsocket(mbc->mbc.sock, FIONBIO, &mode);
+#endif
 			if (rc != MBC_N_KINEMATICS_SIZE(mbc)) {
 				fprintf(stderr, "recv(%lu) x, theta, xP, omega failed (%ld)\n",
 					(unsigned long)MBC_N_KINEMATICS_SIZE(mbc), (long)rc);
 				return -1;
+			}
+			else if (mbc->mbc.verbose)
+			{
+				fprintf(stderr, "recv(%lu) x, theta, xP, omega succeeded, received (%ld) bytes\n",
+					(unsigned long)MBC_N_KINEMATICS_SIZE(mbc), (long)rc);
 			}
 		}
 	}
@@ -443,10 +602,17 @@ mbc_nodal_put_forces(mbc_nodal_t *mbc, int last)
 	if (mbc->mbc.cmd != ES_GOTO_NEXT_STEP) {
 		/* reference node */
 		if (MBC_F_REF_NODE(mbc)) {
+
+		if (mbc->mbc.verbose)
+		{
+			fprintf(stdout, "Sending reference node dynamics data\n");
+		}
+
 			ssize_t	rc;
 
-			rc = send(mbc->mbc.sock, (const void *)MBC_R_DYNAMICS(mbc),
+			rc = sendn(mbc->mbc.sock, (const void *)MBC_R_DYNAMICS(mbc),
 				MBC_R_DYNAMICS_SIZE(mbc), mbc->mbc.send_flags);
+
 			if (rc != MBC_R_DYNAMICS_SIZE(mbc)) {
 				fprintf(stderr, "send(%lu) reference node failed (%ld)\n",
 					(unsigned long)MBC_R_DYNAMICS_SIZE(mbc), (long)rc);
@@ -456,10 +622,22 @@ mbc_nodal_put_forces(mbc_nodal_t *mbc, int last)
 
 		/* nodal */
 		if (mbc->nodes > 0) {
+
+		if (mbc->mbc.verbose)
+		{
+			fprintf(stdout, "Sending node dynamics data\n");
+		}
+
 			ssize_t	rc;
 
-			rc = send(mbc->mbc.sock, (const void *)MBC_N_DYNAMICS(mbc),
+			rc = sendn(mbc->mbc.sock, (const void *)MBC_N_DYNAMICS(mbc),
 				MBC_N_DYNAMICS_SIZE(mbc), mbc->mbc.send_flags);
+
+		if (mbc->mbc.verbose)
+		{
+			fprintf(stdout, "Sent %ld bytes, dynamics size is %ld\n", (long)rc, (long)MBC_N_DYNAMICS_SIZE(mbc));
+		}
+
 			if (rc != MBC_N_DYNAMICS_SIZE(mbc)) {
 				fprintf(stderr, "send(%lu) nodes failed (%ld)\n",
 					(unsigned long)MBC_N_DYNAMICS_SIZE(mbc), (long)rc);
@@ -489,6 +667,7 @@ int
 mbc_nodal_init(mbc_nodal_t *mbc, unsigned refnode, unsigned nodes,
 	unsigned labels, unsigned rot, unsigned accels)
 {
+
 	mbc->nodes = nodes;
 	MBC_F_SET(mbc, MBC_NODAL);
 
@@ -534,7 +713,7 @@ mbc_nodal_init(mbc_nodal_t *mbc, unsigned refnode, unsigned nodes,
 		return -1;
 	}
 	MBC_F_SET(mbc, (rot & MBC_REF_NODE_ROT_MASK));
-	
+
 	mbc->n_ptr = NULL;
 	mbc->n_k_labels = NULL;
 	mbc->n_k_x = NULL;
@@ -583,8 +762,8 @@ mbc_nodal_init(mbc_nodal_t *mbc, unsigned refnode, unsigned nodes,
 		}
 
 		if (MBC_F_LABELS(mbc)) {
-			mbc->k_size += mbc->nodes*sizeof(uint32_t);
-			mbc->d_size += mbc->nodes*sizeof(uint32_t);
+			mbc->k_size += (mbc->nodes + mbc->nodes%2)*sizeof(uint32_t);
+			mbc->d_size += (mbc->nodes + mbc->nodes%2)*sizeof(uint32_t);
 		}
 
 		mbc->n_ptr = (void *)malloc(MBC_N_SIZE(mbc));
@@ -692,7 +871,7 @@ mbc_nodal_negotiate_request(mbc_nodal_t *mbc)
 	uint32_ptr[0] = MBC_F(mbc);
 	uint32_ptr[1] = mbc->nodes;
 
-	rc = send(mbc->mbc.sock, (const void *)buf, sizeof(buf),
+	rc = sendn(mbc->mbc.sock, (const void *)buf, sizeof(buf),
 		mbc->mbc.send_flags);
 	if (rc != sizeof(buf)) {
 		fprintf(stderr, "send negotiate request failed (%ld)\n", (long)rc);
@@ -753,7 +932,7 @@ mbc_nodal_negotiate_response(mbc_nodal_t *mbc)
 		return -1;
 	}
 
-	rc = recv(mbc->mbc.sock, (void *)buf, sizeof(buf), mbc->mbc.recv_flags);
+	rc = recvn(mbc->mbc.sock, (void *)buf, sizeof(buf), mbc->mbc.recv_flags);
 	if (rc != sizeof(buf)) {
 		fprintf(stderr, "recv negotiate request failed\n");
 		return -1;
@@ -859,10 +1038,10 @@ mbc_modal_get_motion(mbc_modal_t *mbc)
 		if (MBC_F_REF_NODE(mbc)) {
 			ssize_t rc;
 
-			rc = recv(mbc->mbc.sock, (void *)MBC_R_KINEMATICS(mbc),
+			rc = recvn(mbc->mbc.sock, (void *)MBC_R_KINEMATICS(mbc),
 				MBC_R_KINEMATICS_SIZE(mbc), mbc->mbc.recv_flags);
 			if (rc == -1) {
-				int save_errno = errno;
+				int save_errno = WSAGetLastError();
 				const char *msg;
 
 				msg = strerror(save_errno);
@@ -881,10 +1060,10 @@ mbc_modal_get_motion(mbc_modal_t *mbc)
 		if (mbc->modes > 0) {
 			ssize_t rc;
 
-			rc = recv(mbc->mbc.sock, (void *)MBC_M_KINEMATICS(mbc),
+			rc = recvn(mbc->mbc.sock, (void *)MBC_M_KINEMATICS(mbc),
 				MBC_M_KINEMATICS_SIZE(mbc), mbc->mbc.recv_flags);
 			if (rc == -1) {
-				int save_errno = errno;
+				int save_errno = WSAGetLastError();
 				const char *msg;
 
 				msg = strerror(save_errno);
@@ -935,10 +1114,10 @@ mbc_modal_put_forces(mbc_modal_t *mbc, int last)
 		if (MBC_F_REF_NODE(mbc)) {
 			ssize_t	rc;
 
-			rc = send(mbc->mbc.sock, (const void *)MBC_R_DYNAMICS(mbc),
+			rc = sendn(mbc->mbc.sock, (const void *)MBC_R_DYNAMICS(mbc),
 				MBC_R_DYNAMICS_SIZE(mbc), mbc->mbc.send_flags);
 			if (rc == -1) {
-				int save_errno = errno;
+				int save_errno = WSAGetLastError();
 				const char *msg;
 
 				msg = strerror(save_errno);
@@ -958,10 +1137,10 @@ mbc_modal_put_forces(mbc_modal_t *mbc, int last)
 		if (mbc->modes > 0) {
 			ssize_t	rc;
 
-			rc = send(mbc->mbc.sock, (const void *)MBC_M_DYNAMICS(mbc),
+			rc = sendn(mbc->mbc.sock, (const void *)MBC_M_DYNAMICS(mbc),
 				MBC_M_DYNAMICS_SIZE(mbc), mbc->mbc.send_flags);
 			if (rc == -1) {
-				int save_errno = errno;
+				int save_errno = WSAGetLastError();
 				const char *msg;
 
 				msg = strerror(save_errno);
@@ -1055,7 +1234,7 @@ mbc_modal_negotiate_request(mbc_modal_t *mbc)
 	uint32_ptr[0] = (uint32_t)MBC_F(mbc);
 	uint32_ptr[1] = mbc->modes;
 
-	rc = send(mbc->mbc.sock, (const void *)buf, sizeof(buf),
+	rc = sendn(mbc->mbc.sock, (const void *)buf, sizeof(buf),
 		mbc->mbc.send_flags);
 	if (rc != sizeof(buf)) {
 		fprintf(stderr, "send negotiate request failed (%ld)\n", (long)rc);
@@ -1114,7 +1293,7 @@ mbc_modal_negotiate_response(mbc_modal_t *mbc)
 		return -1;
 	}
 
-	rc = recv(mbc->mbc.sock, (void *)buf, sizeof(buf), mbc->mbc.recv_flags);
+	rc = recvn(mbc->mbc.sock, (void *)buf, sizeof(buf), mbc->mbc.recv_flags);
 	if (rc != sizeof(buf)) {
 		fprintf(stderr, "recv negotiate request failed\n");
 		return -1;

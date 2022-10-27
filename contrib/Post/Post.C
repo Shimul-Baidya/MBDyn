@@ -4,8 +4,8 @@
  *
  * Copyright (C) 1996-2017
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -24,8 +24,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * along with this program; If not, see <https://www.gnu.org/licenses/>.
+ *
  */
 /* Copyright Marco Morandini */
 
@@ -47,6 +47,7 @@
 #include <FlexLexer.h>
 #undef yyFlexLexer
 
+std::string output_frequency_string;
 int output_frequency = 0;
 
 int step = 0;
@@ -56,6 +57,8 @@ int niter = 0;
 double reserr = 0.;
 double solerr = 0.;
 int solconv = 0;
+bool out_flag;
+
 
 #include "Post.hh"
 
@@ -144,6 +147,7 @@ struct OutputElement {
 	std::map<int,int> output_cols;
 	std::vector<double> outputs;
 	OutputElement(const int i) : label(i), num_outputs(0) {};
+	bool operator == (const int i) {return i == label;};
 };
 
 struct OutputFile {
@@ -168,7 +172,11 @@ bool ParseLog(std::istream& in, std::ostream& out) {
 		//std::endl << "-----------------------------" << std::endl;
 		switch (type) {
 			case OUTPUT_FREQUENCY_TOK:
-				in >> output_frequency;
+				in >> output_frequency_string;
+				if (output_frequency_string != std::string("custom")) {
+					output_frequency = std::stoi(output_frequency_string);
+				}
+					
 				return true;
 				break;
 			default:
@@ -182,8 +190,10 @@ bool ParseOut(MbdynpostFlexLexer &flex, std::istream& in) {
 	while ((type = flex.yylex()) != EOF_TOK) {
 		switch (type) {
 			case STEP_TOK:
-				in >> step >> current_time >> tstep >> niter >> reserr >> solerr >> solconv;
-				return true;
+				in >> step >> current_time >> tstep >> niter >> reserr >> solerr >> solconv >> out_flag;
+				if (out_flag) {
+					return true;
+				}
 				break;
 			default:
 				break;
@@ -222,8 +232,21 @@ bool ParseCommands(std::istream& in, std::ostream& out) {
 			OutputFile &fl(*files.rbegin());
 			fl.num_elements++;
 			int i = atoi(flex.YYText());
-			fl.elements.push_back(OutputElement(i));
-			OutputElement &el(*fl.elements.rbegin());
+			auto el_it = std::find(fl.elements.begin(), fl.elements.end(), i);
+			if (el_it == fl.elements.end()){
+				fl.elements.push_back(OutputElement(i));
+				el_it = fl.elements.end();
+				el_it--;
+			} else {
+				std::cerr << "Error, request for the ouptu of element " << i << std::endl;
+				std::cerr << "Some output for same element has already been requested." << std::endl;
+				std::cerr << "you should ask for an element only once," << std::endl;
+				std::cerr << "separating the different requested columns with commas" << std::endl;
+				std::cerr << std::endl;
+				std::cerr << "See Post --help for details" << std::endl;
+				exit(1);
+			}
+			OutputElement &el(*el_it);
 			if ((type = flex.yylex()) != DUEPUNTI_TOK) {
 				std::cerr << "Unrecognized post_description token \""
 					<< flex.YYText() << "\"\n"
@@ -302,8 +325,8 @@ static char doc[] = "MbdynPost -- another Mbdyn result parser\n"
 "\n"
 " Copyright (C) 1996-2017\n"
 "\n"
-" Pierangelo Masarati	<masarati@aero.polimi.it>\n"
-" Paolo Mantegazza	<mantegazza@aero.polimi.it>\n"
+" Pierangelo Masarati	<pierangelo.masarati@polimi.it>\n"
+" Paolo Mantegazza	<paolo.mantegazza@polimi.it>\n"
 "\n"
 " Changing this copyright notice is forbidden.\n"
 "\n"
@@ -394,7 +417,7 @@ parse_opt (int key, char *arg, struct argp_state *state) {
 
 static struct argp argp_s = { options, parse_opt, args_doc, doc };
 
-struct allocate_file : public std::unary_function<OutputFile&, std::istream *> {
+struct allocate_file {
 	std::string basename;
 	bool success;
 	allocate_file(std::string bs) : basename(bs), success(true) {};
@@ -440,7 +463,7 @@ struct allocate_file : public std::unary_function<OutputFile&, std::istream *> {
 		it.file = file;
 	}
 };
-struct skip_time_step : public std::unary_function<OutputFile&, void> {
+struct skip_time_step {
 	mutable bool success;
 	mutable bool last;
 	skip_time_step(bool l) : success(true), last(l) {};
@@ -459,7 +482,7 @@ struct skip_time_step : public std::unary_function<OutputFile&, void> {
 	}
 };
 
-struct read_time_step : public std::unary_function<OutputFile&, void> {
+struct read_time_step {
 	mutable bool success;
 	mutable bool last;
 	read_time_step(bool l) : success(true), last(l) {};
@@ -513,7 +536,7 @@ struct read_time_step : public std::unary_function<OutputFile&, void> {
 	}
 };
  
-struct write_time_step : public std::unary_function<OutputFile&, void> {
+struct write_time_step {
 	mutable bool success;
 	mutable std::ostream * file;
 	write_time_step(std::ostream * f) : success(true), file(f) {};
@@ -527,7 +550,7 @@ struct write_time_step : public std::unary_function<OutputFile&, void> {
 	}
 };
  
-struct close_file : public std::unary_function<OutputFile&, void> {
+struct close_file {
 	void operator()(OutputFile& it) const {
 		if (it.file != 0) {
 			static_cast<std::ifstream*>(it.file)->close();

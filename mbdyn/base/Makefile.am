@@ -63,6 +63,8 @@ external.cc \
 external.h \
 extforce.cc \
 extforce.h \
+extsocket.cc \
+extsocket.h \
 filedrv.cc \
 filedrv.h \
 fixedstep.cc \
@@ -85,6 +87,8 @@ j2p.cc \
 j2p.h \
 linesearch.h \
 linesearch.cc \
+noxsolver.h \
+noxsolver.cc \
 loadable.cc \
 loadable.h \
 mbpar.cc \
@@ -95,12 +99,19 @@ modelns.cc \
 modelns.h \
 modules.cc \
 modules.h \
+ms34stepsol.cc \
+ms34stepsol.h \
 mtdataman.cc \
 mtdataman.h \
+multistagestepsol_impl.cc \
+multistagestepsol_impl.h \
+multistagestepsol_tpl.h \
 nestedelem.cc \
 nestedelem.h \
 node.cc \
 node.h \
+nodead.cc \
+nodead.h \
 nodeman.cc \
 nonlin.cc \
 nonlin.h \
@@ -142,8 +153,13 @@ shape_impl.h \
 shdrive.cc \
 shdrive.h \
 shockabsorber.h \
+siconosmcp.h \
+siconosmcp.cc \
 simentity.cc \
 simentity.h \
+singlestepsol_impl.cc \
+singlestepsol_impl.h \
+singlestepsol_tpl.h \
 sockdrv.cc \
 sockdrv.h \
 socketstreamdrive.cc \
@@ -162,14 +178,15 @@ solverdiagnostics.h \
 stepsol.cc \
 stepsol.h \
 stepsol.hc \
+stepsol_impl.cc \
+stepsol_impl.h \
+stepsol_tpl.h \
 symcltp.h \
 tpldrive.cc \
 tpldrive.h \
 tpldrive_impl.cc \
 tpldrive_impl.h \
 vec3drv.h \
-thirdorderstepsol.h \
-thirdorderstepsol.cc \
 TimeStepControl.h \
 TimeStepControl.cc \
 userelem.cc \
@@ -186,10 +203,12 @@ nodist_libbase_la_SOURCES =
 
 if BUILD_STATIC_MODULES
 nodist_libbase_la_SOURCES += \
+$(srcdir)/../../modules/module-minmaxdrive/module-minmaxdrive.cc \
+$(srcdir)/../../modules/module-minmaxdrive/module-minmaxdrive.h \
 $(srcdir)/../../modules/module-nodedistdrive/module-nodedistdrive.cc \
 $(srcdir)/../../modules/module-nodedistdrive/module-nodedistdrive.h \
-$(srcdir)/../../modules/module-minmaxdrive/module-minmaxdrive.cc \
-$(srcdir)/../../modules/module-minmaxdrive/module-minmaxdrive.h
+$(srcdir)/../../modules/module-hfelem/module-hfelem.cc \
+$(srcdir)/../../modules/module-hfelem/module-hfelem.h
 ## add more...
 
 if USE_OCTAVE
@@ -232,7 +251,7 @@ schurdataman.cc \
 schurdataman.h
 endif
 
-libbase_la_LIBADD = @LIBS@ @SECURITY_LIBS@ $(GINACLIB_LIBS)
+libbase_la_LIBADD = @LIBS@ @SECURITY_LIBS@ @OCTAVE_LIBS@ $(GINACLIB_LIBS)
 libbase_la_LDFLAGS = -static
 
 AM_CPPFLAGS = \
@@ -252,7 +271,7 @@ AM_CPPFLAGS = \
 -I$(srcdir)/../../mbdyn/hydr \
 -I$(srcdir)/../../modules \
 $(GINACLIB_CPPFLAGS) \
-$(OCTAVE_INCLUDE)
+@OCTAVE_INCLUDE@
 
 noinst_PROGRAMS = inusetest
 inusetest_SOURCES = inusetest.cc

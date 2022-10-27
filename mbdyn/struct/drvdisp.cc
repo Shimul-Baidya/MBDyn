@@ -85,6 +85,22 @@ DriveDisplacementJoint::Restart(std::ostream& out) const
 	return out;
 }
 
+void
+DriveDisplacementJoint::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Drive displacement", OH, name);
+
+			Var_d = OH.CreateVar<Vec3>(name + "d",
+				OutputHandler::Dimensions::Length,
+				"imposed relative displacement, global frame (x, y, z)");
+		}
+#endif // USE_NETCDF
+	}
+}
 
 void
 DriveDisplacementJoint::Output(OutputHandler& OH) const
@@ -92,9 +108,21 @@ DriveDisplacementJoint::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 		Vec3 d(pNode2->GetXCurr() + pNode2->GetRCurr()*f2
 			- pNode1->GetXCurr() - pNode1->GetRCurr()*f1);
-		Joint::Output(OH.Joints(), "DriveDisplacementJoint", GetLabel(),
-				pNode1->GetRCurr().Transpose()*F, Zero3, F, Zero3)
-			<< " " << d << std::endl;
+
+
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "DriveDisplacementJoint", GetLabel(),
+					pNode1->GetRCurr().Transpose()*F, Zero3, F, Zero3)
+				<< " " << d << std::endl;
+		}
+
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, F, Zero3, F, Zero3);
+			OH.WriteNcVar(Var_d, d);
+		}
+#endif // USE_NETCDF
+
 	}
 }
 
@@ -665,6 +693,27 @@ DriveDisplacementJoint::InitialAssRes(SubVectorHandler& WorkVec,
 
 	return WorkVec;
 }
+
+const OutputHandler::Dimensions
+DriveDisplacementJoint::GetEquationDimension(integer index) const {
+	// DOF == 3
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+	case 1:
+		dimension = OutputHandler::Dimensions::Length;
+		break;
+	case 2:
+		dimension = OutputHandler::Dimensions::Length;
+		break;
+	case 3:
+		dimension = OutputHandler::Dimensions::Length;
+		break;
+	}
+
+	return dimension;
+}
 					   
 /* DriveDisplacementJoint - end */
 
@@ -710,15 +759,42 @@ DriveDisplacementPinJoint::Restart(std::ostream& out) const
 	return out;
 }
 
+void
+DriveDisplacementPinJoint::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			std::string name;
+			OutputPrepare_int("Drive displacement pin", OH, name);
+
+			Var_d = OH.CreateVar<Vec3>(name + "d",
+				OutputHandler::Dimensions::Length,
+				"imposed relative displacement (x, y, z)");
+		}
+#endif // USE_NETCDF
+	}
+}
 
 void
 DriveDisplacementPinJoint::Output(OutputHandler& OH) const
 {   
 	if (bToBeOutput()) {
 		Vec3 d(pNode->GetXCurr() + pNode->GetRCurr()*f - x);
-		Joint::Output(OH.Joints(), "DriveDisplacementPinJoint", GetLabel(),
-				F, Zero3, F, Zero3)
-			<< " " << d << std::endl;
+
+		if (OH.UseText(OutputHandler::JOINTS)) {
+			Joint::Output(OH.Joints(), "DriveDisplacementPinJoint", GetLabel(),
+					F, Zero3, F, Zero3)
+				<< " " << d << std::endl;
+		}
+
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+			Joint::NetCDFOutput(OH, F, Zero3, F, Zero3);
+			OH.WriteNcVar(Var_d, d);
+		}
+#endif // USE_NETCDF
+
 	}
 }
 
@@ -1208,6 +1284,27 @@ DriveDisplacementPinJoint::InitialAssRes(SubVectorHandler& WorkVec,
 	WorkVec.Sub(15 + 1, PhiPrime);
 
 	return WorkVec;
+}
+
+const OutputHandler::Dimensions
+DriveDisplacementPinJoint::GetEquationDimension(integer index) const {
+	// DOF == 3
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+	case 1:
+		dimension = OutputHandler::Dimensions::Length;
+		break;
+	case 2:
+		dimension = OutputHandler::Dimensions::Length;
+		break;
+	case 3:
+		dimension = OutputHandler::Dimensions::Length;
+		break;
+	}
+
+	return dimension;
 }
 					   
 /* DriveDisplacementPinJoint - end */

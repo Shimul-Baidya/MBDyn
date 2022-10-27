@@ -37,6 +37,7 @@
 
 #include "joint.h"
 #include "drive.h"
+#include "output.h"
 
 #ifndef MBDYN_X_DISTANCE_JOINT
 /* DistanceJoint - begin */
@@ -47,6 +48,10 @@ class DistanceJoint : virtual public Elem, public Joint, public DriveOwner {
    const StructDispNode* pNode2;
    mutable Vec3 v;
    doublereal dAlpha;
+#ifdef USE_NETCDF
+   MBDynNcVar Var_V;
+   MBDynNcVar Var_d;
+#endif // USE_NETCDF
 
  public:
    /* Costruttore non banale */
@@ -90,6 +95,7 @@ class DistanceJoint : virtual public Elem, public Joint, public DriveOwner {
 			    const VectorHandler& XCurr,
 			    const VectorHandler& XPrimeCurr);
 
+   void OutputPrepare(OutputHandler& OH);
    virtual void Output(OutputHandler& OH) const;
 
 
@@ -129,6 +135,13 @@ class DistanceJoint : virtual public Elem, public Joint, public DriveOwner {
    };
    /* ************************************************ */
 
+   /* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+   /* describes the dimension of components of equation */
+   virtual std::ostream& DescribeEq(std::ostream& out,
+		  const char *prefix = "",
+		  bool bInitial = false) const;
 };
 
 /* DistanceJoint - end */
@@ -145,6 +158,10 @@ virtual public Elem, public Joint, public DriveOwner {
    Vec3 f2;
    mutable Vec3 v;
    doublereal dAlpha;
+#ifdef USE_NETCDF
+   MBDynNcVar Var_V;
+   MBDynNcVar Var_d;
+#endif // USE_NETCDF
 
  public:
    /* Costruttore non banale */
@@ -192,6 +209,7 @@ virtual public Elem, public Joint, public DriveOwner {
 			    const VectorHandler& XCurr,
 			    const VectorHandler& XPrimeCurr);
 
+   void OutputPrepare(OutputHandler& OH);
    virtual void Output(OutputHandler& OH) const;
 
 
@@ -231,6 +249,13 @@ virtual public Elem, public Joint, public DriveOwner {
    };
    /* ************************************************ */
 
+   /* returns the dimension of the component */
+	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+   /* describes the dimension of components of equation */
+   virtual std::ostream& DescribeEq(std::ostream& out,
+		  const char *prefix = "",
+		  bool bInitial = false) const;
 };
 
 /* DistanceJointWithOffset - end */
@@ -330,6 +355,7 @@ class ClampJoint : virtual public Elem, public Joint {
    /* Inverse Dynamics update */
    void Update(const VectorHandler& XCurr, InverseDynamics::Order iOrder = InverseDynamics::INVERSE_DYNAMICS);
 
+   void OutputPrepare(OutputHandler& OH);
    virtual void Output(OutputHandler& OH) const;
 
 
@@ -366,6 +392,9 @@ class ClampJoint : virtual public Elem, public Joint {
      connectedNodes[0] = pNode;
    };
    /* ************************************************ */
+
+   /* returns the dimension of the component */
+   const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 };
 
 /* ClampJoint - end */

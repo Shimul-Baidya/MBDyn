@@ -49,11 +49,15 @@
 #include "drive.h"
 #include "drive_.h"
 #include "filedrv.h"
+#include "nodead.h"
+#include "elecnodead.h"
 #include "presnode.h"
+#include "presnodead.h"
 #include "j2p.h"
 #include "sah.h"
 
 #include "thermalnode.h"
+#include "thermalnodead.h"
 
 #include "aeroelem.h"
 #include "beam.h"
@@ -115,6 +119,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		"loadable" "path",
 
 		"skip" "initial" "joint" "assembly",
+		"initial" "assembly" "of" "deformable" "and" "force" "elements",
 		"use",
 		"in" "assembly",
 		"initial" "stiffness",
@@ -144,6 +149,8 @@ DataManager::ReadControl(MBDynParser& HP,
 			"reference" "frames",
 			"accelerations",
 			"drive" "callers",
+			
+		"output" "units",
 
 		"default" "orientation",
 		"default" "beam" "output",
@@ -158,7 +165,9 @@ DataManager::ReadControl(MBDynParser& HP,
 		"model",
 
 		"rigid" "body" "kinematics",
-
+                
+                "use" "automatic" "differentiation",
+                
 		0
 	};
 
@@ -205,6 +214,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		LOADABLEPATH,
 
 		SKIPINITIALJOINTASSEMBLY,
+		INITIALASSEMBLYOFDEFORMABLEANDFORCEELEMENTS,
 		USE,
 		INASSEMBLY,
 		INITIALSTIFFNESS,
@@ -235,6 +245,8 @@ DataManager::ReadControl(MBDynParser& HP,
 			REFERENCEFRAMES,
 			ACCELERATIONS,
 			DRIVECALLERS,
+			
+		OUTPUTUNITS,
 
 		DEFAULTORIENTATION,
 		DEFAULTBEAMOUTPUT,
@@ -248,7 +260,8 @@ DataManager::ReadControl(MBDynParser& HP,
 		SELECTTIMEOUT,
 		MODEL,
 		RIGIDBODYKINEMATICS,
-
+                USE_AUTOMATIC_DIFFERENTIATION,
+                
 		LASTKEYWORD
 	};
 
@@ -583,6 +596,11 @@ DataManager::ReadControl(MBDynParser& HP,
 			DEBUGLCOUT(MYDEBUG_INPUT, "Skipping initial joint assembly" << std::endl);
 		} break;
 
+		case INITIALASSEMBLYOFDEFORMABLEANDFORCEELEMENTS: {
+			bNotDeformableInitial = false;
+			DEBUGLCOUT(MYDEBUG_INPUT, "Enabling initial joint assembly of deformable elements and of forces" << std::endl);
+		} break;
+
 		/* Uso di diversi tipi di elementi nell'assemblaggio iniziale */
 		case USE:
 			while (true) {
@@ -600,11 +618,15 @@ DataManager::ReadControl(MBDynParser& HP,
 					break;
 
 				case GRAVITY:
+					// FIXME: to be implemented!
 					ElemData[Elem::GRAVITY].ToBeUsedInAssembly(true);
+#if 0
 					DEBUGLCOUT(MYDEBUG_INPUT,
 						"Gravity will be used "
 						"in initial joint assembly"
 						<< std::endl);
+#endif
+					silent_cerr("using \"gravity\" in assembly is currently not supported at line " << HP.GetLineData() << std::endl);
 					break;
 
 				case FORCES:
@@ -967,9 +989,36 @@ EndOfUse:
 
 				} else if (HP.IsKeyWord("netcdf")) {
 					ResMode |= RES_NETCDF;
+					if (HP.IsKeyWord("classic")) {
+#ifdef USE_NETCDF
+						NetCDF_Format = netCDF::NcFile::classic;
+#endif // USE_NETCDF
+					} else if (HP.IsKeyWord("classic64")) {
+#ifdef USE_NETCDF
+						NetCDF_Format = netCDF::NcFile::classic64;
+#endif // USE_NETCDF
+					} else if (HP.IsKeyWord("nc4")) {
+#ifdef USE_NETCDF
+						NetCDF_Format = netCDF::NcFile::nc4;
+#endif // USE_NETCDF
+					} else if (HP.IsKeyWord("nc4classic")) {
+#ifdef USE_NETCDF
+						NetCDF_Format = netCDF::NcFile::nc4classic;
+#endif // USE_NETCDF
+					}
 					if (HP.IsKeyWord("sync")) {
 #ifdef USE_NETCDF
 						bNetCDFsync = true;
+#endif // USE_NETCDF
+					}
+					if (HP.IsKeyWord("no" "sync")) {
+#ifdef USE_NETCDF
+						bNetCDFsync = false;
+#endif // USE_NETCDF
+					}
+					if (HP.IsKeyWord("text")) {
+#ifdef USE_NETCDF
+						bNetCDFnoText = false;
 #endif // USE_NETCDF
 					}
 					if (HP.IsKeyWord("no" "text")) {
@@ -979,7 +1028,7 @@ EndOfUse:
 					}
 #ifndef USE_NETCDF
 					silent_cerr("\"netcdf\" ignored; please rebuild with NetCDF output enabled"
-						<< std::endl);
+						" at line " << HP.GetLineData() << std::endl);
 #endif /* ! USE_NETCDF */
 
 				} else {
@@ -1017,77 +1066,48 @@ EndOfUse:
 					bOutputFrames = true;
 					break;
 
-				case ACCELERATIONS:
-					bOutputAccels = true;
-					break;
-
 				case DRIVECALLERS:
 					bOutputDriveCaller = true;
-					break;
-
-				case STRUCTURALNODES:
-					NodeData[Node::STRUCTURAL].DefaultOut(true);
-					break;
-
-				case ELECTRICNODES:
-					NodeData[Node::ELECTRIC].DefaultOut(true);
-					break;
-
-				case THERMALNODES:
-					NodeData[Node::THERMAL].DefaultOut(true);
 					break;
 
 				case ABSTRACTNODES:
 					NodeData[Node::ABSTRACT].DefaultOut(true);
 					break;
 
+				case ELECTRICNODES:
+					NodeData[Node::ELECTRIC].DefaultOut(true);
+					break;
+
 				case HYDRAULICNODES:
 					NodeData[Node::HYDRAULIC].DefaultOut(true);
 					break;
 
-				case GRAVITY:
-					ElemData[Elem::GRAVITY].DefaultOut(true);
+				case STRUCTURALNODES:
+					NodeData[Node::STRUCTURAL].DefaultOut(true);
 					break;
 
-				case RIGIDBODIES:
-					ElemData[Elem::BODY].DefaultOut(true);
+				case ACCELERATIONS:
+					bOutputAccels = true;
 					break;
 
-				case JOINTS:
-					ElemData[Elem::JOINT].DefaultOut(true);
-					break;
-
-				case BEAMS:
-					ElemData[Elem::BEAM].DefaultOut(true);
-					break;
-
-				case PLATES:
-					ElemData[Elem::PLATE].DefaultOut(true);
-					break;
-
-				case AIRPROPERTIES:
-					ElemData[Elem::AIRPROPERTIES].DefaultOut(true);
-					break;
-
-				case ROTORS:
-				case INDUCEDVELOCITYELEMENTS:
-					ElemData[Elem::INDUCEDVELOCITY].DefaultOut(true);
-					break;
-
-				case AEROMODALS:
-					ElemData[Elem::AEROMODAL].DefaultOut(true);
+				case THERMALNODES:
+					NodeData[Node::THERMAL].DefaultOut(true);
 					break;
 
 				case AERODYNAMICELEMENTS:
 					ElemData[Elem::AERODYNAMIC].DefaultOut(true);
 					break;
 
-				case FORCES:
-					ElemData[Elem::FORCE].DefaultOut(true);
+				case AEROMODALS:
+					ElemData[Elem::AEROMODAL].DefaultOut(true);
 					break;
 
-				case GENELS:
-					ElemData[Elem::GENEL].DefaultOut(true);
+				case AIRPROPERTIES:
+					ElemData[Elem::AIRPROPERTIES].DefaultOut(true);
+					break;
+
+				case BEAMS:
+					ElemData[Elem::BEAM].DefaultOut(true);
 					break;
 
 				case ELECTRICBULKELEMENTS:
@@ -1098,21 +1118,52 @@ EndOfUse:
 					ElemData[Elem::ELECTRIC].DefaultOut(true);
 					break;
 
-				case THERMALELEMENTS:
-					ElemData[Elem::THERMAL].DefaultOut(true);
-					break;
-
-				case HYDRAULICELEMENTS:
-					ElemData[Elem::HYDRAULIC].DefaultOut(true);
-					break;
-				case LOADABLEELEMENTS:
-					ElemData[Elem::LOADABLE].DefaultOut(true);
-					break;
 #ifdef USE_EXTERNAL
 				case EXTERNALELEMENTS:
 					ElemData[Elem::EXTERNAL].DefaultOut(true);
 					break;
 #endif /* USE_EXTERNAL */
+
+				case FORCES:
+					ElemData[Elem::FORCE].DefaultOut(true);
+					break;
+
+				case GENELS:
+					ElemData[Elem::GENEL].DefaultOut(true);
+					break;
+
+				case GRAVITY:
+					ElemData[Elem::GRAVITY].DefaultOut(true);
+					break;
+
+				case HYDRAULICELEMENTS:
+					ElemData[Elem::HYDRAULIC].DefaultOut(true);
+					break;
+
+				case INDUCEDVELOCITYELEMENTS:
+				case ROTORS:
+					ElemData[Elem::INDUCEDVELOCITY].DefaultOut(true);
+					break;
+
+				case JOINTS:
+					ElemData[Elem::JOINT].DefaultOut(true);
+					break;
+
+				case LOADABLEELEMENTS:
+					ElemData[Elem::LOADABLE].DefaultOut(true);
+					break;
+
+				case PLATES:
+					ElemData[Elem::PLATE].DefaultOut(true);
+					break;
+
+				case RIGIDBODIES:
+					ElemData[Elem::BODY].DefaultOut(true);
+					break;
+
+				case THERMALELEMENTS:
+					ElemData[Elem::THERMAL].DefaultOut(true);
+					break;
 
 				case UNKNOWN:
 					silent_cerr("warning: unknown output case at line "
@@ -1128,7 +1179,11 @@ EndOfUse:
 				}
 			}
 			break;
-
+		
+		case OUTPUTUNITS:
+			OutHdl.ReadOutputUnits(HP);
+			break;
+		
 		case DEFAULTORIENTATION:
 			od = ReadOrientationDescription(HP);
 			break;
@@ -1228,19 +1283,12 @@ EndOfUse:
 			break;
 
 		case FDJAC_METER: {
-#ifdef MBDYN_FDJAC
 			if (pFDJacMeter != 0) {
 				silent_cerr("\"finite difference jacobian meter\" already defined" << std::endl);
 				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
-#endif // MBDYN_FDJAC
 			DriveCaller *pTmp = HP.GetDriveCaller(false);
-#ifdef MBDYN_FDJAC
 			pFDJacMeter = pTmp;
-#else // !MBDYN_FDJAC
-			silent_cerr("warning, \"finite difference jacobian meter\" not supported (ignored)" << std::endl);
-			SAFEDELETE(pTmp);
-#endif // !MBDYN_FDJAC
 		} break;
 
 		case READSOLUTIONARRAY:{
@@ -1410,6 +1458,11 @@ EndOfUse:
 			}
 		} break;
 
+                case USE_AUTOMATIC_DIFFERENTIATION:
+                        DEBUGCERR("Support for automatic differentiation is enabled\n");
+                        bAutoDiff = true;
+                        break;
+                        
 		case UNKNOWN:
 			/*
 			 * If description is not in key table the parser
@@ -1454,12 +1507,14 @@ EndOfUse:
 #endif // USE_NETCDF
 
 	if (bOutput(RES_NETCDF)) {
+		// FIXME: replace with a single call that sets NetCDF for all types that support it
 		OutHdl.SetNetCDF(OutputHandler::NETCDF);
 		OutHdl.SetNetCDF(OutputHandler::STRNODES);
 		OutHdl.SetNetCDF(OutputHandler::INERTIA);
 		OutHdl.SetNetCDF(OutputHandler::JOINTS);
 		OutHdl.SetNetCDF(OutputHandler::BEAMS);
 		OutHdl.SetNetCDF(OutputHandler::AERODYNAMIC);
+		OutHdl.SetNetCDF(OutputHandler::ROTORS);
 		OutHdl.SetNetCDF(OutputHandler::LOADABLE);
 		OutHdl.SetNetCDF(OutputHandler::FORCES);
 		OutHdl.SetNetCDF(OutputHandler::GRAVITY);
@@ -1822,9 +1877,17 @@ DataManager::ReadNodes(MBDynParser& HP)
 				pDO->SetScale(dScale);
 
 				Node *pN = 0;
-				SAFENEWWITHCONSTRUCTOR(pN,
-					ElectricNode,
-					ElectricNode(uLabel, pDO, dx, dxp, fOut));
+
+                                if (bUseAutoDiff()) {
+                                        SAFENEWWITHCONSTRUCTOR(pN,
+                                                               ElectricNodeAd,
+                                                               ElectricNodeAd(uLabel, pDO, dx, dxp, fOut));                                        
+                                } else {
+                                        SAFENEWWITHCONSTRUCTOR(pN,
+                                                               ElectricNode,
+                                                               ElectricNode(uLabel, pDO, dx, dxp, fOut));
+                                }
+                                
 				if (pN != 0) {
 					ppN = InsertNode(NodeData[Node::ELECTRIC], uLabel, pN);
 				}
@@ -1862,9 +1925,16 @@ DataManager::ReadNodes(MBDynParser& HP)
 				pDO->SetScale(dScale);
 
 				Node *pN = 0;
-				SAFENEWWITHCONSTRUCTOR(pN,
-					ThermalNode,
-					ThermalNode(uLabel, pDO, dx, dxp, fOut));
+
+                                if (bUseAutoDiff()) {
+                                     SAFENEWWITHCONSTRUCTOR(pN,
+                                                            ThermalNodeAd,
+                                                            ThermalNodeAd(uLabel, pDO, dx, dxp, fOut));
+                                } else {
+                                     SAFENEWWITHCONSTRUCTOR(pN,
+                                                            ThermalNode,
+                                                            ThermalNode(uLabel, pDO, dx, dxp, fOut));
+                                }
 				if (pN != 0) {
 					ppN = InsertNode(NodeData[Node::THERMAL], uLabel, pN);
 				}
@@ -1921,14 +1991,25 @@ DataManager::ReadNodes(MBDynParser& HP)
 
 				Node *pN = 0;
 				if (bAlgebraic) {
-					SAFENEWWITHCONSTRUCTOR(pN,
-						ScalarAlgebraicNode,
-						ScalarAlgebraicNode(uLabel, pDO, dx, fOut));
-
-				} else {
-					SAFENEWWITHCONSTRUCTOR(pN,
-						ScalarDifferentialNode,
-						ScalarDifferentialNode(uLabel, pDO, dx, dxp, fOut));
+                                        if (bUseAutoDiff()) {
+                                                SAFENEWWITHCONSTRUCTOR(pN,
+                                                                       ScalarAlgebraicNodeAd,
+                                                                       ScalarAlgebraicNodeAd(uLabel, pDO, dx, fOut));
+                                        } else {
+                                                SAFENEWWITHCONSTRUCTOR(pN,
+                                                                       ScalarAlgebraicNode,
+                                                                       ScalarAlgebraicNode(uLabel, pDO, dx, fOut));
+                                        }
+                                } else {
+                                        if (bUseAutoDiff()) {
+                                                SAFENEWWITHCONSTRUCTOR(pN,
+                                                                       ScalarDifferentialNodeAd,
+                                                                       ScalarDifferentialNodeAd(uLabel, pDO, dx, dxp, fOut));
+                                        } else {
+                                                SAFENEWWITHCONSTRUCTOR(pN,
+                                                                       ScalarDifferentialNode,
+                                                                       ScalarDifferentialNode(uLabel, pDO, dx, dxp, fOut));
+                                        }
 				}
 
 				if (pN != 0) {
@@ -2089,10 +2170,17 @@ DataManager::ReadNodes(MBDynParser& HP)
 				pDO->SetScale(dScale);
 
 				Node *pN = 0;
-				SAFENEWWITHCONSTRUCTOR(pN,
-					PressureNode,
-					PressureNode(uLabel, pDO, dx, fOut));
 
+                                if (bUseAutoDiff()) {
+                                     SAFENEWWITHCONSTRUCTOR(pN,
+                                                            PressureNodeAd,
+                                                            PressureNodeAd(uLabel, pDO, dx, fOut));
+                                } else {
+                                     SAFENEWWITHCONSTRUCTOR(pN,
+                                                            PressureNode,
+                                                            PressureNode(uLabel, pDO, dx, fOut));
+                                }
+                                
 				if (pN != 0) {
 					ppN = InsertNode(NodeData[Node::HYDRAULIC], uLabel, pN);
 				}
@@ -2529,22 +2617,26 @@ ReadOrientationDescription(MBDynParser& HP)
 }
 
 OrientationDescription
-ReadOptionalOrientationDescription(DataManager *pDM, MBDynParser& HP)
+ReadOptionalOrientationDescription(DataManager *pDM, MBDynParser& HP, OrientationDescription od /* = UNKNOWN_ORIENTATION_DESCRIPTION */ )
 {
-	OrientationDescription dod = UNKNOWN_ORIENTATION_DESCRIPTION;
+	OrientationDescription dod = od;
 
 	if (HP.IsKeyWord("orientation" "description")) {
+		// override existing
 		dod = ReadOrientationDescription(HP);
 
-	} else if (pDM != 0) {
-		/* get a sane default */
-		dod = pDM->GetOrientationDescription();
+	} else if (od == UNKNOWN_ORIENTATION_DESCRIPTION) {
+		if (pDM != 0) {
+			// get model-wide default
+			dod = pDM->GetOrientationDescription();
 
-	} else {
-		dod = EULER_123;
-		silent_cerr("Warning, data manager not defined yet, "
-			"using default orientation (\"euler 123\") "
-			"at line " << HP.GetLineData() << std::endl);
+		} else {
+			// use legacy default
+			dod = EULER_123;
+			silent_cerr("Warning, data manager not defined yet, "
+				"using default orientation (\"euler 123\") "
+				"at line " << HP.GetLineData() << std::endl);
+		}
 	}
 
 	return dod;

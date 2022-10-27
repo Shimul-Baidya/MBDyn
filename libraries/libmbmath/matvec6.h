@@ -34,7 +34,8 @@
 
 #include "matvec3.h"
 
-class Vec6 {
+class Vec6: public sp_grad::SpConstMatElemAdapter<Vec6>
+{
  protected:
    Vec3 v[2];
    
@@ -77,7 +78,7 @@ class Vec6 {
       return v[1];
    };
    
-   inline const Vec3& GetVec(unsigned short int i) const {
+   inline const Vec3& GetVec(integer i) const {
       ASSERT(i == 0 || i == 1);
       return v[i];
    };
@@ -90,12 +91,12 @@ class Vec6 {
       return v[1];
    };
 
-   Vec3 GetVec(unsigned short int i) {
+   Vec3 GetVec(integer i) {
       ASSERT(i == 0 || i == 1);
       return v[i];
    };
    
-   inline const doublereal* pGetVec(unsigned short int i) const {
+   inline const doublereal* pGetVec(integer i) const {
       ASSERT(i == 0 || i == 1);
       return v[i].pGetVec();
    };
@@ -105,7 +106,21 @@ class Vec6 {
       v[1] = x.GetVec2();
       return *this;
    };
-   
+
+     template <typename DERIVED>
+     Vec6& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& v) {
+          using namespace sp_grad;
+
+          static_assert(v.iNumRowsStatic == iNumRowsStatic);
+          static_assert(v.iNumColsStatic == iNumColsStatic);
+          
+          for (index_type i = 1; i <= iNumRowsStatic; ++i) {
+               (*this)(i) = v.dGetValue(i, 1);
+          }
+          
+          return *this;
+     }
+     
    inline Vec6& operator += (const Vec6& x) {
       v[0] += x.GetVec1();
       v[1] += x.GetVec2();
@@ -179,33 +194,33 @@ class Vec6 {
       return sqrt(v[0].Dot() + v[1].Dot());
    };
 
-   inline const doublereal& dGet(unsigned short int i) const {
+   inline const doublereal& dGet(integer i) const {
       ASSERT(i > 0 && i < 7);
       if (i < 1 || i > 6) {
 	 throw ErrRowIndexOutOfRange(i, 1, 6, MBDYN_EXCEPT_ARGS);
       }
-      unsigned short int j = (i - 1)/3;
+      integer j = (i - 1)/3;
       return v[j].dGet(i - 3*j);
    };
 
-   inline const doublereal& operator ()(unsigned short int i) const {
+   inline const doublereal& operator ()(integer i) const {
       ASSERT(i > 0 && i < 7);
-      unsigned short int j = (i - 1)/3;
+      integer j = (i - 1)/3;
       return v[j](i - 3*j);
    };
    
-   inline doublereal& operator ()(unsigned short int i) {
+   inline doublereal& operator ()(integer i) {
       ASSERT(i > 0 && i < 7);
-      unsigned short int j = (i - 1)/3;
+      integer j = (i - 1)/3;
       return v[j](i - 3*j);
    };
    
-   inline void Put(unsigned short int i, const doublereal& d) {
+   inline void Put(integer i, const doublereal& d) {
       ASSERT(i > 0 && i < 7);
       if (i < 1 || i > 6) {
 	 throw ErrRowIndexOutOfRange(i, 1, 6, MBDYN_EXCEPT_ARGS);
       }
-      unsigned short int j = (i-1)/3;
+      integer j = (i-1)/3;
       v[j].Put(i-3*j, d);
    };
    
@@ -221,7 +236,17 @@ class Vec6 {
    
    void Reset(void);
 
-   std::ostream& Write(std::ostream& out, const char* sFill = " ") const;   
+   std::ostream& Write(std::ostream& out, const char* sFill = " ") const;
+     
+     static constexpr sp_grad::index_type iNumRowsStatic = 6;
+     static constexpr sp_grad::index_type iNumColsStatic = 1;
+     inline constexpr sp_grad::index_type iGetNumRows() const noexcept { return iNumRowsStatic; }
+     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return iNumColsStatic; }
+     static inline constexpr sp_grad::index_type iGetRowOffset() noexcept { return 1; }
+     static inline constexpr sp_grad::index_type iGetColOffset() noexcept { return iNumRowsStatic; }
+     inline const doublereal* begin() const noexcept { return v[0].pGetVec(); }
+     inline const doublereal* end() const noexcept { return begin() + iNumRowsStatic; }
+     doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i); }     
 };
 
 
@@ -231,7 +256,8 @@ extern std::ostream& operator << (std::ostream& out, const Vec6& m);
 extern std::ostream& Write(std::ostream& out, const Vec6& v, const char* sFill = " ");
 
 
-class Mat6x6 {
+class Mat6x6: public sp_grad::SpConstMatElemAdapter<Mat6x6>
+{
  protected:
    Mat3x3 m[2][2];
    
@@ -333,7 +359,7 @@ class Mat6x6 {
       return m[1][1];
    };
    
-   Mat3x3 GetMat(unsigned short int i, unsigned short int j) {
+   Mat3x3 GetMat(integer i, integer j) {
       ASSERT((i == 0 || i == 1) && (j == 0 || j == 1));
       return m[i][j];
    };
@@ -354,8 +380,8 @@ class Mat6x6 {
       return m[1][1];
    };
    
-   inline const Mat3x3& GetMat(unsigned short int i, 
-			       unsigned short int j) const {
+   inline const Mat3x3& GetMat(integer i, 
+			       integer j) const {
       ASSERT((i == 0 || i == 1) && (j == 0 || j == 1));
       return m[i][j];
    };
@@ -377,7 +403,7 @@ class Mat6x6 {
       m[1][1] = x;
    };
    
-   void PutMat(unsigned short int i, unsigned short int j, const Mat3x3& x) {
+   void PutMat(integer i, integer j, const Mat3x3& x) {
       ASSERT((i == 0 || i == 1) && (j == 0 || j == 1));
       m[i][j] = x;
    };
@@ -399,7 +425,7 @@ class Mat6x6 {
       m[1][1] += x;
    };
    
-   void AddMat(unsigned short int i, unsigned short int j, const Mat3x3& x) {
+   void AddMat(integer i, integer j, const Mat3x3& x) {
       ASSERT((i == 0 || i == 1) && (j == 0 || j == 1));
       m[i][j] += x;
    };
@@ -421,7 +447,7 @@ class Mat6x6 {
       m[1][1] -= x;
    };
    
-   void SubMat(unsigned short int i, unsigned short int j, const Mat3x3& x) {
+   void SubMat(integer i, integer j, const Mat3x3& x) {
       ASSERT((i == 0 || i == 1) && (j == 0 || j == 1));
       m[i][j] -= x;
    };
@@ -429,8 +455,8 @@ class Mat6x6 {
    
 
    
-   inline const doublereal* pGetMat(unsigned short int i, 
-				    unsigned short int j) const {
+   inline const doublereal* pGetMat(integer i, 
+				    integer j) const {
       ASSERT((i == 0 || i == 1) && (j == 0 || j == 1));
       return m[i][j].pGetMat();
    };
@@ -442,7 +468,23 @@ class Mat6x6 {
       m[1][1] = x.GetMat22();
       return *this;
    };
-   
+
+     template <typename DERIVED>
+     Mat6x6& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& m) {
+          using namespace sp_grad;
+
+          static_assert(m.iNumRowsStatic == iNumRowsStatic);
+          static_assert(m.iNumColsStatic == iNumColsStatic);
+
+          for (index_type j = 1; j <= iNumColsStatic; ++j) {
+               for (index_type i = 1; i <= iNumRowsStatic; ++i) {
+                    (*this)(i, j) = m.dGetValue(i, j);
+               }
+          }
+          
+          return *this;
+     }
+     
    inline Mat6x6& operator += (const Mat6x6& x) {
       m[0][0] += x.GetMat11();
       m[1][0] += x.GetMat21();
@@ -535,7 +577,7 @@ class Mat6x6 {
 		    m[1][1].Transpose());
    };   
 
-   const doublereal& dGet(unsigned short int ir, unsigned short int ic) const {
+   const doublereal& dGet(integer ir, integer ic) const {
       ASSERT((ir > 0 && ir < 7) && (ic > 0 && ic < 7));
       if (ir < 1 || ir > 6) {
 	 throw ErrRowIndexOutOfRange(ir, 1, 6, MBDYN_EXCEPT_ARGS);
@@ -543,26 +585,26 @@ class Mat6x6 {
       if (ic < 1 || ic > 6) {
 	 throw ErrColIndexOutOfRange(ic, 1, 6, MBDYN_EXCEPT_ARGS);
       }
-      unsigned short int jr = (ir-1)/3;
-      unsigned short int jc = (ic-1)/3;
+      integer jr = (ir-1)/3;
+      integer jc = (ic-1)/3;
       return m[jr][jc].dGet(ir-3*jr, ic-3*jc);
    };      
    
-   const doublereal& operator ()(unsigned short int ir, unsigned short int ic) const {
+   const doublereal& operator ()(integer ir, integer ic) const {
       ASSERT((ir > 0 && ir < 7) && (ic > 0 && ic < 7));
-      unsigned short int jr = (ir - 1)/3;
-      unsigned short int jc = (ic - 1)/3;
+      integer jr = (ir - 1)/3;
+      integer jc = (ic - 1)/3;
       return m[jr][jc](ir - 3*jr, ic - 3*jc);
    };
    
-   doublereal& operator ()(unsigned short int ir, unsigned short int ic) {
+   doublereal& operator ()(integer ir, integer ic) {
       ASSERT((ir > 0 && ir < 7) && (ic > 0 && ic < 7));
-      unsigned short int jr = (ir - 1)/3;
-      unsigned short int jc = (ic - 1)/3;
+      integer jr = (ir - 1)/3;
+      integer jc = (ic - 1)/3;
       return m[jr][jc](ir - 3*jr, ic - 3*jc);
    };
    
-   void Put(unsigned short int ir, unsigned short int ic, const doublereal& d) {
+   void Put(integer ir, integer ic, const doublereal& d) {
       ASSERT((ir > 0 && ir < 7) && (ic > 0 && ic < 7));
       if (ir < 1 || ir > 6) {
 	 throw ErrRowIndexOutOfRange(ir, 1, 6, MBDYN_EXCEPT_ARGS);
@@ -570,8 +612,8 @@ class Mat6x6 {
       if (ic < 1 || ic > 6) {
 	 throw ErrColIndexOutOfRange(ic, 1, 6, MBDYN_EXCEPT_ARGS);
       }
-      unsigned short int jr = (ir-1)/3;
-      unsigned short int jc = (ic-1)/3;
+      integer jr = (ir-1)/3;
+      integer jc = (ic-1)/3;
       m[jr][jc].Put(ir-3*jr, ic-3*jc, d);
    };      
    
@@ -581,6 +623,16 @@ class Mat6x6 {
    std::ostream& Write(std::ostream& out, 
 		  const char* sFill = " ", 
 		  const char* sFill2 = NULL) const;
+
+     static constexpr sp_grad::index_type iNumRowsStatic = 6;
+     static constexpr sp_grad::index_type iNumColsStatic = 6;
+     inline constexpr sp_grad::index_type iGetNumRows() const noexcept { return iNumRowsStatic; }
+     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return iNumColsStatic; }
+     static inline constexpr sp_grad::index_type iGetRowOffset() = delete;
+     static inline constexpr sp_grad::index_type iGetColOffset() = delete;
+     inline constexpr const doublereal* begin() const = delete;
+     inline constexpr const doublereal* end() const = delete;
+     doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i, j); }
 };
 
 extern std::ostream& operator << (std::ostream& out, const Mat6x6& m);

@@ -48,7 +48,7 @@ class GiNaCElasticConstitutiveLaw
 private:
 	unsigned dim;
 
-	std::vector<GiNaC::symbol *> gEps;		/* parameter symbols */
+	std::vector<GiNaC::realsymbol *> gEps;		/* parameter symbols */
 
 	std::vector<GiNaC::ex> gExpr;			/* expressions */
 	std::vector<std::vector<GiNaC::ex> > gExprDEps;	/* derivatives */
@@ -103,7 +103,7 @@ GiNaCElasticConstitutiveLaw<T, Tder>::GiNaCElasticConstitutiveLaw(
 	GiNaC::lst l; 
 
 	for (unsigned row = 0; row < dim; row++) {
-		gEps[row] = new GiNaC::symbol(epsilon[row]);
+		gEps[row] = new GiNaC::realsymbol(epsilon[row]);
 		l.append(*gEps[row]);
 	}
 
@@ -112,8 +112,8 @@ GiNaCElasticConstitutiveLaw<T, Tder>::GiNaCElasticConstitutiveLaw(
 			gExpr[row] = GiNaC::ex(expression[row], l);
 
 		} catch (std::exception& e) {
-			silent_cerr("GiNaCElasticConstitutiveLaw<T, Tder>: expression #" << row << " parsing "
-				"failed: " << e.what() << std::endl);
+			silent_cerr("GiNaCElasticConstitutiveLaw<T, Tder>: expression #" << row << " [0-" << (dim - 1) << "] "
+				"\"" << expression[row] << "\" parsing failed: " << e.what() << std::endl);
 			throw e;
 		}
 
@@ -122,8 +122,9 @@ GiNaCElasticConstitutiveLaw<T, Tder>::GiNaCElasticConstitutiveLaw(
 				gExprDEps[row][col] = gExpr[row].diff(*gEps[col]);
 
 			} catch (std::exception& e) {
-				silent_cerr("GiNaCElasticConstitutiveLaw<T, Tder>: expression #" << row << " differentiation "
-					"wrt/ Eps #" << col << "failed: "
+				silent_cerr("GiNaCElasticConstitutiveLaw<T, Tder>: expression #" << row << " [0-" << (dim - 1) << "] "
+					"\"" << expression[row] << "\" differentiation "
+					"wrt/ Eps #" << col << " [0-" << (dim - 1) << ": " << epsilon[col] << "] failed: "
 					<< e.what() << std::endl);
 				throw e;
 			}
@@ -242,7 +243,7 @@ template <>
 class GiNaCElasticConstitutiveLaw<doublereal, doublereal>
 : public SymbolicElasticConstitutiveLaw<doublereal, doublereal> {
 private:
-	GiNaC::symbol gEps;		/* parameter symbol */
+	GiNaC::realsymbol gEps;		/* parameter symbol */
 
 	GiNaC::ex gExpr;		/* expression */
 	GiNaC::ex gExprDEps;		/* derivative */
@@ -277,7 +278,7 @@ gEps(epsilon[0])
 		gExpr = GiNaC::ex(expression[0], l);
 
 	} catch (std::exception& e) {
-		silent_cerr("GiNaCElasticConstitutiveLaw<doublereal, doublereal>: expression parsing failed: " << e.what() << std::endl);
+		silent_cerr("GiNaCElasticConstitutiveLaw<doublereal, doublereal>: expression \"" << expression[0] << "\" parsing failed: " << e.what() << std::endl);
 		throw e;
 	}
 
@@ -285,7 +286,7 @@ gEps(epsilon[0])
 		gExprDEps = gExpr.diff(gEps);
 
 	} catch (std::exception& e) {
-		silent_cerr("GiNaCElasticConstitutiveLaw<doublereal, doublereal>: expression differentiation wrt/ Eps failed: " << e.what() << std::endl);
+		silent_cerr("GiNaCElasticConstitutiveLaw<doublereal, doublereal>: expression \"" << expression[0] << "\" differentiation wrt/ Eps \"" << epsilon[0] << "\" failed: " << e.what() << std::endl);
 		throw e;
 	}
 
@@ -376,7 +377,7 @@ class GiNaCViscousConstitutiveLaw
 private:
 	unsigned dim;
 
-	std::vector<GiNaC::symbol *> gEpsPrime;			/* parameter symbols */
+	std::vector<GiNaC::realsymbol *> gEpsPrime;		/* parameter symbols */
 
 	std::vector<GiNaC::ex> gExpr;				/* expressions */
 	std::vector<std::vector<GiNaC::ex> > gExprDEpsPrime;	/* derivatives */
@@ -430,7 +431,7 @@ GiNaCViscousConstitutiveLaw<T, Tder>::GiNaCViscousConstitutiveLaw(
 	GiNaC::lst l; 
 
 	for (unsigned row = 0; row < dim; row++) {
-		gEpsPrime[row] = new GiNaC::symbol(epsilonPrime[row]);
+		gEpsPrime[row] = new GiNaC::realsymbol(epsilonPrime[row]);
 		l.append(*gEpsPrime[row]);
 	}
 
@@ -439,8 +440,8 @@ GiNaCViscousConstitutiveLaw<T, Tder>::GiNaCViscousConstitutiveLaw(
 			gExpr[row] = GiNaC::ex(expression[row], l);
 
 		} catch (std::exception& e) {
-			silent_cerr("GiNaCViscousConstitutiveLaw<T, Tder>: expression #" << row << " parsing "
-				"failed: " << e.what() << std::endl);
+			silent_cerr("GiNaCViscousConstitutiveLaw<T, Tder>: expression #" << row << " [0-" << (dim - 1) << "] "
+				"\"" << expression[row] << "\" parsing failed: " << e.what() << std::endl);
 			throw e;
 		}
 
@@ -449,8 +450,9 @@ GiNaCViscousConstitutiveLaw<T, Tder>::GiNaCViscousConstitutiveLaw(
 				gExprDEpsPrime[row][col] = gExpr[row].diff(*gEpsPrime[col]);
 
 			} catch (std::exception& e) {
-				silent_cerr("GiNaCViscousConstitutiveLaw<T, Tder>: expression #" << row << " differentiation "
-					"wrt/ EpsPrime #" << col << " failed: " << e.what()
+				silent_cerr("GiNaCViscousConstitutiveLaw<T, Tder>: expression #" << row << " [0-" << (dim - 1) << "] "
+					"\"" << expression[row] << "\" differentiation "
+					"wrt/ EpsPrime #" << col << " [0-" << (dim - 1) << "] \"" << epsilonPrime[col] << "\" failed: " << e.what()
 					<< std::endl);
 				throw e;
 			}
@@ -564,10 +566,10 @@ template <>
 class GiNaCViscousConstitutiveLaw<doublereal, doublereal>
 : public SymbolicViscousConstitutiveLaw<doublereal, doublereal> {
 private:
-	GiNaC::symbol gEpsPrime;	/* parameter derivative symbol */
+	GiNaC::realsymbol gEpsPrime;	/* parameter derivative symbol */
 
 	GiNaC::ex gExpr;		/* expression */
-	GiNaC::ex gExprDEpsPrime;		/* derivative */
+	GiNaC::ex gExprDEpsPrime;	/* derivative */
 
 public:
 	GiNaCViscousConstitutiveLaw(
@@ -596,14 +598,14 @@ gEpsPrime(epsilonPrime[0])
 	try {
 		gExpr = GiNaC::ex(expression[0], l);
 	} catch (std::exception& e) {
-		silent_cerr("GiNaCViscousConstitutiveLaw<doublereal, doublereal>: expression parsing failed: " << e.what() << std::endl);
+		silent_cerr("GiNaCViscousConstitutiveLaw<doublereal, doublereal>: expression \"" << expression[0] << "\" parsing failed: " << e.what() << std::endl);
 		throw e;
 	}
 
 	try {
 		gExprDEpsPrime = gExpr.diff(gEpsPrime);
 	} catch (std::exception& e) {
-		silent_cerr("GiNaCViscousConstitutiveLaw<doublereal, doublereal>: expression differentiation wrt/ EpsPrime failed: " << e.what() << std::endl);
+		silent_cerr("GiNaCViscousConstitutiveLaw<doublereal, doublereal>: expression \"" << expression[0] << "\" differentiation wrt/ EpsPrime \"" << epsilonPrime[0] << "\" failed: " << e.what() << std::endl);
 		throw e;
 	}
 
@@ -693,8 +695,8 @@ class GiNaCViscoElasticConstitutiveLaw
 private:
 	unsigned dim;
 
-	std::vector<GiNaC::symbol *> gEps;			/* parameter symbols */
-	std::vector<GiNaC::symbol *> gEpsPrime;			/* parameter symbols */
+	std::vector<GiNaC::realsymbol *> gEps;			/* parameter symbols */
+	std::vector<GiNaC::realsymbol *> gEpsPrime;		/* parameter symbols */
 
 	std::vector<GiNaC::ex> gExpr;				/* expressions */
 	std::vector<std::vector<GiNaC::ex> > gExprDEps;		/* derivatives */
@@ -756,9 +758,9 @@ GiNaCViscoElasticConstitutiveLaw<T, Tder>::GiNaCViscoElasticConstitutiveLaw(
 	GiNaC::lst l; 
 
 	for (unsigned row = 0; row < dim; row++) {
-		gEps[row] = new GiNaC::symbol(epsilon[row]);
+		gEps[row] = new GiNaC::realsymbol(epsilon[row]);
 		l.append(*gEps[row]);
-		gEpsPrime[row] = new GiNaC::symbol(epsilonPrime[row]);
+		gEpsPrime[row] = new GiNaC::realsymbol(epsilonPrime[row]);
 		l.append(*gEpsPrime[row]);
 	}
 
@@ -767,8 +769,8 @@ GiNaCViscoElasticConstitutiveLaw<T, Tder>::GiNaCViscoElasticConstitutiveLaw(
 			gExpr[row] = GiNaC::ex(expression[row], l);
 
 		} catch (std::exception& e) {
-			silent_cerr("GiNaCViscoElasticConstitutiveLaw<T, Tder>: expression #" << row << " parsing "
-				"failed: " << e.what() << std::endl);
+			silent_cerr("GiNaCViscoElasticConstitutiveLaw<T, Tder>: expression #" << row << " [0-" << (dim - 1) << "] "
+				"\"" << expression[row] << "\" parsing failed: " << e.what() << std::endl);
 			throw e;
 		}
 
@@ -777,8 +779,9 @@ GiNaCViscoElasticConstitutiveLaw<T, Tder>::GiNaCViscoElasticConstitutiveLaw(
 				gExprDEps[row][col] = gExpr[row].diff(*gEps[col]);
 
 			} catch (std::exception& e) {
-				silent_cerr("GiNaCViscoElasticConstitutiveLaw<T, Tder>: expression #" << row << " differentiation "
-					"wrt/ Eps #" << col << "failed: "
+				silent_cerr("GiNaCViscoElasticConstitutiveLaw<T, Tder>: expression #" << row << " [0-" << (dim - 1) << "] "
+					"\"" << expression[row] << "\" differentiation "
+					"wrt/ Eps #" << col << " [0-" << (dim - 1) << "] \"" << epsilon[col] << "\" failed: "
 					<< e.what() << std::endl);
 				throw e;
 			}
@@ -787,8 +790,9 @@ GiNaCViscoElasticConstitutiveLaw<T, Tder>::GiNaCViscoElasticConstitutiveLaw(
 				gExprDEpsPrime[row][col] = gExpr[row].diff(*gEpsPrime[col]);
 
 			} catch (std::exception& e) {
-				silent_cerr("GiNaCViscoElasticConstitutiveLaw<T, Tder>: expression #" << row << " differentiation "
-					"wrt/ EpsPrime #" << col << "failed: "
+				silent_cerr("GiNaCViscoElasticConstitutiveLaw<T, Tder>: expression #" << row << " [0-" << (dim - 1) << "] "
+					"\"" << expression[row] << "\" differentiation "
+					"wrt/ EpsPrime #" << col << " [0-" << (dim - 1) << "] \"" << epsilonPrime[col] << "\" failed: "
 					<< e.what() << std::endl);
 				throw e;
 			}
@@ -931,12 +935,12 @@ template <>
 class GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>
 : public SymbolicViscoElasticConstitutiveLaw<doublereal, doublereal> {
 private:
-	GiNaC::symbol gEps;		/* parameter symbol */
-	GiNaC::symbol gEpsPrime;	/* parameter derivative symbol */
+	GiNaC::realsymbol gEps;		/* parameter symbol */
+	GiNaC::realsymbol gEpsPrime;	/* parameter derivative symbol */
 
 	GiNaC::ex gExpr;		/* expression */
 	GiNaC::ex gExprDEps;		/* derivative */
-	GiNaC::ex gExprDEpsPrime;		/* derivative */
+	GiNaC::ex gExprDEpsPrime;	/* derivative */
 
 public:
 	GiNaCViscoElasticConstitutiveLaw(
@@ -971,21 +975,21 @@ gEps(epsilon[0]), gEpsPrime(epsilonPrime[0])
 	try {
 		gExpr = GiNaC::ex(expression[0], l);
 	} catch (std::exception& e) {
-		silent_cerr("GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>: expression parsing failed: " << e.what() << std::endl);
+		silent_cerr("GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>: expression \"" << expression[0] << "\" parsing failed: " << e.what() << std::endl);
 		throw e;
 	}
 
 	try {
 		gExprDEps = gExpr.diff(gEps);
 	} catch (std::exception& e) {
-		silent_cerr("GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>: expression differentiation wrt/ Eps failed: " << e.what() << std::endl);
+		silent_cerr("GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>: expression \"" << expression[0] << "\" differentiation wrt/ Eps \"" << epsilon[0] << "\" failed: " << e.what() << std::endl);
 		throw e;
 	}
 
 	try {
 		gExprDEpsPrime = gExpr.diff(gEpsPrime);
 	} catch (std::exception& e) {
-		silent_cerr("GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>: expression differentiation wrt/ EpsPrime failed: " << e.what() << std::endl);
+		silent_cerr("GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>: expression \"" << expression[0] << "\" differentiation wrt/ EpsPrime \"" << epsilonPrime[0] << "\" failed: " << e.what() << std::endl);
 		throw e;
 	}
 

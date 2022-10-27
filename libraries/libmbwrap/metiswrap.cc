@@ -1,4 +1,4 @@
-/* $Header$ */
+/* $Header: /var/cvs/mbdyn/mbdyn/mbdyn-1.0/libraries/libmbwrap/metiswrap.cc,v 1.24 2017/01/12 14:44:25 masarati Exp $ */
 /* 
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
@@ -36,6 +36,13 @@
 #undef ASSERT /* kill annoying redefiniton message */
 #include "mynewmem.h"
 
+#ifdef NEW_METIS_INTERFACE
+#define metis_idx_type idx_t
+#else
+#define metis_idx_type idxtype
+#endif
+
+
 int
 mbdyn_METIS_PartGraph(int iTotVertices,
 		int *pXadj,
@@ -49,6 +56,8 @@ mbdyn_METIS_PartGraph(int iTotVertices,
 	/* required by METIS_PartGraphVKway API, but otherwise ignored */
 	/* 0: C-style numbering [0..n-1]; 1: F77-style numbering (1..n) */
 	int	numflag = 0;
+		// silence "set but not used warning if METIS_PartGraphVKway is not used
+		(void)numflag; 
 	/* if options[0] == 0, the rest is ignored */
 	int	options[5] = { 0 };
 	/* total communication volume */
@@ -56,13 +65,13 @@ mbdyn_METIS_PartGraph(int iTotVertices,
 	/* weiht flags */
 	int	wgtflag;
 
-	idxtype	*xadj = 0,
+	metis_idx_type	*xadj = 0,
 		*adjncy = 0,
 		*vwgt = 0,
 		*adjwgt = 0,
 		*part = 0;
 
-	if (sizeof(idxtype) == sizeof(int)) {
+	if (sizeof(metis_idx_type) == sizeof(int)) {
 		xadj = pXadj;
 		adjncy = pAdjncy;
 		vwgt = pVertexWgts;
@@ -70,15 +79,15 @@ mbdyn_METIS_PartGraph(int iTotVertices,
 		part = pParAmgProcs;
 
 	} else {
-		SAFENEWARR(xadj, idxtype, iTotVertices);
-		SAFENEWARR(adjncy, idxtype, pXadj[iTotVertices]);
+		SAFENEWARR(xadj, metis_idx_type, iTotVertices);
+		SAFENEWARR(adjncy, metis_idx_type, pXadj[iTotVertices]);
 		if (pVertexWgts) {
-			SAFENEWARR(vwgt, idxtype, iTotVertices);
+			SAFENEWARR(vwgt, metis_idx_type, iTotVertices);
 		}
 		if (pCommWgts) {
-			SAFENEWARR(adjwgt, idxtype, pXadj[iTotVertices]);
+			SAFENEWARR(adjwgt, metis_idx_type, pXadj[iTotVertices]);
 		}
-		SAFENEWARR(part, idxtype, iTotVertices);
+		SAFENEWARR(part, metis_idx_type, iTotVertices);
 
 		for (int i = 0; i < iTotVertices; i++) {
 			xadj[i] = pXadj[i];
@@ -109,23 +118,42 @@ mbdyn_METIS_PartGraph(int iTotVertices,
 	} else if (pCommWgts) {
 		wgtflag = 1;
 	} else {
+#ifdef NEW_METIS_INTERFACE
+		wgtflag = 1;
+#else
 		wgtflag = 0;
+#endif
 	}
 
-	METIS_PartGraphVKway(&iTotVertices,
-			xadj,
+#ifdef NEW_METIS_INTERFACE
+	METIS_PartGraphKway(&iTotVertices,
+			&wgtflag,
+                        xadj,
+			adjncy,
+			vwgt,
+                        NULL,
+			adjwgt,
+			&DataCommSize,
+                        NULL,
+                        NULL,
+			options,
+			&volume,
+			part);
+#else
+	METIS_PartGraphKway(&iTotVertices,
+                        xadj,
 			adjncy,
 			vwgt,
 			adjwgt,
-			&wgtflag,
+			&wgtflag
 			&numflag,
 			&DataCommSize,
 			options,
 			&volume,
 			part);
+#endif
 
-
-	if (sizeof(idxtype) != sizeof(int)) {
+	if (sizeof(metis_idx_type) != sizeof(int)) {
 		for (int i = 0; i < iTotVertices; i++) {
 			pParAmgProcs[i] = part[i];
 		}

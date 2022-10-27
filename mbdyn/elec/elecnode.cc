@@ -43,9 +43,10 @@ ElectricNode::ElectricNode(unsigned int uL,
 	doublereal dx,
 	doublereal dxp,
 	flag fOut)
-: ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
+     :ScalarNode(uL, pDO, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
 {
-	NO_OP;
+     NO_OP;
 }
 
   /* Distruttore (per ora e' banale) */
@@ -61,5 +62,32 @@ ElectricNode::GetNodeType(void) const
 	return Node::ELECTRIC;
 }
 
+const OutputHandler::Dimensions 
+ElectricNode::GetEquationDimension(integer index) const {
+   // DOF == 1
+   OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Current;
+			break;
+	}
+
+	return dimension;
+}
+
+std::ostream&
+ElectricNode::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": " <<
+			"electric current balance" << std::endl;
+
+	return out;
+}
 /* ElectricNode - end */
 

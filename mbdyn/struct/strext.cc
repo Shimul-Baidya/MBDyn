@@ -34,12 +34,16 @@
 #include "dataman.h"
 #include "extedge.h"
 #include "strext.h"
+#include "extsocket.h"
 #include "stredge.h"
+#include "extedge.h"
 #include "Rot.hh"
 
 #include <fstream>
 #include <cerrno>
 #include <algorithm>
+
+#include "sock.h"
 
 /* StructExtForce - begin */
 
@@ -138,24 +142,27 @@ iobuf_m(0)
 		}
 	}
 
-	unsigned node_kinematics_size = 0;
-	unsigned labels_size = 0;
+	// node_kinematics_size is number of doubles required
+	// for position, velocity, rotations and accelerations
+	node_kinematics_size = 0;
+	node_kinematics_nbytes = 0;
+	labels_size = 0;
 
 	// I/O will use filedes
 	if (!pEFH->GetOutStream()) {
-		node_kinematics_size = 3 + 3;
+		node_kinematics_size = 3 + 3; // position and velocity
 
 		switch (uRot) {
 		case MBC_ROT_NONE:
 			break;
 
 		case MBC_ROT_MAT:
-			node_kinematics_size += 9 + 3;
+			node_kinematics_size += 9 + 3; // full orientation matrix plus 3 angular velocities
 			break;
 
 		case MBC_ROT_THETA:
 		case MBC_ROT_EULER_123:
-			node_kinematics_size += 3 + 3;
+			node_kinematics_size += 3 + 3; // 3 orientation values plus 3 angular velocities
 			break;
 
 		default:
@@ -163,32 +170,43 @@ iobuf_m(0)
 		}
 
 		if (bOutputAccelerations) {
-			node_kinematics_size += 3;
+			node_kinematics_size += 3; // cartesian accelerations
 			if (uRot != MBC_ROT_NONE) {
-				node_kinematics_size += 3;
+				node_kinematics_size += 3; // angular accelerations
 			}
 		}
 
-		node_kinematics_size *= sizeof(doublereal);
+		// multiply by number of bytes in one value as everything is
+		// converted to a set of chars before transmission
+		node_kinematics_size *= m_Points.size();
 
+		// now the forces
 		dynamics_size = 3;
 		if (uRot != MBC_ROT_NONE) {
 			dynamics_size += 3;
 		}
 
-		dynamics_size *= sizeof(doublereal);
+		dynamics_size *= m_Points.size();
 
+		// labels
 		if (bLabels) {
-			labels_size = sizeof(uint32_t)*(m_Points.size() + m_Points.size()%2);
+			labels_size = m_Points.size() + m_Points.size()%2;
+			labels_nbytes = sizeof(uint32_t) * labels_size;
+		} else {
+			labels_size = 0;
+			labels_nbytes = 0;
 		}
 
-		iobuf.resize(node_kinematics_size*m_Points.size() + labels_size);
-		dynamics_size = dynamics_size*m_Points.size() + labels_size;
+		// all data is transmitted as a string of chars first put in
+		// a vector, iobuf
+		node_kinematics_nbytes = node_kinematics_size * sizeof(doublereal);
+		iobuf.resize(node_kinematics_nbytes + labels_nbytes);
+		dynamics_nbytes = dynamics_size * sizeof(doublereal) + labels_nbytes;
 
 		char *ptr = &iobuf[0];
 		if (bLabels) {
 			iobuf_labels = (uint32_t *)ptr;
-			ptr += labels_size;
+			ptr += labels_nbytes;
 		}
 
 		iobuf_x = (doublereal *)ptr;
@@ -296,12 +314,13 @@ StructExtForce::Prepare(ExtFileHandlerBase *pEFH)
 
 			uint32_ptr[1] = m_Points.size();
 
-			ssize_t rc = send(pEFH->GetOutFileDes(),
-				(const void *)buf, sizeof(buf),
+			ssize_t rc = sendn(pEFH->GetOutFileDes(),
+				(const char *)buf, sizeof(buf),
 				pEFH->GetSendFlags());
-			if (rc == -1) {
-				int save_errno = errno;
-				char *err_msg = strerror(save_errno);
+
+			if (rc == SOCKET_ERROR) {
+				int save_errno = WSAGetLastError();
+				char *err_msg = sock_err_string(save_errno);
 				silent_cerr("StructExtForce(" << GetLabel() << "): "
 					"negotiation request send() failed "
 					"(" << save_errno << ": " << err_msg << ")"
@@ -320,12 +339,12 @@ StructExtForce::Prepare(ExtFileHandlerBase *pEFH)
 		} break;
 
 	case ExtFileHandlerBase::NEGOTIATE_SERVER: {
-		unsigned uN;
-		unsigned uNodal;
-		bool bRef;
-		unsigned uR;
-		bool bA;
-		bool bL;
+		unsigned uN = 0;
+		unsigned uNodal = 0;
+		bool bRef = false;
+		unsigned uR = 0;
+		bool bA = false;
+		bool bL = false;
 
 		std::istream *infp = pEFH->GetInStream();
 		if (infp) {
@@ -336,12 +355,12 @@ StructExtForce::Prepare(ExtFileHandlerBase *pEFH)
 			char buf[sizeof(uint32_t) + sizeof(uint32_t)];
 			uint32_t *uint32_ptr;
 
-			ssize_t rc = recv(pEFH->GetInFileDes(),
-				(void *)buf, sizeof(buf),
+			ssize_t rc = recvn(pEFH->GetInFileDes(),
+				(char *)buf, sizeof(buf),
 				pEFH->GetRecvFlags());
-			if (rc == -1) {
-				int save_errno = errno;
-				char *err_msg = strerror(save_errno);
+			if (rc == SOCKET_ERROR) {
+				int save_errno = WSAGetLastError();
+				char *err_msg = sock_err_string(save_errno);
 				silent_cerr("StructExtForce(" << GetLabel() << "): "
 					"negotiation response recv() failed "
 					"(" << save_errno << ": " << err_msg << ")"
@@ -364,60 +383,75 @@ StructExtForce::Prepare(ExtFileHandlerBase *pEFH)
 			bA = (uint32_ptr[0] & MBC_ACCELS);
 
 			uN = uint32_ptr[1];
+
+			pedantic_cout("uNodal: " << uNodal << ", bRef: " << bRef << ", uR: " << uR << ", bL: " << bL << ", bA: " << bA << ", uN: " << uN << std::endl);
 #endif // USE_SOCKET
 		}
 
-		if (uNodal != MBC_NODAL) {
-			silent_cerr("StructExtForce(" << GetLabel() << "): "
-				"negotiation response failed: expecting MBC_NODAL "
-				"(=" << MBC_NODAL << "), got " << uNodal
-				<< std::endl);
-			bResult = false;
-		}
+		// check the settings on the remote
+		bResult = CheckProblemsMatch (uNodal, bRef, uR, bL, bA, uN);
 
-		if ((pRefNode != 0 && !bRef) || (pRefNode == 0 && bRef)) {
-			silent_cerr("StructExtForce(" << GetLabel() << "): "
-				"negotiation response failed: reference node configuration mismatch "
-				"(local=" << (pRefNode != 0 ? "yes" : "no") << ", remote=" << (bRef ? "yes" : "no") << ")"
-				<< std::endl);
-			bResult = false;
-		}
-
-		if (uR != uRot) {
-			silent_cerr("StructExtForce(" << GetLabel() << "): "
-				"negotiation response failed: orientation output mismatch "
-				"(local=" << uRot  << ", remote=" << uR << ")"
-				<< std::endl);
-			bResult = false;
-		}
-
-		if (bL != bLabels) {
-			silent_cerr("StructExtForce(" << GetLabel() << "): "
-				"negotiation response failed: labels output mismatch "
-				"(local=" << (bLabels ? "yes" : "no") << ", remote=" << (bL ? "yes" : "no") << ")"
-				<< std::endl);
-			bResult = false;
-		}
-
-		if (bA != bOutputAccelerations) {
-			silent_cerr("StructExtForce(" << GetLabel() << "): "
-				"negotiation response failed: acceleration output mismatch "
-				"(local=" << (bOutputAccelerations ? "yes" : "no") << ", remote=" << (bA ? "yes" : "no") << ")"
-				<< std::endl);
-			bResult = false;
-		}
-
-		if (uN != m_Points.size()) {
-			silent_cerr("StructExtForce(" << GetLabel() << "): "
-				"negotiation response failed: node number mismatch "
-				"(local=" << m_Points.size() << ", remote=" << uN << ")"
-				<< std::endl);
-			bResult = false;
-		}
 		} break;
 
 	default:
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	return bResult;
+}
+
+bool
+StructExtForce::CheckProblemsMatch (unsigned  uNodal, bool bRef, unsigned  uR, bool bL, bool bA, unsigned uN)
+{
+
+	bool bResult = true;
+
+	if (uNodal != MBC_NODAL) {
+		silent_cerr("StructExtForce(" << GetLabel() << "): "
+			"negotiation response failed: expecting MBC_NODAL "
+			"(=" << MBC_NODAL << "), got " << uNodal
+			<< std::endl);
+		bResult = false;
+	}
+
+	if ((pRefNode != 0 && !bRef) || (pRefNode == 0 && bRef)) {
+		silent_cerr("StructExtForce(" << GetLabel() << "): "
+			"negotiation response failed: reference node configuration mismatch "
+			"(local=" << (pRefNode != 0 ? "yes" : "no") << ", remote=" << (bRef ? "yes" : "no") << ")"
+			<< std::endl);
+		bResult = false;
+	}
+
+	if (uR != uRot) {
+		silent_cerr("StructExtForce(" << GetLabel() << "): "
+			"negotiation response failed: orientation output mismatch "
+			"(local=" << uRot  << ", remote=" << uR << ")"
+			<< std::endl);
+		bResult = false;
+	}
+
+	if (bL != bLabels) {
+		silent_cerr("StructExtForce(" << GetLabel() << "): "
+			"negotiation response failed: labels output mismatch "
+			"(local=" << (bLabels ? "yes" : "no") << ", remote=" << (bL ? "yes" : "no") << ")"
+			<< std::endl);
+		bResult = false;
+	}
+
+	if (bA != bOutputAccelerations) {
+		silent_cerr("StructExtForce(" << GetLabel() << "): "
+			"negotiation response failed: acceleration output mismatch "
+			"(local=" << (bOutputAccelerations ? "yes" : "no") << ", remote=" << (bA ? "yes" : "no") << ")"
+			<< std::endl);
+		bResult = false;
+	}
+
+	if (uN != m_Points.size()) {
+		silent_cerr("StructExtForce(" << GetLabel() << "): "
+			"negotiation response failed: node number mismatch "
+			"(local=" << m_Points.size() << ", remote=" << uN << ")"
+			<< std::endl);
+		bResult = false;
 	}
 
 	return bResult;
@@ -429,12 +463,28 @@ StructExtForce::Prepare(ExtFileHandlerBase *pEFH)
 void
 StructExtForce::Send(ExtFileHandlerBase *pEFH, ExtFileHandlerBase::SendWhen when)
 {
+    pedantic_cout("StructExtForce:in Send" << std::endl);
+
+	switch (pEFH->GetType())
+	{
+	case ExtFileHandlerBase::TYPE_FILE:
+	case ExtFileHandlerBase::TYPE_EDGE:
+	case ExtFileHandlerBase::TYPE_SOCKET: {
+
 	std::ostream *outfp = pEFH->GetOutStream();
 	if (outfp) {
 		SendToStream(*outfp, when);
 
 	} else {
 		SendToFileDes(pEFH->GetOutFileDes(), when);
+	}
+
+		break;
+    }
+    default:
+
+        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+
 	}
 }
 
@@ -501,7 +551,7 @@ StructExtForce::SendToStream(std::ostream& outf, ExtFileHandlerBase::SendWhen wh
 
 		outf << "# regular nodes" << std::endl;
 
-		for (std::vector<PointData>::const_iterator point = m_Points.begin(); point != m_Points.end(); ++point) {
+		for (std::vector<PointData>::const_iterator point = m_Points.cbegin(); point != m_Points.cend(); ++point) {
 			Vec3 f(point->pNode->GetRCurr()*point->Offset);
 			Vec3 x(point->pNode->GetXCurr() + f);
 			Vec3 Dx(x - xRef);
@@ -568,7 +618,7 @@ StructExtForce::SendToStream(std::ostream& outf, ExtFileHandlerBase::SendWhen wh
 	} else {
 		outf << "# regular nodes" << std::endl;
 
-		for (std::vector<PointData>::const_iterator point = m_Points.begin(); point != m_Points.end(); ++point) {
+		for (std::vector<PointData>::const_iterator point = m_Points.cbegin(); point != m_Points.cend(); ++point) {
 			/*
 				p = x + f
 				R = R
@@ -640,6 +690,11 @@ StructExtForce::SendToStream(std::ostream& outf, ExtFileHandlerBase::SendWhen wh
 	}
 }
 
+/* TODO: code assumes socket and file descriptors are both ints, but on
+   windows a socket should have SOCKET type. At the moment casting a
+   socket to an int works but it is dangerous and should not really be
+   done. See more at:
+   https://stackoverflow.com/questions/1953639/is-it-safe-to-cast-socket-to-int-under-win64 */
 void
 StructExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::SendWhen when)
 {
@@ -656,36 +711,36 @@ StructExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::SendWhen when)
 			uint32_t l[2];
 			l[0] = pRefNode->GetLabel();
 			l[1] = 0;
-         		send(outfd, (void *)&l[0], sizeof(l), 0);
+			sendn(outfd, (const char *)&l[0], sizeof(l), 0);
 		}
 
-		send(outfd, (void *)xRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)xRef.pGetVec(), 3*sizeof(doublereal), 0);
 		switch (uRot) {
 		case MBC_ROT_NONE:
 			break;
 
 		case MBC_ROT_MAT:
-			send(outfd, (void *)RRef.pGetMat(), 9*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)RRef.pGetMat(), 9*sizeof(doublereal), 0);
 			break;
 
 		case MBC_ROT_THETA: {
 			Vec3 Theta(RotManip::VecRot(RRef));
-			send(outfd, (void *)Theta.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)Theta.pGetVec(), 3*sizeof(doublereal), 0);
 			} break;
 
 		case MBC_ROT_EULER_123: {
 			Vec3 E(MatR2EulerAngles123(RRef)*dRaDegr);
-			send(outfd, (void *)E.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)E.pGetVec(), 3*sizeof(doublereal), 0);
 			} break;
 		}
-		send(outfd, (void *)xpRef.pGetVec(), 3*sizeof(doublereal), 0);
+		sendn(outfd, (const char *)xpRef.pGetVec(), 3*sizeof(doublereal), 0);
 		if (uRot != MBC_ROT_NONE) {
-			send(outfd, (void *)wRef.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)wRef.pGetVec(), 3*sizeof(doublereal), 0);
 		}
 		if (bOutputAccelerations) {
-			send(outfd, (void *)xppRef.pGetVec(), 3*sizeof(doublereal), 0);
+			sendn(outfd, (const char *)xppRef.pGetVec(), 3*sizeof(doublereal), 0);
 			if (uRot != MBC_ROT_NONE) {
-				send(outfd, (void *)wpRef.pGetVec(), 3*sizeof(doublereal), 0);
+				sendn(outfd, (const char *)wpRef.pGetVec(), 3*sizeof(doublereal), 0);
 			}
 		}
 
@@ -811,7 +866,7 @@ StructExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::SendWhen when)
 		}
 	}
 
-	send(outfd, &iobuf[0], iobuf.size(), 0);
+	sendn(outfd, &iobuf[0], iobuf.size(), 0);
 #else // ! USE_SOCKET
 	throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 #endif // ! USE_SOCKET
@@ -820,12 +875,28 @@ StructExtForce::SendToFileDes(int outfd, ExtFileHandlerBase::SendWhen when)
 void
 StructExtForce::Recv(ExtFileHandlerBase *pEFH)
 {
-	std::istream *infp = pEFH->GetInStream();
-	if (infp) {
-		RecvFromStream(*infp);
 
-	} else {
-		RecvFromFileDes(pEFH->GetInFileDes());
+	switch (pEFH->GetType())
+	{
+	case ExtFileHandlerBase::TYPE_FILE:
+	case ExtFileHandlerBase::TYPE_EDGE:
+	case ExtFileHandlerBase::TYPE_SOCKET: {
+
+		std::istream *infp = pEFH->GetInStream();
+
+        	if (infp) {
+        	    RecvFromStream(*infp);
+
+        	} else {
+        	    RecvFromFileDes(pEFH->GetInFileDes());
+        	}
+
+        }
+        	break;
+	default:
+
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+
 	}
 }
 
@@ -979,9 +1050,9 @@ StructExtForce::RecvFromFileDes(int infd)
 			ulen += 3*sizeof(doublereal);
 		}
 
-		len = recv(infd, (void *)buf, ulen, 0);
+		len = recvn(infd, (char *)buf, ulen, 0);
 		if (len == -1) {
-			int save_errno = errno;
+			int save_errno = WSAGetLastError();
 			char *err_msg = strerror(save_errno);
 			silent_cerr("StructExtForce(" << GetLabel() << "): "
 				"recv() failed (" << save_errno << ": "
@@ -1017,19 +1088,19 @@ StructExtForce::RecvFromFileDes(int infd)
 		}
 	}
 
-	ssize_t len = recv(infd, (void *)&iobuf[0], dynamics_size, 0);
+	ssize_t len = recvn(infd, (char *)&iobuf[0], dynamics_nbytes, 0);
 	if (len == -1) {
-		int save_errno = errno;
+		int save_errno = WSAGetLastError();
 		char *err_msg = strerror(save_errno);
 		silent_cerr("StructExtForce(" << GetLabel() << "): "
 			"recv() failed (" << save_errno << ": "
 			<< err_msg << ")" << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 
-	} else if (unsigned(len) != dynamics_size) {
+	} else if (unsigned(len) != dynamics_nbytes) {
 		silent_cerr("StructExtForce(" << GetLabel() << "): "
 			"recv() failed " "(got " << len << " of "
-			<< dynamics_size << " bytes)" << std::endl);
+			<< dynamics_nbytes << " bytes)" << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
 
@@ -1045,13 +1116,13 @@ StructExtForce::RecvFromFileDes(int infd)
 
 			unsigned l = iobuf_labels[cnt];
 			std::vector<PointData>::const_iterator p;
-			for (p = m_Points.begin(); p != m_Points.end(); ++p) {
+			for (p = m_Points.cbegin(); p != m_Points.cend(); ++p) {
 				if (p->uLabel == l) {
 					break;
 				}
 			}
 
-			if (p == m_Points.end()) {
+			if (p == m_Points.cend()) {
 				silent_cerr("StructExtForce"
 					"(" << GetLabel() << "): "
 					"unknown label " << l

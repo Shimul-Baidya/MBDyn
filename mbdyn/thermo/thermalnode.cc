@@ -35,7 +35,7 @@
 #include "solman.h"
 
 
-/* ThermalNode - begin */
+/* ThermalNode - begin */ 
 
 /* Costruttore */
 ThermalNode::ThermalNode(unsigned int uL,
@@ -43,7 +43,9 @@ ThermalNode::ThermalNode(unsigned int uL,
 	doublereal dx,
 	doublereal dxp,
 	flag fOut)
-: ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
+     :ScalarNode(uL, pDO, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
+
 {
 	NO_OP;
 }
@@ -66,6 +68,34 @@ void
 ThermalNode::Output(OutputHandler& OH) const
 {
 	ScalarDifferentialNode::Output(OH.Get(OutputHandler::THERMALNODES));
+}
+
+const OutputHandler::Dimensions 
+ThermalNode::GetEquationDimension(integer index) const {
+
+		OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+		switch (index)
+		{
+		case 1:
+			dimension = OutputHandler::Dimensions::Power;
+			break;
+		}
+
+		return dimension;
+}
+
+std::ostream&
+ThermalNode::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+{
+
+	integer iIndex = iGetFirstIndex();
+
+	out
+		<< prefix << iIndex + 1 << ": "
+			"heat flux balance" << std::endl;
+
+	return out;
 }
 
 /* ThermalNode - end */

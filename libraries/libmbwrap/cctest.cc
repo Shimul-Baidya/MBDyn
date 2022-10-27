@@ -43,7 +43,6 @@
 #include "dirccmh.h"
 #include "y12wrap.h"
 #include "harwrap.h"
-#include "mschwrap.h"
 #include "umfpackwrap.h"
 #include "parsuperluwrap.h"
 #include "superluwrap.h"
@@ -229,7 +228,7 @@ retry:;
 		pV->operator()(2) = b2;
 		pV->operator()(3) = b3;
 
-	} catch (MatrixHandler::ErrRebuildMatrix) {
+	} catch (MatrixHandler::ErrRebuildMatrix& e) {
 		std::cerr << "need to rebuild matrix..." << std::endl;
 		pSM->MatrInitialize();
 		goto retry;
@@ -280,6 +279,11 @@ retry:;
 		return 0;
 	}
 
-	goto retry;
+ 	goto retry;
+
+
+        SAFEDELETE(pSM);
+
+        return 0;
 }
 

@@ -162,6 +162,8 @@ public:
 	typedef std::map<unsigned, const ReferenceFrame *> RFType;
 	const RFType& GetReferenceFrameContainer(void) const;
 
+	void GetRefByLabel(ReferenceFrame& rf);
+
 protected:
 	RFType RF;
 
@@ -307,6 +309,8 @@ public:
 
 public:
 	virtual void GetMat6xN(Mat3xN& m1, Mat3xN& m2, integer iNumCols);
+	virtual void GetMatNx6(MatNx3& m1, MatNx3& m2, integer iNumRows);
+	virtual void GetMatNxN(MatNxN& m, integer iNumRows);
 
 	/*
 	 * Lettura di posizioni, vettori e matrici di rotazione
@@ -403,6 +407,7 @@ public:
 	ConstitutiveLaw3D* GetConstLaw3D(ConstLawType::Type& clt);
 	ConstitutiveLaw6D* GetConstLaw6D(ConstLawType::Type& clt);
 	const DriveCaller* GetDrive(unsigned uLabel) const;
+	void SetDrive(unsigned uLabel, const DriveCaller *pDC);
 
 	DriveCaller* GetDriveCaller(bool bDeferred = false);
 	template <class T> const TplDriveCaller<T> *GetTplDrive(unsigned uLabel) const;

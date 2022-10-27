@@ -62,12 +62,6 @@ PlaneHingeJoint::PlaneHingeJoint(unsigned int uL, const DofOwner* pDO,
 Joint(uL, pDO, fOut), 
 pNode1(pN1), pNode2(pN2),
 d1(dTmp1), R1h(R1hTmp), d2(dTmp2), R2h(R2hTmp), F(Zero3), M(Zero3),
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars... TODO: try to remove
-Var_Phi(0),
-Var_Omega(0),
-//Var_MFR(0),
-//Var_MU(0),
-#endif // USE_NETCDFC
 calcInitdTheta(_calcInitdTheta), NTheta(0), dTheta(initDTheta), dThetaWrapped(initDTheta),
 Sh_c(sh), fc(f), preF(pref), r(rr),
 od(od)
@@ -837,6 +831,9 @@ SubVectorHandler& PlaneHingeJoint::AssRes(SubVectorHandler& WorkVec,
    /* Indici del vincolo */
    for (unsigned int iCnt = 1; iCnt <= iGetNumDof(); iCnt++) {
       WorkVec.PutRowIndex(12+iCnt, iFirstReactionIndex+iCnt);
+
+       /* initial testing for get equation dimension  */
+      GetEquationDimension(iCnt);
    }
 
    /* Aggiorna i dati propri */
@@ -896,7 +893,7 @@ SubVectorHandler& PlaneHingeJoint::AssRes(SubVectorHandler& WorkVec,
       try {
           fc->AssRes(WorkVec,12+NumSelfDof,iFirstReactionIndex+NumSelfDof,modF,v,XCurr,XPrimeCurr);
       }
-      catch (Elem::ChangedEquationStructure) {
+      catch (Elem::ChangedEquationStructure& err) {
           ChangeJac = true;
       }
       doublereal f = fc->fc();
@@ -956,16 +953,19 @@ PlaneHingeJoint::OutputPrepare(OutputHandler& OH)
 
 			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega", "radian/s",
+			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 
-/* TODO
-			Var_MFR = OH.CreateVar<doublereal>(name + "MFR", "Nm",
-				"friciton moment ");
+			if (fc) {
+				Var_MFR = OH.CreateVar<doublereal>(name + "MFR",
+						OutputHandler::Dimensions::Moment,
+						"friciton moment ");
 
-			Var_MU = OH.CreateVar<doublereal>(name + "MU", "--",
-					"friction model specific data: friction coefficient?");
-*/
+				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+						OutputHandler::Dimensions::Dimensionless,
+						"friction model specific data: friction coefficient");
+			}
 		}
 #endif // USE_NETCDF
 	}
@@ -1006,22 +1006,17 @@ void PlaneHingeJoint::Output(OutputHandler& OH) const
 
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec((R2Tmp.MulTV(F)).pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec(M.pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec(F.pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec((R2Tmp*M).pGetVec(), OH.GetCurrentStep());
-
+			Joint::NetCDFOutput(OH, R2Tmp.MulTV(F), M, F, R2Tmp*M);
 			switch (od) {
 			case EULER_123:
 			case EULER_313:
 			case EULER_321:
 			case ORIENTATION_VECTOR:
-				Var_Phi->put_rec(E.pGetVec(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, E);
 				break;
 
 			case ORIENTATION_MATRIX:
-				Var_Phi->put_rec(RTmp.pGetMat(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, RTmp);
 				break;
 
 			default:
@@ -1029,21 +1024,12 @@ void PlaneHingeJoint::Output(OutputHandler& OH) const
 				break;
 			}
 
-			Var_Omega->put_rec(OmegaTmp.pGetVec(), OH.GetCurrentStep());
-/*
+			OH.WriteNcVar(Var_Omega, OmegaTmp);
+
 			if (fc) {
-					Var_MFR->put_rec(&M3, OH.GetCurrentStep());
-					Var_MU->put_rec(fc->fc(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_MFR, M3);
+				OH.WriteNcVar(Var_fc, fc->fc());
 			}
-			else
-			{
-				Var_MFR->put_rec(0, OH.GetCurrentStep());
-				Var_MU->put_rec(0, OH.GetCurrentStep());
-			}
-*/
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
 		}
 #endif // USE_NETCDF
 		if (OH.UseText(OutputHandler::JOINTS)) {
@@ -1528,6 +1514,40 @@ doublereal PlaneHingeJoint::dGetPrivData(unsigned int i) const
    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 }
 
+const OutputHandler::Dimensions
+PlaneHingeJoint::GetEquationDimension(integer index) const {
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+         break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+         break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Length;
+         break;
+		case 4:
+			dimension = OutputHandler::Dimensions::rad;
+         break;
+		case 5:
+			dimension = OutputHandler::Dimensions::rad;
+         break;
+	}
+
+	if (fc) {
+      index -= NumSelfDof;
+		integer iFCDofs = fc->iGetNumDof();
+		if (iFCDofs > 0) {
+			/* TODO */
+         /* not sure how to handle this part currently */
+		}
+	}
+
+	return dimension;
+}
 /* PlaneHingeJoint - end */
 
 
@@ -1545,12 +1565,6 @@ pNode1(pN1), pNode2(pN2),
 R1h(R1hTmp), R2h(R2hTmp), M(Zero3),
 NTheta(0), dTheta(0.),
 dThetaWrapped(0.),
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars...
-Var_Phi(0),
-Var_Omega(0),
-//Var_MFR(0),
-//Var_MU(0),
-#endif // USE_NETCDFC
 od(od)
 {
    NO_OP;
@@ -2036,9 +2050,11 @@ PlaneRotationJoint::OutputPrepare(OutputHandler& OH)
 			std::string name;
 			OutputPrepare_int("revolute rotation", OH, name);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
+			Var_Phi = OH.CreateRotationVar(name, "", od, 
+				"relative orientation");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega", "radian/s",
+			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}
 #endif // USE_NETCDF
@@ -2080,21 +2096,17 @@ void PlaneRotationJoint::Output(OutputHandler& OH) const
       
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec(M.pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec(Zero3.pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec((R2Tmp*M).pGetVec(), OH.GetCurrentStep());
+			Joint::NetCDFOutput(OH, Zero3, M, Zero3, R2Tmp*M);
 			switch (od) {
 			case EULER_123:
 			case EULER_313:
 			case EULER_321:
 			case ORIENTATION_VECTOR:
-				Var_Phi->put_rec(E.pGetVec(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, E);
 				break;
 
 			case ORIENTATION_MATRIX:
-				Var_Phi->put_rec(RTmp.pGetMat(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, RTmp);
 				break;
 
 			default:
@@ -2102,10 +2114,7 @@ void PlaneRotationJoint::Output(OutputHandler& OH) const
 				break;
 			}
 
-			Var_Omega->put_rec(OmegaTmp.pGetVec(), OH.GetCurrentStep());
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
+			OH.WriteNcVar(Var_Omega, OmegaTmp);
 		}
 #endif // USE_NETCDF
 		if (OH.UseText(OutputHandler::JOINTS)) {
@@ -2517,6 +2526,24 @@ doublereal PlaneRotationJoint::dGetPrivData(unsigned int i) const
    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 }
 
+const OutputHandler::Dimensions
+PlaneRotationJoint::GetEquationDimension(integer index) const {
+	
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+	}
+
+	return dimension;
+}
+
 /* PlaneRotationJoint - end */
 
 
@@ -2545,12 +2572,6 @@ DriveOwner(pDC),
 pNode1(pN1), pNode2(pN2), 
 d1(dTmp1), R1h(R1hTmp), d2(dTmp2), R2h(R2hTmp), F(Zero3), M(Zero3),
 NTheta(0), dTheta(0.), dThetaWrapped(0.),
-#ifdef USE_NETCDFC // netcdfcxx4 has non-pointer vars...
-Var_Phi(0),
-Var_Omega(0),
-//Var_MFR(0),
-//Var_MU(0),
-#endif // USE_NETCDFC
 Sh_c(sh), fc(f), preF(pref), r(rr),
 od(od)
 {
@@ -3337,7 +3358,7 @@ SubVectorHandler& AxialRotationJoint::AssRes(SubVectorHandler& WorkVec,
       try {
           fc->AssRes(WorkVec,12+NumSelfDof,iFirstReactionIndex+NumSelfDof,modF,v,XCurr,XPrimeCurr);
       }
-      catch (Elem::ChangedEquationStructure) {
+      catch (Elem::ChangedEquationStructure& err) {
           ChangeJac = true;
       }
       doublereal f = fc->fc();
@@ -3378,18 +3399,21 @@ AxialRotationJoint::OutputPrepare(OutputHandler& OH)
 			std::string name;
 			OutputPrepare_int("axial rotation", OH, name);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
+			Var_Phi = OH.CreateRotationVar(name, "", od, "Relative orientation");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega", "radian/s",
+			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 
-/* TODO
-			Var_MFR = OH.CreateVar<doublereal>(name + "MFR", "Nm",
-				"friciton moment ");
+			if (fc) {
+				Var_MFR = OH.CreateVar<doublereal>(name + "MFR",
+						OutputHandler::Dimensions::Moment,
+						"friciton moment");
 
-			Var_MU = OH.CreateVar<doublereal>(name + "MU", "--",
-					"friction model specific data: friction coefficient?");
-*/
+				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+						OutputHandler::Dimensions::Dimensionless,
+						"friction model specific data: friction coefficient");
+			}
 		}
 #endif // USE_NETCDF
 	}
@@ -3430,42 +3454,29 @@ void AxialRotationJoint::Output(OutputHandler& OH) const
       
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-#if defined(USE_NETCDFC)
-			Var_F_local->put_rec((R2Tmp.MulTV(F)).pGetVec(), OH.GetCurrentStep());
-			Var_M_local->put_rec(M.pGetVec(), OH.GetCurrentStep());
-			Var_F_global->put_rec(F.pGetVec(), OH.GetCurrentStep());
-			Var_M_global->put_rec((R2Tmp*M).pGetVec(), OH.GetCurrentStep());
+			Joint::NetCDFOutput(OH, R2Tmp.MulTV(F), M, F, R2Tmp*M);
 			switch (od) {
 			case EULER_123:
 			case EULER_313:
 			case EULER_321:
 			case ORIENTATION_VECTOR:
-				Var_Phi->put_rec(E.pGetVec(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, E);
 				break;
 
 			case ORIENTATION_MATRIX:
-				Var_Phi->put_rec(RTmp.pGetMat(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_Phi, RTmp);
 				break;
 
 			default:
 				/* impossible */
 				break;
 			}
-			Var_Omega->put_rec(OmegaTmp.pGetVec(), OH.GetCurrentStep());
-/*
+
+			OH.WriteNcVar(Var_Omega, OmegaTmp);
 			if (fc) {
-					Var_MFR->put_rec(&M3, OH.GetCurrentStep());
-					Var_MU->put_rec(fc->fc(), OH.GetCurrentStep());
+				OH.WriteNcVar(Var_MFR, M3);
+				OH.WriteNcVar(Var_fc, fc->fc());
 			}
-			else
-			{
-				Var_MFR->put_rec(0, OH.GetCurrentStep());
-				Var_MU->put_rec(0, OH.GetCurrentStep());
-			}
-*/
-#elif defined(USE_NETCDF4)  /*! USE_NETCDFC */
-// TODO
-#endif  /* USE_NETCDF4 */
 		}
 #endif // USE_NETCDF
 		if (OH.UseText(OutputHandler::JOINTS)) {
@@ -3980,6 +3991,36 @@ AxialRotationJoint::dGetPrivData(unsigned int i) const
 	throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 }
 
+const OutputHandler::Dimensions
+AxialRotationJoint::GetEquationDimension(integer index) const {
+	
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Length;
+			break;
+		case 4:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 5:
+			dimension = OutputHandler::Dimensions::rad;
+			break;
+		case 6:
+			dimension = OutputHandler::Dimensions::AngularVelocity;
+			break;
+	}
+
+	return dimension;
+}
+
 /* AxialRotationJoint - end */
 
 
@@ -4490,7 +4531,10 @@ SubVectorHandler& PlanePinJoint::AssRes(SubVectorHandler& WorkVec,
    
    /* Indici del vincolo */
    for (int iCnt = 1; iCnt <= 5; iCnt++) {
-      WorkVec.PutRowIndex(6+iCnt, iFirstReactionIndex+iCnt);   
+      WorkVec.PutRowIndex(6+iCnt, iFirstReactionIndex+iCnt); 
+
+       /* initial testing for get equation dimension  */
+      GetEquationDimension(iCnt);  
    }
    
    F = Vec3(XCurr, iFirstReactionIndex+1);
@@ -4521,6 +4565,19 @@ SubVectorHandler& PlanePinJoint::AssRes(SubVectorHandler& WorkVec,
    return WorkVec;
 }
 
+void 
+PlanePinJoint::OutputPrepare(OutputHandler& OH)
+{
+   if (bToBeOutput()) {
+#ifdef USE_NETCDF
+	   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+		   std::string name;
+		   OutputPrepare_int("Plane Pin", OH, name);
+	   }
+#endif // USE_NETCDF
+   }
+}
+
 /* Output (da mettere a punto) */
 void PlanePinJoint::Output(OutputHandler& OH) const
 {
@@ -4528,10 +4585,18 @@ void PlanePinJoint::Output(OutputHandler& OH) const
       Mat3x3 RTmp(pNode->GetRCurr()*Rh);
       Mat3x3 R0Tmp(R0.MulTM(RTmp));
       
-      Joint::Output(OH.Joints(), "PlanePin", GetLabel(),
-		    RTmp.MulTV(F), M, F, RTmp*M) 
-	<< " " << MatR2EulerAngles(R0Tmp)*dRaDegr
-	<< " " << RTmp.MulTV(pNode->GetWCurr()) << std::endl;      
+      if (OH.UseText(OutputHandler::JOINTS)) {
+	      Joint::Output(OH.Joints(), "PlanePin", GetLabel(),
+			      RTmp.MulTV(F), M, F, RTmp*M) 
+		      << " " << MatR2EulerAngles(R0Tmp)*dRaDegr
+		      << " " << RTmp.MulTV(pNode->GetWCurr()) << std::endl;      
+      }
+
+#ifdef USE_NETCDF
+	   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
+		   Joint::NetCDFOutput(OH, RTmp.MulTV(F), M, F, RTmp*M);
+	   }
+#endif // USE_NETCDF
    }
 }
 
@@ -4881,6 +4946,32 @@ PlanePinJoint::dGetPrivData(unsigned int i) const
    silent_cerr("PlanePinJoint(" << GetLabel() << "): "
 	   "illegal private data " << i << std::endl);
    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+}
+
+const OutputHandler::Dimensions
+PlanePinJoint::GetEquationDimension(integer index) const {
+	OutputHandler::Dimensions dimension = OutputHandler::Dimensions::UnknownDimension;
+
+	switch (index)
+	{
+		case 1:
+			dimension = OutputHandler::Dimensions::Length;
+         break;
+		case 2:
+			dimension = OutputHandler::Dimensions::Length;
+         break;
+		case 3:
+			dimension = OutputHandler::Dimensions::Length;
+         break;
+		case 4:
+			dimension = OutputHandler::Dimensions::rad;
+         break;
+		case 5:
+			dimension = OutputHandler::Dimensions::rad;
+         break;
+	}
+
+	return dimension;
 }
 
 /* PlanePinJoint - end */

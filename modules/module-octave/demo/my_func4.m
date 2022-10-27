@@ -30,7 +30,7 @@
 # 
 #################################################################
 ##
-## AUTHOR: Reinhard Resch <r.resch@secop.com>
+## AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
 ##        Copyright (C) 2011(-2017) all rights reserved.
 ##
 ##        The copyright of this code is transferred
@@ -45,6 +45,7 @@ function y = my_func4(t, pDM)
     persistent pNode1 = pDM.GetStructNode(int32(1));
     persistent MBDYN_VERSION = pDM.GetVersion();
 
+    pkg load mbdyn_util_oct;
     %printf("mboct: MBDyn version %s\n", MBDYN_VERSION);
     %disp(typeinfo(pDM));
 

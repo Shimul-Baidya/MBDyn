@@ -31,7 +31,7 @@
 
 /* 
  * Copyright 1999-2000 Lamberto Puggelli <puggelli@tiscalinet.it>
- * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+ * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano 
  */
 
 #ifndef PRESNODE_H
@@ -39,25 +39,21 @@
 
 #include "node.h"
 
-class PressureNode : public ScalarAlgebraicNode {
- public:
-   PressureNode(unsigned int uL, const DofOwner* pDO, 
-		doublereal dx, flag fOut) 
-     : ScalarAlgebraicNode(uL, pDO, dx, fOut) {
-	NO_OP;
-     };
+class PressureNode : virtual public ScalarAlgebraicNode {
+public:
+     PressureNode(unsigned int uL, const DofOwner* pDO, doublereal dx, flag fOut); 
    
-   virtual ~PressureNode(void) { 
-      NO_OP;      
-   };
+     virtual ~PressureNode();
    
-   virtual Node::Type GetNodeType(void) const {
-      return Node::HYDRAULIC;
-   };
+     virtual Node::Type GetNodeType(void) const;
    
-   void Output(OutputHandler& OH) const {
-      ScalarAlgebraicNode::Output(OH.PresNodes());
-   };
+     void Output(OutputHandler& OH) const;
+
+     /* returns the dimension of the component */
+     const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
+
+     /* describes the dimension of components of equation */
+     virtual std::ostream& DescribeEq(std::ostream& out, const char *prefix = "", bool bInitial = false) const;
 };
 
 #endif /* PRESNODE_H */
