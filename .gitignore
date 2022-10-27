@@ -21,9 +21,12 @@ var/mbdyn2easyanim.sh
 *.lot
 
 ## MBDyn manuals
-manual/input/mbdyn-input-develop.pdf
-manual/install/mbdyn-install-develop.pdf
-manual/tecman/mbdyn-tecman-develop.pdf
+manual/input/mbdyn-input-*.pdf
+manual/install/mbdyn-install-*.pdf
+manual/tecman/mbdyn-tecman-*.pdf
+
+## Python caches
+**/__pycache__
 
 # Prerequisites
 *.d
