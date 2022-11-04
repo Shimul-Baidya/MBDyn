@@ -667,12 +667,15 @@ DataManager::ElemOutputPrepare(OutputHandler& OH)
 	}
 
 	if (iNumTypes > 0) {
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
 		OutputHandler::AttrValVec attrs(2);
-		attrs[0] = OutputHandler::AttrVal("description", std::string("Element types"));
+		attrs[0] = OutputHandler::AttrVal("description", std::string("Element types (in attribute \"types\", semicolon-separated)"));
 		std::string types("");
 
 		for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
 			if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
+				ASSERT(ElemData[et].ShortDesc != 0);
 				if (!types.empty()) {
 					types += ";";
 				}
@@ -691,9 +694,7 @@ DataManager::ElemOutputPrepare(OutputHandler& OH)
 		
 		for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
 			if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
-				ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 				ASSERT(ElemData[et].Desc != 0);
-				ASSERT(ElemData[et].ShortDesc != 0);
 
 				integer iNumElems = ElemData[et].ElemContainer.size();
 
