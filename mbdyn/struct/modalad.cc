@@ -490,7 +490,7 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
                DEBUG_DUMP_GRAD_VEC_SIZE(MaPP_CaP_Ka, T);
 
-               const SpColVector<T, 3> RTvP = Transpose(R) * vP;
+               const SpColVector<T, 3> RTvP = Transpose(R) * (vP - GravityAcceleration);
 
                DEBUG_DUMP_GRAD_VEC_SIZE(RTvP, T);
 
