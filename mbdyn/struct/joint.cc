@@ -2206,7 +2206,16 @@ ReadJoint(DataManager* pDM,
 		Vec3 f1(HP.GetPosRel(RF1));
 
 		Mat3x3 R1(Eye3);
-		if (HP.IsKeyWord("hinge") || HP.IsKeyWord("orientation")) {
+		bool bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+
+		if (bOrientation) {
 			R1 = HP.GetRotRel(RF1);
 		}
 
@@ -2221,7 +2230,16 @@ ReadJoint(DataManager* pDM,
 		Vec3 f2(HP.GetPosRel(RF2, RF1, f1));
 
 		Mat3x3 R2(Eye3);
-		if (HP.IsKeyWord("hinge") || HP.IsKeyWord("orientation")) {
+		bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+
+		if (bOrientation) {
 			R2 = HP.GetRotRel(RF2, RF1, R1);
 		}
 
@@ -2373,7 +2391,16 @@ ReadJoint(DataManager* pDM,
 		Vec3 f(HP.GetPosRel(RF));
 
 		Mat3x3 R(Eye3);
-		if (HP.IsKeyWord("hinge") || HP.IsKeyWord("orientation")) {
+		bool bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+
+		if (bOrientation) {
 			R = HP.GetRotRel(RF);
 		}
 
@@ -3673,8 +3700,18 @@ ReadJoint(DataManager* pDM,
 			<< " " << pNode->GetLabel()
 			<< " " << f;
 
+		bool bOrientation;
+
 		Mat3x3 R = Eye3;
-		if (HP.IsKeyWord("hinge")) {
+		bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+		if (bOrientation) {
 			R = HP.GetRotRel(RF);
 		}
 		DEBUGLCOUT(MYDEBUG_INPUT,
@@ -3771,17 +3808,25 @@ ReadJoint(DataManager* pDM,
 				
 				out << " " << f1;
 
-				if (HP.IsKeyWord("hinge")) {
+				bOrientation = false;
+				if (HP.IsKeyWord("orientation")) {
+					bOrientation = true;
+
+				} else if (HP.IsKeyWord("hinge")) {
+					silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+					bOrientation = true;
+				}
+
+				if (bOrientation) {
 					if (HP.IsKeyWord("same")) {
 						R1 = bc[i-1]->GetR(3);
 					} else {
 						R1 = HP.GetRotRel(RF);
 						/* FIXME: allow tolerance? */
 						if (!R1.IsExactlySame(bc[i-1]->GetR(3))) {
-							silent_cerr("line " << HP.GetLineData() << ": "
-								"Beam(" << pBeam->GetLabel() << ").R1 "
+							silent_cerr("Beam(" << pBeam->GetLabel() << ").R1 "
 								"and Beam(" << bc[i-1]->pGetBeam()->GetLabel() << ").R3 "
-								"do not match" << std::endl);
+								"do not match at line " << HP.GetLineData() << std::endl);
 							throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
 						}
 					}
@@ -3791,7 +3836,16 @@ ReadJoint(DataManager* pDM,
 
 			} else {
 				f1 = HP.GetPosRel(RF);
-				if (HP.IsKeyWord("hinge")) {
+				bOrientation = false;
+				if (HP.IsKeyWord("orientation")) {
+					bOrientation = true;
+
+				} else if (HP.IsKeyWord("hinge")) {
+					silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+					bOrientation = true;
+				}
+
+				if (bOrientation) {
 					R1 = HP.GetRotRel(RF);
 					DEBUGLCOUT(MYDEBUG_INPUT, "Node 1 rotation matrix: "
 						<< std::endl << R1 << std::endl);
@@ -3814,7 +3868,16 @@ ReadJoint(DataManager* pDM,
 			out << " " << f2;
 
 			Mat3x3 R2(Eye3);
-			if (HP.IsKeyWord("hinge")) {
+			bOrientation = false;
+			if (HP.IsKeyWord("orientation")) {
+				bOrientation = true;
+
+			} else if (HP.IsKeyWord("hinge")) {
+				silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+				bOrientation = true;
+			}
+
+			if (bOrientation) {
 				R2 = HP.GetRotRel(RF);
 				DEBUGLCOUT(MYDEBUG_INPUT,
 					"Node 2 rotation matrix: " << std::endl
@@ -3837,7 +3900,16 @@ ReadJoint(DataManager* pDM,
 			out << " " << f3;
 
 			Mat3x3 R3(Eye3);
-			if (HP.IsKeyWord("hinge")) {
+			bOrientation = false;
+			if (HP.IsKeyWord("orientation")) {
+				bOrientation = true;
+
+			} else if (HP.IsKeyWord("hinge")) {
+				silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+				bOrientation = true;
+			}
+
+			if (bOrientation) {
 				R3 = HP.GetRotRel(RF);
 				DEBUGLCOUT(MYDEBUG_INPUT,
 					"Node 3 rotation matrix: " << std::endl
