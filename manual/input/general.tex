@@ -834,6 +834,19 @@ Implements the type \ty{Mat3x3}.
 		a_{31} & a_{32} & a_{33}
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # general case
+    1., 0., 0.,
+    0., 1., 0.,
+    0., 0., 1.
+    # or
+    matr,
+        1., 0., 0.,
+        0., 1., 0.,
+        0., 0., 1.
+\end{verbatim}
+
     \item symmetric matrix: keyword \kw{sym}, followed by a sequence
     of 6 reals, comma-separated, that represents the upper triangle, 
     row-oriented coefficients of a symmetric matrix, 
@@ -845,7 +858,16 @@ Implements the type \ty{Mat3x3}.
 		a_{13} & a_{23} & a_{33}
 	}}
 \end{equation}
-    \item skew symmetric matrix: keyword \kw{skew}, followed by a sequence
+\textbf{Example.}
+\begin{verbatim}
+    # symmetric matrix
+    sym,
+        1., 0., 0.,
+            1., 0.,
+                1.,
+\end{verbatim}
+
+    \item skew-symmetric matrix: keyword \kw{skew}, followed by a sequence
     of 3 reals, comma-separated, that are the components of the vector $\T{v}$
     that generates a skew symmetric matrix $\T{m}=\T{v}\times{}$:
 \begin{equation}
@@ -855,6 +877,12 @@ Implements the type \ty{Mat3x3}.
 		-v_2 & v_1 & 0
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # skew-symmetric matrix
+    skew , 1., 2., 3.
+\end{verbatim}
+
     \item diagonal matrix: keyword \kw{diag}, followed by a sequence
     of 3 reals, comma-separated, that represent the diagonal coefficients 
     of a diagonal matrix, namely $a_{11}$, $a_{22}$, $a_{33}$
@@ -865,11 +893,28 @@ Implements the type \ty{Mat3x3}.
 		0 & 0 & a_{33}
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # diagonal matrix
+    diag , 1., 1., 1.
+\end{verbatim}
+
     \item identity matrix: keyword \kw{eye}; the matrix is initialized
     as the identity matrix, that is a null matrix except for the diagonal 
     coefficients that are 1.
+\textbf{Example.}
+\begin{verbatim}
+    # identity matrix
+    eye
+\end{verbatim}
+
     \item null matrix: keyword \kw{null}; the matrix is initialized 
     with zeros.
+\begin{verbatim}
+    # null matrix
+    null 
+\end{verbatim}
+
 \end{enumerate}
 For example, the identity matrix can be defined as:
 \begin{verbatim}
@@ -897,7 +942,7 @@ the above data as
     eye                                   # a la matlab
 \end{verbatim}
 
-\begin{figure}
+\begin{figure}[h]
 \centering
 \psfrag{a}{(a)}
 \psfrag{b}{(b)}
@@ -925,15 +970,24 @@ Implements the type \ty{OrientationMatrix}.
 system, each of them preceded by its index in the final orientation matrix.
 The procedure that builds the orientation matrix from the two vectors
 is illustrated in Figure~\ref{fig:general:orientation-matrices:MatR2vec}.
-The first vector, vector 1 in subfigure (a), is normalized and assumed
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{v1} , \bnt{v1_1}, \bnt{v1_2} , \bnt{v1_3} ,
+    \bnt{v2} , \bnt{v2_1}, \bnt{v2_2} , \bnt{v2_3}
+
+    \bnt{v1} ::= \{ 1 | 2 | 3 \}
+    \bnt{v2} ::= \{ 1 | 2 | 3 \} # \bnt{v2} != \bnt{v1}
+\end{Verbatim}
+The first vector, \bnt{v1}, namely vector 1 in subfigure (a), is normalized and assumed
 to represent the desired direction.
-The second vector, vector 2' in subfigure (b), simply concurs
+The second vector, \bnt{v2}, namely vector 2' in subfigure (b), simply concurs
 in the definition of the plane the vector that is not given is normal to.
 The third vector, vector 3 in subfigure (c), results from the cross-product
 of the first two vectors, after normalization.
 The actual direction of the second vector, vector 2 in subfigure (d),
 results from the cross product of the third and the first vector.
-Examples:
+
+\noindent
+\textbf{Examples.}
 \begin{verbatim}
     1, 1.,0.,0., 2, 0.,1.,0.
 \end{verbatim}
@@ -965,7 +1019,15 @@ in initial direction 2, while direction 3 in the final reference frame remains
 parallel to \texttt{0.,0.,1.}, which represents direction 3 in the initial reference frame.
 
 \item a variant of the above, which may be useful when only one
-direction really matters, is illustrated in the example below:
+direction really matters, is
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{v1} , \bnt{v1_1}, \bnt{v1_2} , \bnt{v1_3} ,
+    \bnt{v2} , \kw{guess}
+
+    \bnt{v1} ::= \{ 1 | 2 | 3 \}
+    \bnt{v2} ::= \{ 1 | 2 | 3 \} # \bnt{v2} != \bnt{v1}
+\end{Verbatim}
+and is illustrated in the example below:
 \begin{verbatim}
     1, 1.,0.,0., 2, guess
 \end{verbatim}
@@ -974,12 +1036,12 @@ that is orthogonal to the given one, which is used as the direction
 indicated by the index (2 in the example).
 The vector is computed based on a very simple algorithm: it contains
 \begin{itemize}
-        \item 1.0 corresponding to the index with smallest module,
+        \item 1.0 corresponding to the index with smallest modulus,
         $v_1\plbr{\mathrm{min}}$;
 	\item $-v_1\plbr{\mathrm{min}}/v_1\plbr{\mathrm{max}}$
-	corresponding to the index with the largest module,
+	corresponding to the index with the largest modulus,
 	$v_1\plbr{\mathrm{max}}$;
-	\item 0.0 on the remaining index.
+	\item 0.0 for the remaining index.
 \end{itemize}
 
 \item identity matrix: keyword \kw{eye}; the identity matrix,
@@ -989,6 +1051,16 @@ frame.
 \item a complete orientation matrix: keyword \kw{matr}
 followed by the nine, row-oriented, coefficients, namely
 $ r_{11} $, $ r_{12} $, \ldots, $ r_{33} $.
+\begin{Verbatim}[commandchars=\\\{\}]
+    \kw{matr} ,
+        \bnt{r11} , \bnt{r12} , \bnt{r13} ,
+        \bnt{r21} , \bnt{r22} , \bnt{r23} ,
+        \bnt{r31} , \bnt{r32} , \bnt{r33}
+            [ , \kw{tolerance} , \bnt{tol} ]
+\end{Verbatim}
+The \kw{tolerance} \nt{tol} is used when checking the orthogonality of the matrix (the default is $10^{-12}$).
+
+\noindent
 Example:
 \begin{verbatim}
     matr,
@@ -996,7 +1068,7 @@ Example:
         r21, r22, r23,
         r31, r32, r33
 \end{verbatim}
-\emph{Note: orthogonality is not enforced; in case, only a warning is issued; be sure an orthogonal
+\emph{Note: orthogonality is not enforced; if the matrix is not orthogonal within the desired tolerance, only a warning is issued; be sure an orthogonal
 matrix, within the desired tolerance, is input}.
 
 \item Euler angles: keyword \kw{euler}, followed by the three
