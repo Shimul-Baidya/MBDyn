@@ -3153,7 +3153,7 @@ with continuous 1st- and 2nd-order derivatives.
 \end{Verbatim}
 %\end{verbatim}
 \nt{expression\_string} is a string, delimited by double quotes.
-It is parsed by the math parser every time 
+It is parsed by the math parser when read during input, and evaluated every time 
 the \htmlref{\kw{drive}}{sec:DriveCaller} is invoked.
 The variable \kw{Time} is kept up to date and can be used in the 
 string to compute the return value, e.g.:
@@ -3168,6 +3168,7 @@ e.g.:
 \begin{verbatim}
     ..., string, "e^(-Var)*cos(2.*pi*Time)" ...
 \end{verbatim}
+Expressions may contain other variables and use functions defined in the available namespaces.
 
 \emph{Note: originally, the expression was parsed each time it is evaluated;
 this is not very efficient.
@@ -3185,6 +3186,33 @@ is internally stored as
 \begin{verbatim}
     ..., string, "1+cos(2*pi*Time)", ...
 \end{verbatim}
+
+It is worth stressing that the expressions are dereferenced (i.e., their value is evaluated)
+when the drive caller is invoked during the analysis.
+So, if any variables that appear in the expressions are redefined during input parsing,
+and one wants the string drive caller to use their value at parsing time rather than run-time,
+the functions \texttt{\bnt{type}\kw{\_eval}} should be used, with
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{type} ::= \{ \kw{bool} | \kw{integer} | \kw{real} | \kw{string} \}
+\end{Verbatim}
+For example,
+\begin{verbatim}
+    set: integer CURR_NODE = 0;
+    # ...
+    ..., string, "model::distance(CURR_NODE, CURR_NODE+1)"
+    # ...
+    set: CURR_NODE = CURR_NODE + 100;
+    # ...
+    ..., string, "model::distance(CURR_NODE, CURR_NODE+1)"
+\end{verbatim}
+used repeatedly, modifying the variable \texttt{CURR\_NODE} in between, would result in all instances of the string drive caller end up using the last value of \texttt{CURR\_NODE} instead of the value that was current when the string drive caller was instantiated.
+Instead,
+\begin{verbatim}
+    ..., string, "integer_eval(model::distance(CURR_NODE, CURR_NODE+1))"
+\end{verbatim}
+would use the value of \texttt{CURR\_NODE} at the time the string was parsed.
+
+
 
 
 \subsection{Tanh drive}
