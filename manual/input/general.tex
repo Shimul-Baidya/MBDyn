@@ -289,8 +289,12 @@ phase it is assigned the value of the current time.
 Table~\ref{tab:MATHP-OPERATORS} shows the supported mathematical 
 operators, while Table~\ref{tab:MATHP-FUNCTIONS} shows the built-in
 mathematical functions.
+
 In addition, type names used as functions provide explicit type casting
-according to built-in casting rules.
+according to built-in casting rules (Table~\ref{tab:MATHP-CAST-FUNCTIONS}).
+The \bnt{type}\kw{\_eval} variants evaluate the argument during parsing, rather than run-time.
+This is useful when parsing strings that will be evaluated later, for example in \kw{string} drive callers
+or hints, if one wants a particular variable or expression to be evaluated at parsing time.
 
 The supported types are listed in Table~\ref{tab:MATHP-TYPES}.
 Table~\ref{tab:MATHP-VARS} lists the predefined variables; notice
@@ -461,6 +465,31 @@ can be reassigned.
 	\end{center}
 \end{table}
 
+\begin{table}
+	\begin{center}
+	\caption{Built-in cast and evaluation functions
+		in math parser}\label{tab:MATHP-CAST-FUNCTIONS}
+	\begin{tabular}{llll}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Returns}} &
+		\multicolumn{1}{c}{\textbf{Arg[s]}} &
+		\multicolumn{1}{c}{\textbf{Description}} \\
+		\hline
+		\kw{bool}		& bool 		& (any)		& cast to bool \\
+		\kw{integer}		& integer	& (any)		& cast to integer \\
+		\kw{real}		& real 		& (any)		& cast to real \\
+		\kw{string}		& string 	& (any)		& cast to string \\
+		\hline
+		\kw{bool\_eval}		& bool 		& (any)		& evaluate arg, casting result to bool \\
+		\kw{integer\_eval}	& integer	& (any)		& evaluate arg, casting to integer \\
+		\kw{real\_eval}		& real 		& (any)		& evaluate arg, casting to real \\
+		\kw{string\_eval}	& string 	& (any)		& evaluate arg, casting to string \\
+		\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+
 \paragraph{Example.} 
 \begin{itemize}
 \item
@@ -502,16 +531,23 @@ yields
 \label{sec:GENERAL:NAMESPACE}
 The math parser uses the notion of \emph{namespace} to separate
 functions.
+
+\subsubsection{Default Namespace}
 The functions listed in Table~\ref{tab:MATHP-FUNCTIONS}
 are implicitly defined in the \kw{default} namespace, 
 i.e.\ they should be referenced by writing
 \begin{verbatim}
     default::sqrt(2.)
 \end{verbatim}
+but the \kw{default::} portion is optional, as the \kw{default} namespace is implicitly assumed.
+
+\subsubsection{Other Namespaces}
 Other namespaces may be defined by the user, and loaded by means
 of the \kw{module load} card described
-in Section~\ref{sec:GENERAL:MODULE-LOAD}.
+in Section~\ref{sec:GENERAL:MODULE-LOAD}
+(see for example the \kw{units} namespace in Section~\ref{sec:modules:udunits} and the related code).
 
+\subsubsection{Model Namespaces}
 The namespace that refers to the current model is loaded by default.
 Its name is \kw{model}, and contains the functions 
 defined in Table~\ref{tab:MODEL-NS-FUNCS}.
