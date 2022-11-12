@@ -108,7 +108,6 @@ WDrv(pWDrv),
 XPPDrv(pXPPDrv),
 WPDrv(pWPDrv)
 {
-	Update();
 }
 
 DriveRigidBodyKinematics::~DriveRigidBodyKinematics(void)
