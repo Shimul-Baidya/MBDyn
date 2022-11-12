@@ -110,7 +110,9 @@ this name as the ordering variable for the rest of the data.
 
 
 \subsection{Node Level}
-There is no variable \kw{node}, with the name of the node level.
+There variable \kw{node} contains the number of node types that are present in the output.
+Its attribute \kw{types} is a semicolon-separated string of the node types.
+
 This level contains as many sublevels as the node types
 that are present in the model.
 Each node type consists in a variable that contains an array
@@ -189,7 +191,9 @@ of the inertia associated to the node, in the appropriate reference frame.
 
 
 \subsection{Element Level}
-There is no variable \kw{elem}, with the name of the element level.
+There variable \kw{elem} contains the number of element types that are present in the output.
+Its attribute \kw{types} is a semicolon-separated string of the element types.
+
 This level contains as many sublevels as the element types
 that are present in the model.
 Each element type consists in a variable that contains an array
