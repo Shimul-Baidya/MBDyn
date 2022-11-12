@@ -107,7 +107,7 @@ DataManager::ElemManager(void)
 
 	ElemData[Elem::INDUCEDVELOCITY].OutFile = OutputHandler::ROTORS;
 	ElemData[Elem::INDUCEDVELOCITY].Desc = "InducedVelocity";
-	ElemData[Elem::INDUCEDVELOCITY].ShortDesc = "indvel";
+	ElemData[Elem::INDUCEDVELOCITY].ShortDesc = "inducedvelocity";
 
 	ElemData[Elem::AEROMODAL].OutFile = OutputHandler::AEROMODALS;
 	ElemData[Elem::AEROMODAL].Desc = "AerodynamicModal";
@@ -115,12 +115,12 @@ DataManager::ElemManager(void)
 
 	ElemData[Elem::AERODYNAMIC].OutFile = OutputHandler::AERODYNAMIC;
 	ElemData[Elem::AERODYNAMIC].Desc = "Aerodynamic";
-	ElemData[Elem::AERODYNAMIC].ShortDesc = "aero";
+	ElemData[Elem::AERODYNAMIC].ShortDesc = "aerodynamic";
 	ElemData[Elem::AERODYNAMIC].uOutputFlags = AerodynamicOutput::OUTPUT_DEFAULT;
 
 	ElemData[Elem::HYDRAULIC].OutFile = OutputHandler::HYDRAULIC;
 	ElemData[Elem::HYDRAULIC].Desc = "Hydraulic";
-	ElemData[Elem::HYDRAULIC].ShortDesc = "hydr";
+	ElemData[Elem::HYDRAULIC].ShortDesc = "hydraulic";
 
 	ElemData[Elem::LOADABLE].OutFile = OutputHandler::LOADABLE;
 	ElemData[Elem::LOADABLE].Desc = "Loadable";
@@ -659,26 +659,58 @@ void
 DataManager::ElemOutputPrepare(OutputHandler& OH)
 {
 #ifdef USE_NETCDF
+	int iNumTypes(0);
 	for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
 		if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
-			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-			ASSERT(ElemData[et].Desc != 0);
-			ASSERT(ElemData[et].ShortDesc != 0);
+			iNumTypes++;
+		}
+	}
 
-			integer iNumElems = ElemData[et].ElemContainer.size();
+	if (iNumTypes > 0) {
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-			OutputHandler::AttrValVec attrs(1);
-			attrs[0] = OutputHandler::AttrVal("description", std::string(ElemData[et].Desc) + " elements labels");
+		OutputHandler::AttrValVec attrs(2);
+		attrs[0] = OutputHandler::AttrVal("description", std::string("Element types (in attribute \"types\", semicolon-separated)"));
+		std::string types("");
 
-			OutputHandler::NcDimVec dim(1);
-			dim[0] = OH.CreateDim(std::string(ElemData[et].ShortDesc) + "_elem_labels_dim", iNumElems);
+		for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
+			if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
+				ASSERT(ElemData[et].ShortDesc != 0);
+				if (!types.empty()) {
+					types += ";";
+				}
+				types += ElemData[et].ShortDesc;
+			}
+		}
+		attrs[1] = OutputHandler::AttrVal("types", types);
 
-			MBDynNcVar VarLabels = OH.CreateVar(std::string("elem.") + ElemData[et].ShortDesc, MbNcInt, attrs, dim);
-			ElemContainerType::const_iterator p = ElemData[et].ElemContainer.begin();
-			for (unsigned i = 0; i < unsigned(iNumElems); i++, p++) {
-				const std::vector<size_t> ncStartPos(1,i);
-				const long l = p->second->GetLabel();
-				VarLabels.putVar(ncStartPos, &l);
+		OutputHandler::NcDimVec dim(1);
+		dim[0] = OH.CreateDim("elem_types_dim", 1);
+
+		MBDynNcVar VarTypes = OH.CreateVar(std::string("elem"), MbNcInt, attrs, dim);
+
+		const std::vector<size_t> ncStartPos(1, 0);
+		VarTypes.putVar(ncStartPos, &iNumTypes);
+		
+		for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
+			if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
+				ASSERT(ElemData[et].Desc != 0);
+
+				integer iNumElems = ElemData[et].ElemContainer.size();
+
+				OutputHandler::AttrValVec attrs(1);
+				attrs[0] = OutputHandler::AttrVal("description", std::string(ElemData[et].Desc) + " elements labels");
+
+				OutputHandler::NcDimVec dim(1);
+				dim[0] = OH.CreateDim(std::string(ElemData[et].ShortDesc) + "_elem_labels_dim", iNumElems);
+
+				MBDynNcVar VarLabels = OH.CreateVar(std::string("elem.") + ElemData[et].ShortDesc, MbNcInt, attrs, dim);
+				ElemContainerType::const_iterator p = ElemData[et].ElemContainer.begin();
+				for (unsigned i = 0; i < unsigned(iNumElems); i++, p++) {
+					const std::vector<size_t> ncStartPos(1, i);
+					const long l = p->second->GetLabel();
+					VarLabels.putVar(ncStartPos, &l);
+				}
 			}
 		}
 	}

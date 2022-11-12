@@ -331,7 +331,7 @@ public:
 	TypedValue
 	Eval(void) const
 	{
-		return  !(m_pEE1->Eval());
+		return !(m_pEE1->Eval());
 	};
 
 	std::ostream&
