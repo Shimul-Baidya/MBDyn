@@ -120,26 +120,62 @@ void
 DataManager::NodeOutputPrepare(OutputHandler& OH)
 {
 #ifdef USE_NETCDF
+	int iNumTypes(0);
+
 	for (unsigned nt = 0; nt < Node::LASTNODETYPE; nt++) {
 		if (!NodeData[nt].NodeContainer.empty() && OH.UseNetCDF(NodeData[nt].OutFile)) {
-			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+			iNumTypes++;
+		}
+	}
 
-			integer iNumNodes = NodeData[nt].NodeContainer.size();
+	if (iNumTypes > 0) {
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-			OutputHandler::AttrValVec attrs(1);
-			attrs[0] = OutputHandler::AttrVal("description", std::string(NodeData[nt].Desc) + " nodes labels");
+		OutputHandler::AttrValVec attrs(2);
+		attrs[0] = OutputHandler::AttrVal("description", std::string("Node types (in attribute \"types\", semicolon-separated)"));
+		std::string types("");
 
-			OutputHandler::NcDimVec dim(1);
-			dim[0] = OH.CreateDim(std::string(NodeData[nt].ShortDesc) + "_node_labels_dim", iNumNodes);
+		for (unsigned nt = 0; nt < Node::LASTNODETYPE; nt++) {
+			if (!NodeData[nt].NodeContainer.empty() && OH.UseNetCDF(NodeData[nt].OutFile)) {
+				ASSERT(NodeData[nt].ShortDesc != 0);
 
-			MBDynNcVar VarLabels = OH.CreateVar(std::string("node.") + NodeData[nt].ShortDesc, MbNcInt, attrs, dim);
+				if (!types.empty()) {
+					types += ";";
+				}
+				types += NodeData[nt].ShortDesc;
+			}
+		}
+		attrs[1] = OutputHandler::AttrVal("types", types);
 
-			NodeContainerType::const_iterator p = NodeData[nt].NodeContainer.begin();
-			std::vector<size_t> ncStartPos(1,0);
-			for (unsigned i = 0; i < unsigned(iNumNodes); i++, p++) {
-				ncStartPos[0] = i;
-				const long l = p->second->GetLabel();
-				VarLabels.putVar(ncStartPos, &l);
+		OutputHandler::NcDimVec dim(1);
+		dim[0] = OH.CreateDim("node_types_dim", 1);
+
+		MBDynNcVar VarTypes = OH.CreateVar(std::string("node"), MbNcInt, attrs, dim);
+
+		const std::vector<size_t> ncStartPos(1, 0);
+		VarTypes.putVar(ncStartPos, &iNumTypes);
+		
+		for (unsigned nt = 0; nt < Node::LASTNODETYPE; nt++) {
+			if (!NodeData[nt].NodeContainer.empty() && OH.UseNetCDF(NodeData[nt].OutFile)) {
+				ASSERT(NodeData[nt].Desc != 0);
+
+				integer iNumNodes = NodeData[nt].NodeContainer.size();
+
+				OutputHandler::AttrValVec attrs(1);
+				attrs[0] = OutputHandler::AttrVal("description", std::string(NodeData[nt].Desc) + " nodes labels");
+
+				OutputHandler::NcDimVec dim(1);
+				dim[0] = OH.CreateDim(std::string(NodeData[nt].ShortDesc) + "_node_labels_dim", iNumNodes);
+
+				MBDynNcVar VarLabels = OH.CreateVar(std::string("node.") + NodeData[nt].ShortDesc, MbNcInt, attrs, dim);
+
+				NodeContainerType::const_iterator p = NodeData[nt].NodeContainer.begin();
+				std::vector<size_t> ncStartPos(1,0);
+				for (unsigned i = 0; i < unsigned(iNumNodes); i++, p++) {
+					ncStartPos[0] = i;
+					const long l = p->second->GetLabel();
+					VarLabels.putVar(ncStartPos, &l);
+				}
 			}
 		}
 	}

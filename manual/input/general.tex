@@ -289,8 +289,12 @@ phase it is assigned the value of the current time.
 Table~\ref{tab:MATHP-OPERATORS} shows the supported mathematical 
 operators, while Table~\ref{tab:MATHP-FUNCTIONS} shows the built-in
 mathematical functions.
+
 In addition, type names used as functions provide explicit type casting
-according to built-in casting rules.
+according to built-in casting rules (Table~\ref{tab:MATHP-CAST-FUNCTIONS}).
+The \bnt{type}\kw{\_eval} variants evaluate the argument during parsing, rather than run-time.
+This is useful when parsing strings that will be evaluated later, for example in \kw{string} drive callers
+or hints, if one wants a particular variable or expression to be evaluated at parsing time.
 
 The supported types are listed in Table~\ref{tab:MATHP-TYPES}.
 Table~\ref{tab:MATHP-VARS} lists the predefined variables; notice
@@ -461,6 +465,31 @@ can be reassigned.
 	\end{center}
 \end{table}
 
+\begin{table}
+	\begin{center}
+	\caption{Built-in cast and evaluation functions
+		in math parser}\label{tab:MATHP-CAST-FUNCTIONS}
+	\begin{tabular}{llll}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Returns}} &
+		\multicolumn{1}{c}{\textbf{Arg[s]}} &
+		\multicolumn{1}{c}{\textbf{Description}} \\
+		\hline
+		\kw{bool}		& bool 		& (any)		& cast to bool \\
+		\kw{integer}		& integer	& (any)		& cast to integer \\
+		\kw{real}		& real 		& (any)		& cast to real \\
+		\kw{string}		& string 	& (any)		& cast to string \\
+		\hline
+		\kw{bool\_eval}		& bool 		& (any)		& evaluate arg, casting result to bool \\
+		\kw{integer\_eval}	& integer	& (any)		& evaluate arg, casting to integer \\
+		\kw{real\_eval}		& real 		& (any)		& evaluate arg, casting to real \\
+		\kw{string\_eval}	& string 	& (any)		& evaluate arg, casting to string \\
+		\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+
 \paragraph{Example.} 
 \begin{itemize}
 \item
@@ -502,16 +531,23 @@ yields
 \label{sec:GENERAL:NAMESPACE}
 The math parser uses the notion of \emph{namespace} to separate
 functions.
+
+\subsubsection{Default Namespace}
 The functions listed in Table~\ref{tab:MATHP-FUNCTIONS}
 are implicitly defined in the \kw{default} namespace, 
 i.e.\ they should be referenced by writing
 \begin{verbatim}
     default::sqrt(2.)
 \end{verbatim}
+but the \kw{default::} portion is optional, as the \kw{default} namespace is implicitly assumed.
+
+\subsubsection{Other Namespaces}
 Other namespaces may be defined by the user, and loaded by means
 of the \kw{module load} card described
-in Section~\ref{sec:GENERAL:MODULE-LOAD}.
+in Section~\ref{sec:GENERAL:MODULE-LOAD}
+(see for example the \kw{units} namespace in Section~\ref{sec:modules:udunits} and the related code).
 
+\subsubsection{Model Namespaces}
 The namespace that refers to the current model is loaded by default.
 Its name is \kw{model}, and contains the functions 
 defined in Table~\ref{tab:MODEL-NS-FUNCS}.
@@ -534,9 +570,17 @@ This string returns the $y$ component of the relative angular velocity between s
 \paragraph{Example 2.} \
 This string returns the absolute $x$ component of the position of node ``\verb;NODENAME;'' at the previous timestep, plus the value of ``\verb;DRIVE_1 * DRIVE_2;'' when time is greater than 5 seconds:
 \begin{verbatim}
-    drive, string, "model::xposition_prev(NODENAME) + \
+    string, "model::xposition_prev(NODENAME) + \
         model::drive(DRIVE_1, Time) * model::drive(DRIVE_2, Time) * (Time > 5.)",
 \end{verbatim}
+
+\paragraph{Example 3.} \
+To extract the current from an electric circuit where a resistor $R$ is defined between electric nodes 1 and 2:
+\begin{verbatim}
+    string, "(model::node::electric(1, \"x\") - model::node::electric(2, \"x\"))/R"
+\end{verbatim}
+
+
 
 \begin{table}
 	\begin{center}
@@ -826,6 +870,19 @@ Implements the type \ty{Mat3x3}.
 		a_{31} & a_{32} & a_{33}
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # general case
+    1., 0., 0.,
+    0., 1., 0.,
+    0., 0., 1.
+    # or
+    matr,
+        1., 0., 0.,
+        0., 1., 0.,
+        0., 0., 1.
+\end{verbatim}
+
     \item symmetric matrix: keyword \kw{sym}, followed by a sequence
     of 6 reals, comma-separated, that represents the upper triangle, 
     row-oriented coefficients of a symmetric matrix, 
@@ -837,7 +894,16 @@ Implements the type \ty{Mat3x3}.
 		a_{13} & a_{23} & a_{33}
 	}}
 \end{equation}
-    \item skew symmetric matrix: keyword \kw{skew}, followed by a sequence
+\textbf{Example.}
+\begin{verbatim}
+    # symmetric matrix
+    sym,
+        1., 0., 0.,
+            1., 0.,
+                1.,
+\end{verbatim}
+
+    \item skew-symmetric matrix: keyword \kw{skew}, followed by a sequence
     of 3 reals, comma-separated, that are the components of the vector $\T{v}$
     that generates a skew symmetric matrix $\T{m}=\T{v}\times{}$:
 \begin{equation}
@@ -847,6 +913,12 @@ Implements the type \ty{Mat3x3}.
 		-v_2 & v_1 & 0
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # skew-symmetric matrix
+    skew , 1., 2., 3.
+\end{verbatim}
+
     \item diagonal matrix: keyword \kw{diag}, followed by a sequence
     of 3 reals, comma-separated, that represent the diagonal coefficients 
     of a diagonal matrix, namely $a_{11}$, $a_{22}$, $a_{33}$
@@ -857,11 +929,28 @@ Implements the type \ty{Mat3x3}.
 		0 & 0 & a_{33}
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # diagonal matrix
+    diag , 1., 1., 1.
+\end{verbatim}
+
     \item identity matrix: keyword \kw{eye}; the matrix is initialized
     as the identity matrix, that is a null matrix except for the diagonal 
     coefficients that are 1.
+\textbf{Example.}
+\begin{verbatim}
+    # identity matrix
+    eye
+\end{verbatim}
+
     \item null matrix: keyword \kw{null}; the matrix is initialized 
     with zeros.
+\begin{verbatim}
+    # null matrix
+    null 
+\end{verbatim}
+
 \end{enumerate}
 For example, the identity matrix can be defined as:
 \begin{verbatim}
@@ -889,7 +978,7 @@ the above data as
     eye                                   # a la matlab
 \end{verbatim}
 
-\begin{figure}
+\begin{figure}[h]
 \centering
 \psfrag{a}{(a)}
 \psfrag{b}{(b)}
@@ -917,15 +1006,24 @@ Implements the type \ty{OrientationMatrix}.
 system, each of them preceded by its index in the final orientation matrix.
 The procedure that builds the orientation matrix from the two vectors
 is illustrated in Figure~\ref{fig:general:orientation-matrices:MatR2vec}.
-The first vector, vector 1 in subfigure (a), is normalized and assumed
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{v1} , \bnt{v1_1}, \bnt{v1_2} , \bnt{v1_3} ,
+    \bnt{v2} , \bnt{v2_1}, \bnt{v2_2} , \bnt{v2_3}
+
+    \bnt{v1} ::= \{ 1 | 2 | 3 \}
+    \bnt{v2} ::= \{ 1 | 2 | 3 \} # \bnt{v2} != \bnt{v1}
+\end{Verbatim}
+The first vector, \bnt{v1}, namely vector 1 in subfigure (a), is normalized and assumed
 to represent the desired direction.
-The second vector, vector 2' in subfigure (b), simply concurs
+The second vector, \bnt{v2}, namely vector 2' in subfigure (b), simply concurs
 in the definition of the plane the vector that is not given is normal to.
 The third vector, vector 3 in subfigure (c), results from the cross-product
 of the first two vectors, after normalization.
 The actual direction of the second vector, vector 2 in subfigure (d),
 results from the cross product of the third and the first vector.
-Examples:
+
+\noindent
+\textbf{Examples.}
 \begin{verbatim}
     1, 1.,0.,0., 2, 0.,1.,0.
 \end{verbatim}
@@ -957,7 +1055,15 @@ in initial direction 2, while direction 3 in the final reference frame remains
 parallel to \texttt{0.,0.,1.}, which represents direction 3 in the initial reference frame.
 
 \item a variant of the above, which may be useful when only one
-direction really matters, is illustrated in the example below:
+direction really matters, is
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{v1} , \bnt{v1_1}, \bnt{v1_2} , \bnt{v1_3} ,
+    \bnt{v2} , \kw{guess}
+
+    \bnt{v1} ::= \{ 1 | 2 | 3 \}
+    \bnt{v2} ::= \{ 1 | 2 | 3 \} # \bnt{v2} != \bnt{v1}
+\end{Verbatim}
+and is illustrated in the example below:
 \begin{verbatim}
     1, 1.,0.,0., 2, guess
 \end{verbatim}
@@ -966,12 +1072,12 @@ that is orthogonal to the given one, which is used as the direction
 indicated by the index (2 in the example).
 The vector is computed based on a very simple algorithm: it contains
 \begin{itemize}
-        \item 1.0 corresponding to the index with smallest module,
+        \item 1.0 corresponding to the index with smallest modulus,
         $v_1\plbr{\mathrm{min}}$;
 	\item $-v_1\plbr{\mathrm{min}}/v_1\plbr{\mathrm{max}}$
-	corresponding to the index with the largest module,
+	corresponding to the index with the largest modulus,
 	$v_1\plbr{\mathrm{max}}$;
-	\item 0.0 on the remaining index.
+	\item 0.0 for the remaining index.
 \end{itemize}
 
 \item identity matrix: keyword \kw{eye}; the identity matrix,
@@ -981,6 +1087,16 @@ frame.
 \item a complete orientation matrix: keyword \kw{matr}
 followed by the nine, row-oriented, coefficients, namely
 $ r_{11} $, $ r_{12} $, \ldots, $ r_{33} $.
+\begin{Verbatim}[commandchars=\\\{\}]
+    \kw{matr} ,
+        \bnt{r11} , \bnt{r12} , \bnt{r13} ,
+        \bnt{r21} , \bnt{r22} , \bnt{r23} ,
+        \bnt{r31} , \bnt{r32} , \bnt{r33}
+            [ , \kw{tolerance} , \bnt{tol} ]
+\end{Verbatim}
+The \kw{tolerance} \nt{tol} is used when checking the orthogonality of the matrix (the default is $10^{-12}$).
+
+\noindent
 Example:
 \begin{verbatim}
     matr,
@@ -988,7 +1104,7 @@ Example:
         r21, r22, r23,
         r31, r32, r33
 \end{verbatim}
-\emph{Note: orthogonality is not enforced; in case, only a warning is issued; be sure an orthogonal
+\emph{Note: orthogonality is not enforced; if the matrix is not orthogonal within the desired tolerance, only a warning is issued; be sure an orthogonal
 matrix, within the desired tolerance, is input}.
 
 \item Euler angles: keyword \kw{euler}, followed by the three
@@ -1370,8 +1486,8 @@ is not in the directory of the including one.
 
 \bigskip
 
-\fbox{There is no check for recursive \kw{include} directives, so 
-{\bf the user must take care of recursion}.}
+\fbox{There is no check for recursively including files, so 
+\textbf{the user must take care of avoiding recursions}.}
 
 \bigskip
 
@@ -2463,10 +2579,14 @@ uses the value of the rotation about axis $z$ of a revolute hinge
 as is (that is, in a linear expression with null constant coefficient 
 and unit linear coefficient, while
 \begin{verbatim}
+    element, 1000, joint, string, "rz", linear, 0., -60.
+\end{verbatim}
+multiplies the value by $-60$;
+\begin{verbatim}
     element, 1000, joint, index, 1
         string, "2.*exp(-100.*Var)"
 \end{verbatim}
-uses the same value, addressed in an alternative manner, in computing
+uses the same value, addressed in an alternative manner using the \kw{index} form, to evaluate
 a string expression.
 
 The same effect can be obtained using the \kw{element} plugin as follows:
@@ -3069,7 +3189,7 @@ with continuous 1st- and 2nd-order derivatives.
 \end{Verbatim}
 %\end{verbatim}
 \nt{expression\_string} is a string, delimited by double quotes.
-It is parsed by the math parser every time 
+It is parsed by the math parser when read during input, and evaluated every time 
 the \htmlref{\kw{drive}}{sec:DriveCaller} is invoked.
 The variable \kw{Time} is kept up to date and can be used in the 
 string to compute the return value, e.g.:
@@ -3084,6 +3204,7 @@ e.g.:
 \begin{verbatim}
     ..., string, "e^(-Var)*cos(2.*pi*Time)" ...
 \end{verbatim}
+Expressions may contain other variables and use functions defined in the available namespaces.
 
 \emph{Note: originally, the expression was parsed each time it is evaluated;
 this is not very efficient.
@@ -3101,6 +3222,33 @@ is internally stored as
 \begin{verbatim}
     ..., string, "1+cos(2*pi*Time)", ...
 \end{verbatim}
+
+It is worth stressing that the expressions are dereferenced (i.e., their value is evaluated)
+when the drive caller is invoked during the analysis.
+So, if any variables that appear in the expressions are redefined during input parsing,
+and one wants the string drive caller to use their value at parsing time rather than run-time,
+the functions \texttt{\bnt{type}\kw{\_eval}} should be used, with
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{type} ::= \{ \kw{bool} | \kw{integer} | \kw{real} | \kw{string} \}
+\end{Verbatim}
+For example,
+\begin{verbatim}
+    set: integer CURR_NODE = 0;
+    # ...
+    ..., string, "model::distance(CURR_NODE, CURR_NODE+1)"
+    # ...
+    set: CURR_NODE = CURR_NODE + 100;
+    # ...
+    ..., string, "model::distance(CURR_NODE, CURR_NODE+1)"
+\end{verbatim}
+used repeatedly, modifying the variable \texttt{CURR\_NODE} in between, would result in all instances of the string drive caller end up using the last value of \texttt{CURR\_NODE} instead of the value that was current when the string drive caller was instantiated.
+Instead,
+\begin{verbatim}
+    ..., string, "integer_eval(model::distance(CURR_NODE, CURR_NODE+1))"
+\end{verbatim}
+would use the value of \texttt{CURR\_NODE} at the time the string was parsed.
+
+
 
 
 \subsection{Tanh drive}
