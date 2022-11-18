@@ -722,7 +722,8 @@ based on \cite{PENNESTRI-2007-JB}.
         [ \kw{reference velocity} , \bnt{V0} , ]
         \kw{reference force} , \bnt{F0} ,
         \kw{activation} , (\hty{DriveCaller}) \bnt{activation}
-            [ , \kw{activation check} , (\ty{bool}) \bnt{activation_check} ]
+            [ , \kw{activation check} , (\ty{bool}) \bnt{activation_check}
+              , \kw{warn}, (\ty{bool})]
         [ , \kw{ergonomy} , \{ \kw{yes} | \kw{no} \} ]
         [ , \kw{reflexive} , # only when ergonomy == no
             \kw{proportional gain} , \bnt{kp} ,
@@ -762,6 +763,13 @@ to the reflexive contribution to muscular activation, which is defined as
 	+
 	\nt{kd} \cdot \frac{\dot{\ell}}{\nt{V0}}
 \end{align}
+Be careful that the resulting requested activation can be outside of the the range 
+${0 \leq a \leq 1}$. If \kw{activation check} is set to \kw{yes}, then the compliance of
+the requested activation with the bounds is verified, and the actual value of the
+activation will be reset at 0 in case of underflow and 1 in case of overflow. If \kw{warn}
+is set to yes, a warning will be printed in \texttt{stderr} when over/underflow conditions
+are reached. 
+
 The contribution of the muscle short-range stiffness (SRS) can be added with \kw{short
 range stiffness}. The optional  parameter \nt{delta} represents the maximum nondimensional
 stretch perturbation, above which the short-range stiffness contribution to the muscle
