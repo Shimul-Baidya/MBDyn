@@ -76,12 +76,77 @@ ModalAd::ModalAd(unsigned int uL,
                  Mat3xN&& oInv11,
                  VecN&& aa,
                  VecN&& bb,
+                 const std::vector<unsigned>& rgGenStressStiffIdx,
                  std::vector<MatNxN>&& rgGenStressStiff,
                  flag fOut)
 :Elem(uL, fOut),
- Modal(uL, pR, x0, R0, pDO, NM, NI, NF, dMassTmp, STmp, JTmp, std::move(uModeNumber), std::move(oGenMass), std::move(oGenStiff), std::move(oGenDamp), std::move(IdFEMNodes), std::move(oN), std::move(snd), std::move(oPHItStrNode), std::move(oPHIrStrNode), std::move(oModeShapest), std::move(oModeShapesr), std::move(oInv3), std::move(oInv4), std::move(oInv5), std::move(oInv8), std::move(oInv9), std::move(oInv10), std::move(oInv11), std::move(aa), std::move(bb), std::move(rgGenStressStiff), fOut),
- pModalNode(pR)
+ Modal(uL, pR, x0, R0, pDO, NM, NI, NF, dMassTmp, STmp, JTmp, std::move(uModeNumber), std::move(oGenMass), std::move(oGenStiff), std::move(oGenDamp), std::move(IdFEMNodes), std::move(oN), std::move(snd), std::move(oPHItStrNode), std::move(oPHIrStrNode), std::move(oModeShapest), std::move(oModeShapesr), std::move(oInv3), std::move(oInv4), std::move(oInv5), std::move(oInv8), std::move(oInv9), std::move(oInv10), std::move(oInv11), std::move(aa), std::move(bb), fOut),
+ pModalNode{pR},
+ rgModalStressStiff{std::move(rgGenStressStiff)}
 {
+     ASSERT(rgModalStressStiff.empty() || rgModalStressStiff.size() == 12u + SND.size() * 6);
+     ASSERT(rgModalStressStiff.size() == rgGenStressStiffIdx.size());
+     ASSERT(pModalNode == nullptr || pModalNode->GetStructNodeType() == StructNode::MODAL);
+
+     if (!rgModalStressStiff.empty()) {
+          for (unsigned i = 0u; i < rgGenStressStiffIdx.size(); ++i) {
+               unsigned uIndex = rgGenStressStiffIdx[i];
+
+               ASSERT(uIndex >= 1u); // one based index from *.fem file
+               ASSERT(uIndex <= 12u + SND.size() * 6u);
+
+               --uIndex; // zero based index
+
+               switch (uIndex) {
+               case 0u:
+               case 1u:
+               case 2u:
+               case 3u:
+               case 4u:
+               case 5u:
+                    oStressStiffIndexW.Insert(i, uIndex);
+                    break;
+               case 6u:
+               case 7u:
+               case 8u:
+                    oStressStiffIndexWP.Insert(i, uIndex - 6u);
+                    break;
+               case 9u:
+               case 10u:
+               case 11u:
+                    oStressStiffIndexVP.Insert(i, uIndex - 9u);
+                    break;
+               default: {
+                    uIndex -= 12u;
+
+                    const unsigned uNodeIdx = uIndex / 6u;
+                    const unsigned uDofIdx = uIndex % 6u;
+
+                    ASSERT(uNodeIdx >= 0u);
+                    ASSERT(uNodeIdx < SND.size());
+                    ASSERT(uDofIdx >= 0u);
+                    ASSERT(uDofIdx < 6u);
+
+                    switch (uDofIdx) {
+                    case 0u:
+                    case 1u:
+                    case 2u:
+                         SND[uNodeIdx].oStressStiffIndexF.Insert(i, uDofIdx);
+                         break;
+                    case 3u:
+                    case 4u:
+                    case 5u:
+                         SND[uNodeIdx].oStressStiffIndexM.Insert(i, uDofIdx - 3u);
+                         break;
+                    default:
+                         ASSERT(0);
+                    }
+               }
+               }
+          }
+     }
+
+     ASSERT(rgModalStressStiff.empty() || rgModalStressStiff.size() <= 12u + SND.size() * 6);
      ASSERT(pModalNode == nullptr || pModalNode->GetStructNodeType() == StructNode::MODAL);
 }
 
@@ -461,41 +526,59 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           WorkVec.AddItem(iRigidIndex + 4, f2);
 
           if (!rgModalStressStiff.empty()) {
-               ASSERT(rgModalStressStiff.size() == 12u + SND.size() * 6u);
+               for (unsigned i = 0; i < oStressStiffIndexW.uGetSize(); ++i) {
+                    const unsigned uIndexMatK0 = oStressStiffIndexW.uGetIndexMat(i);
+                    const unsigned uIndexVecWq = oStressStiffIndexW.uGetIndexVec(i);
 
-               SpColVector<T, 6> RTwq(6, 6);
+                    ASSERT(uIndexMatK0 >= 0u);
+                    ASSERT(uIndexMatK0 < rgModalStressStiff.size());
+                    ASSERT(uIndexVecWq >= 0u);
+                    ASSERT(uIndexVecWq < 6);
 
-               static constexpr index_type idx1[] = {1, 2, 3, 1, 2, 3};
-               static constexpr index_type idx2[] = {1, 2, 3, 2, 3, 1};
+                    static constexpr index_type idx1[] = {1, 2, 3, 1, 2, 3};
+                    static constexpr index_type idx2[] = {1, 2, 3, 2, 3, 1};
 
-               for (index_type i = 1; i <= 6; ++i) {
-                    RTwq(i) = RTw(idx1[i - 1]) * RTw(idx2[i - 1]);
-               }
+                    const T RTwqi = RTw(idx1[uIndexVecWq]) * RTw(idx2[uIndexVecWq]);
 
-               DEBUG_DUMP_GRAD_VEC_SIZE(RTwq, T);
+                    DEBUG_DUMP_GRAD_SCALAR_SIZE(RTwqi, T);
 
-               for (index_type i = 1; i <= 6; ++i) {
-                    MaPP_CaP_Ka -= (rgModalStressStiff[i - 1] * a) * RTwq(i);
-               }
-
-               DEBUG_DUMP_GRAD_VEC_SIZE(MaPP_CaP_Ka, T);
-
-               const SpColVector<T, 3> RTwP = Transpose(R) * wP;
-
-               DEBUG_DUMP_GRAD_VEC_SIZE(RTwP, T);
-
-               for (index_type i = 1; i <= 3; ++i) {
-                    MaPP_CaP_Ka -= (rgModalStressStiff[i - 1 + 6] * a) * RTwP(i);
+                    MaPP_CaP_Ka -= (rgModalStressStiff[uIndexMatK0] * a) * RTwqi;
                }
 
                DEBUG_DUMP_GRAD_VEC_SIZE(MaPP_CaP_Ka, T);
 
-               const SpColVector<T, 3> RTvP = Transpose(R) * (vP - GravityAcceleration);
+               for (unsigned i = 0; i < oStressStiffIndexWP.uGetSize(); ++i) {
+                    const unsigned uIndexMatK0 = oStressStiffIndexWP.uGetIndexMat(i);
+                    const unsigned uIndexVecWP = oStressStiffIndexWP.uGetIndexVec(i);
 
-               DEBUG_DUMP_GRAD_VEC_SIZE(RTvP, T);
+                    ASSERT(uIndexMatK0 >= 0u);
+                    ASSERT(uIndexMatK0 < rgModalStressStiff.size());
+                    ASSERT(uIndexVecWP >= 0u);
+                    ASSERT(uIndexVecWP < 3u);
 
-               for (index_type i = 1; i <= 3; ++i) {
-                    MaPP_CaP_Ka -= (rgModalStressStiff[i - 1 + 9] * a) * RTvP(i);
+                    const T RTwPi = Dot(R.GetCol(uIndexVecWP + 1), wP);
+
+                    DEBUG_DUMP_GRAD_SCALAR_SIZE(RTwPi, T);
+
+                    MaPP_CaP_Ka -= (rgModalStressStiff[uIndexMatK0] * a) * RTwPi;
+               }
+
+               DEBUG_DUMP_GRAD_VEC_SIZE(MaPP_CaP_Ka, T);
+
+               for (unsigned i = 0; i < oStressStiffIndexVP.uGetSize(); ++i) {
+                    const unsigned uIndexMatK0 = oStressStiffIndexVP.uGetIndexMat(i);
+                    const unsigned uIndexVecVP = oStressStiffIndexVP.uGetIndexVec(i);
+
+                    ASSERT(uIndexMatK0 >= 0u);
+                    ASSERT(uIndexMatK0 < rgModalStressStiff.size());
+                    ASSERT(uIndexVecVP >= 0u);
+                    ASSERT(uIndexVecVP < 3u);
+
+                    const T RTvPi = Dot(R.GetCol(uIndexVecVP + 1), vP - GravityAcceleration);
+
+                    DEBUG_DUMP_GRAD_SCALAR_SIZE(RTvPi, T);
+
+                    MaPP_CaP_Ka -= (rgModalStressStiff[uIndexMatK0] * a) * RTvPi;
                }
 
                DEBUG_DUMP_GRAD_VEC_SIZE(MaPP_CaP_Ka, T);
@@ -575,7 +658,7 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
      for (unsigned int iStrNode = 1; iStrNode <= NStrNodes; iStrNode++) {
           const index_type iStrNodem1 = iStrNode - 1;
-          const integer iNodeFirstMomIndex = SND[iStrNodem1].pNode->iGetFirstMomentumIndex();
+          const integer iNodeFirstMomIndex = SND[iStrNodem1].pNodeAd->iGetFirstMomentumIndex();
 
           SpColVector<T, 3> PHIta(3, NModes), PHIra(3, NModes);
 
@@ -596,7 +679,9 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
           SpColVector<T, 3> x2(3, 1);
 
-          auto pStrNodem1 = dynamic_cast<const StructNodeAd*>(SND[iStrNodem1].pNode);
+          const StructNodeAd* const pStrNodem1 = SND[iStrNodem1].pNodeAd;
+
+          ASSERT(pStrNodem1 != nullptr);
 
           pStrNodem1->GetXCurr(x2, dCoef, func);
 
@@ -620,16 +705,18 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           }
 
           if (!rgModalStressStiff.empty()) {
-               ASSERT(rgModalStressStiff.size() == 12u + SND.size() * 6u);
-
-               const index_type iOffset = -1 + 12 + (iStrNode - 1) * 6;
-
-               ASSERT(3 + iOffset < rgModalStressStiff.size());
-
                DEBUG_DUMP_GRAD_VEC_SIZE(vtemp, T);
 
-               for (index_type i = 1; i <= 3; ++i) {
-                    MaPP_CaP_Ka += (rgModalStressStiff[i + iOffset] * a) * vtemp(i);
+               for (unsigned i = 0; i < SND[iStrNodem1].oStressStiffIndexF.uGetSize(); ++i) {
+                    const unsigned uIndexMatK0 = SND[iStrNodem1].oStressStiffIndexF.uGetIndexMat(i);
+                    const unsigned uIndexVecF = SND[iStrNodem1].oStressStiffIndexF.uGetIndexVec(i);
+
+                    ASSERT(uIndexMatK0 >= 0);
+                    ASSERT(uIndexMatK0 < rgModalStressStiff.size());
+                    ASSERT(uIndexVecF >= 0);
+                    ASSERT(uIndexVecF < 3u);
+
+                    MaPP_CaP_Ka += (rgModalStressStiff[uIndexMatK0] * a) * vtemp(uIndexVecF + 1);
                }
 
                DEBUG_DUMP_GRAD_VEC_SIZE(MaPP_CaP_Ka, T);
@@ -658,16 +745,18 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           }
 
           if (!rgModalStressStiff.empty()) {
-               ASSERT(rgModalStressStiff.size() == 12u + SND.size() * 6u);
-
-               const index_type iOffset = -1 + 12 + (iStrNode - 1) * 6 + 3;
-
-               ASSERT(3 + iOffset < rgModalStressStiff.size());
-
                DEBUG_DUMP_GRAD_VEC_SIZE(vtemp, T);
 
-               for (index_type i = 1; i <= 3; ++i) {
-                    MaPP_CaP_Ka += (rgModalStressStiff[i + iOffset] * a) * vtemp(i);
+               for (unsigned i = 0; i < SND[iStrNodem1].oStressStiffIndexM.uGetSize(); ++i) {
+                    const unsigned uIndexMatK0 = SND[iStrNodem1].oStressStiffIndexM.uGetIndexMat(i);
+                    const unsigned uIndexVecM = SND[iStrNodem1].oStressStiffIndexM.uGetIndexVec(i);
+
+                    ASSERT(uIndexMatK0 >= 0u);
+                    ASSERT(uIndexMatK0 < rgModalStressStiff.size());
+                    ASSERT(uIndexVecM >= 0u);
+                    ASSERT(uIndexVecM < 3u);
+
+                    MaPP_CaP_Ka += (rgModalStressStiff[uIndexMatK0] * a) * vtemp(uIndexVecM + 1);
                }
 
                DEBUG_DUMP_GRAD_VEC_SIZE(MaPP_CaP_Ka, T);
@@ -691,10 +780,10 @@ ModalAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
      for (unsigned int jMode = 1; jMode <= NModes; jMode++) {
           ASSERT(SpGradientTraits<T>::iGetSize(MaPP_CaP_Ka(jMode)) <= iSize_MaPP_CaP_Ka);
-          
+
           DEBUG_DUMP_EXPR(iSize_MaPP_CaP_Ka);
           DEBUG_DUMP_GRAD_SCALAR_SIZE(MaPP_CaP_Ka(jMode), T);
-          
+
           WorkVec.AddItem(iModalIndex + NModes + jMode, MaPP_CaP_Ka(jMode));
      }
 

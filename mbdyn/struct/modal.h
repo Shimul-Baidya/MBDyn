@@ -46,6 +46,7 @@
 #ifndef MODAL_H
 #define MODAL_H
 
+#include <array>
 #include <fstream>
 #include <joint.h>
 
@@ -88,7 +89,6 @@ protected:
 	const MatNxN oModalMass;
 	const MatNxN oModalStiff;
 	const MatNxN oModalDamp;
-        const std::vector<MatNxN> rgModalStressStiff;
 	const Mat3xN oPHIt;
 	const Mat3xN oPHIr;
    
@@ -124,9 +124,70 @@ protected:
 	VecN bPrime;
 
 public:
+        template <unsigned N>
+        class StressStiffIndex {
+        public:
+             static_assert(N > 0);
+
+             StressStiffIndex()
+                  :uSize(0u) {
+#ifdef DEBUG
+                  std::fill(std::begin(rgIndexMat), std::end(rgIndexMat), SS_UNUSED);
+                  std::fill(std::begin(rgIndexVec), std::end(rgIndexVec), SS_UNUSED);
+#endif
+             }
+
+             void Insert(unsigned uIndexMat, unsigned uIndexVec) {
+                  ASSERT(uSize >= 0);
+                  ASSERT(uSize < N);
+
+                  ASSERT(rgIndexMat[uSize] == SS_UNUSED);
+                  ASSERT(rgIndexVec[uSize] == SS_UNUSED);
+
+                  rgIndexMat[uSize] = uIndexMat;
+                  rgIndexVec[uSize] = uIndexVec;
+
+                  ++uSize;
+
+                  ASSERT(uSize <= N);
+             }
+
+             unsigned uGetSize() const {
+                  ASSERT(uSize >= 0);
+                  ASSERT(uSize <= N);
+
+                  return uSize;
+             }
+
+             unsigned uGetIndexMat(unsigned iIndex) const {
+                  ASSERT(iIndex >= 0);
+                  ASSERT(iIndex < uSize);
+                  ASSERT(uSize <= N);
+                  ASSERT(rgIndexMat[iIndex] != SS_UNUSED);
+                  return rgIndexMat[iIndex];
+             }
+
+             unsigned uGetIndexVec(unsigned iIndex) const {
+                  ASSERT(iIndex >= 0);
+                  ASSERT(iIndex < uSize);
+                  ASSERT(uSize <= N);
+                  ASSERT(rgIndexVec[iIndex] != SS_UNUSED);
+
+                  return rgIndexVec[iIndex];
+             }
+
+        private:
+             enum: unsigned { SS_UNUSED = ~0u };
+             unsigned uSize;
+             std::array<unsigned, N> rgIndexMat;
+             std::array<unsigned, N> rgIndexVec;
+        };
+     
 	struct StrNodeData {
+                StrNodeData();
 		// constant, defined once for all at input
 		const StructNode *pNode;
+                const class StructNodeAd *pNodeAd;
 		std::string FEMNode;
 		Vec3 OffsetFEM;
 		Vec3 OffsetMB;
@@ -140,9 +201,10 @@ public:
 		// variable, constructed during analysis
 		Vec3 F;
 		Vec3 M;
-
-		bool bOut;
-	};
+                StressStiffIndex<3> oStressStiffIndexF;
+                StressStiffIndex<3> oStressStiffIndexM;
+                bool bOut;
+        };
 
 protected:
 	std::vector<StrNodeData> SND;
@@ -190,7 +252,6 @@ public:
 			Mat3xN&& oInv11,
 			VecN&& a,
 			VecN&& aP,
-                        std::vector<MatNxN>&& rgGenStressStiff,
 			flag fOut);
 
 	/* Distruttore */

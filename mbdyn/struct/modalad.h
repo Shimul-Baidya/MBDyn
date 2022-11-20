@@ -80,6 +80,7 @@ public:
              Mat3xN&& oInv11,
              VecN&& a,
              VecN&& aP,
+             const std::vector<unsigned>& rgGenStressStiffIdx,
              std::vector<MatNxN>&& rgGenStressStiff,
              flag fOut);
 
@@ -202,9 +203,13 @@ private:
      UpdateInvariants(const sp_grad::SpColVector<sp_grad::GpGradProd, 3>& Inv3jaj,
                       const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>& Inv8jaj,
                       const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>& Inv9jkajak) {}
-     
+
 private:
      const ModalNodeAd* const pModalNode;
+     const std::vector<MatNxN> rgModalStressStiff;
+     StressStiffIndex<6> oStressStiffIndexW;
+     StressStiffIndex<3> oStressStiffIndexWP;
+     StressStiffIndex<3> oStressStiffIndexVP;
 };
 
 #endif /* MODALAD_H */
