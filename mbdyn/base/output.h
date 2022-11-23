@@ -148,6 +148,7 @@ public:
 		Moment,
 		Voltage,
 		Charge,
+		Resistance,
 		Frequency,
 		deg,
 		rad,

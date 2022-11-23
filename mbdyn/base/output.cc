@@ -123,6 +123,7 @@ const std::unordered_map<const OutputHandler::Dimensions, const std::string> Dim
 	{ OutputHandler::Dimensions::Moment , std::string("Moment") },
 	{ OutputHandler::Dimensions::Voltage , std::string("Voltage") },
 	{ OutputHandler::Dimensions::Charge , std::string("Charge") },
+	{ OutputHandler::Dimensions::Resistance , std::string("Resistance") },
 	{ OutputHandler::Dimensions::Frequency , std::string("Frequency") },
 	{ OutputHandler::Dimensions::deg , std::string("deg") },
 	{ OutputHandler::Dimensions::rad , std::string("rad") },
@@ -281,6 +282,10 @@ void OutputHandler::SetDerivedUnits(std::unordered_map<Dimensions, std::string>&
 		Units[Dimensions::Mass] + " " +
 		Units[Dimensions::Time] + "^-3 " +
 		Units[Dimensions::Current] + "^-1";
+	Units[Dimensions::Resistance] = Units[Dimensions::Length] + "^2 " + 
+		Units[Dimensions::Mass] + " " + 
+		Units[Dimensions::Time] + "^-3 " +
+		Units[Dimensions::Current] + "^-2";
 	Units[Dimensions::Frequency] = Units[Dimensions::Time] + "^-1";
 	Units[Dimensions::Charge] = Units[Dimensions::Time] + " " +
 		Units[Dimensions::Current];
