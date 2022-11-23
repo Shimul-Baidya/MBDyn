@@ -37,6 +37,7 @@
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
 #include <iostream>
+#include <sstream>
 #include <cfloat>
 
 #include "dataman.h"
@@ -95,7 +96,6 @@ void
 Resistor::OutputPrepare(OutputHandler& OH)
 {
 	if (bToBeOutput()) {
-		
 		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 		std::ostringstream os;
 		os << "elem.loadable." << GetLabel();
@@ -122,24 +122,25 @@ Resistor::OutputPrepare(OutputHandler& OH)
 void
 Resistor::Output(OutputHandler& OH) const
 {
-
-   if (bToBeOutput()) {
+	if (bToBeOutput()) {
 #ifdef USE_NETCDF
-	   if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-		   OH.WriteNcVar(Var_dR1, R1);
-		   OH.WriteNcVar(Var_di_curr, i_curr);
-		   OH.WriteNcVar(Var_dVoltage1, Voltage1);
-		   OH.WriteNcVar(Var_dVoltage2, Voltage2);
-	   }
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			OH.WriteNcVar(Var_dR1, R1);
+			OH.WriteNcVar(Var_di_curr, i_curr);
+			OH.WriteNcVar(Var_dVoltage1, Voltage1);
+			OH.WriteNcVar(Var_dVoltage2, Voltage2);
+		}
 #endif // USE_NETCDF
-   std::ostream& out = OH.Loadable();
-   out << std::setw(8) << GetLabel()
-      << " " << i_curr        // current on resistor
-      << " " << Voltage1      // voltage on node 1
-      << " " << Voltage2      // voltage on node 2
-      << std::endl;
-   }
 
+		if (OH.UseText(OutputHandler::LOADABLE)) {
+			std::ostream& out = OH.Loadable();
+			out << std::setw(8) << GetLabel()
+				<< " " << i_curr        // current on resistor
+				<< " " << Voltage1      // voltage on node 1
+				<< " " << Voltage2      // voltage on node 2
+				<< std::endl;
+		}
+	}
 }
 
 
@@ -401,24 +402,25 @@ Capacitor::OutputPrepare(OutputHandler& OH)
 void
 Capacitor::Output(OutputHandler& OH) const
 {
-
-   if (bToBeOutput()) {
+	if (bToBeOutput()) {
 #ifdef USE_NETCDF
-	   if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-		   OH.WriteNcVar(Var_dC1, C1);
-		   OH.WriteNcVar(Var_di_curr, i_curr);
-		   OH.WriteNcVar(Var_dVoltage1, Voltage1);
-		   OH.WriteNcVar(Var_dVoltage2, Voltage2);
-	   }
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			OH.WriteNcVar(Var_dC1, C1);
+			OH.WriteNcVar(Var_di_curr, i_curr);
+			OH.WriteNcVar(Var_dVoltage1, Voltage1);
+			OH.WriteNcVar(Var_dVoltage2, Voltage2);
+		}
 #endif // USE_NETCDF
-   std::ostream& out = OH.Loadable();
-   out << std::setw(8) << GetLabel()
-      << " " << i_curr        // current on Capacitor
-      << " " << Voltage1      // voltage on node 1
-      << " " << Voltage2      // voltage on node 2
-      << std::endl;
-   }
 
+		if (OH.UseText(OutputHandler::LOADABLE)) {
+			std::ostream& out = OH.Loadable();
+			out << std::setw(8) << GetLabel()
+				<< " " << i_curr        // current on Capacitor
+				<< " " << Voltage1      // voltage on node 1
+				<< " " << Voltage2      // voltage on node 2
+				<< std::endl;
+		}
+	}
 }
 
 unsigned int
