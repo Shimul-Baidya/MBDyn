@@ -149,6 +149,7 @@ public:
 		Voltage,
 		Charge,
 		Resistance,
+		Capacitance,
 		Frequency,
 		deg,
 		rad,

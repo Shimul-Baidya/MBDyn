@@ -371,10 +371,46 @@ Capacitor::~Capacitor(void)
 }
 
 void
+Capacitor::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+		
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+		std::ostringstream os;
+		os << "elem.loadable." << GetLabel();
+		(void)OH.CreateVar(os.str(), "Capacitor");
+
+		os << '.';
+		std::string name = os.str();
+
+		Var_dC1 = OH.CreateVar<doublereal>(name + "Var_dC1",
+				OutputHandler::Dimensions::Capacitance,
+				"Capacitor constant");
+		Var_di_curr = OH.CreateVar<doublereal>(name + "Var_di_curr",
+				OutputHandler::Dimensions::Current,
+				"Current on capacitor");
+		Var_dVoltage1 = OH.CreateVar<doublereal>(name + "Var_dVoltage1",
+				OutputHandler::Dimensions::Voltage,
+				"Voltage on node 1");
+		Var_dVoltage2 = OH.CreateVar<doublereal>(name + "Var_dVoltage2",
+				OutputHandler::Dimensions::Voltage,
+				"Voltage on node 2");
+	}
+}
+
+void
 Capacitor::Output(OutputHandler& OH) const
 {
 
    if (bToBeOutput()) {
+#ifdef USE_NETCDF
+	   if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+		   OH.WriteNcVar(Var_dC1, C1);
+		   OH.WriteNcVar(Var_di_curr, i_curr);
+		   OH.WriteNcVar(Var_dVoltage1, Voltage1);
+		   OH.WriteNcVar(Var_dVoltage2, Voltage2);
+	   }
+#endif // USE_NETCDF
    std::ostream& out = OH.Loadable();
    out << std::setw(8) << GetLabel()
       << " " << i_curr        // current on Capacitor
