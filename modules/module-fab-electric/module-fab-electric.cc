@@ -92,10 +92,46 @@ Resistor::~Resistor(void)
 }
 
 void
+Resistor::OutputPrepare(OutputHandler& OH)
+{
+	if (bToBeOutput()) {
+		
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+		std::ostringstream os;
+		os << "elem.loadable." << GetLabel();
+		(void)OH.CreateVar(os.str(), "Resistor");
+
+		os << '.';
+		std::string name = os.str();
+
+		Var_dR1 = OH.CreateVar<doublereal>(name + "Var_dR1",
+				OutputHandler::Dimensions::Resistance,
+				"Resistor constant");
+		Var_di_curr = OH.CreateVar<doublereal>(name + "Var_di_curr",
+				OutputHandler::Dimensions::Current,
+				"Current on resistor");
+		Var_dVoltage1 = OH.CreateVar<doublereal>(name + "Var_dVoltage1",
+				OutputHandler::Dimensions::Voltage,
+				"Voltage on node 1");
+		Var_dVoltage2 = OH.CreateVar<doublereal>(name + "Var_dVoltage2",
+				OutputHandler::Dimensions::Voltage,
+				"Voltage on node 2");
+	}
+}
+
+void
 Resistor::Output(OutputHandler& OH) const
 {
 
    if (bToBeOutput()) {
+#ifdef USE_NETCDF
+	   if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+		   OH.WriteNcVar(Var_dR1, R1);
+		   OH.WriteNcVar(Var_di_curr, i_curr);
+		   OH.WriteNcVar(Var_dVoltage1, Voltage1);
+		   OH.WriteNcVar(Var_dVoltage2, Voltage2);
+	   }
+#endif // USE_NETCDF
    std::ostream& out = OH.Loadable();
    out << std::setw(8) << GetLabel()
       << " " << i_curr        // current on resistor
@@ -105,6 +141,7 @@ Resistor::Output(OutputHandler& OH) const
    }
 
 }
+
 
 unsigned int
 Resistor::iGetNumDof(void) const
