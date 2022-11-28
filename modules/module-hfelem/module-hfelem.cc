@@ -541,7 +541,7 @@ m_iConvergedPeriod(0)
 				silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): Prescribed initial time step "
 					<< pDC->dGet(m_dTInit) <<
 					"\nevaluated at the initial time t = " << m_dTInit <<
-					"is different from initial time step " << m_dDeltaT << std::endl);
+					" is different from initial time step " << m_dDeltaT << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 		}
