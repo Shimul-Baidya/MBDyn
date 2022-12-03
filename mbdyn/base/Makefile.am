@@ -222,6 +222,8 @@ endif
 
 if USE_GINAC
 libbase_la_SOURCES += \
+ginacmbd.h \
+ginacmbd.cc \
 ginaccltp.h \
 ginacdrive.cc \
 ginacdrive.h
