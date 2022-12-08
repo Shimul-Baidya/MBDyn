@@ -96,6 +96,11 @@ DataManager::ElemManager(void)
 	ElemData[Elem::PLATE].Desc = "Plate";
 	ElemData[Elem::PLATE].ShortDesc = "plate";
 
+        // FIXME: Output handler for solids not enabled yet
+	//ElemData[Elem::SOLID].OutFile = OutputHandler::SOLIDS;
+	ElemData[Elem::SOLID].Desc = "Solid";
+	ElemData[Elem::SOLID].ShortDesc = "solid";
+        
 	ElemData[Elem::AIRPROPERTIES].OutFile = OutputHandler::AIRPROPS;
 	ElemData[Elem::AIRPROPERTIES].Desc = "AirProperties";
 	ElemData[Elem::AIRPROPERTIES].ShortDesc = "airprops";

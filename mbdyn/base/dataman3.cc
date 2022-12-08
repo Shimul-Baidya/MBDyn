@@ -96,6 +96,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		psReadControlElems[Elem::JOINT_REGULARIZATION],
 		psReadControlElems[Elem::BEAM],
 		psReadControlElems[Elem::PLATE],
+                psReadControlElems[Elem::SOLID],
 		psReadControlElems[Elem::AIRPROPERTIES],
 		psReadControlElems[Elem::INDUCEDVELOCITY],
 		psReadControlElems[Elem::AEROMODAL],
@@ -191,6 +192,7 @@ DataManager::ReadControl(MBDynParser& HP,
 			JOINT_REGULARIZATIONS,
 		BEAMS,
 		PLATES,
+                SOLIDS,
 		AIRPROPERTIES,
 		INDUCEDVELOCITYELEMENTS,
 		AEROMODALS,
@@ -404,6 +406,16 @@ DataManager::ReadControl(MBDynParser& HP,
 			}
 		} break;
 
+		case SOLIDS: {
+			integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
+			ElemData[Elem::SOLID].iExpectedNum = iDmy;
+			DEBUGLCOUT(MYDEBUG_INPUT, "Solids: " << iDmy << std::endl);
+                        // FIXME: Assertion fails if this is enabled
+			// if (iDmy > 0 ) {
+			// 	bInitialJointAssemblyToBeDone = true;
+			// }
+		} break;
+                     
 		/* Elementi aerodinamici: proprieta' dell'aria */
 		case AIRPROPERTIES: {
 			if (ElemData[Elem::AIRPROPERTIES].iExpectedNum > 0) {
@@ -656,6 +668,14 @@ DataManager::ReadControl(MBDynParser& HP,
 						<< std::endl);
 					break;
 
+				case SOLIDS:
+					ElemData[Elem::SOLID].ToBeUsedInAssembly(true);
+					DEBUGLCOUT(MYDEBUG_INPUT,
+						"Solids will be used "
+						"in initial joint assembly"
+						<< std::endl);
+					break;
+                                        
 				case AERODYNAMICELEMENTS:
 					ElemData[Elem::AERODYNAMIC].ToBeUsedInAssembly(true);
 					DEBUGLCOUT(MYDEBUG_INPUT,
@@ -1156,6 +1176,10 @@ EndOfUse:
 				case PLATES:
 					ElemData[Elem::PLATE].DefaultOut(true);
 					break;
+
+                                case SOLIDS:
+					ElemData[Elem::SOLID].DefaultOut(true);
+					break;                          
 
 				case RIGIDBODIES:
 					ElemData[Elem::BODY].DefaultOut(true);

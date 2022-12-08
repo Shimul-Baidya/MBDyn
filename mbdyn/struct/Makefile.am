@@ -100,6 +100,8 @@ shelleas.cc \
 shelleas.h \
 socketstreammotionelem.cc \
 socketstreammotionelem.h \
+solid.h \
+solid.cc \
 spherj.cc \
 spherj.h \
 stredge.cc \

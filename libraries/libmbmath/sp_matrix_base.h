@@ -4651,6 +4651,16 @@ namespace sp_grad {
      inline T Det(const SpMatrix<T, 2, 2>& A) {
           return A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1);
      }
+     
+     template <typename T>
+     inline void Inv(const SpMatrix<T, 2, 2>& A, SpMatrix<T, 2, 2>& invA, T& detA) {
+          detA = Det(A);
+          
+          invA(1, 1) = A(2, 2) / detA;
+          invA(2, 1) = -A(2, 1) / detA;
+          invA(1, 2) = -A(1, 2) / detA;
+          invA(2, 2) = A(1, 1) / detA;
+     }
 
      template <typename T>
      inline SpMatrix<T, 2, 2> Inv(const SpMatrix<T, 2, 2>& A) {
@@ -4660,6 +4670,41 @@ namespace sp_grad {
                     -A(2, 1) / detA,
                     -A(1, 2) / detA,
                     A(1, 1) / detA};
+     }
+
+     template <typename T>
+     inline T Det(const SpMatrix<T, 3, 3>& A) {
+          return A(1,1)*(A(2,2)*A(3,3)-A(2,3)*A(3,2))-A(1,2)*(A(2,1)*A(3,3)-A(2,3)*A(3,1))+A(1,3)*(A(2,1)*A(3,2)-A(2,2)*A(3,1));
+     }
+
+     template <typename T>
+     inline void Inv(const SpMatrix<T, 3, 3>& A, SpMatrix<T, 3, 3>& invA, T& detA) {
+          detA = Det(A);
+          
+          invA(1,1) = (A(2,2)*A(3,3)-A(2,3)*A(3,2))/detA;
+          invA(1,2) = -(A(1,2)*A(3,3)-A(1,3)*A(3,2))/detA;
+          invA(1,3) = (A(1,2)*A(2,3)-A(1,3)*A(2,2))/detA;
+          invA(2,1) = -(A(2,1)*A(3,3)-A(2,3)*A(3,1))/detA;
+          invA(2,2) = (A(1,1)*A(3,3)-A(1,3)*A(3,1))/detA;
+          invA(2,3) = -(A(1,1)*A(2,3)-A(1,3)*A(2,1))/detA;
+          invA(3,1) = (A(2,1)*A(3,2)-A(2,2)*A(3,1))/detA;
+          invA(3,2) = -(A(1,1)*A(3,2)-A(1,2)*A(3,1))/detA;
+          invA(3,3) = (A(1,1)*A(2,2)-A(1,2)*A(2,1))/detA;
+     }
+
+     template <typename T>
+     inline SpMatrix<T, 3, 3> Inv(const SpMatrix<T, 3, 3>& A) {
+          const T detA = Det(A);
+
+          return SpMatrix<T, 3, 3>{(A(2,2)*A(3,3)-A(2,3)*A(3,2))/detA,
+                    -(A(2,1)*A(3,3)-A(2,3)*A(3,1))/detA,          
+                    (A(2,1)*A(3,2)-A(2,2)*A(3,1))/detA,
+                    -(A(1,2)*A(3,3)-A(1,3)*A(3,2))/detA,
+                    (A(1,1)*A(3,3)-A(1,3)*A(3,1))/detA,
+                    -(A(1,1)*A(3,2)-A(1,2)*A(3,1))/detA,
+                    (A(1,2)*A(2,3)-A(1,3)*A(2,2))/detA,          
+                    -(A(1,1)*A(2,3)-A(1,3)*A(2,1))/detA,
+                    (A(1,1)*A(2,2)-A(1,2)*A(2,1))/detA};
      }
 
      template <typename ValueType, index_type NumRows, index_type NumCols>

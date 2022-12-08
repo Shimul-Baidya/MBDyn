@@ -910,6 +910,54 @@ namespace sp_grad_test {
 
      }
 
+     template <typename T, sp_grad::index_type N>
+     void testInv(const index_type inumloops, const index_type inumdof, const index_type inumnz) {
+          using namespace std;
+          using namespace std::chrono;
+
+          cerr << __PRETTY_FUNCTION__ << ":\n";
+
+          random_device rd;
+          mt19937 gen(rd());
+          uniform_real_distribution<doublereal> randval(-1., 1.);
+          uniform_int_distribution<index_type> randdof(1, inumdof);
+          uniform_int_distribution<index_type> randnz(0, inumnz - 1);
+
+          gen.seed(0);
+
+          for (index_type iloop = 0; iloop < inumloops; ++iloop) {
+               SpMatrixA<T, N, N> A;
+
+               for (index_type j = 1; j <= A.iGetNumCols(); ++j) {
+                    for (index_type i = 1; i <= A.iGetNumRows(); ++i) {
+                         sp_grad_rand_gen(A(i, j), randnz, randdof, randval, gen);
+                    }
+               }
+
+               const SpMatrixA<T, N, N> invA = Inv(A);
+               SpMatrixA<T, N, N> invA2;
+               T detA;
+               Inv(A, invA2, detA);
+               SpMatrixA<T, N, N> I1 = invA * A;
+               SpMatrixA<T, N, N> I2 = A * invA;
+               SpMatrixA<T, N, N> I3 = invA2 * A;
+               SpMatrixA<T, N, N> I4 = A * invA2;
+               
+               const doublereal dTol = sqrt(std::numeric_limits<doublereal>::epsilon());
+               
+               for (index_type j = 1; j <= N; ++j) {
+                    for (index_type i = 1; i <= N; ++i) {
+                         T deltaij{(i == j) ? 1. : 0.};
+                         
+                         sp_grad_assert_equal(I1(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I2(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I3(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I4(i, j), deltaij, dTol);
+                    }
+               }
+          }
+     }
+     
      template <typename T>
      SpColVector<T, 2> func_grad_prod0(const SpColVector<T, 2>& X) {
           return SpColVector<T, 2>{sin(2. * X(1) - X(2) * 3.) * exp(X(1) / X(2)) + sqrt(X(1)), 4. * cos(X(1) * X(2)) * pow(X(1), X(2))};
@@ -3344,7 +3392,11 @@ int main(int argc, char* argv[])
           if (SP_GRAD_RUN_TEST(15.1)) test15<doublereal>(inumloops, inumnz, inumdof);
           if (SP_GRAD_RUN_TEST(15.2)) test15<SpGradient>(inumloops, inumnz, inumdof);
           if (SP_GRAD_RUN_TEST(16.1)) test16(inumloops, inumnz, inumdof, imatrows, imatcols);
-
+          if (SP_GRAD_RUN_TEST(17.1)) testInv<doublereal, 2>(inumloops, inumnz, inumdof);
+          if (SP_GRAD_RUN_TEST(17.2)) testInv<doublereal, 3>(inumloops, inumnz, inumdof);
+          if (SP_GRAD_RUN_TEST(17.3)) testInv<SpGradient, 2>(inumloops, inumnz, inumdof);
+          if (SP_GRAD_RUN_TEST(17.4)) testInv<SpGradient, 3>(inumloops, inumnz, inumdof);
+          
           cerr << "All tests passed\n"
                << "\n\tloops performed: " << inumloops
                << "\n\tmax nonzeros: " << inumnz

@@ -88,6 +88,7 @@
 
 #include "membrane.h"
 #include "shell.h"
+#include "solid.h"
 
 static int iNumTypes[Elem::LASTELEMTYPE];
 
@@ -111,7 +112,8 @@ enum KeyWords {
 	MEMBRANE4EAS,
 	SHELL4EAS,
 	SHELL4EASANS,
-
+        HEXAHEDRON8,
+        
 	AIRPROPERTIES,
 	GUST,
 	INDUCEDVELOCITY,
@@ -179,7 +181,8 @@ DataManager::ReadElems(MBDynParser& HP)
 		"membrane4eas",
 		"shell4eas",
 		"shell4easans",
-
+                "hexahedron8",
+                
 		"air" "properties",
 		"gust",
 		"induced" "velocity",
@@ -360,6 +363,12 @@ DataManager::ReadElems(MBDynParser& HP)
 				Typ = Elem::PLATE;
 				break;
 			}
+
+                        case HEXAHEDRON8: {
+                             DEBUGLCOUT(MYDEBUG_INPUT, "solids\n");
+                             Typ = Elem::SOLID;
+                             break;
+                        }
 
 			case INDUCEDVELOCITY:
 			case ROTOR: {
@@ -548,7 +557,11 @@ DataManager::ReadElems(MBDynParser& HP)
 				case SHELL4EASANS:
 					t = Elem::PLATE;
 					break;
-
+                                        
+                                case HEXAHEDRON8:
+                                        t = Elem::SOLID;
+                                        break;
+                                     
 				case INDUCEDVELOCITY:
 				case ROTOR:
 					t = Elem::INDUCEDVELOCITY;
@@ -866,7 +879,7 @@ DataManager::ReadElems(MBDynParser& HP)
 					case HBEAM:
 					case SHELL4EAS:
 					case SHELL4EASANS:
-
+                                        case HEXAHEDRON8:
 					case INDUCEDVELOCITY:
 					case ROTOR:
 					case AERODYNAMICBODY:
@@ -954,6 +967,10 @@ DataManager::ReadElems(MBDynParser& HP)
 							ppE = ppFindElem(Elem::PLATE, uLabel);
 							break;
 
+                                                case HEXAHEDRON8:
+                                                        ppE = ppFindElem(Elem::SOLID, uLabel);
+                                                        break;
+                                                        
 						case INDUCEDVELOCITY:
 						case ROTOR:
 							ppE = ppFindElem(Elem::INDUCEDVELOCITY, uLabel);
@@ -1096,7 +1113,8 @@ DataManager::ReadElems(MBDynParser& HP)
 				case MEMBRANE4EAS:
 				case SHELL4EAS:
 				case SHELL4EASANS:
-
+                                case HEXAHEDRON8:
+                                        
 				case GUST:
 				case INDUCEDVELOCITY:
 				case ROTOR:
@@ -1598,6 +1616,35 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 		break;
 	}
 
+        case HEXAHEDRON8: {
+                const char* sType = "hexahedron8";
+                
+		if (iNumTypes[Elem::SOLID]-- <= 0) {
+			DEBUGCERR("");
+			silent_cerr("line " << HP.GetLineData() << ": "
+				<< sType << "(" << uLabel << ") "
+				"exceeds solid elements number" << std::endl);
+
+			throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+		}
+
+		if (pFindElem(Elem::SOLID, uLabel) != NULL) {
+			DEBUGCERR("");
+			silent_cerr("line " << HP.GetLineData() << ": "
+				<< sType << "(" << uLabel << ") "
+				"already defined" << std::endl);
+
+			throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+		}
+                
+                pE = ReadSolid<SolidElemStatic<Hexahedron8, Gauss2>>(this, HP, uLabel);
+                
+		if (pE) {
+			ppE = InsertElem(ElemData[Elem::SOLID], uLabel, pE);
+		}
+                
+                break;
+        }
 	/* Elementi aerodinamici: rotori */
 	case ROTOR:
 	case INDUCEDVELOCITY: {
