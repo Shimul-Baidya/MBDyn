@@ -82,6 +82,7 @@ const char* psExt[] = {
 	".dof",
 	".drv",		// 30
 	".trc",
+        ".sol",
 	".m",		// NOTE: ALWAYS LAST!
 	NULL		// 33
 };
@@ -504,6 +505,10 @@ OutputHandler::OutputHandler_int(void)
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[TRACES].pof = &ofTraces;
 
+	OutData[SOLIDS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+	OutData[SOLIDS].pof = &ofSolids;
+        
 	OutData[EIGENANALYSIS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[EIGENANALYSIS].pof = &ofEigenanalysis;

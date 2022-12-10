@@ -150,6 +150,32 @@ Elem::Type SolidElemStatic<ElementType, CollocationType>::GetElemType(void) cons
 }
 
 template <typename ElementType, typename CollocationType>
+void SolidElemStatic<ElementType, CollocationType>::Output(OutputHandler& OH) const
+{
+     using namespace sp_grad;
+     
+     if (bToBeOutput()) {
+          if (OH.UseText(OutputHandler::SOLIDS)) {
+               std::ostream& of = OH.Solids();
+               
+               of << std::setw(8) << GetLabel();
+
+               for (index_type j = 1; j <= CollocationType::iGetNumEvalPoints(); ++j) {
+                    for (index_type i = 1; i <= 6; ++i) {
+                         of << ' ' << epsilon(i, j);
+                    }
+
+                    for (index_type i = 1; i <= 6; ++i) {
+                         of << ' ' << tau(i, j);
+                    }
+               }
+
+               of << '\n';
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType>
 void
 SolidElemStatic<ElementType, CollocationType>::SetValue(DataManager *pDM,
                                                         VectorHandler& X, VectorHandler& XP,
@@ -247,17 +273,19 @@ SolidElemStatic<ElementType, CollocationType>::AssRes(sp_grad::SpGradientAssVec<
 
           const SpColVector<T, 6> eps{G(1, 1), G(2, 2), G(3, 3), 2. * G(1, 2), 2. * G(2, 3), 2. * G(3, 1)};
 
-          const SpColVector<T, 6> S = rgConstLaw[iColloc]->Update(eps);
+          const SpColVector<T, 6> sigma = rgConstLaw[iColloc]->Update(eps);
 
+          UpdateStressStrain(iColloc, G, sigma, dF);
+          
 #ifdef DEBUG
           if (std::is_same<T, doublereal>::value) {
                DEBUGCERR("eps=" << eps << "\n");
-               DEBUGCERR("S=" << S << "\n");
+               DEBUGCERR("sigma=" << sigma << "\n");
           }
 #endif
           const doublereal alpha = CollocationType::dGetWeight(iColloc);
 
-          R -= (Transpose(BL0) * S + Transpose(BL1) * S) * alpha * detJ;
+          R -= (Transpose(BL0) * sigma + Transpose(BL1) * sigma) * alpha * detJ;
      }
 
      for (index_type i = 1; i <= ElementType::NumberOfNodes; ++i) {
@@ -334,6 +362,49 @@ SolidElemStatic<ElementType, CollocationType>::Jacobian(const sp_grad::SpMatrix<
      using namespace sp_grad;
 
      J = Transpose(x0 * hd);
+}
+
+template <typename ElementType, typename CollocationType>
+void
+SolidElemStatic<ElementType, CollocationType>::UpdateStressStrain(const sp_grad::index_type iColloc,
+                                                                  const sp_grad::SpMatrix<doublereal, 3, 3>& G,
+                                                                  const sp_grad::SpColVector<doublereal, 6>& sigma,
+                                                                  const sp_grad::SpMatrix<doublereal, 3, 3>& dF)
+{
+     using namespace sp_grad;
+     
+     SpMatrixA<doublereal, 3, 3> F = dF;
+
+     for (index_type i = 1; i <= 3; ++i) {
+          F(i, i) += 1.;
+     }
+
+     static constexpr index_type idxr[6] = {1, 2, 3, 1, 2, 3};
+     static constexpr index_type idxc[6] = {1, 2, 3, 2, 3, 1};
+
+     SpMatrixA<doublereal, 3, 3> S;
+
+     for (index_type i = 1; i <= 6; ++i) {
+          S(idxr[i - 1], idxc[i - 1]) = sigma(i);
+     }
+
+     for (index_type i = 4; i <= 6; ++i) {
+          S(idxc[i - 1], idxr[i - 1]) = sigma(i);
+     }
+
+     const SpMatrixA<doublereal, 3, 3> taui = F * S * Transpose(F) / Det(F);
+
+     for (index_type i = 1; i <= 3; ++i) {
+          epsilon(i, iColloc + 1) = sqrt(1. + 2. * G(i, i)) - 1.;
+     }
+
+     for (index_type i = 4; i <= 6; ++i) {
+          epsilon(i, iColloc + 1) = 2. * G(idxr[i - 1], idxc[i - 1]) / ((1. + epsilon(idxr[i - 1], iColloc + 1)) * (1. + epsilon(idxc[i - 1], iColloc + 1)));
+     }
+     
+     for (index_type i = 1; i <= 6; ++i) {
+          tau(i, iColloc + 1) = taui(idxr[i - 1], idxc[i - 1]);          
+     }
 }
 
 template <typename SolidElemType>

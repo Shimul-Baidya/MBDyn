@@ -108,6 +108,7 @@ public:
 		DOFSTATS,
 		DRIVECALLERS,			// 30
 		TRACES,
+                SOLIDS,
 		EIGENANALYSIS,			// NOTE: ALWAYS LAST!
 		LASTFILE			// 33
 	};
@@ -241,6 +242,7 @@ private:
 	std::ofstream ofDofStats;		/* 30 */
 	std::ofstream ofDriveCallers;
 	std::ofstream ofTraces;
+        std::ofstream ofSolids;
 	std::ofstream ofEigenanalysis;
 
 	int iCurrWidth;
@@ -333,6 +335,7 @@ public:
 	inline std::ostream& DofStats(void) const;
 	inline std::ostream& DriveCallers(void) const;
 	inline std::ostream& Traces(void) const;
+        inline std::ostream& Solids(void) const;
 	inline std::ostream& Eigenanalysis(void) const;
 
 	inline int iW(void) const;
@@ -709,6 +712,13 @@ OutputHandler::DriveCallers(void) const
 	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofDriveCallers));
 }
 
+inline std::ostream&
+OutputHandler::Solids(void) const
+{
+	ASSERT(IsOpen(SOLIDS));
+	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofSolids));
+}
+        
 inline std::ostream&
 OutputHandler::Traces(void) const
 {

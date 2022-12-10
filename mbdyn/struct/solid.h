@@ -94,6 +94,8 @@ public:
 
      virtual Elem::Type GetElemType(void) const override;
 
+     virtual void Output(OutputHandler& OH) const override;
+     
      virtual void
      SetValue(DataManager *pDM,
               VectorHandler& X, VectorHandler& XP,
@@ -135,12 +137,34 @@ public:
 
 protected:
      inline void
+     UpdateStressStrain(sp_grad::index_type i,
+                        const sp_grad::SpMatrix<doublereal, 3, 3>& G,
+                        const sp_grad::SpColVector<doublereal, 6>& sigma,
+                        const sp_grad::SpMatrix<doublereal, 3, 3>& dF);
+     
+     static inline void
+     UpdateStressStrain(sp_grad::index_type,
+                        const sp_grad::SpMatrix<sp_grad::SpGradient, 3, 3>&,
+                        const sp_grad::SpColVector<sp_grad::SpGradient, 6>&,
+                        const sp_grad::SpMatrix<sp_grad::SpGradient, 3, 3>&) {
+     }
+
+     static inline void
+     UpdateStressStrain(sp_grad::index_type,
+                        const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>&,
+                        const sp_grad::SpColVector<sp_grad::GpGradProd, 6>&,
+                        const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>&) {
+     }     
+     
+     inline void
      Jacobian(const sp_grad::SpMatrix<doublereal, ElementType::NumberOfNodes, 3>& hd,
               sp_grad::SpMatrix<doublereal, 3, 3>& J);
 
      sp_grad::SpMatrixA<doublereal, 3, ElementType::NumberOfNodes> x0;
      const std::array<const StructDispNodeAd*, ElementType::NumberOfNodes> rgNodes;
      std::array<std::unique_ptr<ConstitutiveLaw6D>, CollocationType::iGetNumEvalPoints()> rgConstLaw;
+     sp_grad::SpMatrixA<doublereal, 6, CollocationType::iGetNumEvalPoints()> epsilon;
+     sp_grad::SpMatrixA<doublereal, 6, CollocationType::iGetNumEvalPoints()> tau;
 };
 
 template <typename SolidElemType>
