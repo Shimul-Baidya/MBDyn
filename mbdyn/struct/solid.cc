@@ -43,11 +43,11 @@
 #include "solid.h"
 #include "dataman.h"
 
-constexpr sp_grad::index_type Hexahedron8::NumberOfNodes;
+constexpr sp_grad::index_type Hexahedron8::iNumNodes;
 
 void
 Hexahedron8::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
-                                sp_grad::SpMatrix<doublereal, NumberOfNodes, 3>& h0d1)
+                                sp_grad::SpMatrix<doublereal, iNumNodes, 3>& h0d1)
 {
      h0d1(1,1) = ((r(2)+1)*(r(3)+1))/8.0E+0;
      h0d1(1,2) = ((r(1)+1)*(r(3)+1))/8.0E+0;
@@ -75,31 +75,25 @@ Hexahedron8::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
      h0d1(8,3) = -((r(1)+1)*(1-r(2)))/8.0E+0;
 }
 
-constexpr sp_grad::index_type Gauss2::NumberOfEvalPoints;
-constexpr sp_grad::index_type Gauss2::NumberOfCollocationPoints;
-constexpr sp_grad::index_type Gauss2::ridx[NumberOfCollocationPoints];
-constexpr sp_grad::index_type Gauss2::sidx[NumberOfCollocationPoints];
-constexpr sp_grad::index_type Gauss2::tidx[NumberOfCollocationPoints];
-constexpr doublereal Gauss2::ri[NumberOfEvalPoints];
-constexpr doublereal Gauss2::alphai[NumberOfEvalPoints];
-
-constexpr sp_grad::index_type
-Gauss2::iGetNumEvalPoints()
-{
-     return NumberOfCollocationPoints;
-}
+constexpr sp_grad::index_type Gauss2::iGaussOrder;
+constexpr sp_grad::index_type Gauss2::iNumEvalPoints;
+constexpr sp_grad::index_type Gauss2::ridx[iNumEvalPoints];
+constexpr sp_grad::index_type Gauss2::sidx[iNumEvalPoints];
+constexpr sp_grad::index_type Gauss2::tidx[iNumEvalPoints];
+constexpr doublereal Gauss2::ri[iGaussOrder];
+constexpr doublereal Gauss2::alphai[iGaussOrder];
 
 void
 Gauss2::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
 {
      ASSERT(i >= 0);
-     ASSERT(i < NumberOfCollocationPoints);
+     ASSERT(i < iNumEvalPoints);
      ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < NumberOfEvalPoints);
+     ASSERT(ridx[i] < iGaussOrder);
      ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < NumberOfEvalPoints);
+     ASSERT(sidx[i] < iGaussOrder);
      ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < NumberOfEvalPoints);
+     ASSERT(tidx[i] < iGaussOrder);
 
      r(1) = ri[ridx[i]];
      r(2) = ri[sidx[i]];
@@ -110,31 +104,44 @@ doublereal
 Gauss2::dGetWeight(sp_grad::index_type i)
 {
      ASSERT(i >= 0);
-     ASSERT(i < NumberOfCollocationPoints);
+     ASSERT(i < iNumEvalPoints);
      ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < NumberOfEvalPoints);
+     ASSERT(ridx[i] < iGaussOrder);
      ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < NumberOfEvalPoints);
+     ASSERT(sidx[i] < iGaussOrder);
      ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < NumberOfEvalPoints);
+     ASSERT(tidx[i] < iGaussOrder);
 
      return alphai[ridx[i]] * alphai[sidx[i]] * alphai[tidx[i]];
 }
 
 template <typename ElementType, typename CollocationType>
+constexpr sp_grad::index_type SolidElemStatic<ElementType, CollocationType>::iNumNodes;
+
+template <typename ElementType, typename CollocationType>
+constexpr sp_grad::index_type SolidElemStatic<ElementType, CollocationType>::iNumEvalPoints;
+
+template <typename ElementType, typename CollocationType>
+constexpr sp_grad::index_type SolidElemStatic<ElementType, CollocationType>::iNumDof;
+
+template <typename ElementType, typename CollocationType>
 SolidElemStatic<ElementType, CollocationType>::SolidElemStatic(unsigned uLabel,
-                                                               const std::array<const StructDispNodeAd*, ElementType::NumberOfNodes>& rgNodes,
-                                                               std::array<std::unique_ptr<ConstitutiveLaw6D>, CollocationType::iGetNumEvalPoints()>&& rgCSL,
+                                                               const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
+                                                               std::array<std::unique_ptr<ConstitutiveLaw6D>, iNumEvalPoints>&& rgCSL,
                                                                flag fOut)
-     :Elem{uLabel, fOut}, ElemGravityOwner{uLabel, fOut}, rgNodes{rgNodes}, rgConstLaw(std::move(rgCSL))
+     :Elem{uLabel, fOut}, ElemGravityOwner{uLabel, fOut}, rgNodes{rgNodes}
 {
      using namespace sp_grad;
 
-     for (index_type i = 1; i <= ElementType::NumberOfNodes; ++i) {
+     for (index_type i = 1; i <= iNumNodes; ++i) {
           const Vec3& x0i = rgNodes[i - 1]->GetXCurr();
           for (index_type j = 1; j <= 3; ++j) {
                x0(j, i) = x0i(j);
           }
+     }
+
+     for (index_type iColloc = 0; iColloc < iNumEvalPoints; ++iColloc) {
+          rgCollocData[iColloc].Init(iColloc, x0, std::move(rgCSL[iColloc]));
      }
 }
 
@@ -153,14 +160,19 @@ template <typename ElementType, typename CollocationType>
 void SolidElemStatic<ElementType, CollocationType>::Output(OutputHandler& OH) const
 {
      using namespace sp_grad;
-     
+
      if (bToBeOutput()) {
+          sp_grad::SpMatrixA<doublereal, 6, iNumEvalPoints> epsilon;
+          sp_grad::SpMatrixA<doublereal, 6, iNumEvalPoints> tau;
+          
+          ComputeStressStrain(epsilon, tau);
+
           if (OH.UseText(OutputHandler::SOLIDS)) {
                std::ostream& of = OH.Solids();
-               
+
                of << std::setw(8) << GetLabel();
 
-               for (index_type j = 1; j <= CollocationType::iGetNumEvalPoints(); ++j) {
+               for (index_type j = 1; j <= iNumEvalPoints; ++j) {
                     for (index_type i = 1; i <= 6; ++i) {
                          of << ' ' << epsilon(i, j);
                     }
@@ -194,7 +206,7 @@ std::ostream& SolidElemStatic<ElementType, CollocationType>::Restart(std::ostrea
 template <typename ElementType, typename CollocationType>
 void SolidElemStatic<ElementType, CollocationType>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 {
-     *piNumRows = ElementType::NumberOfNodes * 3;
+     *piNumRows = iNumDof;
      *piNumCols = 0;
 }
 
@@ -209,91 +221,53 @@ SolidElemStatic<ElementType, CollocationType>::AssRes(sp_grad::SpGradientAssVec<
 {
      using namespace sp_grad;
 
-     SpMatrix<T, 3, ElementType::NumberOfNodes> u(3, ElementType::NumberOfNodes, 1);
-     SpColVector<T, 3> Xj(3, 1);
+     SpMatrix<T, 3, iNumNodes> u(3, iNumNodes, 1);
 
-     for (index_type j = 1; j <= ElementType::NumberOfNodes; ++j) {
-          rgNodes[j - 1]->GetXCurr(Xj, dCoef, func);
+     GetDeformations(u, dCoef, func);
 
-          for (index_type i = 1; i <= 3; ++i) {
-               u(i, j) = std::move(Xj(i));
-               u(i, j) -= x0(i, j);
-          }
-     }
+     constexpr index_type iNumColsR = 2 * iNumDof * iNumEvalPoints;
+     
+     SpColVectorA<T, iNumDof, iNumColsR> R;
 
-     SpColVectorA<doublereal, 3> r;
-     SpMatrixA<doublereal, ElementType::NumberOfNodes, 3> hd;
-     SpMatrixA<doublereal, 3, 3> J, invJ;
-     doublereal detJ;
-     SpMatrixA<doublereal, 6, ElementType::NumberOfNodes * 3> BL0;
-     SpMatrixA<T, 6, ElementType::NumberOfNodes * 3, ElementType::NumberOfNodes * 3> BL1;
-     SpColVectorA<T, 3 * ElementType::NumberOfNodes, 2 * 3 * ElementType::NumberOfNodes * CollocationType::iGetNumEvalPoints()> R;
+     AssStiffnessVec(u, R, dCoef, func);
 
-     for (index_type iColloc = 0; iColloc < CollocationType::iGetNumEvalPoints(); ++iColloc) {
-          CollocationType::GetPosition(iColloc, r);
-          ElementType::ShapeFunctionDeriv(r, hd);
-          Jacobian(hd, J);
-          Inv(J, invJ, detJ);
-          SpMatrix<doublereal, ElementType::NumberOfNodes, 3> h0d = hd * invJ;
-
-          for (index_type k = 1; k <= ElementType::NumberOfNodes; ++k) {
-               for (index_type i = 1; i <= 3; ++i) {
-                    BL0(i, (k - 1) * 3 + i) = h0d(k, i);
-               }
-
-               BL0(4, (k - 1) * 3 + 1) = h0d(k, 2);
-               BL0(4, (k - 1) * 3 + 2) = h0d(k, 1);
-               BL0(5, (k - 1) * 3 + 2) = h0d(k, 3);
-               BL0(5, (k - 1) * 3 + 3) = h0d(k, 2);
-               BL0(6, (k - 1) * 3 + 1) = h0d(k, 3);
-               BL0(6, (k - 1) * 3 + 3) = h0d(k, 1);
-          }
-
-          SpMatrix<T, 3, 3> dF = u * h0d;
-
-          for (index_type k=1; k <= ElementType::NumberOfNodes; ++k) {
-               for (index_type i = 1; i <= 3; ++i) {
-                    for (index_type j = 1; j <= 3; ++j) {
-                         BL1(i, (k - 1) * 3 + j) = dF(j , i) * h0d(k, i);
-                    }
-               }
-
-               BL1(4, (k - 1) * 3 + 1) = dF(1, 1) * h0d(k, 2) + dF(1, 2) * h0d(k, 1);
-               BL1(4, (k - 1) * 3 + 2) = dF(2, 1) * h0d(k, 2) + dF(2, 2) * h0d(k, 1);
-               BL1(4, (k - 1) * 3 + 3) = dF(3, 1) * h0d(k, 2) + dF(3, 2) * h0d(k, 1);
-               BL1(5, (k - 1) * 3 + 1) = dF(1, 2) * h0d(k, 3) + dF(1, 3) * h0d(k, 2);
-               BL1(5, (k - 1) * 3 + 2) = dF(2, 2) * h0d(k, 3) + dF(2, 3) * h0d(k, 2);
-               BL1(5, (k - 1) * 3 + 3) = dF(3, 2) * h0d(k, 3) + dF(3, 3) * h0d(k, 2);
-               BL1(6, (k - 1) * 3 + 1) = dF(1, 1) * h0d(k, 3) + dF(1, 3) * h0d(k, 1);
-               BL1(6, (k - 1) * 3 + 2) = dF(2, 1) * h0d(k, 3) + dF(2, 3) * h0d(k, 1);
-               BL1(6, (k - 1) * 3 + 3) = dF(3, 1) * h0d(k, 3) + dF(3, 3) * h0d(k, 1);
-          }
-
-          const SpMatrix<T, 3, 3> G = 0.5 * (dF + Transpose(dF) + Transpose(dF) * dF);
-
-          const SpColVector<T, 6> eps{G(1, 1), G(2, 2), G(3, 3), 2. * G(1, 2), 2. * G(2, 3), 2. * G(3, 1)};
-
-          const SpColVector<T, 6> sigma = rgConstLaw[iColloc]->Update(eps);
-
-          UpdateStressStrain(iColloc, G, sigma, dF);
-          
-#ifdef DEBUG
-          if (std::is_same<T, doublereal>::value) {
-               DEBUGCERR("eps=" << eps << "\n");
-               DEBUGCERR("sigma=" << sigma << "\n");
-          }
-#endif
-          const doublereal alpha = CollocationType::dGetWeight(iColloc);
-
-          R -= (Transpose(BL0) * sigma + Transpose(BL1) * sigma) * alpha * detJ;
-     }
-
-     for (index_type i = 1; i <= ElementType::NumberOfNodes; ++i) {
+     for (index_type i = 1; i <= iNumNodes; ++i) {
           const index_type iEqIndex = rgNodes[i - 1]->iGetFirstMomentumIndex();
 
           for (index_type j = 1; j <= 3; ++j) {
                WorkVec.AddItem(iEqIndex + j, R((i - 1) * 3 + j));
           }
+     }
+}
+
+template <typename ElementType, typename CollocationType>
+template <typename T>
+void
+SolidElemStatic<ElementType, CollocationType>::AssStiffnessVec(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
+                                                               sp_grad::SpColVector<T, iNumDof>& R,
+                                                               const doublereal dCoef,
+                                                               const sp_grad::SpFunctionCall func)
+{
+     using namespace sp_grad;
+     
+     SpMatrixA<T, 6, iNumDof, iNumDof> BL1;
+
+     for (index_type iColloc = 0; iColloc < iNumEvalPoints; ++iColloc) {
+          const auto& h0d = rgCollocData[iColloc].h0d;
+
+          const SpMatrix<T, 3, 3> dF = u * h0d;
+
+          const SpMatrix<T, 3, 3> G = 0.5 * (dF + Transpose(dF) + Transpose(dF) * dF);
+
+          const SpColVector<T, 6> sigma = rgCollocData[iColloc].ComputeStress(G, dF);
+
+          const doublereal alpha = CollocationType::dGetWeight(iColloc);
+
+          rgCollocData[iColloc].StrainMatrix1(dF, BL1);
+          
+          const auto& BL0 = rgCollocData[iColloc].BL0;
+          
+          R -= (Transpose(BL0) * sigma + Transpose(BL1) * sigma) * (alpha * rgCollocData[iColloc].detJ);
      }
 }
 
@@ -355,55 +329,152 @@ SolidElemStatic<ElementType, CollocationType>::AssJac(VectorHandler& JacY,
 }
 
 template <typename ElementType, typename CollocationType>
+template <typename T>
 void
-SolidElemStatic<ElementType, CollocationType>::Jacobian(const sp_grad::SpMatrix<doublereal, ElementType::NumberOfNodes, 3>& hd,
-                                                        sp_grad::SpMatrix<doublereal, 3, 3>& J)
+SolidElemStatic<ElementType, CollocationType>::GetDeformations(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
+                                                               const doublereal dCoef,
+                                                               const sp_grad::SpFunctionCall func) const
 {
      using namespace sp_grad;
 
-     J = Transpose(x0 * hd);
+     SpColVectorA<T, 3, 1> Xj;
+
+     for (index_type j = 1; j <= iNumNodes; ++j) {
+          rgNodes[j - 1]->GetXCurr(Xj, dCoef, func);
+
+          for (index_type i = 1; i <= 3; ++i) {
+               u(i, j) = std::move(Xj(i));
+               u(i, j) -= x0(i, j);
+          }
+     }
 }
 
 template <typename ElementType, typename CollocationType>
 void
-SolidElemStatic<ElementType, CollocationType>::UpdateStressStrain(const sp_grad::index_type iColloc,
-                                                                  const sp_grad::SpMatrix<doublereal, 3, 3>& G,
-                                                                  const sp_grad::SpColVector<doublereal, 6>& sigma,
-                                                                  const sp_grad::SpMatrix<doublereal, 3, 3>& dF)
+SolidElemStatic<ElementType, CollocationType>::ComputeStressStrain(sp_grad::SpMatrixA<doublereal, 6, iNumEvalPoints>& epsilon,
+                                                                   sp_grad::SpMatrixA<doublereal, 6, iNumEvalPoints>& tau) const
 {
      using namespace sp_grad;
-     
-     SpMatrixA<doublereal, 3, 3> F = dF;
-
-     for (index_type i = 1; i <= 3; ++i) {
-          F(i, i) += 1.;
-     }
 
      static constexpr index_type idxr[6] = {1, 2, 3, 1, 2, 3};
      static constexpr index_type idxc[6] = {1, 2, 3, 2, 3, 1};
 
      SpMatrixA<doublereal, 3, 3> S;
 
-     for (index_type i = 1; i <= 6; ++i) {
-          S(idxr[i - 1], idxc[i - 1]) = sigma(i);
-     }
+     for (index_type iColloc = 0; iColloc < iNumEvalPoints; ++iColloc) {
+          const auto& sigma = rgCollocData[iColloc].sigma;
 
-     for (index_type i = 4; i <= 6; ++i) {
-          S(idxc[i - 1], idxr[i - 1]) = sigma(i);
-     }
+          for (index_type i = 1; i <= 6; ++i) {
+               S(idxr[i - 1], idxc[i - 1]) = sigma(i);
+          }
 
-     const SpMatrixA<doublereal, 3, 3> taui = F * S * Transpose(F) / Det(F);
+          for (index_type i = 4; i <= 6; ++i) {
+               S(idxc[i - 1], idxr[i - 1]) = sigma(i);
+          }
 
-     for (index_type i = 1; i <= 3; ++i) {
-          epsilon(i, iColloc + 1) = sqrt(1. + 2. * G(i, i)) - 1.;
-     }
+          const auto& F = rgCollocData[iColloc].F;
 
-     for (index_type i = 4; i <= 6; ++i) {
-          epsilon(i, iColloc + 1) = 2. * G(idxr[i - 1], idxc[i - 1]) / ((1. + epsilon(idxr[i - 1], iColloc + 1)) * (1. + epsilon(idxc[i - 1], iColloc + 1)));
+          const SpMatrixA<doublereal, 3, 3> taui = F * S * Transpose(F) / Det(F);
+
+          const auto& G = rgCollocData[iColloc].G;
+
+          for (index_type i = 1; i <= 3; ++i) {
+               epsilon(i, iColloc + 1) = sqrt(1. + 2. * G(i, i)) - 1.;
+          }
+
+          for (index_type i = 4; i <= 6; ++i) {
+               epsilon(i, iColloc + 1) = 2. * G(idxr[i - 1], idxc[i - 1]) / ((1. + epsilon(idxr[i - 1], iColloc + 1)) * (1. + epsilon(idxc[i - 1], iColloc + 1)));
+          }
+
+          for (index_type i = 1; i <= 6; ++i) {
+               tau(i, iColloc + 1) = taui(idxr[i - 1], idxc[i - 1]);
+          }
      }
-     
-     for (index_type i = 1; i <= 6; ++i) {
-          tau(i, iColloc + 1) = taui(idxr[i - 1], idxc[i - 1]);          
+}
+
+template <typename ElementType, typename CollocationType>
+void
+SolidElemStatic<ElementType, CollocationType>::CollocData::Init(const sp_grad::index_type iColloc, const sp_grad::SpMatrixA<doublereal, 3, iNumNodes>& x0, std::unique_ptr<ConstitutiveLaw6D>&& pCSL)
+{
+     using namespace sp_grad;
+
+     pConstLaw = std::move(pCSL);
+
+     SpColVectorA<doublereal, 3> r;
+     sp_grad::SpMatrixA<doublereal, ElementType::iNumNodes, 3> hd;
+
+     CollocationType::GetPosition(iColloc, r);
+     ElementType::ShapeFunctionDeriv(r, hd);
+
+     J = Transpose(x0 * hd);
+     Inv(J, invJ, detJ);
+
+     h0d = hd * invJ;
+
+     for (index_type k = 1; k <= iNumNodes; ++k) {
+          for (index_type i = 1; i <= 3; ++i) {
+               BL0(i, (k - 1) * 3 + i) = h0d(k, i);
+          }
+
+          BL0(4, (k - 1) * 3 + 1) = h0d(k, 2);
+          BL0(4, (k - 1) * 3 + 2) = h0d(k, 1);
+          BL0(5, (k - 1) * 3 + 2) = h0d(k, 3);
+          BL0(5, (k - 1) * 3 + 3) = h0d(k, 2);
+          BL0(6, (k - 1) * 3 + 1) = h0d(k, 3);
+          BL0(6, (k - 1) * 3 + 3) = h0d(k, 1);
+     }
+}
+
+template <typename ElementType, typename CollocationType>
+template <typename T>
+sp_grad::SpColVector<T, 6>
+SolidElemStatic<ElementType, CollocationType>::CollocData::ComputeStress(const sp_grad::SpMatrix<T, 3, 3>& G, const sp_grad::SpMatrix<T, 3, 3>& dF)
+{
+     using namespace sp_grad;
+     const SpColVector<T, 6> eps{G(1, 1), G(2, 2), G(3, 3), 2. * G(1, 2), 2. * G(2, 3), 2. * G(3, 1)};
+     const SpColVector<T, 6> sigma = pConstLaw->Update(eps);
+
+     UpdateStressStrain(G, sigma, dF);
+
+     return sigma;
+}
+
+template <typename ElementType, typename CollocationType>
+inline void
+SolidElemStatic<ElementType, CollocationType>::CollocData::UpdateStressStrain(const sp_grad::SpMatrix<doublereal, 3, 3>& G_tmp,
+                                                                              const sp_grad::SpColVector<doublereal, 6>& sigma_tmp,
+                                                                              const sp_grad::SpMatrix<doublereal, 3, 3>& dF_tmp)
+{
+     using namespace sp_grad;
+               
+     G = G_tmp;
+     sigma = sigma_tmp;
+     F = dF_tmp + Eye3;
+}
+
+template <typename ElementType, typename CollocationType>
+template <typename T>
+void
+SolidElemStatic<ElementType, CollocationType>::CollocData::StrainMatrix1(const sp_grad::SpMatrix<T, 3, 3>& dF,
+                                                                         sp_grad::SpMatrix<T, 6, iNumDof>& BL1) const
+{
+     using namespace sp_grad;
+
+     for (index_type k = 1; k <= iNumNodes; ++k) {
+          for (index_type i = 1; i <= 3; ++i) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    BL1(i, (k - 1) * 3 + j) = dF(j , i) * h0d(k, i);
+               }
+          }
+
+          static constexpr index_type idx1[] = {2, 3, 3};
+          static constexpr index_type idx2[] = {1, 2, 1};
+
+          for (index_type i = 1; i <= 3; ++i) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    BL1(i + 3, (k - 1) * 3 + j) = dF(j, idx2[i - 1]) * h0d(k, idx1[i - 1]) + dF(j, idx1[i - 1]) * h0d(k, idx2[i - 1]);
+               }
+          }
      }
 }
 
@@ -415,8 +486,8 @@ ReadSolid(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 
         using namespace sp_grad;
 
-        constexpr index_type iNumNodes = SolidElemType::iGetNumNodes();
-        constexpr index_type iNumEvalPoints = SolidElemType::iGetNumEvalPoints();
+        constexpr index_type iNumNodes = SolidElemType::iNumNodes;
+        constexpr index_type iNumEvalPoints = SolidElemType::iNumEvalPoints;
 
         std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
 

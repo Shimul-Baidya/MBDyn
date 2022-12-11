@@ -52,17 +52,18 @@
 
 class Hexahedron8 {
 protected:
-     static constexpr sp_grad::index_type NumberOfNodes = 8;
+     static constexpr sp_grad::index_type iNumNodes = 8;
 
      static inline void
      ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
-                        sp_grad::SpMatrix<doublereal, NumberOfNodes, 3>& h0d1);
+                        sp_grad::SpMatrix<doublereal, iNumNodes, 3>& h0d1);
 };
 
 class Gauss2 {
+private:
+     static constexpr sp_grad::index_type iGaussOrder = 2;
 public:
-     static inline constexpr sp_grad::index_type
-     iGetNumEvalPoints();
+     static constexpr sp_grad::index_type iNumEvalPoints = std::pow(iGaussOrder, 3);
 
      static inline void
      GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r);
@@ -71,24 +72,23 @@ public:
      dGetWeight(sp_grad::index_type i);
 
 private:
-     static constexpr sp_grad::index_type NumberOfEvalPoints = 2;
-     static constexpr sp_grad::index_type NumberOfCollocationPoints = NumberOfEvalPoints * NumberOfEvalPoints * NumberOfEvalPoints;
-     static constexpr sp_grad::index_type ridx[NumberOfCollocationPoints] = {0, 1, 1, 0, 0, 1, 1, 0};
-     static constexpr sp_grad::index_type sidx[NumberOfCollocationPoints] = {0, 0, 1, 1, 0, 0, 1, 1};
-     static constexpr sp_grad::index_type tidx[NumberOfCollocationPoints] = {0, 0, 0, 0, 1, 1, 1, 1};
-     static constexpr doublereal ri[NumberOfEvalPoints] = {0.577350269189626, -0.577350269189626};
-     static constexpr doublereal alphai[NumberOfEvalPoints] = {1.0, 1.0};
+     static constexpr sp_grad::index_type ridx[iNumEvalPoints] = {0, 1, 1, 0, 0, 1, 1, 0};
+     static constexpr sp_grad::index_type sidx[iNumEvalPoints] = {0, 0, 1, 1, 0, 0, 1, 1};
+     static constexpr sp_grad::index_type tidx[iNumEvalPoints] = {0, 0, 0, 0, 1, 1, 1, 1};
+     static constexpr doublereal ri[iGaussOrder] = {0.577350269189626, -0.577350269189626};
+     static constexpr doublereal alphai[iGaussOrder] = {1.0, 1.0};
 };
 
 template <typename ElementType, typename CollocationType>
 class SolidElemStatic: virtual public Elem, public ElemGravityOwner, protected ElementType, protected CollocationType {
 public:
-     static constexpr sp_grad::index_type iGetNumNodes() { return ElementType::NumberOfNodes; }
-     static constexpr sp_grad::index_type iGetNumEvalPoints() { return CollocationType::iGetNumEvalPoints(); }
+     static constexpr sp_grad::index_type iNumNodes = ElementType::iNumNodes;
+     static constexpr sp_grad::index_type iNumEvalPoints = CollocationType::iNumEvalPoints;
+     static constexpr sp_grad::index_type iNumDof = iNumNodes * 3;
 
      SolidElemStatic(unsigned uLabel,
-                     const std::array<const StructDispNodeAd*, ElementType::NumberOfNodes>& rgNodes,
-                     std::array<std::unique_ptr<ConstitutiveLaw6D>, CollocationType::iGetNumEvalPoints()>&& rgCSL,
+                     const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
+                     std::array<std::unique_ptr<ConstitutiveLaw6D>, iNumEvalPoints>&& rgCSL,
                      flag fOut);
      virtual ~SolidElemStatic();
 
@@ -125,8 +125,6 @@ public:
             const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr) override;
 
-     // Used by Newton Krylov solvers only
-     // JacY += Jac * Y
      virtual void
      AssJac(VectorHandler& JacY,
             const VectorHandler& Y,
@@ -136,35 +134,72 @@ public:
             VariableSubMatrixHandler& WorkMat) override;
 
 protected:
+     template <typename T>
      inline void
-     UpdateStressStrain(sp_grad::index_type i,
-                        const sp_grad::SpMatrix<doublereal, 3, 3>& G,
-                        const sp_grad::SpColVector<doublereal, 6>& sigma,
-                        const sp_grad::SpMatrix<doublereal, 3, 3>& dF);
-     
-     static inline void
-     UpdateStressStrain(sp_grad::index_type,
-                        const sp_grad::SpMatrix<sp_grad::SpGradient, 3, 3>&,
-                        const sp_grad::SpColVector<sp_grad::SpGradient, 6>&,
-                        const sp_grad::SpMatrix<sp_grad::SpGradient, 3, 3>&) {
-     }
-
-     static inline void
-     UpdateStressStrain(sp_grad::index_type,
-                        const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>&,
-                        const sp_grad::SpColVector<sp_grad::GpGradProd, 6>&,
-                        const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>&) {
-     }     
+     GetDeformations(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
+                     doublereal dCoef,
+                     sp_grad::SpFunctionCall func) const;
      
      inline void
-     Jacobian(const sp_grad::SpMatrix<doublereal, ElementType::NumberOfNodes, 3>& hd,
-              sp_grad::SpMatrix<doublereal, 3, 3>& J);
+     ComputeStressStrain(sp_grad::SpMatrixA<doublereal, 6, iNumEvalPoints>& epsilon,
+                         sp_grad::SpMatrixA<doublereal, 6, iNumEvalPoints>& tau) const;
 
-     sp_grad::SpMatrixA<doublereal, 3, ElementType::NumberOfNodes> x0;
-     const std::array<const StructDispNodeAd*, ElementType::NumberOfNodes> rgNodes;
-     std::array<std::unique_ptr<ConstitutiveLaw6D>, CollocationType::iGetNumEvalPoints()> rgConstLaw;
-     sp_grad::SpMatrixA<doublereal, 6, CollocationType::iGetNumEvalPoints()> epsilon;
-     sp_grad::SpMatrixA<doublereal, 6, CollocationType::iGetNumEvalPoints()> tau;
+     template <typename T>
+     void
+     AssStiffnessVec(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
+                     sp_grad::SpColVector<T, iNumDof>& R,
+                     doublereal dCoef,
+                     sp_grad::SpFunctionCall func);
+     
+     struct CollocData {
+          static constexpr sp_grad::index_type iNumNodes = SolidElemStatic::iNumNodes;
+          static constexpr sp_grad::index_type iNumDof = SolidElemStatic::iNumDof;
+          
+          inline void
+          Init(sp_grad::index_type iColloc,
+               const sp_grad::SpMatrixA<doublereal, 3, iNumNodes>& x0,
+               std::unique_ptr<ConstitutiveLaw6D>&& pCSL);
+
+          template <typename T>
+          inline void
+          StrainMatrix1(const sp_grad::SpMatrix<T, 3, 3>& dF,
+                        sp_grad::SpMatrix<T, 6, iNumDof>& BL1) const;
+
+          template <typename T>
+          inline sp_grad::SpColVector<T, 6>
+          ComputeStress(const sp_grad::SpMatrix<T, 3, 3>& G,
+                        const sp_grad::SpMatrix<T, 3, 3>& dF);
+
+          inline void
+          UpdateStressStrain(const sp_grad::SpMatrix<doublereal, 3, 3>& G_tmp,
+                             const sp_grad::SpColVector<doublereal, 6>& sigma_tmp,
+                             const sp_grad::SpMatrix<doublereal, 3, 3>& dF_tmp);
+
+          inline void
+          UpdateStressStrain(const sp_grad::SpMatrix<sp_grad::SpGradient, 3, 3>& G,
+                             const sp_grad::SpColVector<sp_grad::SpGradient, 6>& sigma,
+                             const sp_grad::SpMatrix<sp_grad::SpGradient, 3, 3>& dF) {
+          }
+
+          inline void
+          UpdateStressStrain(const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>& G,
+                             const sp_grad::SpColVector<sp_grad::GpGradProd, 6>& sigma,
+                             const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>& dF) {
+          }          
+          
+          std::unique_ptr<ConstitutiveLaw6D> pConstLaw;
+          sp_grad::SpMatrixA<doublereal, iNumNodes, 3> h0d;
+          sp_grad::SpMatrixA<doublereal, 3, 3> J, invJ;
+          doublereal detJ;
+          sp_grad::SpMatrixA<doublereal, 6, iNumDof> BL0;
+          sp_grad::SpMatrixA<doublereal, 3, 3> G;
+          sp_grad::SpMatrixA<doublereal, 3, 3> F;
+          sp_grad::SpColVectorA<doublereal, 6> sigma;
+     };
+
+     sp_grad::SpMatrixA<doublereal, 3, iNumNodes> x0;
+     const std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
+     std::array<CollocData, iNumEvalPoints> rgCollocData;
 };
 
 template <typename SolidElemType>
