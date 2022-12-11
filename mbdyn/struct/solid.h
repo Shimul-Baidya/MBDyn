@@ -73,9 +73,9 @@ public:
 private:
      static constexpr sp_grad::index_type NumberOfEvalPoints = 2;
      static constexpr sp_grad::index_type NumberOfCollocationPoints = NumberOfEvalPoints * NumberOfEvalPoints * NumberOfEvalPoints;
-     static constexpr sp_grad::index_type ridx[NumberOfCollocationPoints] = {0, 0, 0, 0, 1, 1, 1, 1};
+     static constexpr sp_grad::index_type ridx[NumberOfCollocationPoints] = {0, 1, 1, 0, 0, 1, 1, 0};
      static constexpr sp_grad::index_type sidx[NumberOfCollocationPoints] = {0, 0, 1, 1, 0, 0, 1, 1};
-     static constexpr sp_grad::index_type tidx[NumberOfCollocationPoints] = {0, 1, 0, 1, 0, 1, 0, 1};
+     static constexpr sp_grad::index_type tidx[NumberOfCollocationPoints] = {0, 0, 0, 0, 1, 1, 1, 1};
      static constexpr doublereal ri[NumberOfEvalPoints] = {0.577350269189626, -0.577350269189626};
      static constexpr doublereal alphai[NumberOfEvalPoints] = {1.0, 1.0};
 };
