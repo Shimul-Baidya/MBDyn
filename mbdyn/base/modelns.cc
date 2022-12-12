@@ -229,6 +229,81 @@ distance(const MathParser::MathArgs& args)
 }
 
 /*
+ * Computes the component of the relative velocity between two nodes along the axis through their position
+ */
+template <when_t when>
+static int
+distancep(const MathParser::MathArgs& args)
+{
+	ASSERT(args.size() == 1 + 2 + 1);
+	ASSERT(args[0]->Type() == MathParser::AT_REAL);
+	ASSERT(args[1]->Type() == MathParser::AT_INT);
+	ASSERT(args[2]->Type() == MathParser::AT_INT);
+	ASSERT(args[3]->Type() == MathParser::AT_PRIVATE);
+
+	MathParser::MathArgReal_t *out = dynamic_cast<MathParser::MathArgReal_t *>(args[0]);
+	ASSERT(out != 0);
+
+	MathParser::MathArgInt_t *arg1 = dynamic_cast<MathParser::MathArgInt_t *>(args[1]);
+	ASSERT(arg1 != 0);
+	ASSERT((*arg1)() >= 0);
+
+	MathParser::MathArgInt_t *arg2 = dynamic_cast<MathParser::MathArgInt_t *>(args[2]);
+	ASSERT(arg2 != 0);
+	ASSERT((*arg2)() >= 0);
+
+	ModelNameSpace::MathArgDM *dm = dynamic_cast<ModelNameSpace::MathArgDM *>(args[3]);
+	ASSERT(dm != 0);
+
+	unsigned uLabel1 = unsigned((*arg1)());
+	unsigned uLabel2 = unsigned((*arg2)());
+
+	const StructNode *pNode1 =  (*dm)()->pFindNode<const StructNode, Node::STRUCTURAL>(uLabel1);
+	if (pNode1 == 0) {
+		silent_cerr("model::distancep" << when2str(when)
+				<< "(" << uLabel1 << "," << uLabel2 << "): "
+				"unable to find StructNode(" << uLabel1 << ")"
+				<< std::endl);
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	const StructNode *pNode2 = (*dm)()->pFindNode<const StructNode, Node::STRUCTURAL>(uLabel2);
+	if (pNode2 == 0) {
+		silent_cerr("model::distancep" << when2str(when)
+				<< "(" << uLabel1 << "," << uLabel2 << "): "
+				"unable to find StructNode(" << uLabel2 << ")"
+				<< std::endl);
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	Vec3 d, v;
+	switch (when) {
+	case CURR:
+		d = pNode2->GetXCurr() - pNode1->GetXCurr();
+		v = pNode2->GetVCurr() - pNode1->GetVCurr();
+		break;
+
+	case PREV:
+		d = pNode2->GetXPrev() - pNode1->GetXPrev();
+		v = pNode2->GetVPrev() - pNode1->GetVPrev();
+		break;
+	}
+
+	doublereal dd = d.Norm();
+	if (dd <= std::numeric_limits<doublereal>::epsilon()) {
+		silent_cerr("model::distancep" << when2str(when)
+				<< "(" << uLabel1 << "," << uLabel2 << "): "
+				"null distance"
+				<< std::endl);
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	*out = (d*v)/dd;
+
+	return 0;
+}
+
+/*
  * Computes the components of the direction between two structural nodes
  */
 template <IDX_t IDX, when_t when>
@@ -1283,6 +1358,25 @@ ModelNameSpace::ModelNameSpace(const DataManager *pDM)
 	f->args[2] = new MathParser::MathArgInt_t;
 	f->args[3] = new MathArgDM(pDM);
 	f->f = distance<IDX3, CURR>;
+	f->t = 0;
+
+	if (!func.insert(funcType::value_type(f->fname, f)).second) {
+		silent_cerr("model namespace: "
+			"unable to insert handler "
+			"for function " << f->fname << std::endl);
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	// distancep
+	f = new MathParser::MathFunc_t;
+	f->fname = "distancep";
+	f->ns = this;
+	f->args.resize(1 + 2 + 1);
+	f->args[0] = new MathParser::MathArgReal_t;
+	f->args[1] = new MathParser::MathArgInt_t;
+	f->args[2] = new MathParser::MathArgInt_t;
+	f->args[3] = new MathArgDM(pDM);
+	f->f = distancep<CURR>;
 	f->t = 0;
 
 	if (!func.insert(funcType::value_type(f->fname, f)).second) {
