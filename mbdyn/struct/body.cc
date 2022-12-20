@@ -197,6 +197,8 @@ Mass::AssVecRBK_int(SubVectorHandler& WorkVec)
 	// force
 	Vec3 f;
 	f = pRBK->GetXPP()*dMass;
+	f += pRBK->GetWP().Cross(s0);
+	f += pRBK->GetW().Cross(pRBK->GetW().Cross(s0));        
 
 	WorkVec.Sub(iIdx + 1, f);
 }
