@@ -151,6 +151,7 @@ DataManager::ElemManager(void)
 	ElemData[Elem::FORCE].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::BEAM].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
 	ElemData[Elem::PLATE].iDerivation = ELEM | GRAVITYOWNER | DOFOWNER | INITIALASSEMBLY;
+        ElemData[Elem::SOLID].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
 	ElemData[Elem::AIRPROPERTIES].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::INDUCEDVELOCITY].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
 	ElemData[Elem::AEROMODAL].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
@@ -172,10 +173,12 @@ DataManager::ElemManager(void)
 	ElemData[Elem::JOINT_REGULARIZATION].ToBeUsedInAssembly(true);
 	ElemData[Elem::BEAM].ToBeUsedInAssembly(true);
 	ElemData[Elem::PLATE].ToBeUsedInAssembly(true);
-
+	ElemData[Elem::SOLID].ToBeUsedInAssembly(true);
+        
 	/* Aggiungere qui se un tipo genera forze d'inerzia e quindi
 	 * deve essere collegato all'elemento accelerazione di gravita' */
 	ElemData[Elem::BODY].GeneratesInertiaForces(true);
+	ElemData[Elem::SOLID].GeneratesInertiaForces(true);
 	ElemData[Elem::JOINT].GeneratesInertiaForces(true);
 	ElemData[Elem::LOADABLE].GeneratesInertiaForces(true);
 	ElemData[Elem::PLATE].GeneratesInertiaForces(true);

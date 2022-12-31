@@ -3064,11 +3064,11 @@ namespace sp_grad {
           };
 
 
-          template <util::MatTranspEvalFlag eTransp, bool bIsGradientLhs, bool bIsGradientRhs, bool bIsSparse>
+          template <util::MatTranspEvalFlag eTransp, bool bIsGradientLhs, bool bIsGradientRhs, bool bIsSparse, bool bOneDofMap>
           struct MatMulExprLoop;
 
           template <util::MatTranspEvalFlag eTransp>
-          struct MatMulExprLoop<eTransp, true, true, true> {
+          struct MatMulExprLoop<eTransp, true, true, true, false> {
                template <typename MatA, typename MatU, typename MatV>
                static inline void InnerProduct(MatA& Atmp,
                                                const MatU& utmp,
@@ -3112,7 +3112,120 @@ namespace sp_grad {
           };
 
           template <util::MatTranspEvalFlag eTransp>
-          struct MatMulExprLoop<eTransp, true, false, true> {
+          struct MatMulExprLoop<eTransp, true, true, true, true> {
+               template <typename MatA, typename MatU, typename MatV>
+               static inline void InnerProduct(MatA& Atmp,
+                                               const MatU& utmp,
+                                               const MatV& vtmp,
+                                               const index_type iNumRows,
+                                               const index_type iNumCols,
+                                               const index_type iRowSizeU,
+                                               const index_type iRowOffsetU,
+                                               const index_type iColOffsetU,
+                                               const index_type iRowOffsetV,
+                                               const index_type iColOffsetV,
+                                               const index_type iColSizeV) {
+                    MatMulExprHelper oMatMulHelper;
+                    typedef MatEvalHelperTransp<eTransp> MatEvalType;
+
+                    // Generic method using a single dof map
+                    // will be efficient if all elements of utmp and vtmp will depend on the same dof's
+
+                    oMatMulHelper.ResetDofStat();
+
+                    for (const SpGradient* putmp = utmp.begin(); putmp < utmp.begin() + iRowOffsetU * iNumRows; putmp += iRowOffsetU) {
+                         oMatMulHelper.GetDofStat(putmp, putmp + iRowSizeU, iColOffsetU);
+                    }
+
+                    for (const SpGradient* pvtmp = vtmp.begin(); pvtmp < vtmp.begin() + iColOffsetV * iNumCols; pvtmp += iColOffsetV) {
+                         oMatMulHelper.GetDofStat(pvtmp, pvtmp + iColSizeV, iRowOffsetV);
+                    }
+
+                    oMatMulHelper.ResetDofMap();
+
+                    for (const SpGradient* putmp = utmp.begin(); putmp < utmp.begin() + iRowOffsetU * iNumRows; putmp += iRowOffsetU) {
+                         oMatMulHelper.InsertDof(putmp, putmp + iRowSizeU, iColOffsetU);
+                    }
+
+                    for (const SpGradient* pvtmp = vtmp.begin(); pvtmp < vtmp.begin() + iColOffsetV * iNumCols; pvtmp += iColOffsetV) {
+                         oMatMulHelper.InsertDof(pvtmp, pvtmp + iColSizeV, iRowOffsetV);
+                    }
+
+                    oMatMulHelper.InsertDone();
+
+                    for (index_type j = 1; j <= iNumCols; ++j) {
+                         const SpGradient* const pvtmp_j = vtmp.begin() + (j - 1) * iColOffsetV;
+
+                         for (index_type i = 1; i <= iNumRows; ++i) {
+                              const SpGradient* const putmp_i = utmp.begin() + (i - 1) * iRowOffsetU;
+
+                              oMatMulHelper.InnerProduct(MatEvalType::GetElem(Atmp, i, j),
+                                                         putmp_i,
+                                                         putmp_i + iRowSizeU,
+                                                         iColOffsetU,
+                                                         pvtmp_j,
+                                                         pvtmp_j + iColSizeV,
+                                                         iRowOffsetV);
+                         }
+                    }
+               }
+          };
+
+          template <util::MatTranspEvalFlag eTransp>
+          struct MatMulExprLoop<eTransp, true, false, true, true> {
+               template <typename MatA, typename MatU, typename MatV>
+               static inline void InnerProduct(MatA& Atmp,
+                                               const MatU& utmp,
+                                               const MatV& vtmp,
+                                               const index_type iNumRows,
+                                               const index_type iNumCols,
+                                               const index_type iRowSizeU,
+                                               const index_type iRowOffsetU,
+                                               const index_type iColOffsetU,
+                                               const index_type iRowOffsetV,
+                                               const index_type iColOffsetV,
+                                               const index_type iColSizeV) {
+                    MatMulExprHelper oMatMulHelper;
+                    typedef MatEvalHelperTransp<eTransp> MatEvalType;
+
+                    // Generic method using a single dof map
+                    // will be efficient if all elements of utmp will depend on the same dof's
+
+                    oMatMulHelper.ResetDofStat();
+
+                    for (const SpGradient* putmp = utmp.begin(); putmp < utmp.begin() + iRowOffsetU * iNumRows; putmp += iRowOffsetU) {
+                         oMatMulHelper.GetDofStat(putmp, putmp + iRowSizeU, iColOffsetU);
+                    }
+
+                    oMatMulHelper.ResetDofMap();
+
+                    for (const SpGradient* putmp = utmp.begin(); putmp < utmp.begin() + iRowOffsetU * iNumRows; putmp += iRowOffsetU) {
+                         oMatMulHelper.InsertDof(putmp, putmp + iRowSizeU, iColOffsetU);
+                    }
+
+                    oMatMulHelper.InsertDone();
+                    
+                    for (index_type i = 1; i <= iNumRows; ++i) {
+                         const SpGradient* const putmp_i = utmp.begin() + (i - 1) * iRowOffsetU;
+
+                         for (index_type j = 1; j <= iNumCols; ++j) {
+                              const doublereal* const pvtmp_j = vtmp.begin() + (j - 1) * iColOffsetV;
+
+                              oMatMulHelper.InnerProduct(MatEvalType::GetElem(Atmp, i, j),
+                                                         putmp_i,
+                                                         putmp_i + iRowSizeU,
+                                                         iColOffsetU,
+                                                         pvtmp_j,
+                                                         pvtmp_j + iColSizeV,
+                                                         iRowOffsetV);
+                         }
+                    }
+
+               }
+          };          
+
+          template <util::MatTranspEvalFlag eTransp>
+          struct MatMulExprLoop<eTransp, true, false, true, false> {
                template <typename MatA, typename MatU, typename MatV>
                static inline void InnerProduct(MatA& Atmp,
                                                const MatU& utmp,
@@ -3155,7 +3268,59 @@ namespace sp_grad {
           };
 
           template <util::MatTranspEvalFlag eTransp>
-          struct MatMulExprLoop<eTransp, false, true, true> {
+          struct MatMulExprLoop<eTransp, false, true, true, true> {
+               template <typename MatA, typename MatU, typename MatV>
+               static inline void InnerProduct(MatA& Atmp,
+                                               const MatU& utmp,
+                                               const MatV& vtmp,
+                                               const index_type iNumRows,
+                                               const index_type iNumCols,
+                                               const index_type iRowSizeU,
+                                               const index_type iRowOffsetU,
+                                               const index_type iColOffsetU,
+                                               const index_type iRowOffsetV,
+                                               const index_type iColOffsetV,
+                                               const index_type iColSizeV) {
+                    MatMulExprHelper oMatMulHelper;
+                    typedef MatEvalHelperTransp<eTransp> MatEvalType;
+
+                    // Generic method using a single dof map
+                    // will be efficient if all elements of vtmp will depend on the same dof's
+
+                    oMatMulHelper.ResetDofStat();
+
+                    for (const SpGradient* pvtmp = vtmp.begin(); pvtmp < vtmp.begin() + iColOffsetV * iNumCols; pvtmp += iColOffsetV) {
+                         oMatMulHelper.GetDofStat(pvtmp, pvtmp + iColSizeV, iRowOffsetV);
+                    }
+
+                    oMatMulHelper.ResetDofMap();
+
+                    for (const SpGradient* pvtmp = vtmp.begin(); pvtmp < vtmp.begin() + iColOffsetV * iNumCols; pvtmp += iColOffsetV) {
+                         oMatMulHelper.InsertDof(pvtmp, pvtmp + iColSizeV, iRowOffsetV);
+                    }
+
+                    oMatMulHelper.InsertDone();
+                    
+                    for (index_type j = 1; j <= iNumCols; ++j) {
+                         const SpGradient* const pvtmp_j = vtmp.begin() + (j - 1) * iColOffsetV;
+
+                         for (index_type i = 1; i <= iNumRows; ++i) {
+                              const doublereal* const putmp_i = utmp.begin() + (i - 1) * iRowOffsetU;
+
+                              oMatMulHelper.InnerProduct(MatEvalType::GetElem(Atmp, i, j),
+                                                         putmp_i,
+                                                         putmp_i + iRowSizeU,
+                                                         iColOffsetU,
+                                                         pvtmp_j,
+                                                         pvtmp_j + iColSizeV,
+                                                         iRowOffsetV);
+                         }
+                    }
+               }
+          };
+          
+          template <util::MatTranspEvalFlag eTransp>
+          struct MatMulExprLoop<eTransp, false, true, true, false> {
                template <typename MatA, typename MatU, typename MatV>
                static inline void InnerProduct(MatA& Atmp,
                                                const MatU& utmp,
@@ -3197,7 +3362,7 @@ namespace sp_grad {
           };
 
           template <util::MatTranspEvalFlag eTransp>
-          struct MatMulExprLoop<eTransp, false, false, true> {
+          struct MatMulExprLoop<eTransp, false, false, true, false> {
                template <typename MatA, typename MatU, typename MatV>
                static inline void InnerProduct(MatA& Atmp,
                                                const MatU& utmp,
@@ -3232,7 +3397,7 @@ namespace sp_grad {
           };
 
           template <util::MatTranspEvalFlag eTransp, bool bIsGradientLhs, bool bIsGradientRhs>
-          struct MatMulExprLoop<eTransp, bIsGradientLhs, bIsGradientRhs, false> {
+          struct MatMulExprLoop<eTransp, bIsGradientLhs, bIsGradientRhs, false, false> {
                template <typename MatA, typename MatU, typename MatV>
                static inline void InnerProduct(MatA& Atmp,
                                                const MatU& utmp,
@@ -3274,8 +3439,8 @@ namespace sp_grad {
 
           constexpr bool bTransposedEval = eTransp == util::MatTranspEvalFlag::TRANSPOSED;
 
-          static_assert(NumRowsA == (!bTransposedEval ? iNumRowsStatic : iNumColsStatic), "Number of rows does not match");
-          static_assert(NumColsA == (!bTransposedEval ? iNumColsStatic : iNumRowsStatic), "Number of columns does not match");
+          static_assert(NumRowsA == (!bTransposedEval ? iNumRowsStatic : iNumColsStatic), "Number of rows do not match");
+          static_assert(NumColsA == (!bTransposedEval ? iNumColsStatic : iNumRowsStatic), "Number of columns do not match");
 
           SP_GRAD_ASSERT(!bHaveRefTo(A));
 
@@ -3315,11 +3480,12 @@ namespace sp_grad {
           constexpr bool bIsGradOrGradProdLhs = bIsGradientLhs || bIsGradProdLhs;
           constexpr bool bIsGradOrGradProdRhs = bIsGradientRhs || bIsGradProdRhs;
           constexpr bool bIsSparseRep = !(bIsGradProdLhs || bIsGradProdRhs);
+          constexpr bool bSingleDofMap = bIsSparseRep && (bIsGradientLhs && bIsGradientRhs);
 
           static_assert(!(bIsGradientRhs && bIsGradProdLhs));
           static_assert(!(bIsGradProdRhs && bIsGradientLhs));
 
-          typedef util::MatMulExprLoop<eTransp, bIsGradOrGradProdLhs, bIsGradOrGradProdRhs, bIsSparseRep> MatMulExprLoop;
+          typedef util::MatMulExprLoop<eTransp, bIsGradOrGradProdLhs, bIsGradOrGradProdRhs, bIsSparseRep, bSingleDofMap> MatMulExprLoop;
 
           MatMulExprLoop::InnerProduct(A,
                                        utmp,
@@ -4464,23 +4630,32 @@ namespace sp_grad {
      MatRVec(const SpColVector<ValueType, 3>& g) {
           SpMatrix<ValueType, 3, 3> RDelta(3, 3, 0);
 
-          const ValueType d = 4. / (4. + Dot(g, g));
-          const ValueType tmp1 = -g(3) * g(3);
-          const ValueType tmp2 = -g(2) * g(2);
-          const ValueType tmp3 = -g(1) * g(1);
-          const ValueType tmp4 = g(1) * g(2) * 0.5;
-          const ValueType tmp5 = g(2) * g(3) * 0.5;
-          const ValueType tmp6 = g(1) * g(3) * 0.5;
+          SpGradExpDofMapHelper<ValueType> oDofMap;
 
-          RDelta(1,1) = (tmp1 + tmp2) * d * 0.5 + 1;
-          RDelta(1,2) = (tmp4 - g(3)) * d;
-          RDelta(1,3) = (tmp6 + g(2)) * d;
-          RDelta(2,1) = (g(3) + tmp4) * d;
-          RDelta(2,2) = (tmp1 + tmp3) * d * 0.5 + 1.;
-          RDelta(2,3) = (tmp5 - g(1)) * d;
-          RDelta(3,1) = (tmp6 - g(2)) * d;
-          RDelta(3,2) = (tmp5 + g(1)) * d;
-          RDelta(3,3) = (tmp2 + tmp3) * d * 0.5 + 1.;
+          oDofMap.GetDofStat(g);
+          oDofMap.Reset();
+          oDofMap.InsertDof(g);
+          oDofMap.InsertDone();
+
+          ValueType d, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6;
+
+          oDofMap.MapAssign(d, 4. / (4. + g(1) * g(1) + g(2) * g(2) + g(3) * g(3)));
+          oDofMap.MapAssign(tmp1, -g(3) * g(3));
+          oDofMap.MapAssign(tmp2, -g(2) * g(2));
+          oDofMap.MapAssign(tmp3, -g(1) * g(1));
+          oDofMap.MapAssign(tmp4, g(1) * g(2) * 0.5);
+          oDofMap.MapAssign(tmp5, g(2) * g(3) * 0.5);
+          oDofMap.MapAssign(tmp6, g(1) * g(3) * 0.5);
+
+          oDofMap.MapAssign(RDelta(1,1), (tmp1 + tmp2) * d * 0.5 + 1);
+          oDofMap.MapAssign(RDelta(1,2), (tmp4 - g(3)) * d);
+          oDofMap.MapAssign(RDelta(1,3), (tmp6 + g(2)) * d);
+          oDofMap.MapAssign(RDelta(2,1), (g(3) + tmp4) * d);
+          oDofMap.MapAssign(RDelta(2,2), (tmp1 + tmp3) * d * 0.5 + 1.);
+          oDofMap.MapAssign(RDelta(2,3), (tmp5 - g(1)) * d);
+          oDofMap.MapAssign(RDelta(3,1), (tmp6 - g(2)) * d);
+          oDofMap.MapAssign(RDelta(3,2), (tmp5 + g(1)) * d);
+          oDofMap.MapAssign(RDelta(3,3), (tmp2 + tmp3) * d * 0.5 + 1.);
 
           return RDelta;
      }
@@ -4530,7 +4705,7 @@ namespace sp_grad {
      }
 
      template <typename ValueType>
-     inline ValueType RotCo(const ValueType& phi) {
+     inline ValueType RotCo(const ValueType& phi, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
           // This algorithm is a simplified version of RotCo in RotCoeff.hc
           // from Marco Morandini  <morandini@aero.polimi.it>
           // and Teodoro Merlini  <merlini@aero.polimi.it>
@@ -4540,33 +4715,53 @@ namespace sp_grad {
           using std::fabs;
 
           constexpr index_type N = 10;
-          ValueType phip[N];
-          ValueType phi2(EvalUnique(phi * phi));
 
           if (fabs(phi) < RotCoeff::SerThrsh[0]) {
-               SpGradientTraits<ValueType>::ResizeReset(phip[0], 1., 0);
+               ValueType phi2;
 
+               oDofMap.MapAssign(phi2, phi * phi);
+               
+               std::array<ValueType, N> phip;
+               
+               SpGradientTraits<ValueType>::ResizeReset(phip[0], 1., 0);
+               
+               index_type iSize_phip = 0;
+               
                for (index_type j = 1; j <= N - 1; j++) {
-                    phip[j] = EvalUnique(phip[j - 1] * phi2);
+                    oDofMap.MapAssign(phip[j], phip[j - 1] * phi2);
+                    iSize_phip += SpGradientTraits<ValueType>::iGetSize(phip[j]);
                }
 
                ValueType cf;
-               SpGradientTraits<ValueType>::ResizeReset(cf, 0., SpGradientTraits<ValueType>::iGetSize(phip[N - 1]));
+               
+               SpGradientTraits<ValueType>::ResizeReset(cf, 0., iSize_phip);
 
                for (index_type j = 0; j < RotCoeff::SerTrunc[0]; j++) {
-                    cf += EvalUnique(phip[j] / RotCoeff::SerCoeff[0][j]);
+                    cf += phip[j] / RotCoeff::SerCoeff[0][j];
                }
 
+               oDofMap.MapAssign(cf, cf);
+               
                return cf;
           }
 
-          const ValueType pd{sqrt(phi2)};
-          return sin(pd) / pd;                 // a = sin(phi)/phi
+          ValueType pd;
+
+          oDofMap.MapAssign(pd, sin(phi) / phi);
+          
+          return pd;
      }
 
      template <typename ValueType>
      inline SpColVector<ValueType, 3>
      VecRotMat(const SpMatrix<ValueType, 3, 3>& R) {
+          SpGradExpDofMapHelper<ValueType> oDofMap;
+          
+          oDofMap.GetDofStat(R);
+          oDofMap.Reset();
+          oDofMap.InsertDof(R);
+          oDofMap.InsertDone();
+          
           // Modified from Appendix 2.4 of
           //
           // author = {Marco Borri and Lorenzo Trainelli and Carlo L. Bottasso},
@@ -4581,30 +4776,42 @@ namespace sp_grad {
           using std::atan2;
           using std::sqrt;
 
-          const ValueType cosphi = 0.5 * (R(1, 1) + R(2, 2) + R(3, 3) - 1.);
+          ValueType cosphi;
+          
+          oDofMap.MapAssign(cosphi, 0.5 * (R(1, 1) + R(2, 2) + R(3, 3) - 1.));
 
           if (cosphi > 0.) {
-               unit(1) = 0.5*(R(3, 2) - R(2, 3));
-               unit(2) = 0.5*(R(1, 3) - R(3, 1));
-               unit(3) = 0.5*(R(2, 1) - R(1, 2));
+               oDofMap.MapAssign(unit(1), 0.5*(R(3, 2) - R(2, 3)));
+               oDofMap.MapAssign(unit(2), 0.5*(R(1, 3) - R(3, 1)));
+               oDofMap.MapAssign(unit(3), 0.5*(R(2, 1) - R(1, 2)));
 
-               const ValueType sinphi2 = Dot(unit, unit);
+               ValueType sinphi2;
+               
+               oDofMap.MapAssign(sinphi2, unit(1) * unit(1) + unit(2) * unit(2) + unit(3) * unit(3));
+               
                ValueType sinphi;
 
                if (sinphi2 != 0) {
-                    sinphi = sqrt(sinphi2);
+                    oDofMap.MapAssign(sinphi, sqrt(sinphi2));
                } else {
                     sinphi = unit(1);
                }
 
-               const ValueType phi = atan2(sinphi, cosphi);
-               unit /= RotCo(phi);
+               ValueType phi;
+
+               oDofMap.MapAssign(phi, atan2(sinphi, cosphi));
+
+               const ValueType RotCoPhi = RotCo(phi, oDofMap);
+
+               for (index_type i = 1; i <= 3; ++i) {
+                    oDofMap.MapAssign(unit(i), unit(i) / RotCoPhi);
+               }
           } else {
                // -1 <= cosphi <= 0
                SpMatrix<ValueType, 3, 3> eet = (R + Transpose(R)) * 0.5;
-               eet(1, 1) -= cosphi;
-               eet(2, 2) -= cosphi;
-               eet(3, 3) -= cosphi;
+               oDofMap.MapAssign(eet(1, 1), eet(1, 1) - cosphi);
+               oDofMap.MapAssign(eet(2, 2), eet(2, 2) - cosphi);
+               oDofMap.MapAssign(eet(3, 3), eet(3, 3) - cosphi);
                // largest (abs) component of unit vector phi/|phi|
                index_type maxcol = 1;
                if (eet(2, 2) > eet(1, 1)) {
@@ -4613,16 +4820,30 @@ namespace sp_grad {
                if (eet(3, 3) > eet(maxcol, maxcol)) {
                     maxcol = 3;
                }
-               unit = (eet.GetCol(maxcol)/sqrt(eet(maxcol, maxcol)*(1. - cosphi)));
+               
+               ValueType d;
+               
+               oDofMap.MapAssign(d, sqrt(eet(maxcol, maxcol) * (1. - cosphi)));
 
-               ValueType sinphi{};
+               for (index_type i = 1; i <= 3; ++i) {
+                    oDofMap.MapAssign(unit(i), eet(i, maxcol) / d);
+               }
 
+               ValueType sinphi;
+
+               SpGradientTraits<ValueType>::ResizeReset(sinphi, 0., 9 * (R.iGetMaxSize() + unit.iGetMaxSize()));
+               
                for (index_type i = 1; i <= 3; ++i) {
                     SpColVector<ValueType, 1> xi = SubMatrix<1, 1>(Cross(unit, R.GetCol(i)), i, 1, 1, 1);
                     sinphi -= xi(1) * 0.5;
                }
 
-               unit *= atan2(sinphi, cosphi);
+               ValueType phi;
+               oDofMap.MapAssign(phi, atan2(sinphi, cosphi));
+
+               for (index_type i = 1; i <= 3; ++i) {
+                    oDofMap.MapAssign(unit(i), unit(i) * phi);
+               }
           }
 
           return unit;
@@ -4663,6 +4884,16 @@ namespace sp_grad {
      }
 
      template <typename T>
+     inline void InvSymm(const SpMatrix<T, 2, 2>& A, SpMatrix<T, 2, 2>& invA, T& detA) {
+          detA = Det(A);
+          
+          invA(1, 1) = A(2, 2) / detA;
+          invA(2, 1) = -A(2, 1) / detA;
+          invA(1, 2) = invA(2, 1);
+          invA(2, 2) = A(1, 1) / detA;
+     }
+     
+     template <typename T>
      inline SpMatrix<T, 2, 2> Inv(const SpMatrix<T, 2, 2>& A) {
           const T detA = Det(A);
 
@@ -4678,33 +4909,73 @@ namespace sp_grad {
      }
 
      template <typename T>
-     inline void Inv(const SpMatrix<T, 3, 3>& A, SpMatrix<T, 3, 3>& invA, T& detA) {
-          detA = Det(A);
-          
-          invA(1,1) = (A(2,2)*A(3,3)-A(2,3)*A(3,2))/detA;
-          invA(1,2) = -(A(1,2)*A(3,3)-A(1,3)*A(3,2))/detA;
-          invA(1,3) = (A(1,2)*A(2,3)-A(1,3)*A(2,2))/detA;
-          invA(2,1) = -(A(2,1)*A(3,3)-A(2,3)*A(3,1))/detA;
-          invA(2,2) = (A(1,1)*A(3,3)-A(1,3)*A(3,1))/detA;
-          invA(2,3) = -(A(1,1)*A(2,3)-A(1,3)*A(2,1))/detA;
-          invA(3,1) = (A(2,1)*A(3,2)-A(2,2)*A(3,1))/detA;
-          invA(3,2) = -(A(1,1)*A(3,2)-A(1,2)*A(3,1))/detA;
-          invA(3,3) = (A(1,1)*A(2,2)-A(1,2)*A(2,1))/detA;
+     inline void Det(const SpMatrix<T, 3, 3>& A, T& detA, const SpGradExpDofMapHelper<T>& oDofMap) {
+          oDofMap.MapAssign(detA, A(1,1)*(A(2,2)*A(3,3)-A(2,3)*A(3,2))-A(1,2)*(A(2,1)*A(3,3)-A(2,3)*A(3,1))+A(1,3)*(A(2,1)*A(3,2)-A(2,2)*A(3,1)));
      }
 
      template <typename T>
-     inline SpMatrix<T, 3, 3> Inv(const SpMatrix<T, 3, 3>& A) {
-          const T detA = Det(A);
+     inline void Inv(const SpMatrix<T, 3, 3>& A, SpMatrix<T, 3, 3>& invA, T& detA) {
+          SpGradExpDofMapHelper<T> oDofMap;
 
-          return SpMatrix<T, 3, 3>{(A(2,2)*A(3,3)-A(2,3)*A(3,2))/detA,
-                    -(A(2,1)*A(3,3)-A(2,3)*A(3,1))/detA,          
-                    (A(2,1)*A(3,2)-A(2,2)*A(3,1))/detA,
-                    -(A(1,2)*A(3,3)-A(1,3)*A(3,2))/detA,
-                    (A(1,1)*A(3,3)-A(1,3)*A(3,1))/detA,
-                    -(A(1,1)*A(3,2)-A(1,2)*A(3,1))/detA,
-                    (A(1,2)*A(2,3)-A(1,3)*A(2,2))/detA,          
-                    -(A(1,1)*A(2,3)-A(1,3)*A(2,1))/detA,
-                    (A(1,1)*A(2,2)-A(1,2)*A(2,1))/detA};
+          oDofMap.GetDofStat(A);
+          oDofMap.Reset();
+          oDofMap.InsertDof(A);
+          oDofMap.InsertDone();
+          
+          Det(A, detA, oDofMap);
+          
+          oDofMap.MapAssign(invA(1, 1),  (A(2, 2) * A(3, 3) - A(2, 3) * A(3, 2)) / detA);
+          oDofMap.MapAssign(invA(1, 2), -(A(1, 2) * A(3, 3) - A(1, 3) * A(3, 2)) / detA);
+          oDofMap.MapAssign(invA(1, 3),  (A(1, 2) * A(2, 3) - A(1, 3) * A(2, 2)) / detA);
+          oDofMap.MapAssign(invA(2, 1), -(A(2, 1) * A(3, 3) - A(2, 3) * A(3, 1)) / detA);
+          oDofMap.MapAssign(invA(2, 2),  (A(1, 1) * A(3, 3) - A(1, 3) * A(3, 1)) / detA);
+          oDofMap.MapAssign(invA(2, 3), -(A(1, 1) * A(2, 3) - A(1, 3) * A(2, 1)) / detA);
+          oDofMap.MapAssign(invA(3, 1),  (A(2, 1) * A(3, 2) - A(2, 2) * A(3, 1)) / detA);
+          oDofMap.MapAssign(invA(3, 2), -(A(1, 1) * A(3, 2) - A(1, 2) * A(3, 1)) / detA);
+          oDofMap.MapAssign(invA(3, 3),  (A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1)) / detA);
+     }
+
+     template <typename T>
+     inline void InvSymm(const SpMatrix<T, 3, 3>& A, SpMatrix<T, 3, 3>& invA, T& detA) {
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(A);
+          oDofMap.Reset();
+          oDofMap.InsertDof(A);
+          oDofMap.InsertDone();
+
+          T a11, a12, a13, a22, a23, a33;
+          
+          oDofMap.MapAssign(a11, A(3, 3) * A(2, 2) - A(2, 3) * A(2, 3));
+          oDofMap.MapAssign(a12, A(1, 3) * A(2, 3) - A(3, 3) * A(1, 2));
+          oDofMap.MapAssign(a13, A(1, 2) * A(2, 3) - A(1, 3) * A(2, 2));
+          oDofMap.MapAssign(a22, A(3, 3) * A(1, 1) - A(1, 3) * A(1, 3));
+          oDofMap.MapAssign(a23, A(1, 2) * A(1, 3) - A(1, 1) * A(2, 3));
+          oDofMap.MapAssign(a33, A(1, 1) * A(2, 2) - A(1, 2) * A(1, 2));
+
+          oDofMap.MapAssign(detA, (A(1, 1) * a11) + (A(1, 2) * a12) + (A(1, 3) * a13));
+
+          oDofMap.MapAssign(invA(1, 1), a11 / detA);
+          oDofMap.MapAssign(invA(1, 2), a12 / detA);
+          oDofMap.MapAssign(invA(1, 3), a13 / detA);
+          oDofMap.MapAssign(invA(2, 2), a22 / detA);
+          oDofMap.MapAssign(invA(2, 3), a23 / detA);
+          oDofMap.MapAssign(invA(3, 3), a33 / detA);
+          
+          invA(2, 1) = invA(1, 2);
+          invA(3, 1) = invA(1, 3);
+          invA(3, 2) = invA(2, 3);
+     }
+     
+     template <typename T>
+     inline SpMatrix<T, 3, 3> Inv(const SpMatrix<T, 3, 3>& A) {
+          SpMatrix<T, 3, 3> invA(3, 3, 0);
+          
+          T detA;
+          
+          Inv(A, invA, detA);
+          
+          return invA;
      }
 
      template <typename ValueType, index_type NumRows, index_type NumCols>

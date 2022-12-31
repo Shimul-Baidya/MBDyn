@@ -934,14 +934,18 @@ namespace sp_grad_test {
                     }
                }
 
+               const SpMatrix<T, N, N> B = Transpose(A) + A;
                const SpMatrixA<T, N, N> invA = Inv(A);
-               SpMatrixA<T, N, N> invA2;
-               T detA;
+               SpMatrixA<T, N, N> invA2, invB2;
+               T detA, detB2;
                Inv(A, invA2, detA);
-               SpMatrixA<T, N, N> I1 = invA * A;
-               SpMatrixA<T, N, N> I2 = A * invA;
-               SpMatrixA<T, N, N> I3 = invA2 * A;
-               SpMatrixA<T, N, N> I4 = A * invA2;
+               InvSymm(B, invB2, detB2);
+               SpMatrix<T, N, N> I1 = invA * A;
+               SpMatrix<T, N, N> I2 = A * invA;
+               SpMatrix<T, N, N> I3 = invA2 * A;
+               SpMatrix<T, N, N> I4 = A * invA2;
+               SpMatrix<T, N, N> I5 = invB2 * B;
+               SpMatrix<T, N, N> I6 = B * invB2;
                
                const doublereal dTol = sqrt(std::numeric_limits<doublereal>::epsilon());
                
@@ -953,6 +957,8 @@ namespace sp_grad_test {
                          sp_grad_assert_equal(I2(i, j), deltaij, dTol);
                          sp_grad_assert_equal(I3(i, j), deltaij, dTol);
                          sp_grad_assert_equal(I4(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I5(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I6(i, j), deltaij, dTol);
                     }
                }
           }

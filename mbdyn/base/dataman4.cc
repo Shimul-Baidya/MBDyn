@@ -113,6 +113,9 @@ enum KeyWords {
 	SHELL4EAS,
 	SHELL4EASANS,
         HEXAHEDRON8,
+        HEXAHEDRON20,
+        PENTAHEDRON15,
+        TETRAHEDRON10,
         
 	AIRPROPERTIES,
 	GUST,
@@ -182,6 +185,9 @@ DataManager::ReadElems(MBDynParser& HP)
 		"shell4eas",
 		"shell4easans",
                 "hexahedron8",
+                "hexahedron20",
+                "pentahedron15",
+                "tetrahedron10",
                 
 		"air" "properties",
 		"gust",
@@ -364,7 +370,10 @@ DataManager::ReadElems(MBDynParser& HP)
 				break;
 			}
 
-                        case HEXAHEDRON8: {
+                        case HEXAHEDRON8:
+                        case HEXAHEDRON20:
+                        case PENTAHEDRON15:
+                        case TETRAHEDRON10: {
                              DEBUGLCOUT(MYDEBUG_INPUT, "solids\n");
                              Typ = Elem::SOLID;
                              break;
@@ -559,6 +568,9 @@ DataManager::ReadElems(MBDynParser& HP)
 					break;
                                         
                                 case HEXAHEDRON8:
+                                case HEXAHEDRON20:
+                                case PENTAHEDRON15:
+                                case TETRAHEDRON10:
                                         t = Elem::SOLID;
                                         break;
                                      
@@ -880,6 +892,9 @@ DataManager::ReadElems(MBDynParser& HP)
 					case SHELL4EAS:
 					case SHELL4EASANS:
                                         case HEXAHEDRON8:
+                                        case HEXAHEDRON20:
+                                        case PENTAHEDRON15:
+                                        case TETRAHEDRON10:
 					case INDUCEDVELOCITY:
 					case ROTOR:
 					case AERODYNAMICBODY:
@@ -968,6 +983,9 @@ DataManager::ReadElems(MBDynParser& HP)
 							break;
 
                                                 case HEXAHEDRON8:
+                                                case HEXAHEDRON20:
+                                                case PENTAHEDRON15:
+                                                case TETRAHEDRON10:
                                                         ppE = ppFindElem(Elem::SOLID, uLabel);
                                                         break;
                                                         
@@ -1114,7 +1132,10 @@ DataManager::ReadElems(MBDynParser& HP)
 				case SHELL4EAS:
 				case SHELL4EASANS:
                                 case HEXAHEDRON8:
-                                        
+                                case HEXAHEDRON20:
+                                case PENTAHEDRON15:
+                                case TETRAHEDRON10:
+
 				case GUST:
 				case INDUCEDVELOCITY:
 				case ROTOR:
@@ -1616,13 +1637,21 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 		break;
 	}
 
-        case HEXAHEDRON8: {
-                const char* sType = "hexahedron8";
-                
+        case HEXAHEDRON8:
+        case HEXAHEDRON20:
+        case PENTAHEDRON15:
+        case TETRAHEDRON10: {
+                static constexpr char sType[][14] = {
+                        "hexahedron8",
+                        "hexahedron20",
+                        "pentahedron15",
+                        "tetrahedron10"
+                };
+             
 		if (iNumTypes[Elem::SOLID]-- <= 0) {
 			DEBUGCERR("");
 			silent_cerr("line " << HP.GetLineData() << ": "
-				<< sType << "(" << uLabel << ") "
+				<< sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
 				"exceeds solid elements number" << std::endl);
 
 			throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
@@ -1631,13 +1660,28 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 		if (pFindElem(Elem::SOLID, uLabel) != NULL) {
 			DEBUGCERR("");
 			silent_cerr("line " << HP.GetLineData() << ": "
-				<< sType << "(" << uLabel << ") "
+				<< sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
 				"already defined" << std::endl);
 
 			throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
-                
-                pE = ReadSolid<SolidElemStatic<Hexahedron8, Gauss2>>(this, HP, uLabel);
+
+                switch (CurrType) {
+                case HEXAHEDRON8:
+                     pE = ReadSolid<Hexahedron8, Gauss2>(this, HP, uLabel);
+                     break;
+                case HEXAHEDRON20:
+                     pE = ReadSolid<Hexahedron20, Gauss3>(this, HP, uLabel);
+                     break;
+                case PENTAHEDRON15:
+                     pE = ReadSolid<Pentahedron15, GaussP15>(this, HP, uLabel);
+                     break;
+                case TETRAHEDRON10:
+                     pE = ReadSolid<Tetrahedron10h, GaussT10h>(this, HP, uLabel);
+                     break;
+                default:
+                     ASSERT(0);
+                }
                 
 		if (pE) {
 			ppE = InsertElem(ElemData[Elem::SOLID], uLabel, pE);

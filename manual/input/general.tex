@@ -550,7 +550,7 @@ in Section~\ref{sec:GENERAL:MODULE-LOAD}
 \subsubsection{Model Namespaces}
 The namespace that refers to the current model is loaded by default.
 Its name is \kw{model}, and contains the functions 
-defined in Table~\ref{tab:MODEL-NS-FUNCS}.
+defined in Tables~\ref{tab:MODEL-NS-FUNCS} and \ref{tab:MODEL-NS-FUNCS-2}.
 With the exception of the \kw{drive} and \kw{sf} functions,
 all functions in the \kw{model} namespace
 with the suffix \kw{\_prev} (e.g.\ \kw{position\_prev})
@@ -603,6 +603,7 @@ To extract the current from an electric circuit where a resistor $R$ is defined 
 		\kw{xdistance}	& Real	& Integer, Integer	& $X$ component of distance between structural nodes \\
 		\kw{ydistance}	& Real	& Integer, Integer	& $Y$ component of distance between structural nodes \\
 		\kw{zdistance}	& Real	& Integer, Integer	& $Z$ component of distance between structural nodes \\
+		\kw{distancep}	& Real	& Integer, Integer	& relative velocity along distance between structural nodes \\
 		\kw{xunitvec}	& Real	& Integer, Integer	& $X$ component of unit vector between structural nodes \\
 		\kw{yunitvec}	& Real	& Integer, Integer	& $Y$ component of unit vector between structural nodes \\
 		\kw{zunitvec}	& Real	& Integer, Integer	& $Z$ component of unit vector between structural nodes \\
@@ -643,7 +644,20 @@ To extract the current from an electric circuit where a resistor $R$ is defined 
 		\kw{zangvrel}	& Real	& Integer, Integer	&
 				$Z$ component of rel.\ angular velocity between structural nodes \\
 		\kw{current}	& Real	& String		& allows to retrieve data specific to the current context \\
-\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+\begin{table}
+	\begin{center}
+	\caption{Functions in the \kw{model} namespace (contd.)}
+	\label{tab:MODEL-NS-FUNCS-2}
+	\begin{tabular}{lllp{.6\textwidth}}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Ret.}} &
+		\multicolumn{1}{c}{\textbf{Arg[s]}} &
+		\multicolumn{1}{c}{\textbf{Description}} \\
+		\hline
 		\kw{drive}	& Real	& Integer, [Real]		&
 				evaluates the \htmlref{\kw{drive caller}}{sec:DRIVE-CALLER}
 				indicated by its label (the first argument)
