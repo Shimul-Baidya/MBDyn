@@ -114,6 +114,7 @@ enum KeyWords {
 	SHELL4EASANS,
         HEXAHEDRON8,
         HEXAHEDRON20,
+        HEXAHEDRON20R,
         PENTAHEDRON15,
         TETRAHEDRON10,
         
@@ -186,6 +187,7 @@ DataManager::ReadElems(MBDynParser& HP)
 		"shell4easans",
                 "hexahedron8",
                 "hexahedron20",
+                "hexahedron20r",
                 "pentahedron15",
                 "tetrahedron10",
                 
@@ -372,6 +374,7 @@ DataManager::ReadElems(MBDynParser& HP)
 
                         case HEXAHEDRON8:
                         case HEXAHEDRON20:
+                        case HEXAHEDRON20R:
                         case PENTAHEDRON15:
                         case TETRAHEDRON10: {
                              DEBUGLCOUT(MYDEBUG_INPUT, "solids\n");
@@ -569,6 +572,7 @@ DataManager::ReadElems(MBDynParser& HP)
                                         
                                 case HEXAHEDRON8:
                                 case HEXAHEDRON20:
+                                case HEXAHEDRON20R:
                                 case PENTAHEDRON15:
                                 case TETRAHEDRON10:
                                         t = Elem::SOLID;
@@ -893,6 +897,7 @@ DataManager::ReadElems(MBDynParser& HP)
 					case SHELL4EASANS:
                                         case HEXAHEDRON8:
                                         case HEXAHEDRON20:
+                                        case HEXAHEDRON20R:
                                         case PENTAHEDRON15:
                                         case TETRAHEDRON10:
 					case INDUCEDVELOCITY:
@@ -984,6 +989,7 @@ DataManager::ReadElems(MBDynParser& HP)
 
                                                 case HEXAHEDRON8:
                                                 case HEXAHEDRON20:
+                                                case HEXAHEDRON20R:
                                                 case PENTAHEDRON15:
                                                 case TETRAHEDRON10:
                                                         ppE = ppFindElem(Elem::SOLID, uLabel);
@@ -1133,6 +1139,7 @@ DataManager::ReadElems(MBDynParser& HP)
 				case SHELL4EASANS:
                                 case HEXAHEDRON8:
                                 case HEXAHEDRON20:
+                                case HEXAHEDRON20R:
                                 case PENTAHEDRON15:
                                 case TETRAHEDRON10:
 
@@ -1639,11 +1646,13 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 
         case HEXAHEDRON8:
         case HEXAHEDRON20:
+        case HEXAHEDRON20R:
         case PENTAHEDRON15:
         case TETRAHEDRON10: {
                 static constexpr char sType[][14] = {
                         "hexahedron8",
                         "hexahedron20",
+                        "hexahedron20r",
                         "pentahedron15",
                         "tetrahedron10"
                 };
@@ -1673,6 +1682,9 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                 case HEXAHEDRON20:
                      pE = ReadSolid<Hexahedron20, Gauss3>(this, HP, uLabel);
                      break;
+                case HEXAHEDRON20R:
+                     pE = ReadSolid<Hexahedron20r, GaussH20r>(this, HP, uLabel);
+                     break;                     
                 case PENTAHEDRON15:
                      pE = ReadSolid<Pentahedron15, GaussP15>(this, HP, uLabel);
                      break;

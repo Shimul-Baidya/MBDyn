@@ -45,6 +45,137 @@
 #include "solid.h"
 #include "dataman.h"
 
+class NeoHookean: public ConstitutiveLaw<Vec6, Mat6x6> {
+public:
+     NeoHookean(const doublereal mu, const doublereal lambda)
+          :mu(mu), lambda(lambda) {
+     }
+
+     virtual ConstLawType::Type GetConstLawType() const override {
+          return ConstLawType::ELASTIC;
+     }
+
+     virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
+          NeoHookean* pCL;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 NeoHookean,
+                                 NeoHookean(mu, lambda));
+          return pCL;
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+                         sp_grad::SpColVector<doublereal, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+                         sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+                         sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const Vec6& Eps, const Vec6& EpsPrime) override {
+          ConstitutiveLaw<Vec6, Mat6x6>::UpdateElasticSparse(this, Eps);
+     }
+
+     template <typename VectorType>
+     void UpdateElasticTpl(const VectorType& epsilon, VectorType& sigma) {
+
+          typedef typename VectorType::ValueType T;
+          using std::pow;
+          using namespace sp_grad;
+
+          SpGradExpDofMapHelper<typename VectorType::ValueType> oDofMap;
+
+          oDofMap.GetDofStat(epsilon);
+          oDofMap.Reset();
+          oDofMap.InsertDof(epsilon);
+          oDofMap.InsertDone();
+
+          // Based on Lars Kuebler 2005, chapter 2.2.1.3, page 25-26
+
+          const SpMatrix<T, 3, 3> C{T{2. * epsilon(1) + 1.},        epsilon(4),           epsilon(6),
+                                    epsilon(4), T{2. * epsilon(2) + 1.},          epsilon(5),
+                                    epsilon(6),          epsilon(5), T{2. * epsilon(3) + 1.}};
+
+          const SpMatrix<T, 3, 3> CC = C * C;
+
+          T IC, IIC, IIIC;
+
+          oDofMap.MapAssign(IC, C(1, 1) + C(2, 2) + C(3, 3));
+          oDofMap.MapAssign(IIC, 0.5 * (IC * IC - (CC(1, 1) + CC(2, 2) + CC(3, 3))));
+
+          Det(C, IIIC, oDofMap);
+
+          T gamma;
+
+          oDofMap.MapAssign(gamma, (lambda * (IIIC - sqrt(IIIC)) - mu) / IIIC);
+
+          constexpr index_type i1[] = {1, 2, 3, 1, 2, 3};
+          constexpr index_type i2[] = {1, 2, 3, 2, 3, 1};
+
+          for (index_type i = 1; i <= 6; ++i) {
+               const index_type j = i1[i - 1];
+               const index_type k = i2[i - 1];
+
+               oDofMap.MapAssign(sigma(i), mu * (j == k) + (CC(j, k) - C(j, k) * IC + IIC * (j == k)) * gamma);
+          }
+     }
+private:
+     const doublereal mu, lambda;
+};
+
+struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
+        virtual ConstitutiveLaw<Vec6, Mat6x6>*
+        Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+             if (!HP.IsKeyWord("E")) {
+                  silent_cerr("keyword \"E\" expected at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+             const doublereal E = HP.GetReal();
+
+             if (E <= 0.) {
+                  silent_cerr("E must be greater than zero at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             if (!HP.IsKeyWord("nu")) {
+                  silent_cerr("keyword \"nu\" expected at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const doublereal nu = HP.GetReal();
+
+             if (nu < 0. || nu >= 0.5) {
+                  // FIXME: incompressible case not implemented yet
+                  silent_cerr("nu must be between 0 and 0.5 at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             NeoHookean* pCL = nullptr;
+
+             const doublereal mu = (E / (2. * (1. + nu))); // Lame parameters
+             const doublereal lambda = (E * nu / ((1. + nu) * (1. - 2. * nu)));
+
+             SAFENEWWITHCONSTRUCTOR(pCL,
+                                    NeoHookean,
+                                    NeoHookean(mu, lambda));
+
+             CLType = ConstLawType::ELASTIC;
+
+             return pCL;
+        }
+};
+
 class Hexahedron8 {
 public:
      static const char* ElementName() {
@@ -70,9 +201,7 @@ public:
      template <sp_grad::index_type iNumComp>
      static inline void
      GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
-                        const sp_grad::SpMatrix<doublereal, iNumNodesExtrap, iNumComp>& taune) {
-          tauni = taune;
-     }
+                        const sp_grad::SpMatrix<doublereal, iNumNodesExtrap, iNumComp>& taune);
 };
 
 class Hexahedron20 {
@@ -100,16 +229,35 @@ public:
      template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
      static inline void
      GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
-                        const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune) {
-          static_assert(iNumRhs >= iNumNodes);
-          using namespace sp_grad;
+                        const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune);
+};
 
-          for (index_type j = 1; j <= iNumComp; ++j) {
-               for (index_type i = 1; i <= iNumNodes; ++i) {
-                    tauni(i, j) = taune(i, j);
-               }
-          }
+class Hexahedron20r {
+public:
+     static const char* ElementName() {
+          return "hexahedron20r";
      }
+
+     static constexpr sp_grad::index_type iNumNodes = 20;
+     static constexpr sp_grad::index_type iNumNodesExtrap = 8;
+     static constexpr bool bHaveDiagMass = false; // not applicable to incomplete high order elements
+
+     static inline void
+     ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
+                        sp_grad::SpMatrix<doublereal, iNumNodes, 3>& h0d1);
+
+     static inline void
+     ShapeFunction(const sp_grad::SpColVector<doublereal, 3>& r,
+                   sp_grad::SpColVector<doublereal, iNumNodes>& h);
+
+     static inline void
+     ShapeFunctionExtrap(const sp_grad::SpColVector<doublereal, 3>& r,
+                         sp_grad::SpColVector<doublereal, iNumNodesExtrap>& h);
+
+     template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
+     static inline void
+     GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
+                        const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune);
 };
 
 class Pentahedron15 {
@@ -137,17 +285,7 @@ public:
      template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
      static inline void
      GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
-                        const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune) {
-          using namespace sp_grad;
-
-          static_assert(iNumRhs >= iNumNodes);
-
-          for (index_type j = 1; j <= iNumComp; ++j) {
-               for (index_type i = 1; i <= iNumNodes; ++i) {
-                    tauni(i, j) = taune(i, j);
-               }
-          }
-     }
+                        const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune);
 };
 
 class Tetrahedron10h {
@@ -175,34 +313,7 @@ public:
      template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
      static inline void
      GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
-                        const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune) {
-          using namespace sp_grad;
-
-          static_assert(iNumRhs >= iNumNodesExtrap);
-
-          static constexpr struct {
-               index_type ico1, ico2, imid;
-          } idxint[] = {
-               {0, 1, 4},
-               {1, 2, 5},
-               {2, 0, 6},
-               {0, 3, 7},
-               {1, 3, 8},
-               {2, 3, 9}
-          };
-
-          constexpr index_type iNumNodesInterp = sizeof(idxint) / sizeof(idxint[0]);
-
-          for (index_type j = 1; j <= iNumComp; ++j) {
-               for (index_type i = 1; i <= iNumNodesExtrap; ++i) {
-                    tauni(i, j) = taune(i, j);
-               }
-               for (index_type i = 0; i < iNumNodesInterp; ++i) {
-                    tauni(idxint[i].imid + 1, j) = 0.5 * (taune(idxint[i].ico1 + 1, j)
-                                                       +  taune(idxint[i].ico2 + 1, j));
-               }
-          }
-     }
+                        const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune);
 };
 
 class Gauss2 {
@@ -283,6 +394,22 @@ private:
      static constexpr doublereal alphai[] = {0.555555555555556, 0.888888888888889, 0.555555555555556};
      static constexpr doublereal ri_lumped[] = {1., 0., -1.};
      static constexpr doublereal alphai_lumped[] = {2./3., 2./3., 2./3.};
+};
+
+class GaussH20r: public Gauss2, public Gauss3 {
+public:
+     using Gauss2::iNumEvalPointsStiffness;
+     using Gauss3::iNumEvalPointsMass;
+     using Gauss3::iNumEvalPointsMassLumped;
+
+     using Gauss2::GetPositionStiffness;
+     using Gauss2::dGetWeightStiffness;
+
+     using Gauss3::GetPositionMass;
+     using Gauss3::dGetWeightMass;
+
+     using Gauss3::GetPositionMassLumped;
+     using Gauss3::dGetWeightMassLumped;
 };
 
 class GaussP15 {
@@ -452,7 +579,7 @@ protected:
 
           const SpColVector<T, 6> eps{G(1, 1), G(2, 2), G(3, 3), 2. * G(1, 2), 2. * G(2, 3), 2. * G(3, 1)};
 
-          sigma = pConstLaw->Update(eps);
+          pConstLaw->Update(eps, sigma);
      }
 
      template <typename T>
@@ -465,7 +592,7 @@ protected:
           const SpColVector<T, 6> eps{G(1, 1), G(2, 2), G(3, 3), 2. * G(1, 2), 2. * G(2, 3), 2. * G(3, 1)};
           const SpColVector<T, 6> epsP{GP(1, 1), GP(2, 2), GP(3, 3), 2. * GP(1, 2), 2. * GP(2, 3), 2. * GP(3, 1)};
 
-          sigma = pConstLaw->Update(eps, epsP);
+          pConstLaw->Update(eps, epsP, sigma);
      }
 
 private:
@@ -662,6 +789,14 @@ Hexahedron8::ShapeFunctionExtrap(const sp_grad::SpColVector<doublereal, 3>& r,
      ShapeFunction(r, h);
 }
 
+template <sp_grad::index_type iNumComp>
+void
+Hexahedron8::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
+                                const sp_grad::SpMatrix<doublereal, iNumNodesExtrap, iNumComp>& taune)
+{
+     tauni = taune;
+}
+
 constexpr sp_grad::index_type Hexahedron20::iNumNodes;
 constexpr sp_grad::index_type Hexahedron20::iNumNodesExtrap;
 
@@ -782,6 +917,184 @@ Hexahedron20::ShapeFunctionExtrap(const sp_grad::SpColVector<doublereal, 3>& r,
      ShapeFunction(r, h);
 }
 
+template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
+void
+Hexahedron20::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
+                                 const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune)
+{
+     static_assert(iNumRhs >= iNumNodes);
+     using namespace sp_grad;
+
+     for (index_type j = 1; j <= iNumComp; ++j) {
+          for (index_type i = 1; i <= iNumNodes; ++i) {
+               tauni(i, j) = taune(i, j);
+          }
+     }
+}
+
+void
+Hexahedron20r::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
+                                  sp_grad::SpMatrix<doublereal, iNumNodes, 3>& h0d1)
+{
+     const doublereal r1 = r(1);
+     const doublereal r2 = r(2);
+     const doublereal r3 = r(3);
+
+     static_assert(iNumNodes == 20);
+
+     h0d1(1,1) = 1.25E-1*(1.0E+0-r2)*(1.0E+0-r3)*(r3+r2+r1+2.0E+0)+1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3);
+     h0d1(1,2) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)-1.25E-1*(r1-1.0E+0)*(1.0E+0-r3)*(r3+r2+r1+2.0E+0);
+     h0d1(1,3) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)-1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(r3+r2+r1+2.0E+0);
+     h0d1(2,1) = (-1.25E-1*(1.0E+0-r2)*(1.0E+0-r3)*(r3+r2-r1+2.0E+0))-1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3);
+     h0d1(2,2) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)-1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r3)*(r3+r2-r1+2.0E+0);
+     h0d1(2,3) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)-1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(r3+r2-r1+2.0E+0);
+     h0d1(3,1) = (-1.25E-1*(r2+1.0E+0)*(1.0E+0-r3)*(r3-r2-r1+2.0E+0))-1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(3,2) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r3)*(r3-r2-r1+2.0E+0)-1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(3,3) = 1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3)-1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(r3-r2-r1+2.0E+0);
+     h0d1(4,1) = 1.25E-1*(r2+1.0E+0)*(1.0E+0-r3)*(r3-r2+r1+2.0E+0)+1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(4,2) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r3)*(r3-r2+r1+2.0E+0)-1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(4,3) = 1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3)-1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(r3-r2+r1+2.0E+0);
+     h0d1(5,1) = 1.25E-1*(1.0E+0-r2)*((-r3)+r2+r1+2.0E+0)*(r3+1.0E+0)+1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h0d1(5,2) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0)-1.25E-1*(r1-1.0E+0)*((-r3)+r2+r1+2.0E+0)*(r3+1.0E+0);
+     h0d1(5,3) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*((-r3)+r2+r1+2.0E+0)-1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h0d1(6,1) = (-1.25E-1*(1.0E+0-r2)*((-r3)+r2-r1+2.0E+0)*(r3+1.0E+0))-1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h0d1(6,2) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0)-1.25E-1*((-r1)-1.0E+0)*((-r3)+r2-r1+2.0E+0)*(r3+1.0E+0);
+     h0d1(6,3) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*((-r3)+r2-r1+2.0E+0)-1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h0d1(7,1) = (-1.25E-1*(r2+1.0E+0)*((-r3)-r2-r1+2.0E+0)*(r3+1.0E+0))-1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(7,2) = 1.25E-1*((-r1)-1.0E+0)*((-r3)-r2-r1+2.0E+0)*(r3+1.0E+0)-1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(7,3) = 1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*((-r3)-r2-r1+2.0E+0)-1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(8,1) = 1.25E-1*(r2+1.0E+0)*((-r3)-r2+r1+2.0E+0)*(r3+1.0E+0)+1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(8,2) = 1.25E-1*(r1-1.0E+0)*((-r3)-r2+r1+2.0E+0)*(r3+1.0E+0)-1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(8,3) = 1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*((-r3)-r2+r1+2.0E+0)-1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(9,1) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(1.0E+0-r3)-2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3);
+     h0d1(9,2) = -2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(1.0E+0-r3);
+     h0d1(9,3) = -2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(1.0E+0-r2);
+     h0d1(10,1) = 2.5E-1*(1.0E+0-r2)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(10,2) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)-2.5E-1*(r1+1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(10,3) = -2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r2+1.0E+0);
+     h0d1(11,1) = 2.5E-1*(1.0E+0-r1)*(r2+1.0E+0)*(1.0E+0-r3)-2.5E-1*(r1+1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(11,2) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(1.0E+0-r3);
+     h0d1(11,3) = -2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(r2+1.0E+0);
+     h0d1(12,1) = -2.5E-1*(1.0E+0-r2)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(12,2) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(1.0E+0-r3)-2.5E-1*(1.0E+0-r1)*(r2+1.0E+0)*(1.0E+0-r3);
+     h0d1(12,3) = -2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r2+1.0E+0);
+     h0d1(13,1) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r3+1.0E+0)-2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h0d1(13,2) = -2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(r3+1.0E+0);
+     h0d1(13,3) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(1.0E+0-r2);
+     h0d1(14,1) = 2.5E-1*(1.0E+0-r2)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(14,2) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0)-2.5E-1*(r1+1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(14,3) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r2+1.0E+0);
+     h0d1(15,1) = 2.5E-1*(1.0E+0-r1)*(r2+1.0E+0)*(r3+1.0E+0)-2.5E-1*(r1+1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(15,2) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(r3+1.0E+0);
+     h0d1(15,3) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(r2+1.0E+0);
+     h0d1(16,1) = -2.5E-1*(1.0E+0-r2)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(16,2) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r3+1.0E+0)-2.5E-1*(1.0E+0-r1)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(16,3) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r2+1.0E+0);
+     h0d1(17,1) = -2.5E-1*(1.0E+0-r2)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(17,2) = -2.5E-1*(1.0E+0-r1)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(17,3) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(1.0E+0-r3)-2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r3+1.0E+0);
+     h0d1(18,1) = 2.5E-1*(1.0E+0-r2)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(18,2) = -2.5E-1*(r1+1.0E+0)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(18,3) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)-2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h0d1(19,1) = 2.5E-1*(r2+1.0E+0)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(19,2) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(19,3) = 2.5E-1*(r1+1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3)-2.5E-1*(r1+1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h0d1(20,1) = -2.5E-1*(r2+1.0E+0)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(20,2) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r3)*(r3+1.0E+0);
+     h0d1(20,3) = 2.5E-1*(1.0E+0-r1)*(r2+1.0E+0)*(1.0E+0-r3)-2.5E-1*(1.0E+0-r1)*(r2+1.0E+0)*(r3+1.0E+0);
+}
+
+void
+Hexahedron20r::ShapeFunction(const sp_grad::SpColVector<doublereal, 3>& r,
+                             sp_grad::SpColVector<doublereal, iNumNodes>& h)
+{
+     const doublereal r1 = r(1);
+     const doublereal r2 = r(2);
+     const doublereal r3 = r(3);
+
+     static_assert(iNumNodes == 20);
+
+     h(1) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)*(r3+r2+r1+2.0E+0);
+     h(2) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)*(r3+r2-r1+2.0E+0);
+     h(3) = 1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3)*(r3-r2-r1+2.0E+0);
+     h(4) = 1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3)*(r3-r2+r1+2.0E+0);
+     h(5) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*((-r3)+r2+r1+2.0E+0)*(r3+1.0E+0);
+     h(6) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*((-r3)+r2-r1+2.0E+0)*(r3+1.0E+0);
+     h(7) = 1.25E-1*((-r1)-1.0E+0)*(r2+1.0E+0)*((-r3)-r2-r1+2.0E+0)*(r3+1.0E+0);
+     h(8) = 1.25E-1*(r1-1.0E+0)*(r2+1.0E+0)*((-r3)-r2+r1+2.0E+0)*(r3+1.0E+0);
+     h(9) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3);
+     h(10) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r2+1.0E+0)*(1.0E+0-r3);
+     h(11) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h(12) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r2+1.0E+0)*(1.0E+0-r3);
+     h(13) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h(14) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r2+1.0E+0)*(r3+1.0E+0);
+     h(15) = 2.5E-1*(1.0E+0-r1)*(r1+1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h(16) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r2+1.0E+0)*(r3+1.0E+0);
+     h(17) = 2.5E-1*(1.0E+0-r1)*(1.0E+0-r2)*(1.0E+0-r3)*(r3+1.0E+0);
+     h(18) = 2.5E-1*(r1+1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)*(r3+1.0E+0);
+     h(19) = 2.5E-1*(r1+1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3)*(r3+1.0E+0);
+     h(20) = 2.5E-1*(1.0E+0-r1)*(r2+1.0E+0)*(1.0E+0-r3)*(r3+1.0E+0);
+}
+
+void
+Hexahedron20r::ShapeFunctionExtrap(const sp_grad::SpColVector<doublereal, 3>& r,
+                                   sp_grad::SpColVector<doublereal, iNumNodesExtrap>& h)
+{
+     const doublereal r1 = r(1);
+     const doublereal r2 = r(2);
+     const doublereal r3 = r(3);
+
+     static_assert(iNumNodesExtrap == 8);
+
+     h(1) = 1.25E-1*(1.0E+0-r1)*(1.0E+0-r2)*(1.0E+0-r3);
+     h(2) = 1.25E-1*(r1+1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3);
+     h(3) = 1.25E-1*(r1+1.0E+0)*(r2+1.0E+0)*(1.0E+0-r3);
+     h(4) = 1.25E-1*(1.0E+0-r1)*(r2+1.0E+0)*(1.0E+0-r3);
+     h(5) = 1.25E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r3+1.0E+0);
+     h(6) = 1.25E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r3+1.0E+0);
+     h(7) = 1.25E-1*(r1+1.0E+0)*(r2+1.0E+0)*(r3+1.0E+0);
+     h(8) = 1.25E-1*(1.0E+0-r1)*(r2+1.0E+0)*(r3+1.0E+0);
+}
+
+template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
+void
+Hexahedron20r::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
+                                  const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune)
+{
+     using namespace sp_grad;
+
+     static_assert(iNumRhs >= iNumNodesExtrap);
+
+     static constexpr struct {
+          index_type ico1, ico2, imid;
+     } idxint[] = {
+          {1, 2,  9},
+          {2, 3, 10},
+          {3, 4, 11},
+          {4, 1, 12},
+          {5, 6, 13},
+          {6, 7, 14},
+          {7, 8, 15},
+          {8, 5, 16},
+          {1, 5, 17},
+          {2, 6, 18},
+          {3, 7, 19},
+          {4, 8, 20}
+     };
+
+     constexpr index_type iNumNodesInterp = sizeof(idxint) / sizeof(idxint[0]);
+
+     for (index_type j = 1; j <= iNumComp; ++j) {
+          for (index_type i = 1; i <= iNumNodesExtrap; ++i) {
+               tauni(i, j) = taune(i, j);
+          }
+          for (index_type i = 0; i < iNumNodesInterp; ++i) {
+               tauni(idxint[i].imid, j) = 0.5 * (taune(idxint[i].ico1, j)
+                                              +  taune(idxint[i].ico2, j));
+          }
+     }
+}
+
 constexpr sp_grad::index_type Pentahedron15::iNumNodes;
 constexpr sp_grad::index_type Pentahedron15::iNumNodesExtrap;
 
@@ -878,6 +1191,21 @@ Pentahedron15::ShapeFunction(const sp_grad::SpColVector<doublereal, 3>& r,
      h(15) = r2*(1-r3_2);
 }
 
+template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
+void
+Pentahedron15::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
+                                  const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune) {
+     using namespace sp_grad;
+
+     static_assert(iNumRhs >= iNumNodes);
+
+     for (index_type j = 1; j <= iNumComp; ++j) {
+          for (index_type i = 1; i <= iNumNodes; ++i) {
+               tauni(i, j) = taune(i, j);
+          }
+     }
+}
+
 void
 Tetrahedron10h::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
                                    sp_grad::SpMatrix<doublereal, iNumNodes, 3>& h0d1)
@@ -946,6 +1274,38 @@ Tetrahedron10h::ShapeFunctionExtrap(const sp_grad::SpColVector<doublereal, 3>& r
      h(2) = r(3);
      h(3) = 1. - r(1) - r(2) - r(3);
      h(4) = r(1);
+}
+
+template <sp_grad::index_type iNumComp, sp_grad::index_type iNumRhs>
+void
+Tetrahedron10h::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
+                                   const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune) {
+     using namespace sp_grad;
+
+     static_assert(iNumRhs >= iNumNodesExtrap);
+
+     static constexpr struct {
+          index_type ico1, ico2, imid;
+     } idxint[] = {
+          {0, 1, 4},
+          {1, 2, 5},
+          {2, 0, 6},
+          {0, 3, 7},
+          {1, 3, 8},
+          {2, 3, 9}
+     };
+
+     constexpr index_type iNumNodesInterp = sizeof(idxint) / sizeof(idxint[0]);
+
+     for (index_type j = 1; j <= iNumComp; ++j) {
+          for (index_type i = 1; i <= iNumNodesExtrap; ++i) {
+               tauni(i, j) = taune(i, j);
+          }
+          for (index_type i = 0; i < iNumNodesInterp; ++i) {
+               tauni(idxint[i].imid + 1, j) = 0.5 * (taune(idxint[i].ico1 + 1, j)
+                                                     +  taune(idxint[i].ico2 + 1, j));
+          }
+     }
 }
 
 constexpr sp_grad::index_type Gauss2::iGaussOrder;
@@ -2869,10 +3229,13 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
      SpColVectorA<doublereal, iNumNodes> rhon;
      const bool bStaticModel = pDM->bIsStaticModel();
 
-     for (index_type i = 1; i <= iNumNodes; ++i) {
-          rgNodes[i - 1] = bStaticModel
+     for (index_type i = 0; i < iNumNodes; ++i) {
+          rgNodes[i] = bStaticModel
                ? pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP)
                : pDM->ReadNode<const DynamicStructDispNodeAd, Node::STRUCTURAL>(HP);
+     }
+
+     for (index_type i = 1; i <= iNumNodes; ++i) {
           rhon(i) = HP.GetReal();
 
           if (rhon(i) <= 0.) {
@@ -3098,5 +3461,11 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
 
 template SolidElem* ReadSolid<Hexahedron8, Gauss2>(DataManager*, MBDynParser&, unsigned int);
 template SolidElem* ReadSolid<Hexahedron20, Gauss3>(DataManager*, MBDynParser&, unsigned int);
+template SolidElem* ReadSolid<Hexahedron20r, GaussH20r>(DataManager*, MBDynParser&, unsigned int);
 template SolidElem* ReadSolid<Pentahedron15, GaussP15>(DataManager*, MBDynParser&, unsigned int);
 template SolidElem* ReadSolid<Tetrahedron10h, GaussT10h>(DataManager*, MBDynParser&, unsigned int);
+
+void InitSolidCL()
+{
+     SetCL6D("neo" "hookean", new NeoHookeanRead);
+}

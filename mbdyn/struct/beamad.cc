@@ -245,7 +245,7 @@ BeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           }
 
           /* Calcola le azioni interne */
-          AzLoc[iSez] = pD[iSez]->pGetConstLaw()->Update(DefLoc[iSez]);
+          pD[iSez]->pGetConstLaw()->Update(DefLoc[iSez], AzLoc[iSez]);
 
           /* corregge le azioni interne locali (piezo, ecc) */
           AddInternalForces(AzLoc[iSez], iSez);
@@ -498,7 +498,7 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           }
 
           /* Calcola le azioni interne */
-          AzLoc[iSez] = pD[iSez]->pGetConstLaw()->Update(DefLoc[iSez], DefPrimeLoc[iSez]);
+          pD[iSez]->pGetConstLaw()->Update(DefLoc[iSez], DefPrimeLoc[iSez], AzLoc[iSez]);
 
           /* corregge le azioni interne locali (piezo, ecc) */
           AddInternalForces(AzLoc[iSez], iSez);

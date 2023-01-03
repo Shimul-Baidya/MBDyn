@@ -52,10 +52,12 @@
 
 class Hexahedron8;
 class Hexahedron20;
+class Hexahedron20r;
 class Pentahedron15;
 class Tetrahedron10h;
 class Gauss2;
 class Gauss3;
+class GaussH20r;
 class GaussP15;
 class GaussT10h;
 
@@ -82,5 +84,7 @@ public:
 template <typename ElementType, typename CollocationType>
 SolidElem*
 ReadSolid(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
+
+void InitSolidCL();
 
 #endif
