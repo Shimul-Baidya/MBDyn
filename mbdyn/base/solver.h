@@ -170,18 +170,19 @@ public:
 
 		// text output precision control
 		int iMatrixPrecision;
-		int iResultsPrecision;
+                int iResultsPrecision;
 
-		// ARPACK specific
-		struct ARPACK {
-			integer iNEV;
-			integer iNCV;
-			doublereal dTOL;
-			ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.) { NO_OP; };
-		} arpack;
+                // ARPACK specific
+                struct ARPACK {
+                        integer iNEV;
+                        integer iNCV;
+                        doublereal dTOL;
+                        integer iMaxIterations;
+                     ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.), iMaxIterations(300) { NO_OP; };
+                } arpack;
 
-		// JDQZ specific
-		struct JDQZ {
+                // JDQZ specific
+                struct JDQZ {
 			doublereal eps;
 			integer kmax;
 			integer jmax;

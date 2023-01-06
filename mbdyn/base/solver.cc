@@ -4283,6 +4283,15 @@ Solver::ReadData(MBDynParser& HP)
 							<< std::endl);
 						EigAn.arpack.dTOL = 0.;
 					}
+
+                                        if (HP.IsKeyWord("max" "iterations")) {
+                                             EigAn.arpack.iMaxIterations = HP.GetInt();
+
+                                             if (EigAn.arpack.iMaxIterations < 1) {
+                                                  silent_cerr("max iterations must be greater than zero at line " << HP.GetLineData() << "\n");
+                                                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                             }
+                                        }
 #else // !USE_ARPACK
 					silent_cerr("\"use arpack\" "
 						"needs to configure --with-arpack "
@@ -5965,6 +5974,20 @@ do_eig(const doublereal& b, const doublereal& re,
 	return 0;
 }
 
+namespace {
+     struct EigenValue {
+          EigenValue(doublereal sigma, doublereal omega, doublereal csi, doublereal freq)
+               :sigma(sigma), omega(omega), csi(csi), freq(freq) {
+          }
+
+          bool operator<(const EigenValue& rhs) const {
+               return (freq == rhs.freq) ? sigma < rhs.sigma : freq < rhs.freq;
+          }
+
+          doublereal sigma, omega, csi, freq;
+     };
+};
+
 // Writes eigenvalues to the .out file in human-readable form
 static void
 output_eigenvalues(const VectorHandler *pBeta,
@@ -5981,6 +6004,10 @@ output_eigenvalues(const VectorHandler *pBeta,
 	Out << "Mode n. " "  " "    Real    " "   " "    Imag    " "  " "    " "   Damp %   " "  Freq Hz" << std::endl;
 
 	integer iNVec = R.iGetSize();
+
+        std::vector<EigenValue> rgEigenValues;
+
+        rgEigenValues.reserve(iNVec);
 
 	for (int iCnt = 1; iCnt <= iNVec; iCnt++) {
 		doublereal b = pBeta ? (*pBeta)(iCnt) : 1.;
@@ -6006,19 +6033,19 @@ output_eigenvalues(const VectorHandler *pBeta,
 
 		vOut[iCnt - 1] = true;
 
-		Out << std::setw(8) << iCnt << ": "
-			<< std::setw(12) << sigma << " + " << std::setw(12) << omega << " j";
-
-		if (fabs(csi) > std::numeric_limits<doublereal>::epsilon()) {
-			Out << "    " << std::setw(12) << csi;
-		} else {
-			Out << "    " << std::setw(12) << 0.;
-		}
-
-		Out << "    " << std::setw(12) << freq;
-
-		Out << std::endl;
+                rgEigenValues.emplace_back(sigma, omega, csi, freq);
 	}
+
+        std::sort(rgEigenValues.begin(), rgEigenValues.end());
+
+        for (size_t iCnt = 0; iCnt < rgEigenValues.size(); ++iCnt) {
+             Out << std::setw(8) << iCnt + 1 << ": "
+                 << std::setw(12) << rgEigenValues[iCnt].sigma
+                 << ((rgEigenValues[iCnt].omega >= 0.) ? " + " : " - ") << std::setw(12)
+                 << std::fabs(rgEigenValues[iCnt].omega) << " j"
+                 << "    " << std::setw(12) << rgEigenValues[iCnt].csi
+                 << "    " << std::setw(12) << rgEigenValues[iCnt].freq << '\n';
+        }
 }
 #endif // defined USE_LAPACK || defined USE_ARPACK || defined USE_JDQZ
 
@@ -6405,7 +6432,7 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 	IDO = 0;
 	BMAT = "I";
 	N = pMatA->iGetNumRows();
-	WHICH = "SM";
+	WHICH = "LI"; // Using this option we can filter out more spurious eigenvalues
 	NEV = pEA->arpack.iNEV;
 	if (NEV > N) {
 		silent_cerr("eig_arpack: invalid NEV=" << NEV << " > size of problem (=" << N << ")" << std::endl);
@@ -6425,7 +6452,7 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 	V.resize(N*(NCV + 1), 0.);
 	LDV = N;
 	IPARAM[0] = 1;
-	IPARAM[2] = 300;		// configurable?
+	IPARAM[2] = pEA->arpack.iMaxIterations;
 	IPARAM[3] = 1;
 	IPARAM[6] = 1;			// mode 1: canonical problem
 	WORKD.resize(3*N, 0.);
