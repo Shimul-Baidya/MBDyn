@@ -3351,10 +3351,10 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
      out << ElementType::ElementName() << ": " << uLabel;
 
      for (sp_grad::index_type i = 0; i < iNumNodes; ++i) {
-          out << ',' << rgNodes[i]->GetLabel();
+          out << ' ' << rgNodes[i]->GetLabel();
      }
 
-     out << "\n";
+     out << '\n';
 
      SolidElem* pEl = nullptr;
 
