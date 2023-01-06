@@ -1656,24 +1656,37 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                         "pentahedron15",
                         "tetrahedron10"
                 };
-             
-		if (iNumTypes[Elem::SOLID]-- <= 0) {
-			DEBUGCERR("");
-			silent_cerr("line " << HP.GetLineData() << ": "
-				<< sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
-				"exceeds solid elements number" << std::endl);
 
-			throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
-		}
+                static_assert(HEXAHEDRON20 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
+                static_assert(HEXAHEDRON20R - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
+                static_assert(HEXAHEDRON15 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
+                static_assert(TETRAHEDRON10 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
 
-		if (pFindElem(Elem::SOLID, uLabel) != NULL) {
-			DEBUGCERR("");
-			silent_cerr("line " << HP.GetLineData() << ": "
-				<< sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
-				"already defined" << std::endl);
+                ASSERT(sType[CurrType - HEXAHEDRON8] < sizeof(sType) / sizeof(sType[0]));
 
-			throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
-		}
+                if (!bUseAutoDiff()) {
+                     silent_cerr("element type " << sType[CurrType - HEXAHEDRON8] << " requires support for automatic differentiation at line " << HP.GetLineData()
+                                 << "\nadd the statement \"use automatic differentiation;\" inside the control data section in order to enable it!\n");
+                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (iNumTypes[Elem::SOLID]-- <= 0) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
+                                "exceeds solid elements number" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (pFindElem(Elem::SOLID, uLabel) != NULL) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
+                                "already defined" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
 
                 switch (CurrType) {
                 case HEXAHEDRON8:
@@ -1684,7 +1697,7 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                      break;
                 case HEXAHEDRON20R:
                      pE = ReadSolid<Hexahedron20r, GaussH20r>(this, HP, uLabel);
-                     break;                     
+                     break;
                 case PENTAHEDRON15:
                      pE = ReadSolid<Pentahedron15, GaussP15>(this, HP, uLabel);
                      break;
@@ -1694,11 +1707,11 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                 default:
                      ASSERT(0);
                 }
-                
-		if (pE) {
-			ppE = InsertElem(ElemData[Elem::SOLID], uLabel, pE);
-		}
-                
+
+                if (pE) {
+                        ppE = InsertElem(ElemData[Elem::SOLID], uLabel, pE);
+                }
+
                 break;
         }
 	/* Elementi aerodinamici: rotori */
