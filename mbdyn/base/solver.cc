@@ -4292,6 +4292,20 @@ Solver::ReadData(MBDynParser& HP)
                                                   throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                                              }
                                         }
+
+                                        if (HP.IsKeyWord("largest" "magnitude")) {
+                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LM;
+                                        } else if (HP.IsKeyWord("smallest" "magnitude")) {
+                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SM;
+                                        } else if (HP.IsKeyWord("largest" "real" "part")) {
+                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LR;
+                                        } else if (HP.IsKeyWord("smallest" "real" "part")) {
+                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SR;
+                                        } else if (HP.IsKeyWord("largest" "imaginary" "part")) {
+                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LI;
+                                        } else if (HP.IsKeyWord("smallest" "imaginary" "part")) {
+                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SI;
+                                        }
 #else // !USE_ARPACK
 					silent_cerr("\"use arpack\" "
 						"needs to configure --with-arpack "
@@ -6429,15 +6443,16 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 	integer LWORKL;
 	integer INFO;
 
-	IDO = 0;
-	BMAT = "I";
-	N = pMatA->iGetNumRows();
-	WHICH = "LI"; // Using this option we can filter out more spurious eigenvalues
-	NEV = pEA->arpack.iNEV;
-	if (NEV > N) {
-		silent_cerr("eig_arpack: invalid NEV=" << NEV << " > size of problem (=" << N << ")" << std::endl);
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	}
+        static constexpr char szWhich[][3] = {"LM", "SM", "LR", "SR", "LI", "SI"};
+        IDO = 0;
+        BMAT = "I";
+        N = pMatA->iGetNumRows();
+        WHICH = szWhich[pEA->arpack.eWhich];
+        NEV = pEA->arpack.iNEV;
+        if (NEV > N) {
+                silent_cerr("eig_arpack: invalid NEV=" << NEV << " > size of problem (=" << N << ")" << std::endl);
+                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+        }
 
 	TOL = pEA->arpack.dTOL;
 	RESID.resize(N, 0.);

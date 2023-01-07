@@ -178,7 +178,15 @@ public:
                         integer iNCV;
                         doublereal dTOL;
                         integer iMaxIterations;
-                     ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.), iMaxIterations(300) { NO_OP; };
+                        enum EigenvalueType {
+                             LM = 0,
+                             SM,
+                             LR,
+                             SR,
+                             LI,
+                             SI
+                        } eWhich;
+                     ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.), iMaxIterations(300), eWhich(LI) { NO_OP; };
                 } arpack;
 
                 // JDQZ specific
