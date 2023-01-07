@@ -1659,10 +1659,10 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 
                 static_assert(HEXAHEDRON20 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
                 static_assert(HEXAHEDRON20R - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
-                static_assert(HEXAHEDRON15 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
+                static_assert(PENTAHEDRON15 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
                 static_assert(TETRAHEDRON10 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
 
-                ASSERT(sType[CurrType - HEXAHEDRON8] < sizeof(sType) / sizeof(sType[0]));
+                ASSERT(CurrType - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
 
                 if (!bUseAutoDiff()) {
                      silent_cerr("element type " << sType[CurrType - HEXAHEDRON8] << " requires support for automatic differentiation at line " << HP.GetLineData()
