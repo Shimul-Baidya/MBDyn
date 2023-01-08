@@ -3117,8 +3117,12 @@ Solver::ReadData(MBDynParser& HP)
 	unsigned nSolverThreads = 0;
 #endif /* USE_MULTITHREAD */
 
+        bool bEigAnUserDefinedParam = false;
+        bool bEigAnUserDefinedLowerFreq = false;
+        bool bEigAnUserDefinedUpperFreq = false;
+        bool bEigAnUserDefinedWhich = false;
 
-	/* Ciclo infinito */
+        /* Ciclo infinito */
 	while (true) {
 		KeyWords CurrKeyWord = KeyWords(HP.GetDescription());
 
@@ -4157,13 +4161,13 @@ Solver::ReadData(MBDynParser& HP)
 			EigAn.currAnalysis = EigAn.Analyses.begin();
 			EigAn.bAnalysis = true;
 
-			// permute is the default; use "balance, no" to disable
-			EigAn.uFlags = EigenAnalysis::EIG_PERMUTE;
+                        // permute is the default; use "balance, no" to disable
+                        EigAn.uFlags = EigenAnalysis::EIG_PERMUTE;
 
-			while (HP.IsArg()) {
+                        while (HP.IsArg()) {
 				if (HP.IsKeyWord("parameter")) {
 					EigAn.dParam = HP.GetReal();
-
+                                        bEigAnUserDefinedParam = true;
 				} else if (HP.IsKeyWord("output" "matrices")) {
 					EigAn.uFlags |= EigenAnalysis::EIG_OUTPUT_MATRICES;
 
@@ -4213,7 +4217,7 @@ Solver::ReadData(MBDynParser& HP)
 							<< std::endl);
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
-
+                                        bEigAnUserDefinedUpperFreq = true;
 				} else if (HP.IsKeyWord("lower" "frequency" "limit")) {
 					EigAn.dLowerFreq = HP.GetReal();
 					if (EigAn.dLowerFreq < 0.) {
@@ -4222,7 +4226,7 @@ Solver::ReadData(MBDynParser& HP)
 							<< std::endl);
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
-
+                                        bEigAnUserDefinedLowerFreq = true;
 				} else if (HP.IsKeyWord("use" "lapack")) {
 					if (EigAn.uFlags & EigenAnalysis::EIG_USE_MASK) {
 						silent_cerr("eigenanalysis routine already selected "
@@ -4293,6 +4297,8 @@ Solver::ReadData(MBDynParser& HP)
                                              }
                                         }
 
+                                        bEigAnUserDefinedWhich = true;
+
                                         if (HP.IsKeyWord("largest" "magnitude")) {
                                              EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LM;
                                         } else if (HP.IsKeyWord("smallest" "magnitude")) {
@@ -4305,6 +4311,8 @@ Solver::ReadData(MBDynParser& HP)
                                              EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LI;
                                         } else if (HP.IsKeyWord("smallest" "imaginary" "part")) {
                                              EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SI;
+                                        } else {
+                                             bEigAnUserDefinedWhich = false;
                                         }
 #else // !USE_ARPACK
 					silent_cerr("\"use arpack\" "
@@ -4401,7 +4409,49 @@ Solver::ReadData(MBDynParser& HP)
 				}
 			}
 
-			// lower must be less than upper
+                        if (!bEigAnUserDefinedParam && (bEigAnUserDefinedLowerFreq || bEigAnUserDefinedUpperFreq)) {
+                             DEBUGCERR("Parameter for eigenanalysis has not been defined in the input file.\n");
+                             DEBUGCERR("Try to estimate the optimum settings for ARPACK based on input file.\n");
+
+                             if (!bEigAnUserDefinedWhich) {
+                                  DEBUGCERR("It was not defined in the input file which eigenvalues to compute\n");
+                                  if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
+                                       // This is the preferred option since ARPACK is better
+                                       // in finding large eigenvalues.
+                                       EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LI;
+                                  } else if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
+                                       EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SM;
+                                  }
+                             }
+
+                             static constexpr doublereal dSafetyFactor = 5.;
+                             static constexpr doublereal dEigAnMinParam = 1e-6;
+                             static constexpr doublereal dEigAnMaxParam = 1. / dEigAnMinParam;
+
+                             bool bEigAnParamSet = false;
+
+                             switch (EigAn.arpack.eWhich) {
+                             case EigenAnalysis::ARPACK::SM:
+                                  if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
+                                       EigAn.dParam = 1. / (2. * M_PI * EigAn.dUpperFreq * dSafetyFactor);
+                                       bEigAnParamSet = true;
+                                  }
+                                  break;
+                             case EigenAnalysis::ARPACK::LI:
+                                  if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
+                                       EigAn.dParam = dSafetyFactor / (2. * M_PI * EigAn.dLowerFreq);
+                                       bEigAnParamSet = true;
+                                  }
+                                  break;
+                             }
+
+                             if (bEigAnParamSet) {
+                                  EigAn.dParam = std::min(dEigAnMaxParam, std::max(dEigAnMinParam, EigAn.dParam));
+                                  silent_cerr("info: estimated parameter for eigenanalysis " << EigAn.dParam << "\n");
+                             }
+                        }
+
+                        // lower must be less than upper
 			if (EigAn.dLowerFreq > EigAn.dUpperFreq) {
 				silent_cerr("upper frequency limit " << EigAn.dUpperFreq
 					<< " less than lower frequency limit " << EigAn.dLowerFreq
@@ -4410,7 +4460,7 @@ Solver::ReadData(MBDynParser& HP)
 			}
 
 			// if only upper is defined, make lower equal to -upper
-			if (EigAn.dLowerFreq == -1.) {
+			if (!bEigAnUserDefinedLowerFreq) {
 				EigAn.dLowerFreq = -EigAn.dUpperFreq;
 			}
 
