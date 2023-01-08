@@ -172,21 +172,22 @@ public:
 		int iMatrixPrecision;
                 int iResultsPrecision;
 
+                enum EigenvalueType {
+                     LM = 0,
+                     SM,
+                     LR,
+                     SR,
+                     LI,
+                     SI
+                } eWhichEigVal;
+             
                 // ARPACK specific
                 struct ARPACK {
                         integer iNEV;
                         integer iNCV;
                         doublereal dTOL;
                         integer iMaxIterations;
-                        enum EigenvalueType {
-                             LM = 0,
-                             SM,
-                             LR,
-                             SR,
-                             LI,
-                             SI
-                        } eWhich;
-                     ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.), iMaxIterations(300), eWhich(LI) { NO_OP; };
+                     ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.), iMaxIterations(300) { NO_OP; };
                 } arpack;
 
                 // JDQZ specific
@@ -224,7 +225,8 @@ public:
 		iFNameWidth(0),
 		iFNameFormat(),
 		dUpperFreq(std::numeric_limits<doublereal>::max()),
-		dLowerFreq(-1.)
+                dLowerFreq(-1.),
+                eWhichEigVal(SM)
 		{
 			currAnalysis = Analyses.end();
 		};

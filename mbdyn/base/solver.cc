@@ -4300,17 +4300,17 @@ Solver::ReadData(MBDynParser& HP)
                                         bEigAnUserDefinedWhich = true;
 
                                         if (HP.IsKeyWord("largest" "magnitude")) {
-                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LM;
+                                             EigAn.eWhichEigVal = EigenAnalysis::LM;
                                         } else if (HP.IsKeyWord("smallest" "magnitude")) {
-                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SM;
+                                             EigAn.eWhichEigVal = EigenAnalysis::SM;
                                         } else if (HP.IsKeyWord("largest" "real" "part")) {
-                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LR;
+                                             EigAn.eWhichEigVal = EigenAnalysis::LR;
                                         } else if (HP.IsKeyWord("smallest" "real" "part")) {
-                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SR;
+                                             EigAn.eWhichEigVal = EigenAnalysis::SR;
                                         } else if (HP.IsKeyWord("largest" "imaginary" "part")) {
-                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LI;
+                                             EigAn.eWhichEigVal = EigenAnalysis::LI;
                                         } else if (HP.IsKeyWord("smallest" "imaginary" "part")) {
-                                             EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SI;
+                                             EigAn.eWhichEigVal = EigenAnalysis::SI;
                                         } else {
                                              bEigAnUserDefinedWhich = false;
                                         }
@@ -4415,12 +4415,20 @@ Solver::ReadData(MBDynParser& HP)
 
                              if (!bEigAnUserDefinedWhich) {
                                   DEBUGCERR("It was not defined in the input file which eigenvalues to compute\n");
-                                  if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
-                                       // This is the preferred option since ARPACK is better
-                                       // in finding large eigenvalues.
-                                       EigAn.arpack.eWhich = EigenAnalysis::ARPACK::LI;
-                                  } else if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
-                                       EigAn.arpack.eWhich = EigenAnalysis::ARPACK::SM;
+                                  if (EigAn.uFlags & EigenAnalysis::EIG_USE_ARPACK) {
+                                       if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
+                                            // This is the preferred option for ARPACK
+                                            EigAn.eWhichEigVal = EigenAnalysis::LI;
+                                       } else if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
+                                            EigAn.eWhichEigVal = EigenAnalysis::SM;
+                                       }
+                                  } else if (EigAn.uFlags & EigenAnalysis::EIG_USE_LAPACK) {
+                                       if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
+                                            // This is the preferred option for LAPACK
+                                            EigAn.eWhichEigVal = EigenAnalysis::SM;
+                                       } else if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
+                                            EigAn.eWhichEigVal = EigenAnalysis::LI;
+                                       }
                                   }
                              }
 
@@ -4430,14 +4438,14 @@ Solver::ReadData(MBDynParser& HP)
 
                              bool bEigAnParamSet = false;
 
-                             switch (EigAn.arpack.eWhich) {
-                             case EigenAnalysis::ARPACK::SM:
+                             switch (EigAn.eWhichEigVal) {
+                             case EigenAnalysis::SM:
                                   if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
                                        EigAn.dParam = 1. / (2. * M_PI * EigAn.dUpperFreq * dSafetyFactor);
                                        bEigAnParamSet = true;
                                   }
                                   break;
-                             case EigenAnalysis::ARPACK::LI:
+                             case EigenAnalysis::LI:
                                   if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
                                        EigAn.dParam = dSafetyFactor / (2. * M_PI * EigAn.dLowerFreq);
                                        bEigAnParamSet = true;
@@ -6497,7 +6505,7 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
         IDO = 0;
         BMAT = "I";
         N = pMatA->iGetNumRows();
-        WHICH = szWhich[pEA->arpack.eWhich];
+        WHICH = szWhich[pEA->eWhichEigVal];
         NEV = pEA->arpack.iNEV;
         if (NEV > N) {
                 silent_cerr("eig_arpack: invalid NEV=" << NEV << " > size of problem (=" << N << ")" << std::endl);
