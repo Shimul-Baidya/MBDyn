@@ -4168,9 +4168,30 @@ Solver::ReadData(MBDynParser& HP)
 				if (HP.IsKeyWord("parameter")) {
 					EigAn.dParam = HP.GetReal();
                                         bEigAnUserDefinedParam = true;
-				} else if (HP.IsKeyWord("output" "matrices")) {
+                                } else if (HP.IsKeyWord("mode")) {
+                                        bEigAnUserDefinedWhich = true;
+                                     
+                                        if (HP.IsKeyWord("largest" "magnitude")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::LM;
+                                        } else if (HP.IsKeyWord("smallest" "magnitude")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::SM;
+                                        } else if (HP.IsKeyWord("largest" "real" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::LR;
+                                        } else if (HP.IsKeyWord("smallest" "real" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::SR;
+                                        } else if (HP.IsKeyWord("largest" "imaginary" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::LI;
+                                        } else if (HP.IsKeyWord("smallest" "imaginary" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::SI;
+                                        } else {
+                                                silent_cerr("keywords \"largest magnitude\", \"smallest magnitude\", "
+                                                            "\"largest real part\", \"smallest real part\", "
+                                                            "\"largest imaginary part\" or \"smallest imaginary part\""
+                                                            " expected at line " << HP.GetLineData() << "\n");
+                                                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                        }
+                                } else if (HP.IsKeyWord("output" "matrices")) {
 					EigAn.uFlags |= EigenAnalysis::EIG_OUTPUT_MATRICES;
-
 				} else if (HP.IsKeyWord("output" "full" "matrices")) {
 #ifndef USE_EIG
 					silent_cerr("\"output full matrices\" needs eigenanalysis support" << std::endl);
@@ -4296,24 +4317,6 @@ Solver::ReadData(MBDynParser& HP)
                                                   throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                                              }
                                         }
-
-                                        bEigAnUserDefinedWhich = true;
-
-                                        if (HP.IsKeyWord("largest" "magnitude")) {
-                                             EigAn.eWhichEigVal = EigenAnalysis::LM;
-                                        } else if (HP.IsKeyWord("smallest" "magnitude")) {
-                                             EigAn.eWhichEigVal = EigenAnalysis::SM;
-                                        } else if (HP.IsKeyWord("largest" "real" "part")) {
-                                             EigAn.eWhichEigVal = EigenAnalysis::LR;
-                                        } else if (HP.IsKeyWord("smallest" "real" "part")) {
-                                             EigAn.eWhichEigVal = EigenAnalysis::SR;
-                                        } else if (HP.IsKeyWord("largest" "imaginary" "part")) {
-                                             EigAn.eWhichEigVal = EigenAnalysis::LI;
-                                        } else if (HP.IsKeyWord("smallest" "imaginary" "part")) {
-                                             EigAn.eWhichEigVal = EigenAnalysis::SI;
-                                        } else {
-                                             bEigAnUserDefinedWhich = false;
-                                        }
 #else // !USE_ARPACK
 					silent_cerr("\"use arpack\" "
 						"needs to configure --with-arpack "
@@ -4422,9 +4425,10 @@ Solver::ReadData(MBDynParser& HP)
                                        } else if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
                                             EigAn.eWhichEigVal = EigenAnalysis::SM;
                                        }
-                                  } else if (EigAn.uFlags & EigenAnalysis::EIG_USE_LAPACK) {
+                                  } else {
                                        if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
                                             // This is the preferred option for LAPACK
+                                            // JDQZ was not tested with this option so far
                                             EigAn.eWhichEigVal = EigenAnalysis::SM;
                                        } else if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
                                             EigAn.eWhichEigVal = EigenAnalysis::LI;
