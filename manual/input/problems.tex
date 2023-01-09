@@ -885,7 +885,7 @@ This nonlinear solver is experimental.
             [ , ... ] ]
     \bnt{method} ::=
         \{ \kw{use lapack} [ , \kw{balance} , \{ \kw{no} | \kw{scale} | \kw{permute} | \kw{all} \} ]
-            | \kw{use arpack} , \bnt{nev} , \bnt{ncv} , \bnt{tol}
+            | \kw{use arpack} , \bnt{nev} , \bnt{ncv} , \bnt{tol} [ , \kw{max iterations}, \bnt{max\_iter} ]
             | \kw{use jdqz} , \bnt{nev} , \bnt{ncv} , \bnt{tol}
             | \kw{use external} \}
     \bnt{mode_options} ::=
@@ -994,6 +994,7 @@ using the \kw{rigid body kinematics} card
 	\item \nt{nev}, the number of the desired eigenvalues;
 	\item \nt{ncv}, the number of the Arnoldi vectors;
 	\item \nt{tol}, the tolerance (positive; zero means machine error).
+        \item \nt{max\_iter}, the maximum number of iterations to perform (default 300)
 	\end{itemize}
 \item \kw{use jdqz} performs the eigenanalysis using JDQZ (Jacobi-Davidson QZ
 	decomposition).
