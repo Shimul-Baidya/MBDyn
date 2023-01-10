@@ -4455,11 +4455,15 @@ Solver::ReadData(MBDynParser& HP)
                                        bEigAnParamSet = true;
                                   }
                                   break;
+                             default:
+                                  break;
                              }
 
                              if (bEigAnParamSet) {
                                   EigAn.dParam = std::min(dEigAnMaxParam, std::max(dEigAnMinParam, EigAn.dParam));
                                   silent_cerr("info: estimated parameter for eigenanalysis " << EigAn.dParam << "\n");
+                             } else {
+                                  silent_cerr("warning: estimation of parameter for eigenanalysis not available; using the default: " << EigAn.dParam << "\n");
                              }
                         }
 
