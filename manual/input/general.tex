@@ -764,11 +764,14 @@ The syntax is
 \end{Verbatim}
 %\end{verbatim}
 where
-\nt{label} is the label of the node,
-\nt{type} is the node type,
-and the mutually exclusive \nt{index} and \nt{name} represent the index
-of the datum that is requested, \nt{name} being a user-friendly
+\begin{itemize}
+\item \nt{label} is the label of the node,
+\item \nt{type} is the node type, and
+\item the mutually exclusive \nt{index} and \nt{name} represent the index
+of the private datum that is requested, \nt{name} being a user-friendly
 representation of the actual index.
+For a description of valid values for \nt{name}, consult the \emph{Private Data} of the corresponding node type.
+\end{itemize}
 The \nt{index} form is the default; however, the \nt{name} form is recommended.
 Note that \nt{name} should be enclosed in double quotes,
 although not strictly required.
@@ -802,11 +805,14 @@ The syntax is
 \end{Verbatim}
 %\end{verbatim}
 where
-\nt{label} is the label of the element,
-\nt{type} is the element type,
-and the mutually exclusive \nt{index} and \nt{name} represent the index
-of the datum that is requested, \nt{name} being a user-friendly
+\begin{itemize}
+\item \nt{label} is the label of the element,
+\item \nt{type} is the element type, and
+\item the mutually exclusive \nt{index} and \nt{name} represent the index
+of the private datum that is requested, \nt{name} being a user-friendly
 representation of the actual index.
+For a description of valid values for \nt{name}, consult the \emph{Private Data} of the corresponding element type.
+\end{itemize}
 The \nt{index} form is the default; however, the \nt{name} form is recommended.
 Note that \nt{name} should be enclosed in double quotes,
 although not strictly required.
@@ -1024,8 +1030,8 @@ is illustrated in Figure~\ref{fig:general:orientation-matrices:MatR2vec}.
     \bnt{v1} , \bnt{v1_1}, \bnt{v1_2} , \bnt{v1_3} ,
     \bnt{v2} , \bnt{v2_1}, \bnt{v2_2} , \bnt{v2_3}
 
-    \bnt{v1} ::= \{ 1 | 2 | 3 \}
-    \bnt{v2} ::= \{ 1 | 2 | 3 \} # \bnt{v2} != \bnt{v1}
+    \bnt{v1} ::= \{ \kw{1} | \kw{2} | \kw{3} \}
+    \bnt{v2} ::= \{ \kw{1} | \kw{2} | \kw{3} \} # \bnt{v2} != \bnt{v1}
 \end{Verbatim}
 The first vector, \bnt{v1}, namely vector 1 in subfigure (a), is normalized and assumed
 to represent the desired direction.

@@ -878,15 +878,20 @@ This nonlinear solver is experimental.
 	    | \kw{matrix output precision}, \bnt{matrix_precision},
 	    | \kw{results output precision}, \bnt{results_precision},
             | \kw{parameter} , \bnt{param}
+            | \kw{mode}, \bnt{mode_options}
             | \kw{lower frequency limit} , \bnt{lower}
             | \kw{upper frequency limit} , \bnt{upper}
             | \bnt{method} \}
             [ , ... ] ]
     \bnt{method} ::=
         \{ \kw{use lapack} [ , \kw{balance} , \{ \kw{no} | \kw{scale} | \kw{permute} | \kw{all} \} ]
-            | \kw{use arpack} , \bnt{nev} , \bnt{ncv} , \bnt{tol}
+            | \kw{use arpack} , \bnt{nev} , \bnt{ncv} , \bnt{tol} [ , \kw{max iterations}, \bnt{max\_iter} ]
             | \kw{use jdqz} , \bnt{nev} , \bnt{ncv} , \bnt{tol}
-            | \kw{use external} \} 
+            | \kw{use external} \}
+    \bnt{mode_options} ::=
+        \{ \kw{largest magnitude}      | \kw{smallest magnitude} |
+          \kw{largest real part}      | \kw{smallest real part} |
+          \kw{largest imaginary part} | \kw{smallest imaginary part} \}
 \end{Verbatim}
 %\end{verbatim}
 Performs the direct eigenanalysis of the problem.
@@ -927,7 +932,23 @@ using the \kw{rigid body kinematics} card
 	the problem in the discrete time domain; it represents
 	a singularity point in the transformation from the discrete
 	to the continuous eigenvalues, so it should not coincide with
-	an eigenvalue of the problem;  by default it is 1.0;
+	an eigenvalue of the problem; by default the value is estimated
+        automatically if \kw{lower frequency limit} or \kw{upper frequency limit} are defined;
+        \begin{align}
+          \bnt{param} = \left\{
+          \begin{array}{ll}
+            \frac{1}{2\,\pi\,5\,\bnt{upper}} & \text{if} \, \bnt{mode} = \kw{smallest magnitude} \nonumber \\
+            \frac{5}{2\,\pi\,\bnt{lower}} & \text{if} \, \bnt{mode} = \kw{largest imaginary part} \nonumber \\
+            1 & \text{otherwise} \nonumber
+          \end{array}\right.
+        \end{align}        
+\item \kw{mode} Krylov subspace methods like ARPACK can compute only a subset of
+        available eigenmodes. With this option the user may specify the eigenvalues
+        $\Lambda_k$ which should be computed; depending on the value of \bnt{param},
+        the smallest magnitude of $\Lambda_k$ is not necessarily the smallest magnitude
+        of the corresponding physical eigenvalue $\lambda_k$; see also \ref{sec:PROBLEMS:eigenvalues};
+        by default \kw{largest imaginary part} is used for ARPACK and \kw{smallest magnitude} is
+        used for LAPACK and JDQZ;
 \item \kw{output full matrices} causes the output
 	of the (full) problem matrices in a \texttt{.m} file,
 	intended to be loaded by tools like Octave/Matlab. If
@@ -973,6 +994,7 @@ using the \kw{rigid body kinematics} card
 	\item \nt{nev}, the number of the desired eigenvalues;
 	\item \nt{ncv}, the number of the Arnoldi vectors;
 	\item \nt{tol}, the tolerance (positive; zero means machine error).
+        \item \nt{max\_iter}, the maximum number of iterations to perform (default 300)
 	\end{itemize}
 \item \kw{use jdqz} performs the eigenanalysis using JDQZ (Jacobi-Davidson QZ
 	decomposition).
@@ -990,6 +1012,7 @@ using the \kw{rigid body kinematics} card
 	that are complex and whose imaginary part is smaller than
 	\nt{upper} Hz;
 \end{itemize}
+
 The \kw{eigenanalysis} functionality is experimental,
 so the syntax could need adjustments and change across versions.
 
@@ -1052,6 +1075,7 @@ Note that $\alpha_r$, $\alpha_i$ and $\beta$ can be all zero;
 only a fraction of the eigenvalues may be output;
 the corresponding continuous time domain eigenvalue $\lambda_k$ is
 \begin{align}
+        \label{sec:PROBLEMS:eigenvalues}
 	\lambda_k
 	&=
 	\frac{1}{\texttt{dCoef}}

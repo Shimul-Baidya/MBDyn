@@ -3117,8 +3117,12 @@ Solver::ReadData(MBDynParser& HP)
 	unsigned nSolverThreads = 0;
 #endif /* USE_MULTITHREAD */
 
+        bool bEigAnUserDefinedParam = false;
+        bool bEigAnUserDefinedLowerFreq = false;
+        bool bEigAnUserDefinedUpperFreq = false;
+        bool bEigAnUserDefinedWhich = false;
 
-	/* Ciclo infinito */
+        /* Ciclo infinito */
 	while (true) {
 		KeyWords CurrKeyWord = KeyWords(HP.GetDescription());
 
@@ -4157,16 +4161,37 @@ Solver::ReadData(MBDynParser& HP)
 			EigAn.currAnalysis = EigAn.Analyses.begin();
 			EigAn.bAnalysis = true;
 
-			// permute is the default; use "balance, no" to disable
-			EigAn.uFlags = EigenAnalysis::EIG_PERMUTE;
+                        // permute is the default; use "balance, no" to disable
+                        EigAn.uFlags = EigenAnalysis::EIG_PERMUTE;
 
-			while (HP.IsArg()) {
+                        while (HP.IsArg()) {
 				if (HP.IsKeyWord("parameter")) {
 					EigAn.dParam = HP.GetReal();
-
-				} else if (HP.IsKeyWord("output" "matrices")) {
+                                        bEigAnUserDefinedParam = true;
+                                } else if (HP.IsKeyWord("mode")) {
+                                        bEigAnUserDefinedWhich = true;
+                                     
+                                        if (HP.IsKeyWord("largest" "magnitude")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::LM;
+                                        } else if (HP.IsKeyWord("smallest" "magnitude")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::SM;
+                                        } else if (HP.IsKeyWord("largest" "real" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::LR;
+                                        } else if (HP.IsKeyWord("smallest" "real" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::SR;
+                                        } else if (HP.IsKeyWord("largest" "imaginary" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::LI;
+                                        } else if (HP.IsKeyWord("smallest" "imaginary" "part")) {
+                                                EigAn.eWhichEigVal = EigenAnalysis::SI;
+                                        } else {
+                                                silent_cerr("keywords \"largest magnitude\", \"smallest magnitude\", "
+                                                            "\"largest real part\", \"smallest real part\", "
+                                                            "\"largest imaginary part\" or \"smallest imaginary part\""
+                                                            " expected at line " << HP.GetLineData() << "\n");
+                                                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                        }
+                                } else if (HP.IsKeyWord("output" "matrices")) {
 					EigAn.uFlags |= EigenAnalysis::EIG_OUTPUT_MATRICES;
-
 				} else if (HP.IsKeyWord("output" "full" "matrices")) {
 #ifndef USE_EIG
 					silent_cerr("\"output full matrices\" needs eigenanalysis support" << std::endl);
@@ -4213,7 +4238,7 @@ Solver::ReadData(MBDynParser& HP)
 							<< std::endl);
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
-
+                                        bEigAnUserDefinedUpperFreq = true;
 				} else if (HP.IsKeyWord("lower" "frequency" "limit")) {
 					EigAn.dLowerFreq = HP.GetReal();
 					if (EigAn.dLowerFreq < 0.) {
@@ -4222,7 +4247,7 @@ Solver::ReadData(MBDynParser& HP)
 							<< std::endl);
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
-
+                                        bEigAnUserDefinedLowerFreq = true;
 				} else if (HP.IsKeyWord("use" "lapack")) {
 					if (EigAn.uFlags & EigenAnalysis::EIG_USE_MASK) {
 						silent_cerr("eigenanalysis routine already selected "
@@ -4283,6 +4308,15 @@ Solver::ReadData(MBDynParser& HP)
 							<< std::endl);
 						EigAn.arpack.dTOL = 0.;
 					}
+
+                                        if (HP.IsKeyWord("max" "iterations")) {
+                                             EigAn.arpack.iMaxIterations = HP.GetInt();
+
+                                             if (EigAn.arpack.iMaxIterations < 1) {
+                                                  silent_cerr("max iterations must be greater than zero at line " << HP.GetLineData() << "\n");
+                                                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                             }
+                                        }
 #else // !USE_ARPACK
 					silent_cerr("\"use arpack\" "
 						"needs to configure --with-arpack "
@@ -4378,7 +4412,62 @@ Solver::ReadData(MBDynParser& HP)
 				}
 			}
 
-			// lower must be less than upper
+                        if (!bEigAnUserDefinedParam && (bEigAnUserDefinedLowerFreq || bEigAnUserDefinedUpperFreq)) {
+                             DEBUGCERR("Parameter for eigenanalysis has not been defined in the input file.\n");
+                             DEBUGCERR("Try to estimate the optimum settings for ARPACK based on input file.\n");
+
+                             if (!bEigAnUserDefinedWhich) {
+                                  DEBUGCERR("It was not defined in the input file which eigenvalues to compute\n");
+                                  if (EigAn.uFlags & EigenAnalysis::EIG_USE_ARPACK) {
+                                       if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
+                                            // This is the preferred option for ARPACK
+                                            EigAn.eWhichEigVal = EigenAnalysis::LI;
+                                       } else if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
+                                            EigAn.eWhichEigVal = EigenAnalysis::SM;
+                                       }
+                                  } else {
+                                       if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
+                                            // This is the preferred option for LAPACK
+                                            // JDQZ was not tested with this option so far
+                                            EigAn.eWhichEigVal = EigenAnalysis::SM;
+                                       } else if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
+                                            EigAn.eWhichEigVal = EigenAnalysis::LI;
+                                       }
+                                  }
+                             }
+
+                             static constexpr doublereal dSafetyFactor = 5.;
+                             static constexpr doublereal dEigAnMinParam = 1e-6;
+                             static constexpr doublereal dEigAnMaxParam = 1. / dEigAnMinParam;
+
+                             bool bEigAnParamSet = false;
+
+                             switch (EigAn.eWhichEigVal) {
+                             case EigenAnalysis::SM:
+                                  if (bEigAnUserDefinedUpperFreq && EigAn.dUpperFreq > 0.) {
+                                       EigAn.dParam = 1. / (2. * M_PI * EigAn.dUpperFreq * dSafetyFactor);
+                                       bEigAnParamSet = true;
+                                  }
+                                  break;
+                             case EigenAnalysis::LI:
+                                  if (bEigAnUserDefinedLowerFreq && EigAn.dLowerFreq > 0.) {
+                                       EigAn.dParam = dSafetyFactor / (2. * M_PI * EigAn.dLowerFreq);
+                                       bEigAnParamSet = true;
+                                  }
+                                  break;
+                             default:
+                                  break;
+                             }
+
+                             if (bEigAnParamSet) {
+                                  EigAn.dParam = std::min(dEigAnMaxParam, std::max(dEigAnMinParam, EigAn.dParam));
+                                  silent_cerr("info: estimated parameter for eigenanalysis " << EigAn.dParam << "\n");
+                             } else {
+                                  silent_cerr("warning: estimation of parameter for eigenanalysis not available; using the default: " << EigAn.dParam << "\n");
+                             }
+                        }
+
+                        // lower must be less than upper
 			if (EigAn.dLowerFreq > EigAn.dUpperFreq) {
 				silent_cerr("upper frequency limit " << EigAn.dUpperFreq
 					<< " less than lower frequency limit " << EigAn.dLowerFreq
@@ -4387,7 +4476,7 @@ Solver::ReadData(MBDynParser& HP)
 			}
 
 			// if only upper is defined, make lower equal to -upper
-			if (EigAn.dLowerFreq == -1.) {
+			if (!bEigAnUserDefinedLowerFreq) {
 				EigAn.dLowerFreq = -EigAn.dUpperFreq;
 			}
 
@@ -5965,6 +6054,20 @@ do_eig(const doublereal& b, const doublereal& re,
 	return 0;
 }
 
+namespace {
+     struct EigenValue {
+          EigenValue(doublereal sigma, doublereal omega, doublereal csi, doublereal freq)
+               :sigma(sigma), omega(omega), csi(csi), freq(freq) {
+          }
+
+          bool operator<(const EigenValue& rhs) const {
+               return (freq == rhs.freq) ? sigma < rhs.sigma : freq < rhs.freq;
+          }
+
+          doublereal sigma, omega, csi, freq;
+     };
+};
+
 // Writes eigenvalues to the .out file in human-readable form
 static void
 output_eigenvalues(const VectorHandler *pBeta,
@@ -5981,6 +6084,10 @@ output_eigenvalues(const VectorHandler *pBeta,
 	Out << "Mode n. " "  " "    Real    " "   " "    Imag    " "  " "    " "   Damp %   " "  Freq Hz" << std::endl;
 
 	integer iNVec = R.iGetSize();
+
+        std::vector<EigenValue> rgEigenValues;
+
+        rgEigenValues.reserve(iNVec);
 
 	for (int iCnt = 1; iCnt <= iNVec; iCnt++) {
 		doublereal b = pBeta ? (*pBeta)(iCnt) : 1.;
@@ -6006,19 +6113,19 @@ output_eigenvalues(const VectorHandler *pBeta,
 
 		vOut[iCnt - 1] = true;
 
-		Out << std::setw(8) << iCnt << ": "
-			<< std::setw(12) << sigma << " + " << std::setw(12) << omega << " j";
-
-		if (fabs(csi) > std::numeric_limits<doublereal>::epsilon()) {
-			Out << "    " << std::setw(12) << csi;
-		} else {
-			Out << "    " << std::setw(12) << 0.;
-		}
-
-		Out << "    " << std::setw(12) << freq;
-
-		Out << std::endl;
+                rgEigenValues.emplace_back(sigma, omega, csi, freq);
 	}
+
+        std::sort(rgEigenValues.begin(), rgEigenValues.end());
+
+        for (size_t iCnt = 0; iCnt < rgEigenValues.size(); ++iCnt) {
+             Out << std::setw(8) << iCnt + 1 << ": "
+                 << std::setw(12) << rgEigenValues[iCnt].sigma
+                 << ((rgEigenValues[iCnt].omega >= 0.) ? " + " : " - ") << std::setw(12)
+                 << std::fabs(rgEigenValues[iCnt].omega) << " j"
+                 << "    " << std::setw(12) << rgEigenValues[iCnt].csi
+                 << "    " << std::setw(12) << rgEigenValues[iCnt].freq << '\n';
+        }
 }
 #endif // defined USE_LAPACK || defined USE_ARPACK || defined USE_JDQZ
 
@@ -6402,15 +6509,16 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 	integer LWORKL;
 	integer INFO;
 
-	IDO = 0;
-	BMAT = "I";
-	N = pMatA->iGetNumRows();
-	WHICH = "SM";
-	NEV = pEA->arpack.iNEV;
-	if (NEV > N) {
-		silent_cerr("eig_arpack: invalid NEV=" << NEV << " > size of problem (=" << N << ")" << std::endl);
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	}
+        static constexpr char szWhich[][3] = {"LM", "SM", "LR", "SR", "LI", "SI"};
+        IDO = 0;
+        BMAT = "I";
+        N = pMatA->iGetNumRows();
+        WHICH = szWhich[pEA->eWhichEigVal];
+        NEV = pEA->arpack.iNEV;
+        if (NEV > N) {
+                silent_cerr("eig_arpack: invalid NEV=" << NEV << " > size of problem (=" << N << ")" << std::endl);
+                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+        }
 
 	TOL = pEA->arpack.dTOL;
 	RESID.resize(N, 0.);
@@ -6425,7 +6533,7 @@ eig_arpack(const MatrixHandler* pMatA, SolutionManager* pSM,
 	V.resize(N*(NCV + 1), 0.);
 	LDV = N;
 	IPARAM[0] = 1;
-	IPARAM[2] = 300;		// configurable?
+	IPARAM[2] = pEA->arpack.iMaxIterations;
 	IPARAM[3] = 1;
 	IPARAM[6] = 1;			// mode 1: canonical problem
 	WORKD.resize(3*N, 0.);
