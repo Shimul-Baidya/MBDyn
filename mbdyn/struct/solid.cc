@@ -1782,6 +1782,12 @@ public:
      virtual void
      AfterConvergence(const VectorHandler& X,
                       const VectorHandler& XP) override;
+
+     virtual int
+     GetNumConnectedNodes() const override;
+     
+     virtual void
+     GetConnectedNodes(std::vector<const Node*>& connectedNodes) const override;
 protected:
      template <typename T>
      inline void
@@ -2584,6 +2590,26 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Aft
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
+int
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetNumConnectedNodes() const
+{
+     return iNumNodes;
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
+void
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetConnectedNodes(std::vector<const Node*>& connectedNodes) const
+{
+     using namespace sp_grad;
+     
+     connectedNodes.resize(iNumNodes);
+
+     for (index_type i = 0; i < iNumNodes; ++i) {
+          connectedNodes[i] = rgNodes[i];
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
 template <typename T>
 void
 SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetNodalDeformations(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
@@ -3053,7 +3079,8 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssInertiaVec(cons
           }
      }
 
-     R.MapAssign(-(M * UP), oDofMap);
+     R.MapAssign(M * UP, oDofMap);
+     R *= -1.;
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType>
