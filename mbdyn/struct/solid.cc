@@ -1854,7 +1854,7 @@ protected:
           ComputeStressElastic(const sp_grad::SpMatrix<T, 3, 3>& G,
                                const sp_grad::SpMatrix<T, 3, 3>& F,
                                sp_grad::SpColVector<T, 6>& sigma,
-                               const sp_grad::SpGradExpDofMapHelper<T>& oDofMap,                               
+                               const sp_grad::SpGradExpDofMapHelper<T>& oDofMap,
                                const SolidElemStatic* pElem);
 
           template <typename T>
@@ -1863,7 +1863,7 @@ protected:
                                     const sp_grad::SpMatrix<T, 3, 3>& GP,
                                     const sp_grad::SpMatrix<T, 3, 3>& F,
                                     sp_grad::SpColVector<T, 6>& sigma,
-                                    const sp_grad::SpGradExpDofMapHelper<T>& oDofMap,                                    
+                                    const sp_grad::SpGradExpDofMapHelper<T>& oDofMap,
                                     const SolidElemStatic* pElem);
 
           inline void
@@ -2250,7 +2250,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      oDofMap.InsertDof(u);
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
-     
+
      constexpr index_type iNumColsR = iNumDof * iNumEvalPointsStiffness;
 
      SpColVectorA<T, iNumDof, iNumColsR> R;
@@ -2301,6 +2301,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      SpMatrixA<T, 6, iNumDof, 2 * iNumDof> BL;
      SpMatrixA<T, 3, 3, iNumDof> F, G;
      SpColVectorA<T, 6, iNumDof> sigma;
+     SpColVectorA<T, iNumDof, iNumDof> dR;
 
      for (index_type iColloc = 0; iColloc < iNumEvalPointsStiffness; ++iColloc) {
           const doublereal alpha = CollocationType::dGetWeightStiffness(iColloc);
@@ -2325,7 +2326,9 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
           rgCollocData[iColloc].StrainMatrix(F, BL, oDofMap);
 
-          R -= Transpose(BL) * sigma; // FIXME: use oDofMap!
+          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
+
+          R -= dR;
      }
 }
 
@@ -2345,6 +2348,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      SpColVectorA<T, 6, iNumDof> sigma;
      SpMatrixA<T, 3, 3, iNumDof> F, FP, C, invC, G, FP_Tr_F;
      SpMatrixA<T, 3, 3, 2 * iNumDof> GP_detF, GP_scaled;
+     SpColVectorA<T, iNumDof, iNumDof> dR;
 
      T detC;
 
@@ -2401,7 +2405,9 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
           ASSERT(sigma.iGetMaxSize() <= iNumDof);
 
-          R -= Transpose(BL) * sigma; // FIXME: use oDofMap
+          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
+
+          R -= dR;
      }
 }
 
@@ -2793,7 +2799,7 @@ void
 SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::CollocData::ComputeStressElastic(const sp_grad::SpMatrix<T, 3, 3>& G,
                                                                                                               const sp_grad::SpMatrix<T, 3, 3>& F,
                                                                                                               sp_grad::SpColVector<T, 6>& sigma,
-                                                                                                              const sp_grad::SpGradExpDofMapHelper<T>& oDofMap,                                                                                                              
+                                                                                                              const sp_grad::SpGradExpDofMapHelper<T>& oDofMap,
                                                                                                               const SolidElemStatic* const pElem)
 {
      oMaterialData.Update(G, sigma, oDofMap);
@@ -2948,7 +2954,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResElastic(sp_g
      oDofMap.InsertDof(u);
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
-     
+
      const index_type iNumColsR = (1 + 3 * (pRBK != nullptr)) * iNumDof * iNumEvalPointsStiffness;
 
      SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
@@ -2997,7 +3003,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResViscoElastic
      oDofMap.InsertDof(u);
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
-     
+
      constexpr index_type iNumEvalPointsR = CollocationType::iNumEvalPointsStiffness > CollocationType::iNumEvalPointsMass
           ? CollocationType::iNumEvalPointsStiffness
           : CollocationType::iNumEvalPointsMass;
@@ -3066,7 +3072,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssInertiaVecRBK(c
      SpColVectorA<doublereal, iNumNodes> h;
      SpMatrixA<doublereal, iNumNodes, 3> hd;
      SpColVectorA<T, 3, iNumNodes> frbk;
-     
+
      for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
           CollocationType::GetPositionMass(iColloc, r);
           ElementType::ShapeFunction(r, h);
