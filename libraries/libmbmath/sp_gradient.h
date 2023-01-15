@@ -102,6 +102,12 @@ namespace sp_grad {
           g.MapAssign(expr, oDofMap);
      }
 
+     template <typename Func, typename Expr>
+     inline void SpGradExpDofMapHelper<SpGradient>::MapAssignOper(SpGradient& g, const SpGradBase<Expr>& expr) const
+     {
+          g.template MapAssignOper<Func>(expr, oDofMap);
+     }
+
      void SpGradientTraits<doublereal>::ResizeReset(doublereal& g, doublereal dVal, index_type)
      {
           g = dVal;
@@ -1042,6 +1048,37 @@ namespace sp_grad {
           SP_GRAD_ASSERT(bValid());
      }
 
+     template <typename Func, typename Expr>
+     void SpGradient::MapAssignOper(const SpGradBase<Expr>& g, const SpGradExpDofMap& oDofMap) {
+          SP_GRAD_ASSERT(bValid());
+
+          const doublereal u = dGetValue();
+          const doublereal v = g.dGetValue();
+          const doublereal f = Func::f(u, v);
+          const doublereal df_du = Func::df_du(u, v);
+          const doublereal df_dv = Func::df_dv(u, v);
+
+          SpGradient r;
+
+          if (!g.bHaveRefTo(*this)) {
+               r = std::move(*this);
+          } else {
+               r = *this;
+          }
+
+          if (!r.bIsUnique()) {
+               r.MakeUnique();
+          }
+
+          r.template InitDerivAssign<Func>(f, df_du, oDofMap);
+
+          g.AddDeriv(r, df_dv, oDofMap);
+
+          *this = std::move(r);
+
+          SP_GRAD_ASSERT(bValid());
+     }
+     
      template <typename Func>
      void SpGradient::InitDerivAssign(const doublereal f, const doublereal df_du, const SpGradExpDofMap& oDofMap) {
           SP_GRAD_ASSERT(bValid());

@@ -241,6 +241,12 @@ namespace sp_grad_test {
                          const SpMatrixBase<TB>& B,
                          SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C);
 
+     template <typename TA, typename TB>
+     void func_mat_mul10(const SpMatrixBase<TA>& A,
+                         const SpMatrixBase<TB>& B,
+                         SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C,
+                         const SpGradExpDofMapHelper<typename util::ResultType<TA, TB>::Type>& oDofMap);
+     
      void func_mat_mul10(index_type nra,
                          index_type nca,
                          index_type ncb,
