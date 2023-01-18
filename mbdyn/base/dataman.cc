@@ -511,6 +511,10 @@ bAutoDiff(false)
 		  return;
 	     }
 
+             if (pRBK) {
+                  pRBK->Update();
+             }
+             
 #ifdef USE_SOCKET
 	     /* waits for all pending sockets to connect */
 	     WaitSocketUsers();

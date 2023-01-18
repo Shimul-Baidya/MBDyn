@@ -108,6 +108,9 @@ GiNaCDriveCaller::bIsDifferentiable(void) const
 doublereal
 GiNaCDriveCaller::dGetP(const doublereal& dVar) const
 {
+#ifdef USE_MULTITHREAD
+        GiNaCGuard guard;
+#endif
 	GiNaC::lst l;
 
 	l.append(*gVar == dVar);

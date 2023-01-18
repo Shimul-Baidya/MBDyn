@@ -169,7 +169,7 @@ PrivPlugIn::ReadIndex(unsigned int iMaxIndex, const char *s)
 		}
 
 		if (!sIndexName.empty()) {
-			silent_cerr("illegal index " << iIndex << " (" << sIndexName << ") for "
+			silent_cerr("illegal index " << iIndex << " (\"" << sIndexName << "\" likely not a valid private datum) for "
 				<< *this << " " << what << "plugin, must be in the range [1--" << iMaxIndex << "]" << std::endl);
 		} else {
 			silent_cerr("illegal index " << iIndex << " for "
@@ -214,7 +214,7 @@ NodePrivPlugIn::ReadSE(unsigned int uLabel, const char *ss)
 	
 	SAFEDELETEARR(s);
 	
-	if (i == Node::LASTNODETYPE) {
+	if (i == Node::UNKNOWN) {
 		silent_cerr("unknown node type '" << ss << "'" << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}

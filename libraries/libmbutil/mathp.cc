@@ -827,6 +827,56 @@ mp_cast(const MathParser::MathArgs& args)
 	return 0;
 }
 
+template <MathParser::ArgType AT>
+static int
+mp_eval(const MathParser::MathArgs& args)
+{
+	ASSERT(args.size() == 1 + 1);
+	ASSERT(args[0]->Type() == AT);
+
+	MathParser::MathArgAny_t *arg1 = dynamic_cast<MathParser::MathArgAny_t*>(args[1]);
+	ASSERT(arg1 != 0);
+
+	switch (args[0]->Type()) {
+	case MathParser::AT_BOOL: {
+		MathParser::MathArgBool_t *out = dynamic_cast<MathParser::MathArgBool_t*>(args[0]);
+		ASSERT(out != 0);
+		(*out)() = (*arg1)().GetBool();
+		} break;
+
+	case MathParser::AT_INT: {
+		MathParser::MathArgInt_t *out = dynamic_cast<MathParser::MathArgInt_t*>(args[0]);
+		ASSERT(out != 0);
+		(*out)() = (*arg1)().GetInt();
+		} break;
+
+	case MathParser::AT_REAL: {
+		MathParser::MathArgReal_t *out = dynamic_cast<MathParser::MathArgReal_t*>(args[0]);
+		ASSERT(out != 0);
+		(*out)() = (*arg1)().GetReal();
+		} break;
+
+	case MathParser::AT_STRING: {
+		MathParser::MathArgString_t *out = dynamic_cast<MathParser::MathArgString_t*>(args[0]);
+		ASSERT(out != 0);
+		TypedValue val(TypedValue::VAR_STRING);
+		val.Cast((*arg1)());
+		(*out)() = val.GetString();
+		} break;
+
+	default:
+		// add support for future types
+		return 1;
+	}
+
+	return 0;
+}
+
+static MathParser::MathFunc_f mp_bool_eval = mp_eval<MathParser::AT_BOOL>;
+static MathParser::MathFunc_f mp_int_eval = mp_eval<MathParser::AT_INT>;
+static MathParser::MathFunc_f mp_real_eval = mp_eval<MathParser::AT_REAL>;
+static MathParser::MathFunc_f mp_string_eval = mp_eval<MathParser::AT_STRING>;
+
 /* tipi delle variabili */
 struct TypeName_t {
 	const char* name;
@@ -2808,6 +2858,44 @@ MathParser::StaticNameSpace::StaticNameSpace(Table *pTable)
 			f->args[0] = data[i].arg;
 			f->args[1] = new MathArgAny_t;
 			f->f = mp_cast;
+			f->t = 0;
+
+			if (!func.insert(funcType::value_type(f->fname, f)).second) {
+				silent_cerr("static namespace: "
+					"unable to insert handler "
+					"for function " << f->fname << std::endl);
+				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+			}
+		}
+	}
+
+	// eval
+	{
+		struct {
+			TypedValue::Type type;
+			MathFunc_f f;
+			MathArg_t *arg;
+		} data[5] = {
+			{ TypedValue::VAR_BOOL, mp_bool_eval },
+			{ TypedValue::VAR_INT, mp_int_eval },
+			{ TypedValue::VAR_REAL, mp_real_eval },
+			{ TypedValue::VAR_STRING, mp_string_eval },
+			{ TypedValue::VAR_UNKNOWN }
+		};
+
+		data[0].arg = new MathArgBool_t;
+		data[1].arg = new MathArgInt_t;
+		data[2].arg = new MathArgReal_t;
+		data[3].arg = new MathArgString_t;
+
+		for (int i = 0; data[i].type != TypedValue::VAR_UNKNOWN; i++) {
+			f = new MathFunc_t;
+			f->fname = std::string(TypedValue::GetTypeName(data[i].type)) + "_eval";
+			f->ns = this;
+			f->args.resize(1 + 1);
+			f->args[0] = data[i].arg;
+			f->args[1] = new MathArgAny_t;
+			f->f = data[i].f;
 			f->t = 0;
 
 			if (!func.insert(funcType::value_type(f->fname, f)).second) {
@@ -5050,6 +5138,13 @@ MathParser::parsefunc(MathFunc_t* f)
 				}
 			}
 		}
+	}
+
+	// if func is "eval", evaluate its argument and return the value
+	if ((f->f == mp_bool_eval) || (f->f == mp_int_eval) || (f->f == mp_real_eval) || (f->f == mp_string_eval)) {
+		EE_Func e_f(this, f);
+		TypedValue d = e_f.Eval();
+		return new EE_Value(d);
 	}
 
 	return new EE_Func(this, f);

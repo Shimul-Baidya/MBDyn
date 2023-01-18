@@ -458,6 +458,9 @@ public:
 		return InducedVelocity::GLAUERT;
 	};
 
+	GlauertRotor::Type GetGlauertRotorType(void) const { return gtype; };
+	const char *GetGlauertRotorDesc(void) const;
+
 	// Somma alla trazione il contributo di un elemento
 	virtual void
 	AddForce(const Elem *pEl, const StructNode *pNode, const Vec3& F, const Vec3& M, const Vec3& X);

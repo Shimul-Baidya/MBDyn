@@ -188,16 +188,49 @@ Rotor::OutputPrepare(OutputHandler& OH)
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::ROTORS)) {
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
 			std::ostringstream os;
-			os << "elem.inducedvelocity." << GetLabel() << ".";
+			os << "elem.inducedvelocity." << GetLabel();
 			std::string name = os.str();
-			(void)OH.CreateVar(name, "Rotor");
+
+			std::ostringstream os_rt;
+			os_rt << "Rotor:";
+			if (dynamic_cast<NoRotor *>(this) != 0) {
+				os_rt << "no";
+
+			} else if (dynamic_cast<UniformRotor *>(this) != 0) {
+				os_rt << "uniform";
+
+			} else if (dynamic_cast<UniformRotor2 *>(this) != 0) {
+				os_rt << "uniformsectional";
+
+			} else if (dynamic_cast<GlauertRotor *>(this) != 0) {
+				os_rt << "glauert";
+
+				GlauertRotor *pR = dynamic_cast<GlauertRotor *>(this);
+				if (pR->GetGlauertRotorType() != GlauertRotor::GLAUERT) {
+					os_rt << ":" << pR->GetGlauertRotorDesc();
+				}
+
+			} else if (dynamic_cast<ManglerRotor *>(this) != 0) {
+				os_rt << "mangler";
+
+			} else if (dynamic_cast<DynamicInflowRotor *>(this) != 0) {
+				os_rt << "dynamicinflow";
+			}
+			std::string rt = os_rt.str();
+
+			(void)OH.CreateVar(name, rt);
+
+			os << ".";
+			name = os.str();
 			Var_f = OH.CreateVar<Vec3>(name + "f",
 					OutputHandler::Dimensions::Force,
-					"rotor force in x, y and z directions (lon, lat, thrust)");
+					"rotor force in x, y and z directions (lon, lat, thrust, assuming x backwards and z upwards along the shaft)");
+
 			Var_m = OH.CreateVar<Vec3>(name + "m",
 					OutputHandler::Dimensions::Moment,
-					"rotor moment about x, y and z directions (pitch, roll, torque)");
+					"rotor moment about x, y and z directions (roll, pitch, torque, assuming x backwards and z upwards along the shaft)");
 			Var_dUMean = OH.CreateVar<doublereal>(name + "UMean",
 					OutputHandler::Dimensions::Velocity,
 					"mean inflow velocity");
@@ -205,24 +238,31 @@ Rotor::OutputPrepare(OutputHandler& OH)
 			Var_dVelocity = OH.CreateVar<doublereal>(name + "VRef",
 					OutputHandler::Dimensions::Velocity,
 					"reference velocity (craft_node + airstream)");
+
 			Var_dAlpha = OH.CreateVar<doublereal>(name + "Alpha",
 					OutputHandler::Dimensions::rad,
 					"rotor disk angle");
+
 			Var_dMu = OH.CreateVar<doublereal>(name + "Mu",
 					OutputHandler::Dimensions::Dimensionless,
 					"advance parameter");
+
 			Var_dLambda = OH.CreateVar<doublereal>(name + "Lambda",
 					OutputHandler::Dimensions::Dimensionless,
 					"inflow parameter");
+
 			Var_dChi = OH.CreateVar<doublereal>(name + "Chi",
 					OutputHandler::Dimensions::Dimensionless,
 					"advance/inflow parameter");
+
 			Var_dPsi0 = OH.CreateVar<doublereal>(name + "Psi0",
 					OutputHandler::Dimensions::rad,
 					"reference azimuthal direction");
+
 			Var_bUMeanRefConverged = OH.CreateVar<integer>(name + "UMeanRefConverged",
 					OutputHandler::Dimensions::Boolean,
 					"boolean flag indicating reference induced velocity computation convergence");
+
 			Var_iCurrIter = OH.CreateVar<integer>(name + "Iter",
 					OutputHandler::Dimensions::Dimensionless,
 					"number of iterations required for convergence");
@@ -1175,6 +1215,37 @@ GlauertRotor::~GlauertRotor(void)
 #endif /* USE_MPI */
 }
 
+const char *
+GlauertRotor::GetGlauertRotorDesc(void) const
+{
+	switch (gtype) {
+	case GlauertRotor::COLEMAN_ET_AL:
+		return "coleman";
+
+	case GlauertRotor::DREES_1:
+		return "drees";
+
+	case GlauertRotor::PAYNE:
+		return "payne";
+
+	case GlauertRotor::WHITE_AND_BLAKE:
+		return "whiteandblake";
+
+	case GlauertRotor::PITT_AND_PETERS:
+		return "pittandpeters";
+
+	case GlauertRotor::HOWLETT:
+		return "howlett";
+
+	case GlauertRotor::DREES_2:
+		return "drees2";
+
+	default:
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	return "unknown";
+}
 
 /* assemblaggio residuo */
 SubVectorHandler&

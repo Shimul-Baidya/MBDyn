@@ -25,7 +25,6 @@ JacSubMatrix.h \
 ldl.h \
 ls.cc \
 ls.h \
-matvec.h \
 matvec3.cc \
 matvec3.h \
 matvec3n.cc \

@@ -44,8 +44,9 @@
 
 #include "drive.h"
 #include <ginac/ginac.h>
+#include "ginacmbd.h"
 
-class GiNaCDriveCaller : public DriveCaller
+class GiNaCDriveCaller : public DriveCaller, private GiNaCEntity
 {
 private:
 	// parameter symbols
@@ -77,6 +78,9 @@ public:
 inline doublereal
 GiNaCDriveCaller::dGet(const doublereal& dVar) const
 {
+#ifdef USE_MULTITHREAD
+        GiNaCGuard guard;
+#endif
 	GiNaC::lst l;
 
 	l.append(*gVar == dVar);

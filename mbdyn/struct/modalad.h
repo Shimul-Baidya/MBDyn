@@ -60,26 +60,28 @@ public:
              doublereal dMass,
              const Vec3& STmp,
              const Mat3x3& JTmp,
-             const std::vector<unsigned int>& uModeNumber,
-             MatNxN *pGenMass,
-             MatNxN *pGenStiff,
-             MatNxN *pGenDamp,
-             const std::vector<std::string>& IdFEMNodes,
-             Mat3xN *pN,
-             const std::vector<Modal::StrNodeData>& snd,
-             Mat3xN *pPHIt,
-             Mat3xN *pPHIr,
-             Mat3xN *pModeShapest,
-             Mat3xN *pModeShapesr,
-             Mat3xN *pInv3,
-             Mat3xN *pInv4,
-             Mat3xN *pInv5,
-             Mat3xN *pInv8,
-             Mat3xN *pInv9,
-             Mat3xN *pInv10,
-             Mat3xN *pInv11,
-             VecN *a,
-             VecN *aP,
+             std::vector<unsigned int>&& uModeNumber,
+             MatNxN&& oGenMass,
+             MatNxN&& opGenStiff,
+             MatNxN&& oGenDamp,
+             std::vector<std::string>&& IdFEMNodes,
+             Mat3xN&& pN,
+             std::vector<Modal::StrNodeData>&& snd,
+             Mat3xN&& oPHIt,
+             Mat3xN&& oPHIr,
+             Mat3xN&& oModeShapest,
+             Mat3xN&& oModeShapesr,
+             Mat3xN&& oInv3,
+             Mat3xN&& oInv4,
+             Mat3xN&& oInv5,
+             Mat3xN&& oInv8,
+             Mat3xN&& oInv9,
+             Mat3xN&& oInv10,
+             Mat3xN&& oInv11,
+             VecN&& a,
+             VecN&& aP,
+             const std::vector<unsigned>& rgGenStressStiffIdx,
+             std::vector<MatNxN>&& rgGenStressStiff,
              flag fOut);
 
      virtual ~ModalAd();
@@ -201,9 +203,13 @@ private:
      UpdateInvariants(const sp_grad::SpColVector<sp_grad::GpGradProd, 3>& Inv3jaj,
                       const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>& Inv8jaj,
                       const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>& Inv9jkajak) {}
-     
+
 private:
      const ModalNodeAd* const pModalNode;
+     const std::vector<MatNxN> rgModalStressStiff;
+     StressStiffIndex<6> oStressStiffIndexW;
+     StressStiffIndex<3> oStressStiffIndexWP;
+     StressStiffIndex<3> oStressStiffIndexVP;
 };
 
 #endif /* MODALAD_H */
