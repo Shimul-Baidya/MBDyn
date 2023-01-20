@@ -836,11 +836,11 @@ main(int argc, char *argv[])
                         if (gradmh) {
                                 SAFENEWWITHCONSTRUCTOR(pSM,
                                                        PastixSolutionManager<SpGradientSparseMatrixHandler>,
-                                                       PastixSolutionManager<SpGradientSparseMatrixHandler>(size, nt, 0));
+                                                       PastixSolutionManager<SpGradientSparseMatrixHandler>(size, nt, 0, -1.));
                         } else {
                                 SAFENEWWITHCONSTRUCTOR(pSM,
                                                        PastixSolutionManager<SpMapMatrixHandler>,
-                                                       PastixSolutionManager<SpMapMatrixHandler>(size, nt, 0));
+                                                       PastixSolutionManager<SpMapMatrixHandler>(size, nt, 0, -1.));
                         }
                         std::cerr << std::endl;
 #else /* !USE_PASTIX */
