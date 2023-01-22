@@ -614,6 +614,7 @@ bool LinSol::SetTolerance(doublereal dToleranceRes)
 {
         switch (currSolver) {
         case LinSol::AZTECOO_SOLVER:
+        case LinSol::PASTIX_SOLVER:
                 dTolRes = dToleranceRes;
                 break;
         default:
@@ -941,12 +942,12 @@ LinSol::GetSolutionManager(integer iNLD,
 		    case LinSol::SOLVER_FLAGS_ALLOWS_GRAD: {
                         SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                                PastixSolutionManager<SpGradientSparseMatrixHandler>,
-                                               PastixSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                                               PastixSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, dTolRes, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
                     } break;
                     default:
 			SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                                PastixSolutionManager<SpMapMatrixHandler>,
-                                               PastixSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                                               PastixSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, dTolRes, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
                     }
 		} break;
 #else /* !USE_PASTIX */
