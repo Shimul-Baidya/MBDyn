@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2020(-2022) all rights reserved.
+        Copyright (C) 2020(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -92,6 +92,29 @@ namespace sp_grad_test {
           f /= u;
      }
 
+     // template <typename T>
+     // void func_scalar2(const T& u, const T& v, const T& w, doublereal e, T& f, const SpGradExpDofMapHelper<T>& oDofMap) {
+     //      oDofMap.MapAssign(f, u);
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, 3.);
+     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, 2 * v);
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, u - v);
+     //      oDofMap.template MapAssignOper<SpGradBinDiv>(f, (1 - w));
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, pow(fabs(u/w), v - 1));
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, sin(v));
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, cos(w));
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, (1 - tan(-w + v)));
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, e);
+     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, 1);
+     //      oDofMap.template MapAssignOper<SpGradBinMinus>(f, 11);
+     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, 4.5 - 1);
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, 3.5);
+     //      oDofMap.template MapAssignOper<SpGradBinDiv>(f, 2.8);
+     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, u);
+     //      oDofMap.template MapAssignOper<SpGradBinMinus>(f, v);
+     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, w);
+     //      oDofMap.template MapAssignOper<SpGradBinDiv>(f, u);
+     // }
+     
      template
      void func_scalar2<doublereal>(const doublereal& u, const doublereal& v, const doublereal& w, doublereal e, doublereal& f);
 
@@ -100,6 +123,15 @@ namespace sp_grad_test {
 
      template
      void func_scalar2<GpGradProd>(const GpGradProd& u, const GpGradProd& v, const GpGradProd& w, doublereal e, GpGradProd& f);
+
+     // template
+     // void func_scalar2<doublereal>(const doublereal& u, const doublereal& v, const doublereal& w, doublereal e, doublereal& f, const SpGradExpDofMapHelper<doublereal>& oDofMap);
+
+     // template
+     // void func_scalar2<SpGradient>(const SpGradient& u, const SpGradient& v, const SpGradient& w, doublereal e, SpGradient& f, const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     // template
+     // void func_scalar2<GpGradProd>(const GpGradProd& u, const GpGradProd& v, const GpGradProd& w, doublereal e, GpGradProd& f, const SpGradExpDofMapHelper<GpGradProd>& oDofMap);
      
      template <typename U, typename V, typename W>
      bool func_bool1(const U& u, const V& v, const W& w, doublereal e) {
@@ -151,8 +183,8 @@ namespace sp_grad_test {
 
      template
      bool func_bool1(const GpGradProd& u, const doublereal& v, const GpGradProd& w, doublereal e);
-     
-     
+
+
      template <typename U, typename V, typename W>
      bool func_bool2(const U& u, const V& v, const W& w, doublereal e) {
           return u + v <= e * (v - w);
@@ -202,7 +234,7 @@ namespace sp_grad_test {
 
      template
      bool func_bool2(const GpGradProd& u, const doublereal& v, const GpGradProd& w, doublereal e);
-     
+
      template <typename U, typename V, typename W>
      bool func_bool3(const U& u, const V& v, const W& w, doublereal e) {
           return u + v > e * (v - w);
@@ -252,7 +284,7 @@ namespace sp_grad_test {
 
      template
      bool func_bool3(const GpGradProd& u, const doublereal& v, const GpGradProd& w, doublereal e);
-     
+
      template <typename U, typename V, typename W>
      bool func_bool4(const U& u, const V& v, const W& w, doublereal e) {
           return u + v < e * (v - w);
@@ -302,7 +334,7 @@ namespace sp_grad_test {
 
      template
      bool func_bool4(const GpGradProd& u, const doublereal& v, const GpGradProd& w, doublereal e);
-     
+
      template <typename U, typename V, typename W>
      bool func_bool5(const U& u, const V& v, const W& w, doublereal e) {
           return (u + v - w) * e == e * (v + u - w);
@@ -352,7 +384,7 @@ namespace sp_grad_test {
 
      template
      bool func_bool5(const GpGradProd& u, const doublereal& v, const GpGradProd& w, doublereal e);
-     
+
      template <typename U, typename V, typename W>
      bool func_bool6(const U& u, const V& v, const W& w, doublereal e) {
           return (u + v - w) * e != e * (v + u - w);
@@ -403,7 +435,7 @@ namespace sp_grad_test {
 
      template
      bool func_bool6(const GpGradProd& u, const doublereal& v, const GpGradProd& w, doublereal e);
-     
+
      doublereal sec(doublereal x) {
           return 1./cos(x);
      }
@@ -848,7 +880,7 @@ namespace sp_grad_test {
                }
           }
      }
-     
+
      template
      void func_mat_mul4s<SpGradient, SpGradient >(const std::vector<SpGradient >&, const std::vector<SpGradient >&, std::vector<SpGradient >&);
 
@@ -1171,6 +1203,21 @@ namespace sp_grad_test {
           D = -A / 3. + (B * 5. - C / 4.) * 1.5;
      }
 
+     template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
+     void func_mat_add7(const SpMatrixBase<TA, NumRows, NumCols>& A,
+                        const SpMatrixBase<TB, NumRows, NumCols>& B,
+                        const SpMatrixBase<TC, NumRows, NumCols>& C,
+                        SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D,
+                        const SpGradExpDofMapHelper<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& oDofMap) {
+
+          SP_GRAD_ASSERT(A.iGetNumRows() == B.iGetNumRows());
+          SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumCols());
+          SP_GRAD_ASSERT(A.iGetNumRows() == C.iGetNumRows());
+          SP_GRAD_ASSERT(A.iGetNumCols() == C.iGetNumCols());
+
+          D.MapAssign(-A / 3. + (B * 5. - C / 4.) * 1.5, oDofMap);
+     }
+
      template
      void func_mat_add7(const SpMatrixBase<SpGradient>&,
                         const SpMatrixBase<SpGradient>&,
@@ -1316,6 +1363,177 @@ namespace sp_grad_test {
                         const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
                         const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
                         SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<SpGradient>&,
+                        SpMatrixBase<SpGradient>&,
+                        const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<doublereal>&,
+                        SpMatrixBase<doublereal>&,
+                        const SpGradExpDofMapHelper<doublereal>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<doublereal>&,
+                        SpMatrixBase<SpGradient>&,
+                        const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<doublereal>&,
+                        SpMatrixBase<SpGradient>&,
+                        const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<SpGradient>&,
+                        SpMatrixBase<SpGradient>&,
+                        const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<doublereal>&,
+                        SpMatrixBase<SpGradient>&,
+                        const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<SpGradient>&,
+                        SpMatrixBase<SpGradient>&,
+                        const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient>&,
+                        const SpMatrixBase<doublereal>&,
+                        const SpMatrixBase<SpGradient>&,
+                        SpMatrixBase<SpGradient>&,
+                        const SpGradExpDofMapHelper<SpGradient>&);
+
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<doublereal>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic1, iNumColsStatic1>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<doublereal>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+
+     template
+     void func_mat_add7(const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&,
+                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
 
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add7a(const SpMatrixBase<TA, NumRows, NumCols>& A,
@@ -1666,24 +1884,24 @@ namespace sp_grad_test {
                         const TC& c,
                         SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D) {
 
-	  typedef typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type TE;
-	  
+          typedef typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type TE;
+
           SP_GRAD_ASSERT(A.iGetNumRows() == B.iGetNumRows());
           SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumCols());
 
-	  D = A;
-	  D /= 2.;
-	  D /= exp(c);
-	  D += B * 3.;
-	  D *= sin(c - 1.);
+          D = A;
+          D /= 2.;
+          D /= exp(c);
+          D += B * 3.;
+          D *= sin(c - 1.);
 
-	  SpMatrixBase<TE, NumRows, NumCols> E = B;
-	  
-	  E *= 0.25;
-	  E -= A * 5.;
-	  E *= cos(c + 1.);
-	  E /= pow(c - 1., 2);
-	  D += E;
+          SpMatrixBase<TE, NumRows, NumCols> E = B;
+
+          E *= 0.25;
+          E -= A * 5.;
+          E *= cos(c + 1.);
+          E /= pow(c - 1., 2);
+          D += E;
      }
 
      template
@@ -1829,31 +2047,31 @@ namespace sp_grad_test {
                         const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
                         const SpGradient&,
                         SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&);
-     
+
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add8b(const SpMatrixBase<TA, NumRows, NumCols>& A,
                         const SpMatrixBase<TB, NumRows, NumCols>& B,
                         const TC& c,
                         SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D) {
 
-	  typedef typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type TE;
-	  
+          typedef typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type TE;
+
           SP_GRAD_ASSERT(A.iGetNumRows() == B.iGetNumRows());
           SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumCols());
 
-	  D = A;
-	  D /= 2.;
-	  D /= EvalUnique(exp(c));
-	  D += EvalUnique(B * 3.);
-	  D *= EvalUnique(sin(c - 1.));
+          D = A;
+          D /= 2.;
+          D /= EvalUnique(exp(c));
+          D += EvalUnique(B * 3.);
+          D *= EvalUnique(sin(c - 1.));
 
-	  SpMatrixBase<TE, NumRows, NumCols> E = B;
-	  
-	  E *= 0.25;
-	  E -= EvalUnique(A * 5.);
-	  E *= EvalUnique(cos(c + 1.));
-	  E /= EvalUnique(pow(c - 1., 2));
-	  D += E;
+          SpMatrixBase<TE, NumRows, NumCols> E = B;
+
+          E *= 0.25;
+          E -= EvalUnique(A * 5.);
+          E *= EvalUnique(cos(c + 1.));
+          E /= EvalUnique(pow(c - 1., 2));
+          D += E;
      }
 
      template
@@ -1999,7 +2217,7 @@ namespace sp_grad_test {
                         const SpMatrixBase<doublereal, iNumRowsStatic2, iNumColsStatic2>&,
                         const SpGradient&,
                         SpMatrixBase<SpGradient, iNumRowsStatic2, iNumColsStatic2>&);
-     
+
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add9(const SpMatrixBase<TA, NumRows, NumCols>& A,
                         const SpMatrixBase<TB, NumCols, NumRows>& B,
@@ -2011,7 +2229,7 @@ namespace sp_grad_test {
 
           D = Transpose((Transpose(Transpose(A) / (2. * exp(c))) + Transpose(B * 3)) * sin(c - 1) + (Transpose(B) / 4. - A * 5.) * (cos(c + 1) / pow(c - 1., 2)));
      }
-     
+
      template
      void func_mat_add9(const SpMatrixBase<SpGradient, SpMatrixSize::DYNAMIC, SpMatrixSize::DYNAMIC>&,
                         const SpMatrixBase<SpGradient, SpMatrixSize::DYNAMIC, SpMatrixSize::DYNAMIC>&,
@@ -2156,7 +2374,7 @@ namespace sp_grad_test {
                         const SpGradient&,
                         SpMatrixBase<SpGradient, iNumColsStatic2, iNumRowsStatic2>&);
 
-     
+
      template <typename TA, typename TB>
      void func_mat_mul10(const SpMatrixBase<TA>& A,
                          const SpMatrixBase<TB>& B,
@@ -2166,6 +2384,16 @@ namespace sp_grad_test {
           C = A * B;
      }
 
+     template <typename TA, typename TB>
+     void func_mat_mul10(const SpMatrixBase<TA>& A,
+                         const SpMatrixBase<TB>& B,
+                         SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C,
+                         const SpGradExpDofMapHelper<typename util::ResultType<TA, TB>::Type>& oDofMap) {
+          SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumRows());
+
+          C.MapAssign(A * B, oDofMap);
+     }
+     
      template
      void func_mat_mul10(const SpMatrixBase<SpGradient>&,
                          const SpMatrixBase<SpGradient>&,
@@ -2187,6 +2415,31 @@ namespace sp_grad_test {
                          SpMatrixBase<SpGradient>&);
 
 
+     template
+     void func_mat_mul10(const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<SpGradient>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul10(const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<doublereal>&,
+                         SpMatrixBase<doublereal>&,
+                         const SpGradExpDofMapHelper<doublereal>&);
+
+     template
+     void func_mat_mul10(const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<doublereal>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul10(const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<SpGradient>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+     
+
      template <typename TA, typename TB>
      void func_mat_mul10_trans(const SpMatrixBase<TA>& A,
                                const SpMatrixBase<TB>& B,
@@ -2196,6 +2449,16 @@ namespace sp_grad_test {
           C = Transpose(Transpose(B) * Transpose(A));
      }
 
+     template <typename TA, typename TB>
+     void func_mat_mul10_trans(const SpMatrixBase<TA>& A,
+                               const SpMatrixBase<TB>& B,
+                               SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C,
+                               const SpGradExpDofMapHelper<typename util::ResultType<TA, TB>::Type>& oDofMap) {
+          SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumRows());
+
+          C.MapAssign(Transpose(Transpose(B) * Transpose(A)), oDofMap);
+     }
+     
      template
      void func_mat_mul10_trans(const SpMatrixBase<SpGradient>&,
                                const SpMatrixBase<SpGradient>&,
@@ -2216,6 +2479,30 @@ namespace sp_grad_test {
                                const SpMatrixBase<SpGradient>&,
                                SpMatrixBase<SpGradient>&);
 
+     template
+     void func_mat_mul10_trans(const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<SpGradient>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul10_trans(const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<doublereal>&,
+                               SpMatrixBase<doublereal>&,
+                               const SpGradExpDofMapHelper<doublereal>&);
+
+     template
+     void func_mat_mul10_trans(const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<doublereal>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul10_trans(const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<SpGradient>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+     
      template <typename TA, typename TB>
      void func_mat_mul10_trans_add(const SpMatrixBase<TA>& A,
                                    const SpMatrixBase<TB>& B,
@@ -2224,6 +2511,16 @@ namespace sp_grad_test {
 
           C = Transpose((Transpose(A * B) + Transpose(B) * Transpose(A)) * 0.5);
      }
+
+     template <typename TA, typename TB>
+     void func_mat_mul10_trans_add(const SpMatrixBase<TA>& A,
+                                   const SpMatrixBase<TB>& B,
+                                   SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C,
+                                   const SpGradExpDofMapHelper<typename util::ResultType<TA, TB>::Type>& oDofMap) {
+          SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumRows());
+
+          C.MapAssign(Transpose((Transpose(A * B) + Transpose(B) * Transpose(A)) * 0.5), oDofMap);
+     }     
 
      template
      void func_mat_mul10_trans_add(const SpMatrixBase<SpGradient>&,
@@ -2245,6 +2542,31 @@ namespace sp_grad_test {
                                    const SpMatrixBase<SpGradient>&,
                                    SpMatrixBase<SpGradient>&);
 
+
+     template
+     void func_mat_mul10_trans_add(const SpMatrixBase<SpGradient>&,
+                                   const SpMatrixBase<SpGradient>&,
+                                   SpMatrixBase<SpGradient>&,
+                                   const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul10_trans_add(const SpMatrixBase<doublereal>&,
+                                   const SpMatrixBase<doublereal>&,
+                                   SpMatrixBase<doublereal>&,
+                                   const SpGradExpDofMapHelper<doublereal>&);
+
+     template
+     void func_mat_mul10_trans_add(const SpMatrixBase<SpGradient>&,
+                                   const SpMatrixBase<doublereal>&,
+                                   SpMatrixBase<SpGradient>&,
+                                   const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul10_trans_add(const SpMatrixBase<doublereal>&,
+                                   const SpMatrixBase<SpGradient>&,
+                                   SpMatrixBase<SpGradient>&,
+                                   const SpGradExpDofMapHelper<SpGradient>&);
+     
      void func_mat_mul10(index_type nra,
                          index_type nca,
                          index_type ncb,
@@ -2296,6 +2618,20 @@ namespace sp_grad_test {
           D = Transpose(A * 3. - B / 2.) * (B / 4. + C * 5.);
      }
 
+     template <typename TA, typename TB, typename TC>
+     void func_mat_mul11(const SpMatrixBase<TA>& A,
+                         const SpMatrixBase<TB>& B,
+                         const SpMatrixBase<TC>& C,
+                         SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D,
+                         const SpGradExpDofMapHelper<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& oDofMap) {
+          SP_GRAD_ASSERT(A.iGetNumRows() == B.iGetNumRows());
+          SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumCols());
+          SP_GRAD_ASSERT(A.iGetNumRows() == C.iGetNumRows());
+          SP_GRAD_ASSERT(A.iGetNumCols() == C.iGetNumCols());
+
+          D.MapAssign(Transpose(A * 3. - B / 2.) * (B / 4. + C * 5.), oDofMap);
+     }
+     
      void func_mat_mul11(index_type n,
                          index_type nbdirs,
                          const doublereal A[],
@@ -2390,6 +2726,63 @@ namespace sp_grad_test {
                          const SpMatrixBase<SpGradient>&,
                          SpMatrixBase<SpGradient>&);
 
+     template
+     void func_mat_mul11(const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<SpGradient>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11(const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<doublereal>&,
+                         SpMatrixBase<doublereal>&,
+                         const SpGradExpDofMapHelper<doublereal>&);
+
+
+     template
+     void func_mat_mul11(const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<doublereal>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11(const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<doublereal>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11(const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<SpGradient>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11(const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<doublereal>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11(const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<SpGradient>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11(const SpMatrixBase<SpGradient>&,
+                         const SpMatrixBase<doublereal>&,
+                         const SpMatrixBase<SpGradient>&,
+                         SpMatrixBase<SpGradient>&,
+                         const SpGradExpDofMapHelper<SpGradient>&);
+     
      template <typename TA, typename TB, typename TC>
      void func_mat_mul11_trans(const SpMatrixBase<TA>& A,
                                const SpMatrixBase<TB>& B,
@@ -2403,6 +2796,20 @@ namespace sp_grad_test {
           D = Transpose(Transpose(B / 4. + C * 5.) * (A * 3. - B / 2.));
      }
 
+     template <typename TA, typename TB, typename TC>
+     void func_mat_mul11_trans(const SpMatrixBase<TA>& A,
+                               const SpMatrixBase<TB>& B,
+                               const SpMatrixBase<TC>& C,
+                               SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D,
+                               const SpGradExpDofMapHelper<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& oDofMap) {
+          SP_GRAD_ASSERT(A.iGetNumRows() == B.iGetNumRows());
+          SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumCols());
+          SP_GRAD_ASSERT(A.iGetNumRows() == C.iGetNumRows());
+          SP_GRAD_ASSERT(A.iGetNumCols() == C.iGetNumCols());
+
+          D.MapAssign(Transpose(Transpose(B / 4. + C * 5.) * (A * 3. - B / 2.)), oDofMap);
+     }
+     
      template
      void func_mat_mul11_trans(const SpMatrixBase<SpGradient>&,
                                const SpMatrixBase<SpGradient>&,
@@ -2453,6 +2860,62 @@ namespace sp_grad_test {
                                SpMatrixBase<SpGradient>&);
 
 
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<SpGradient>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<doublereal>&,
+                               SpMatrixBase<doublereal>&,
+                               const SpGradExpDofMapHelper<doublereal>&);
+
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<doublereal>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<doublereal>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<SpGradient>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<doublereal>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<SpGradient>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul11_trans(const SpMatrixBase<SpGradient>&,
+                               const SpMatrixBase<doublereal>&,
+                               const SpMatrixBase<SpGradient>&,
+                               SpMatrixBase<SpGradient>&,
+                               const SpGradExpDofMapHelper<SpGradient>&);
+     
      template <typename TA, typename TB, typename TC>
      void func_mat_mul12a(const SpMatrixBase<TA>& A,
                           const SpMatrixBase<TB>& B,
@@ -2461,6 +2924,15 @@ namespace sp_grad_test {
           D = Transpose(A * B * C);
      }
 
+     template <typename TA, typename TB, typename TC>
+     void func_mat_mul12a(const SpMatrixBase<TA>& A,
+                          const SpMatrixBase<TB>& B,
+                          const SpMatrixBase<TC>& C,
+                          SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D,
+                          const SpGradExpDofMapHelper<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& oDofMap) {
+          D.MapAssign(Transpose(A * B * C), oDofMap);
+     }
+     
      void func_mat_mul12(index_type nra,
                          index_type nca,
                          index_type ncb,
@@ -2529,6 +3001,62 @@ namespace sp_grad_test {
                           const SpMatrixBase<SpGradient>&,
                           SpMatrixBase<SpGradient>&);
 
+     template
+     void func_mat_mul12a(const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<SpGradient>&,
+                          SpMatrixBase<SpGradient>&,
+                          const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul12a(const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<doublereal>&,
+                          SpMatrixBase<doublereal>&,
+                          const SpGradExpDofMapHelper<doublereal>&);
+
+     template
+     void func_mat_mul12a(const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<doublereal>&,
+                          SpMatrixBase<SpGradient>&,
+                          const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul12a(const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<doublereal>&,
+                          SpMatrixBase<SpGradient>&,
+                          const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul12a(const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<SpGradient>&,
+                          SpMatrixBase<SpGradient>&,
+                          const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul12a(const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<doublereal>&,
+                          SpMatrixBase<SpGradient>&,
+                          const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul12a(const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<SpGradient>&,
+                          SpMatrixBase<SpGradient>&,
+                          const SpGradExpDofMapHelper<SpGradient>&);
+
+     template
+     void func_mat_mul12a(const SpMatrixBase<SpGradient>&,
+                          const SpMatrixBase<doublereal>&,
+                          const SpMatrixBase<SpGradient>&,
+                          SpMatrixBase<SpGradient>&,
+                          const SpGradExpDofMapHelper<SpGradient>&);
+     
      template <typename TA, typename TB, typename TC>
      void func_mat_mul12b(const SpMatrixBase<TA>& A,
                           const SpMatrixBase<TB>& B,

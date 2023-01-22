@@ -30,7 +30,7 @@
 
 /*
   AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-  Copyright (C) 2020(-2022) all rights reserved.
+  Copyright (C) 2020(-2023) all rights reserved.
 
   The copyright of this code is transferred
   to Pierangelo Masarati and Paolo Mantegazza
@@ -176,6 +176,8 @@ namespace sp_grad_test {
 
           gen.seed(0);
 
+          SpGradExpDofMapHelper<SpGradient> oDofMap;
+
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
                Mat3x3 A, C;
                Mat3xN A3n(3), C3n(3);
@@ -220,13 +222,34 @@ namespace sp_grad_test {
 
                SpMatrix<doublereal> A2x3 = Transpose(SubMatrix(Transpose(A6x7), 3, 2, 3, 2, 4, 2));
                SpMatrix<SpGradient> A2x3g = Transpose(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2));
+
+               oDofMap.ResetDofStat();
+               oDofMap.GetDofStat(A6x7g);
+               oDofMap.Reset();
+               oDofMap.InsertDof(A6x7g);
+               oDofMap.InsertDone();
+
+               SpMatrix<SpGradient> A2x3gMap(Transpose(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2)), oDofMap);
+               SpMatrix<SpGradient> B2x3g = A2x3g * 3. - A2x3g * 0.5;
+               SpMatrix<SpGradient> B2x3gMap(A2x3g * 3. - A2x3g * 0.5, oDofMap);
                SpMatrix<doublereal, 2, 3> A2x3f = Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7f)));
                SpMatrix<SpGradient, 2, 3> A2x3gf = Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)));
+               SpMatrix<SpGradient, 2, 3> A2x3gfMap(Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf))), oDofMap);
                SpMatrix<doublereal, 2, 3> A2x3f2 = Transpose(SubMatrix<3, 2>(Transpose(A6x7f), 3, 2, 2, 4));
                SpMatrix<SpGradient, 2, 3> A2x3gf2 = Transpose(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4));
+               SpMatrix<SpGradient, 2, 3> A2x3gf2Map(Transpose(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4)), oDofMap);
                SpMatrix<doublereal, SpMatrixSize::DYNAMIC, 3> A2x3f3 = Transpose(SubMatrix<3, 2, 3>(Transpose(A6x7f2), 2, 4, 2));
                SpMatrix<SpGradient, SpMatrixSize::DYNAMIC, 3> A2x3gf3 = Transpose(SubMatrix<3, 2, 3>(Transpose(A6x7gf2), 2, 4, 2));
-               SpMatrix<SpGradient, 3, 3> CrossX8a(MatCrossVec(X8a, 5.));
+               SpMatrix<SpGradient, SpMatrixSize::DYNAMIC, 3> A2x3gf3Map(Transpose(SubMatrix<3, 2, 3>(Transpose(A6x7gf2), 2, 4, 2)), oDofMap);
+               SpColVector<SpGradient, 3> A2x3gf1 = Transpose(A2x3gf.GetRow(1));
+               SpMatrix<SpGradient, 3, 3> CrossX8a(MatCrossVec(A2x3gf1, 5.));
+               SpMatrix<SpGradient, 3, 3> CrossX8aMap(MatCrossVec(A2x3gf1, 5.), oDofMap);
+
+               for (index_type i = 1; i <= 3; ++i) {
+                    for (index_type j = 1; j <= 3; ++j) {
+                         sp_grad_assert_equal(CrossX8a(i, j), CrossX8aMap(i, j), 0.);
+                    }
+               }
 
                sp_grad_assert_equal(A2x3(1, 1), A6x7(2, 3), 0.);
                sp_grad_assert_equal(A2x3(1, 2), A6x7(2, 5), 0.);
@@ -241,6 +264,13 @@ namespace sp_grad_test {
                sp_grad_assert_equal(A2x3g(2, 1), A6x7g(6, 3), 0.);
                sp_grad_assert_equal(A2x3g(2, 2), A6x7g(6, 5), 0.);
                sp_grad_assert_equal(A2x3g(2, 3), A6x7g(6, 7), 0.);
+
+               sp_grad_assert_equal(A2x3gMap(1, 1), A6x7g(2, 3), 0.);
+               sp_grad_assert_equal(A2x3gMap(1, 2), A6x7g(2, 5), 0.);
+               sp_grad_assert_equal(A2x3gMap(1, 3), A6x7g(2, 7), 0.);
+               sp_grad_assert_equal(A2x3gMap(2, 1), A6x7g(6, 3), 0.);
+               sp_grad_assert_equal(A2x3gMap(2, 2), A6x7g(6, 5), 0.);
+               sp_grad_assert_equal(A2x3gMap(2, 3), A6x7g(6, 7), 0.);
 
                sp_grad_assert_equal(A2x3f(1, 1), A6x7f(2, 3), 0.);
                sp_grad_assert_equal(A2x3f(1, 2), A6x7f(2, 5), 0.);
@@ -286,12 +316,13 @@ namespace sp_grad_test {
 
                SpMatrix<doublereal> A2x3b = SubMatrix(A6x7, 2, 4, 2, 3, 2, 3);
                SpMatrix<SpGradient> A2x3gb = SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3);
-
+               SpMatrix<SpGradient> A2x3gbMap(SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3), oDofMap);
                SpMatrix<doublereal, 2, 3> A2x3bf = SubMatrix<2, 4, 2, 3, 2, 3>(A6x7f);
                SpMatrix<SpGradient, 2, 3> A2x3gbf = SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf);
-
+               SpMatrix<SpGradient, 2, 3> A2x3gbfMap(SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf), oDofMap);
                SpMatrix<doublereal, 2, 3> A2x3bf2 = SubMatrix<2, 3>(A6x7f, 2, 4, 3, 2);
                SpMatrix<SpGradient, 2, 3> A2x3gbf2 = SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2);
+               SpMatrix<SpGradient, 2, 3> A2x3gbf2Map(SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2), oDofMap);
 
                for (index_type i = 1; i <= A2x3.iGetNumRows(); ++i) {
                     for (index_type j = 1; j <= A2x3.iGetNumCols(); ++j) {
@@ -301,49 +332,77 @@ namespace sp_grad_test {
                          sp_grad_assert_equal(A2x3gf(i, j), A2x3gbf(i, j), 0.);
                          sp_grad_assert_equal(A2x3f2(i, j), A2x3bf(i, j), 0.);
                          sp_grad_assert_equal(A2x3gf2(i, j), A2x3gbf(i, j), 0.);
+                         sp_grad_assert_equal(B2x3gMap(i, j), B2x3g(i, j), 0.);
+                         sp_grad_assert_equal(A2x3gfMap(i, j), A2x3gf(i, j), 0.);
+                         sp_grad_assert_equal(A2x3gf2Map(i, j), A2x3gf(i, j), 0.);
+                         sp_grad_assert_equal(A2x3gbMap(i, j), A2x3gb(i, j), 0.);
+                         sp_grad_assert_equal(A2x3gbfMap(i, j), A2x3gb(i, j), 0.);
+                         sp_grad_assert_equal(A2x3gbf2Map(i, j), A2x3gb(i, j), 0.);
                     }
                }
 
                SpMatrix<doublereal> A2x3T_A2x3 = Transpose(A2x3) * A2x3b;
                SpMatrix<SpGradient> A2x3gT_A2x3g = Transpose(A2x3g) * A2x3gb;
+               SpMatrix<SpGradient> A2x3gT_A2x3gMap(Transpose(A2x3g) * A2x3gb, oDofMap);
                SpMatrix<doublereal> A2x3T_A2x3b = SubMatrix(Transpose(A6x7), 3, 2, 3, 2, 4, 2) * Transpose(SubMatrix(Transpose(A6x7), 3, 2, 3, 2, 4, 2));
                SpMatrix<SpGradient> A2x3gT_A2x3gb = SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2) * Transpose(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2));
+               SpMatrix<SpGradient> A2x3gT_A2x3gbMap(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2) * Transpose(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2)), oDofMap);
                SpMatrix<doublereal> A2x3T_A2x3c = Transpose(SubMatrix(A6x7, 2, 4, 2, 3, 2, 3)) * SubMatrix(A6x7, 2, 4, 2, 3, 2, 3);
                SpMatrix<SpGradient> A2x3gT_A2x3gc = Transpose(SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3)) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3);
+               SpMatrix<SpGradient> A2x3gT_A2x3gcMap(Transpose(SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3)) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3), oDofMap);
                SpMatrix<doublereal> A2x3T_A2x3d =  Transpose(Transpose(SubMatrix(A6x7, 2, 4, 2, 3, 2, 3)) * SubMatrix(A6x7, 2, 4, 2, 3, 2, 3));
                SpMatrix<SpGradient> A2x3gT_A2x3gd =  Transpose(Transpose(SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3)) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3));
+               SpMatrix<SpGradient> A2x3gT_A2x3gdMap(Transpose(Transpose(SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3)) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3)), oDofMap);
                SpMatrix<doublereal> A2x3T_A2x3e =  Transpose(SubMatrix(Transpose(A6x7), 3, 2, 3, 2, 4, 2) * SubMatrix(A6x7, 2, 4, 2, 3, 2, 3));
                SpMatrix<SpGradient> A2x3gT_A2x3ge =  Transpose(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3));
+               SpMatrix<SpGradient> A2x3gT_A2x3geMap(Transpose(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3)), oDofMap);
                SpMatrix<SpGradient> A2x3gT_A2x3gT = Transpose(Transpose(A2x3g) * A2x3g);
+               SpMatrix<SpGradient> A2x3gT_A2x3gTMap(Transpose(Transpose(A2x3g) * A2x3g), oDofMap);
                SpMatrix<SpGradient> A2x3gT_A2x3gTb =  SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3);
+               SpMatrix<SpGradient> A2x3gT_A2x3gTbMap(SubMatrix(Transpose(A6x7g), 3, 2, 3, 2, 4, 2) * SubMatrix(A6x7g, 2, 4, 2, 3, 2, 3), oDofMap);
 
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3f = Transpose(A2x3f) * A2x3bf;
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gf = Transpose(A2x3gf) * A2x3gbf;
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gfMap(Transpose(A2x3gf) * A2x3gbf, oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3bf = SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7f)) * Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7f)));
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gbf = SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)) * Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)));
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gbfMap(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)) * Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf))), oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3cf = Transpose(SubMatrix<2, 4, 2, 3, 2, 3>(A6x7f)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7f);
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gcf = Transpose(SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf);
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gcfMap(Transpose(SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf), oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3df =  Transpose(Transpose(SubMatrix<2, 4, 2, 3, 2, 3>(A6x7f)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7f));
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gdf =  Transpose(Transpose(SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf));
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gdfMap(Transpose(Transpose(SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf)), oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3ef =  Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7f)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7f));
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gef =  Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf));
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gefMap(Transpose(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf)), oDofMap);
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTf = Transpose(Transpose(A2x3gf) * A2x3gf);
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTfMap(Transpose(Transpose(A2x3gf) * A2x3gf), oDofMap);
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTbf =  SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf);
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTbfMap(SubMatrix<3, 2, 3, 2, 4, 2>(Transpose(A6x7gf)) * SubMatrix<2, 4, 2, 3, 2, 3>(A6x7gf), oDofMap);
 
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3f2 = Transpose(A2x3f2) * A2x3bf2;
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gf2 = Transpose(A2x3gf2) * A2x3gbf2;
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gf2Map(Transpose(A2x3gf2) * A2x3gbf2, oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3bf2 = SubMatrix<3, 2>(Transpose(A6x7f), 3, 2, 2, 4) * Transpose(SubMatrix<3, 2>(Transpose(A6x7f), 3, 2, 2, 4));
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gbf2 = SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4) * Transpose(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4));
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gbf2Map(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4) * Transpose(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4)), oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3cf2 = Transpose(SubMatrix<2, 3>(A6x7f, 2, 4, 3, 2)) * SubMatrix<2, 3>(A6x7f, 2, 4, 3, 2);
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gcf2 = Transpose(SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2)) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2);
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gcf2Map(Transpose(SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2)) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2), oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3df2 =  Transpose(Transpose(SubMatrix<2, 3>(A6x7f, 2, 4, 3, 2)) * SubMatrix<2, 3>(A6x7f, 2, 4, 3, 2));
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gdf2 =  Transpose(Transpose(SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2)) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2));
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gdf2Map(Transpose(Transpose(SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2)) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2)), oDofMap);
                SpMatrix<doublereal, 3, 3> A2x3T_A2x3ef2 =  Transpose(SubMatrix<3, 2>(Transpose(A6x7f), 3, 2, 2, 4) * SubMatrix<2, 3>(A6x7f, 2, 4, 3, 2));
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gef2 =  Transpose(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2));
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gef2Map(Transpose(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2)), oDofMap);
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTf2 = Transpose(Transpose(A2x3gf) * A2x3gf);
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTf2Map(Transpose(Transpose(A2x3gf) * A2x3gf), oDofMap);
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTbf2 =  SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2);
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gTbf2Map(SubMatrix<3, 2>(Transpose(A6x7gf), 3, 2, 2, 4) * SubMatrix<2, 3>(A6x7gf, 2, 4, 3, 2), oDofMap);
 
                SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gf3 = Transpose(A2x3gf3) * A2x3gf3;
+               SpMatrix<SpGradient, 3, 3> A2x3gT_A2x3gf3Map(Transpose(A2x3gf3) * A2x3gf3, oDofMap);
 
                for (index_type i = 1; i <= A2x3T_A2x3.iGetNumRows(); ++i) {
                     for (index_type j = 1; j <= A2x3T_A2x3.iGetNumCols(); ++j) {
@@ -383,6 +442,32 @@ namespace sp_grad_test {
                          sp_grad_assert_equal(A2x3gT_A2x3gf2(i, j), A2x3gT_A2x3gTbf2(j, i), sqrt(std::numeric_limits<doublereal>::epsilon()));
 
                          sp_grad_assert_equal(A2x3gT_A2x3gf3(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+
+                         sp_grad_assert_equal(A2x3gT_A2x3gMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gbMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gcMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gdMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3geMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+
+                         sp_grad_assert_equal(A2x3gT_A2x3gTMap(j, i), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gTbMap(j, i), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gfMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gbfMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gcfMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gdfMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gefMap(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gTfMap(j, i), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gTbfMap(j, i), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gf2Map(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gf2Map(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gbf2Map(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gcf2Map(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gdf2Map(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gef2Map(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gTf2Map(j, i), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gTbf2Map(j, i), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
+                         sp_grad_assert_equal(A2x3gT_A2x3gf3Map(i, j), A2x3gT_A2x3g(i, j), sqrt(std::numeric_limits<doublereal>::epsilon()));
                     }
                }
 
@@ -925,6 +1010,8 @@ namespace sp_grad_test {
 
           gen.seed(0);
 
+          SpGradExpDofMapHelper<T> oDofMap;
+
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
                SpMatrixA<T, N, N> A;
 
@@ -934,36 +1021,62 @@ namespace sp_grad_test {
                     }
                }
 
+               oDofMap.ResetDofStat();
+               oDofMap.GetDofStat(A);
+               oDofMap.Reset();
+               oDofMap.InsertDof(A);
+               oDofMap.InsertDone();
+
                const SpMatrix<T, N, N> B = Transpose(A) + A;
+
+               const SpMatrix<T, N, N> BMap(Transpose(A) + A, oDofMap);
+
                const SpMatrixA<T, N, N> invA = Inv(A);
-               SpMatrixA<T, N, N> invA2, invB2;
-               T detA, detB2;
+               SpMatrixA<T, N, N> invA2, invB2, invAMap, invBMap;
+               T detA, detB2, detAMap, detBMap;
+
                Inv(A, invA2, detA);
                InvSymm(B, invB2, detB2);
+               Inv(A, invAMap, detAMap, oDofMap);
+               InvSymm(B, invBMap, detBMap, oDofMap);
+
                SpMatrix<T, N, N> I1 = invA * A;
                SpMatrix<T, N, N> I2 = A * invA;
                SpMatrix<T, N, N> I3 = invA2 * A;
                SpMatrix<T, N, N> I4 = A * invA2;
                SpMatrix<T, N, N> I5 = invB2 * B;
                SpMatrix<T, N, N> I6 = B * invB2;
-               
+               SpMatrix<T, N, N> I1Map(invAMap * A);
+               SpMatrix<T, N, N> I2Map(A * invA, oDofMap);
+               SpMatrix<T, N, N> I3Map(invA2 * A, oDofMap);
+               SpMatrix<T, N, N> I4Map(A * invA2, oDofMap);
+               SpMatrix<T, N, N> I5Map(invB2 * B, oDofMap);
+               SpMatrix<T, N, N> I6Map(B * invB2, oDofMap);
+
                const doublereal dTol = sqrt(std::numeric_limits<doublereal>::epsilon());
-               
+
                for (index_type j = 1; j <= N; ++j) {
                     for (index_type i = 1; i <= N; ++i) {
                          T deltaij{(i == j) ? 1. : 0.};
-                         
+
                          sp_grad_assert_equal(I1(i, j), deltaij, dTol);
                          sp_grad_assert_equal(I2(i, j), deltaij, dTol);
                          sp_grad_assert_equal(I3(i, j), deltaij, dTol);
                          sp_grad_assert_equal(I4(i, j), deltaij, dTol);
                          sp_grad_assert_equal(I5(i, j), deltaij, dTol);
                          sp_grad_assert_equal(I6(i, j), deltaij, dTol);
+
+                         sp_grad_assert_equal(I1Map(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I2Map(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I3Map(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I4Map(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I5Map(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(I6Map(i, j), deltaij, dTol);
                     }
                }
           }
      }
-     
+
      template <typename T>
      SpColVector<T, 2> func_grad_prod0(const SpColVector<T, 2>& X) {
           return SpColVector<T, 2>{sin(2. * X(1) - X(2) * 3.) * exp(X(1) / X(2)) + sqrt(X(1)), 4. * cos(X(1) * X(2)) * pow(X(1), X(2))};
@@ -1968,12 +2081,14 @@ namespace sp_grad_test {
           const doublereal dTol = pow(numeric_limits<doublereal>::epsilon(), 0.5);
 
           typedef typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type TD;
-
+          SpGradExpDofMapHelper<TD> oDofMap;
           SpMatrixBase<TA, NumRows, NumCols> A(imatrows, imatcols, inumnz);
           SpMatrixBase<TB, NumRows, NumCols> B(imatrows, imatcols, inumnz);
           SpMatrixBase<TC, NumRows, NumCols> C(imatrows, imatcols, inumnz);
           SpMatrixBase<TD, NumRows, NumCols> D(imatrows, imatcols, 3 * inumnz);
           SpMatrixBase<TD, NumRows, NumCols> Da(imatrows, imatcols, 3 * inumnz);
+          SpMatrixBase<TD, NumRows, NumCols> DMap(imatrows, imatcols, inumnz);
+
           vector<doublereal> Av(imatrows * imatcols), Ad,
                Bv(imatrows * imatcols), Bd,
                Cv(imatrows * imatcols), Cd,
@@ -1984,7 +2099,7 @@ namespace sp_grad_test {
           Cd.reserve(imatrows * imatcols * inumnz);
           Dd.reserve(imatrows * imatcols * inumnz);
 
-          duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), sp_grad_a_time(0), c_full_time(0);
+          duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), sp_grad_a_time(0), c_full_time(0), sp_grad_compr_time(0);
 
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
                SpGradDofStat s;
@@ -2003,6 +2118,16 @@ namespace sp_grad_test {
                     sp_grad_rand_gen(ci, randnz, randdof, randval, gen);
                     SpGradientTraits<TC>::GetDofStat(ci, s);
                }
+
+               oDofMap.ResetDofStat();
+               oDofMap.GetDofStat(A);
+               oDofMap.GetDofStat(B);
+               oDofMap.GetDofStat(C);
+               oDofMap.Reset();
+               oDofMap.InsertDof(A);
+               oDofMap.InsertDof(B);
+               oDofMap.InsertDof(C);
+               oDofMap.InsertDone();
 
                const index_type nbdirs = s.iNumNz ? s.iMaxDof : 0;
 
@@ -2058,9 +2183,15 @@ namespace sp_grad_test {
 
                start = high_resolution_clock::now();
 
-               func_mat_add7a(A, B, C, D);
+               func_mat_add7a(A, B, C, Da);
 
                sp_grad_a_time += high_resolution_clock::now() - start;
+
+               start = high_resolution_clock::now();
+
+               func_mat_add7(A, B, C, DMap, oDofMap);
+
+               sp_grad_compr_time += high_resolution_clock::now() - start;
 
                for (index_type j = 1; j <= imatcols; ++j) {
                     for (index_type i = 1; i <= imatrows; ++i) {
@@ -2069,10 +2200,13 @@ namespace sp_grad_test {
                          const doublereal cij = SpGradientTraits<TC>::dGetValue(C.GetElem(i, j));
                          const doublereal dijr1 = SpGradientTraits<TD>::dGetValue(D.GetElem(i, j));
                          const doublereal dijr2 = Dv[(j - 1) * imatrows + i - 1];
+                         const doublereal dijr3 = SpGradientTraits<TD>::dGetValue(DMap.GetElem(i, j));
+                         const doublereal dijr4 = SpGradientTraits<TD>::dGetValue(Da.GetElem(i, j));
                          const doublereal dij = -aij / 3. + (bij * 5. - cij / 4.) * 1.5;
 
                          assert(fabs(dij - dijr1) / std::max(1., fabs(dij)) < dTol);
                          assert(fabs(dij - dijr2) / std::max(1., fabs(dij)) < dTol);
+                         assert(fabs(dij - dijr3) / std::max(1., fabs(dij)) < dTol);
 
                          for (index_type k = s.iMinDof; k <= s.iMaxDof; ++k) {
                               const doublereal daij = SpGradientTraits<TA>::dGetDeriv(A.GetElem(i, j), k);
@@ -2080,10 +2214,15 @@ namespace sp_grad_test {
                               const doublereal dcij = SpGradientTraits<TC>::dGetDeriv(C.GetElem(i, j), k);
                               const doublereal ddijr1 = SpGradientTraits<TD>::dGetDeriv(D.GetElem(i, j), k);
                               const doublereal ddijr2 = Dd[((j - 1) * imatrows + (i - 1) + (k - 1) * imatrows * imatcols)];
+                              const doublereal ddijr3 = SpGradientTraits<TD>::dGetDeriv(DMap.GetElem(i, j), k);
+                              const doublereal ddijr4 = SpGradientTraits<TD>::dGetDeriv(Da.GetElem(i, j), k);
+
                               const doublereal ddij = -daij / 3. + (dbij * 5. - dcij / 4.) * 1.5;
 
                               assert(fabs(ddij - ddijr1) / std::max(1., fabs(ddij)) < dTol);
                               assert(fabs(ddij - ddijr2) / std::max(1., fabs(ddij)) < dTol);
+                              assert(fabs(ddij - ddijr3) / std::max(1., fabs(ddij)) < dTol);
+                              assert(fabs(ddij - ddijr4) / std::max(1., fabs(ddij)) < dTol);
                          }
                     }
                }
@@ -2091,6 +2230,7 @@ namespace sp_grad_test {
 
           auto sp_grad_time_ns = duration_cast<nanoseconds>(sp_grad_time).count();
           auto sp_grad_a_time_ns = duration_cast<nanoseconds>(sp_grad_a_time).count();
+          auto sp_grad_compr_time_ns = duration_cast<nanoseconds>(sp_grad_compr_time).count();
           auto c_full_time_ns = duration_cast<nanoseconds>(c_full_time).count();
 
           cerr << "test7: sp_grad_time = " << fixed << setprecision(6)
@@ -2104,6 +2244,9 @@ namespace sp_grad_test {
                << endl;
           cerr << "test7: sp_grad_time / c_full_time = " << fixed << setprecision(6)
                << static_cast<doublereal>(sp_grad_time_ns) / static_cast<doublereal>(c_full_time_ns)
+               << endl;
+          cerr << "test7: sp_grad_compr_time / c_full_time = " << fixed << setprecision(6)
+               << static_cast<doublereal>(sp_grad_compr_time_ns) / static_cast<doublereal>(c_full_time_ns)
                << endl;
           cerr << "test7: sp_grad_a_time / c_full_time = " << fixed << setprecision(6)
                << static_cast<doublereal>(sp_grad_a_time_ns) / static_cast<doublereal>(c_full_time_ns)
@@ -3402,7 +3545,7 @@ int main(int argc, char* argv[])
           if (SP_GRAD_RUN_TEST(17.2)) testInv<doublereal, 3>(inumloops, inumnz, inumdof);
           if (SP_GRAD_RUN_TEST(17.3)) testInv<SpGradient, 2>(inumloops, inumnz, inumdof);
           if (SP_GRAD_RUN_TEST(17.4)) testInv<SpGradient, 3>(inumloops, inumnz, inumdof);
-          
+
           cerr << "All tests passed\n"
                << "\n\tloops performed: " << inumloops
                << "\n\tmax nonzeros: " << inumnz

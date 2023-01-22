@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2020(-2022) all rights reserved.
+        Copyright (C) 2020(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -154,7 +154,131 @@ namespace sp_grad {
                     return oExpr;
                }
 
-               typedef const Expr Type;
+               class Type: public SpMatElemExprBase<typename util::remove_all<Expr>::type::ValueType, TempExprHelper<Expr, false>::Type> {
+               private:
+                    typedef typename util::remove_all<Expr>::type ExprType;
+
+               public:
+                    typedef typename ExprType::ValueType ValueType;
+                    typedef typename ExprType::DerivedType DerivedType;
+                    static constexpr index_type iNumElemOps = ExprType::iNumElemOps;
+                    static constexpr unsigned uMatAccess = ExprType::uMatAccess;
+                    static constexpr index_type iNumRowsStatic = ExprType::iNumRowsStatic;
+                    static constexpr index_type iNumColsStatic = ExprType::iNumColsStatic;
+                    static constexpr SpMatOpType eMatOpType = ExprType::eMatOpType;
+                    static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = ExprType::eExprEvalFlags;
+
+                    Type(const Expr& oExpr)
+                         :oExpr(oExpr) {
+                    }
+
+                    Type(const Expr& oExpr, const SpGradExpDofMapHelper<ValueType>&)
+                         :oExpr(oExpr) {
+                    }
+
+                    operator const Expr&() const {
+                         return oExpr;
+                    }
+
+                    template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                              SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                              typename ValueTypeA,
+                              index_type NumRowsA, index_type NumColsA>
+                    inline void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
+                         oExpr.template Eval<eTransp, eCompr>(A);
+                    }
+
+                    template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                              SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                              typename Func,
+                              typename ValueTypeA,
+                              index_type NumRowsA, index_type NumColsA>
+                    inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
+                         oExpr.template AssignEval<eTransp, eCompr, Func>(A);
+                    }
+
+                    template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                              SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                              typename ValueTypeA,
+                              index_type NumRowsA, index_type NumColsA>
+                    inline void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+                         oExpr.template Eval<eTransp, eCompr>(A, oDofMap);
+                    }
+
+                    template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                              SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                              typename Func,
+                              typename ValueTypeA,
+                              index_type NumRowsA, index_type NumColsA>
+                    inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+                         oExpr.template AssignEval<eTransp, eCompr, Func>(A, oDofMap);
+                    }
+
+                    index_type iGetNumRows() const {
+                         return oExpr.iGetNumRows();
+                    }
+
+                    index_type iGetNumCols() const {
+                         return oExpr.iGetNumCols();
+                    }
+
+                    constexpr doublereal dGetValue(index_type i, index_type j) const {
+                         return oExpr.dGetValue(i, j);
+                    }
+
+#ifdef SP_GRAD_DEBUG
+                    template <typename ExprType, typename ExprB>
+                    constexpr bool bHaveRefTo(const SpMatElemExprBase<ExprType, ExprB>& A) const {
+                         return oExpr.bHaveRefTo(A);
+                    }
+#endif
+                    constexpr index_type iGetSize(index_type i, index_type j) const {
+                         return oExpr.iGetSize(i, j);
+                    }
+
+                    index_type iGetMaxSizeElem() const {
+                         return oExpr.iGetMaxSizeElem();
+                    }
+
+                    index_type iGetMaxSize() const {
+                         return oExpr.iGetMaxSize();
+                    }
+
+                    template <typename ValueTypeB>
+                    void InsertDeriv(ValueTypeB& g, doublereal dCoef, index_type i, index_type j) const {
+                         oExpr.InsertDeriv(g, dCoef, i, j);
+                    }
+
+                    void GetDofStat(SpGradDofStat& s, index_type i, index_type j) const {
+                         oExpr.GetDofStat(s, i, j);
+                    }
+
+                    void InsertDof(SpGradExpDofMap& oExpDofMap, index_type i, index_type j) const {
+                         oExpr.InsertDof(oExpDofMap, i, j);
+                    }
+
+                    template <typename ValueTypeB>
+                    void AddDeriv(ValueTypeB& g, doublereal dCoef, const SpGradExpDofMap& oExpDofMap, index_type i, index_type j) const {
+                         oExpr.AddDeriv(g, dCoef, oExpDofMap, i, j);
+                    }
+
+                    const ValueType* begin() const {
+                         return oExpr.begin();
+                    }
+
+                    const ValueType* end() const {
+                         return oExpr.end();
+                    }
+
+                    inline constexpr index_type iGetRowOffset() const noexcept { return oExpr.iGetRowOffset(); }
+                    inline constexpr index_type iGetColOffset() const noexcept { return oExpr.iGetColOffset(); }
+
+                    constexpr const DerivedType* pGetRep() const noexcept {
+                         return oExpr.pGetRep();
+                    }
+               private:
+                    const Expr oExpr;
+               };
           };
 
           template <index_type iSizeStatic>
@@ -226,12 +350,30 @@ namespace sp_grad {
           }
 
           template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = eExprEvalFlags,
+                    typename ValueTypeA, index_type iNumRowsA, index_type iNumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, iNumRowsA, iNumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
                     SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
                     typename Func,
                     typename ValueTypeA,
                     index_type NumRowsA, index_type NumColsA>
           inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
           constexpr doublereal dGetValue(index_type i, index_type j) const {
@@ -352,7 +494,6 @@ namespace sp_grad {
                this->template ElemEval<eTransp, eCompr>(A);
           }
 
-
           template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
                     SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
                     typename Func,
@@ -360,6 +501,24 @@ namespace sp_grad {
                     index_type NumRowsA, index_type NumColsA>
           inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = eExprEvalFlags,
+                    typename ValueTypeA, index_type iNumRowsA, index_type iNumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, iNumRowsA, iNumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
           constexpr doublereal dGetValue(index_type i, index_type j) const {
@@ -546,6 +705,23 @@ namespace sp_grad {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
           }
 
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = eExprEvalFlags, typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                          const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
+          }
+
           constexpr doublereal dGetValue(index_type i, index_type j) const {
                return UnaryFunc::f(u.dGetValue(i, j));
           }
@@ -630,6 +806,22 @@ namespace sp_grad {
                     index_type NumRowsA, index_type NumColsA>
           inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = eExprEvalFlags, typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               u.template Eval<eTransp, eExprEvalFlags>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
           constexpr doublereal dGetValue(index_type i, index_type j) const {
@@ -718,6 +910,24 @@ namespace sp_grad {
                this->template ElemAssign<util::TranspMatEvalHelper<eTransp>::Value, eCompr, Func>(A);
           }
 
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               u.template Eval<util::TranspMatEvalHelper<eTransp>::Value, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<util::TranspMatEvalHelper<eTransp>::Value, eCompr, Func>(A, oDofMap);
+          }
+
           constexpr doublereal dGetValue(index_type i, index_type j) const {
                return u.dGetValue(j, i);
           }
@@ -804,6 +1014,23 @@ namespace sp_grad {
                     index_type NumRowsA, index_type NumColsA>
           inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
           constexpr doublereal dGetValue(index_type i, index_type j) const {
@@ -909,6 +1136,24 @@ namespace sp_grad {
                     index_type NumRowsA, index_type NumColsA>
           inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
           constexpr doublereal dGetValue(index_type i, index_type j) const {
@@ -1047,6 +1292,24 @@ namespace sp_grad {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
           }
 
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
+          }
+
           constexpr doublereal dGetValue(index_type i, index_type j) const {
                return u.dGetValue(iGetRowIndex(i), iGetColIndex(j));
           }
@@ -1181,6 +1444,22 @@ namespace sp_grad {
                     index_type NumRowsA, index_type NumColsA>
           inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
           constexpr doublereal dGetValue(index_type i, index_type j) const {
@@ -1322,6 +1601,24 @@ namespace sp_grad {
                     index_type NumRowsA, index_type NumColsA>
           inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
           constexpr doublereal dGetValue(index_type i, index_type j) const {
@@ -1468,6 +1765,22 @@ namespace sp_grad {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
           }
 
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
+          }
+
           constexpr doublereal dGetValue(index_type i, index_type j) const {
                return u.dGetValue(iGetRowIndex(i), iGetColIndex(j));
           }
@@ -1586,6 +1899,20 @@ namespace sp_grad {
                     index_type NumRowsA, index_type NumColsA>
           void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const=delete;
 
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          inline void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                           const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const;
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                          const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const=delete;
+
           doublereal dGetValue(index_type, index_type) const = delete;
 
           index_type iGetSize(index_type i, index_type j) const = delete;
@@ -1675,6 +2002,24 @@ namespace sp_grad {
                this->template ElemAssign<eTransp, eCompr, Func>(A);
           }
 
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                    const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+          }
+
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          inline void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                                 const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+               this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
+          }
+
           inline constexpr doublereal dGetValue(index_type, index_type) const noexcept;
 
           inline constexpr index_type iGetSize(index_type, index_type) const noexcept;
@@ -1728,6 +2073,12 @@ namespace sp_grad {
           inline SpMatrixBase(index_type iNumRows, index_type iNumCols, index_type iNumDeriv);
           template <typename ValueTypeExpr, typename Expr>
           inline SpMatrixBase(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr);
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpMatrixBase& MapAssign(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr,
+                                         const SpGradExpDofMapHelper<ValueType>& oDofMap);
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpMatrixBase(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr,
+                              const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpMatrixBase(const std::initializer_list<ValueType>& rgValues);
           inline ~SpMatrixBase();
           inline void ResizeReset(index_type iNumRows, index_type iNumCols, index_type iNumDeriv);
@@ -1791,6 +2142,19 @@ namespace sp_grad {
                     typename ValueTypeA,
                     index_type NumRowsA, index_type NumColsA>
           void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const;
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+          inline void Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                           const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const;
+          template <util::MatTranspEvalFlag eTransp = util::MatTranspEvalFlag::DIRECT,
+                    SpGradCommon::ExprEvalFlags eCompr = SpGradCommon::ExprEvalDuplicate,
+                    typename Func,
+                    typename ValueTypeA,
+                    index_type NumRowsA, index_type NumColsA>
+          void AssignEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A,
+                          const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const;
+
           inline index_type iGetMaxSize() const;
           inline constexpr SpMatColVecExpr<ValueType, const SpMatrixBase&> GetCol(index_type iCol) const {
                return decltype(GetCol(iCol))(*this, iCol);
@@ -1849,6 +2213,9 @@ namespace sp_grad {
           inline SpMatrix(const std::initializer_list<ValueType>& rgValues);
           template <typename ValueTypeExpr, typename Expr>
           inline SpMatrix(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr);
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpMatrix(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr,
+                          const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpMatrix& operator=(SpMatrix&& oMat)=default;
           inline SpMatrix& operator=(const SpMatrix& oMat)=default;
           inline SpMatrix& operator=(const Mat3x3& oMat);
@@ -2584,6 +2951,27 @@ namespace sp_grad {
                oExpr.template ElemEvalCompr<eTransp>(A);
           }
 
+          template <MatTranspEvalFlag eTransp, typename Expr, typename ValueType, index_type NumRows, index_type NumCols>
+          void MatEvalHelperCompr<SpGradCommon::ExprEvalDuplicate>::ElemEval(const Expr& oExpr, SpMatrixBase<ValueType, NumRows, NumCols>& A, const SpGradExpDofMapHelper<ValueType>&) {
+               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalDuplicate);
+
+               constexpr bool bIsGradProd = std::is_same<ValueType, GpGradProd>::value;
+               constexpr bool bIsDouble = std::is_same<ValueType, doublereal>::value;
+               constexpr bool bIsSpGradient = std::is_same<ValueType, SpGradient>::value;
+
+               static_assert(bIsGradProd || bIsDouble);
+               static_assert(!bIsSpGradient); // For efficiency reasons we should always use compressed evaluation if oDofMap is provided
+
+               oExpr.template ElemEvalUncompr<eTransp>(A);
+          }
+
+          template <MatTranspEvalFlag eTransp, typename Expr, typename ValueType, index_type NumRows, index_type NumCols>
+          void MatEvalHelperCompr<SpGradCommon::ExprEvalUnique>::ElemEval(const Expr& oExpr, SpMatrixBase<ValueType, NumRows, NumCols>& A, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalUnique);
+
+               oExpr.template ElemEvalCompr<eTransp>(A, oDofMap);
+          }
+
           template <typename ValueType, index_type NumRows, index_type NumCols>
           void MatEvalHelperTransp<MatTranspEvalFlag::DIRECT>::ResizeReset(SpMatrixBase<ValueType, NumRows, NumCols>& A,
                                                                            index_type iNumRows,
@@ -2614,6 +3002,9 @@ namespace sp_grad {
           struct ElemAssignHelper {
                template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
                static inline void ElemAssignCompr(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueTypeB, ExprB>& B) = delete;
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssignCompr(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueTypeB, ExprB>& B, SpGradExpDofMapHelper<ValueTypeA>& oDofMap) = delete;
 
                template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
                static inline void ElemAssignUncompr(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueTypeB, ExprB>& B) = delete;
@@ -2650,6 +3041,11 @@ namespace sp_grad {
                static inline void ElemAssignUncompr(SpMatrixBase<doublereal, NumRowsA, NumColsA>& A, const SpMatElemExprBase<doublereal, ExprB>& B) {
                     ElemAssignCompr<eTransp, Func>(A, B);
                }
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssignCompr(SpMatrixBase<doublereal, NumRowsA, NumColsA>& A, const SpMatElemExprBase<doublereal, ExprB>& B, SpGradExpDofMapHelper<doublereal>&) {
+                    ElemAssignCompr<eTransp, Func>(A, B);
+               }
           };
 
 
@@ -2678,6 +3074,33 @@ namespace sp_grad {
                               const doublereal fij = Func::f(uij, vij);
                               const doublereal dfij_du = Func::df_du(uij, vij);
                               Aij.template InitDerivAssign<Func>(fij, dfij_du, Aij.iGetSize());
+                         }
+                    }
+               }
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssignCompr(SpMatrixBase<SpGradient, NumRowsA, NumColsA>& A, const SpMatElemExprBase<doublereal, ExprB>& B, const SpGradExpDofMapHelper<SpGradient>& oDofMap) {
+                    typedef typename remove_all<ExprB>::type ExprTypeB;
+                    constexpr index_type iNumRowsStatic = ExprTypeB::iNumRowsStatic;
+                    constexpr index_type iNumColsStatic = ExprTypeB::iNumColsStatic;
+
+                    const index_type iNumRows = A.iGetNumRows();
+                    const index_type iNumCols = A.iGetNumCols();
+
+                    static_assert(NumRowsA == iNumRowsStatic, "Number of rows does not match");
+                    static_assert(NumColsA == iNumColsStatic, "Number of columns does not match");
+
+                    SP_GRAD_ASSERT(B.iGetNumRows() == iNumRows || B.iGetNumRows() == SpMatrixSize::DYNAMIC);
+                    SP_GRAD_ASSERT(B.iGetNumCols() == iNumCols || B.iGetNumCols() == SpMatrixSize::DYNAMIC);
+
+                    for (index_type j = 1; j <= iNumCols; ++j) {
+                         for (index_type i = 1; i <= iNumRows; ++i) {
+                              SpGradient& Aij = A.GetElem(i, j);
+                              const doublereal uij = Aij.dGetValue();
+                              const doublereal vij = B.dGetValue(i, j);
+                              const doublereal fij = Func::f(uij, vij);
+                              const doublereal dfij_du = Func::df_du(uij, vij);
+                              Aij.template InitDerivAssign<Func>(fij, dfij_du, oDofMap.GetDofMap());
                          }
                     }
                }
@@ -2739,6 +3162,49 @@ namespace sp_grad {
                               Aij.template InitDerivAssign<Func>(fij, dfij_du, oDofMap);
 
                               B.AddDeriv(Aij, dfij_dv, oDofMap, i, j);
+
+                              SP_GRAD_ASSERT(Aij.bIsUnique());
+                         }
+                    }
+
+                    SP_GRAD_ASSERT(A.bValid());
+               }
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssignCompr(SpMatrixBase<SpGradient, NumRowsA, NumColsA>& A,
+                                                  const SpMatElemExprBase<SpGradient, ExprB>& B,
+                                                  const SpGradExpDofMapHelper<SpGradient>& oDofMap) {
+                    typedef typename remove_all<ExprB>::type ExprTypeB;
+                    constexpr index_type iNumRowsStatic = ExprTypeB::iNumRowsStatic;
+                    constexpr index_type iNumColsStatic = ExprTypeB::iNumColsStatic;
+
+                    const index_type iNumRows = A.iGetNumRows();
+                    const index_type iNumCols = A.iGetNumCols();
+
+                    static_assert(NumRowsA == iNumRowsStatic, "Number of rows does not match");
+                    static_assert(NumColsA == iNumColsStatic, "Number of columns does not match");
+
+                    SP_GRAD_ASSERT(B.iGetNumRows() == iNumRows || B.iGetNumRows() == SpMatrixSize::DYNAMIC);
+                    SP_GRAD_ASSERT(B.iGetNumCols() == iNumCols || B.iGetNumCols() == SpMatrixSize::DYNAMIC);
+
+                    SP_GRAD_ASSERT(!B.bHaveRefTo(A));
+                    SP_GRAD_ASSERT(A.bValid());
+
+                    for (index_type j = 1; j <= iNumCols; ++j) {
+                         for (index_type i = 1; i <= iNumRows; ++i) {
+                              SpGradient& Aij = A.GetElem(i, j);
+
+                              SP_GRAD_ASSERT(Aij.bIsUnique());
+
+                              const doublereal uij = Aij.dGetValue();
+                              const doublereal vij = B.dGetValue(i, j);
+                              const doublereal fij = Func::f(uij, vij);
+                              const doublereal dfij_du = Func::df_du(uij, vij);
+                              const doublereal dfij_dv = Func::df_dv(uij, vij);
+
+                              Aij.template InitDerivAssign<Func>(fij, dfij_du, oDofMap.GetDofMap());
+
+                              B.AddDeriv(Aij, dfij_dv, oDofMap.GetDofMap(), i, j);
 
                               SP_GRAD_ASSERT(Aij.bIsUnique());
                          }
@@ -2832,6 +3298,11 @@ namespace sp_grad {
                static inline void ElemAssignCompr(SpMatrixBase<GpGradProd, NumRowsA, NumColsA>& A, const SpMatElemExprBase<GpGradProd, ExprB>& B) {
                     ElemAssignHelper<GpGradProd, GpGradProd>::template ElemAssignUncompr<eTransp, Func>(A, B);
                }
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssignCompr(SpMatrixBase<GpGradProd, NumRowsA, NumColsA>& A, const SpMatElemExprBase<GpGradProd, ExprB>& B, const SpGradExpDofMapHelper<GpGradProd>&) {
+                    ElemAssignHelper<GpGradProd, GpGradProd>::template ElemAssignUncompr<eTransp, Func>(A, B);
+               }
           };
 
           template <>
@@ -2876,12 +3347,20 @@ namespace sp_grad {
                static inline void ElemAssignCompr(SpMatrixBase<GpGradProd, NumRowsA, NumColsA>& A, const SpMatElemExprBase<doublereal, ExprB>& B) {
                     ElemAssignHelper<GpGradProd, doublereal>::template ElemAssignUncompr<eTransp, Func>(A, B);
                }
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssignCompr(SpMatrixBase<GpGradProd, NumRowsA, NumColsA>& A, const SpMatElemExprBase<doublereal, ExprB>& B, const SpGradExpDofMapHelper<GpGradProd>&) {
+                    ElemAssignHelper<GpGradProd, doublereal>::template ElemAssignUncompr<eTransp, Func>(A, B);
+               }
           };
 
           template <SpGradCommon::ExprEvalFlags eFlags>
           struct ElemAssignHelperCompr {
                template <MatTranspEvalFlag eTransp, typename Func, typename ValueA, typename ValueB, typename ExprB, index_type NumRowsA, index_type NumColsA>
                static inline void ElemAssign(SpMatrixBase<ValueA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueB, ExprB>& B) = delete;
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ValueA, typename ValueB, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssign(SpMatrixBase<ValueA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueB, ExprB>& B, SpGradExpDofMapHelper<ValueA>& oDofMap) = delete;
           };
 
           template <>
@@ -2890,6 +3369,11 @@ namespace sp_grad {
                static inline void ElemAssign(SpMatrixBase<ValueA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueB, ExprB>& B) {
                     ElemAssignHelper<ValueA, ValueB>::template ElemAssignCompr<eTransp, Func>(A, B);
                }
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ValueA, typename ValueB, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssign(SpMatrixBase<ValueA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueB, ExprB>& B, SpGradExpDofMapHelper<ValueA>& oDofMap) {
+                    ElemAssignHelper<ValueA, ValueB>::template ElemAssignCompr<eTransp, Func>(A, B, oDofMap);
+               }
           };
 
           template <>
@@ -2897,6 +3381,11 @@ namespace sp_grad {
                template <MatTranspEvalFlag eTransp, typename Func, typename ValueA, typename ValueB, typename ExprB, index_type NumRowsA, index_type NumColsA>
                static inline void ElemAssign(SpMatrixBase<ValueA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueB, ExprB>& B) {
                     ElemAssignHelper<ValueA, ValueB>::template ElemAssignUncompr<eTransp, Func>(A, B);
+               }
+
+               template <MatTranspEvalFlag eTransp, typename Func, typename ValueA, typename ValueB, typename ExprB, index_type NumRowsA, index_type NumColsA>
+               static inline void ElemAssign(SpMatrixBase<ValueA, NumRowsA, NumColsA>& A, const SpMatElemExprBase<ValueB, ExprB>& B, SpGradExpDofMapHelper<ValueA>& oDofMap) {
+                    ElemAssignHelper<ValueA, ValueB>::template ElemAssignCompr<eTransp, Func>(A, B, oDofMap);
                }
           };
      };
@@ -2918,6 +3407,25 @@ namespace sp_grad {
                index_type NumRowsA, index_type NumColsA>
      void SpMatElemExprBase<ValueType, DERIVED>::ElemAssign(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
           util::ElemAssignHelperCompr<eCompr>::template ElemAssign<eTransp, Func>(A, *this);
+     }
+
+     template <typename ValueType, typename DERIVED>
+     template <util::MatTranspEvalFlag eTransp,
+               SpGradCommon::ExprEvalFlags eCompr,
+               typename ValueTypeA,
+               index_type NumRowsA, index_type NumColsA>
+     void SpMatElemExprBase<ValueType, DERIVED>::ElemEval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+          util::MatEvalHelperCompr<eCompr>::template ElemEval<eTransp>(*this, A, oDofMap);
+     }
+
+     template <typename ValueType, typename DERIVED>
+     template <util::MatTranspEvalFlag eTransp,
+               SpGradCommon::ExprEvalFlags eCompr,
+               typename Func,
+               typename ValueTypeA,
+               index_type NumRowsA, index_type NumColsA>
+     void SpMatElemExprBase<ValueType, DERIVED>::ElemAssign(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+          util::ElemAssignHelperCompr<eCompr>::template ElemAssign<eTransp, Func>(A, *this, oDofMap);
      }
 
      template <typename ValueType, typename DERIVED>
@@ -3006,6 +3514,41 @@ namespace sp_grad {
      }
 
      template <typename ValueType, typename DERIVED>
+     template <util::MatTranspEvalFlag eTransp, index_type NumRowsA, index_type NumColsA>
+     void SpMatElemExprBase<ValueType, DERIVED>::ElemEvalCompr(SpMatrixBase<SpGradient, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<SpGradient>& oDofMap) const {
+          const index_type iNumRows = iGetNumRows();
+          const index_type iNumCols = iGetNumCols();
+
+          typedef util::MatEvalHelperTransp<eTransp> MatEvalType;
+          constexpr bool bTransposed = eTransp == util::MatTranspEvalFlag::TRANSPOSED;
+
+          static_assert(NumRowsA == (!bTransposed ? iNumRowsStatic : iNumColsStatic), "Number of rows does not match");
+          static_assert(NumColsA == (!bTransposed ? iNumColsStatic : iNumRowsStatic), "Number of columns does not match");
+
+          SP_GRAD_ASSERT(!bHaveRefTo(A));
+
+          MatEvalType::ResizeReset(A, iNumRows, iNumCols, oDofMap.GetDofStat().iNumNz);
+
+          SP_GRAD_ASSERT(A.iGetNumRows() == (!bTransposed ? iNumRows : iNumCols));
+          SP_GRAD_ASSERT(A.iGetNumCols() == (!bTransposed ? iNumCols : iNumRows));
+
+          for (index_type j = 1; j <= iNumCols; ++j) {
+               for (index_type i = 1; i <= iNumRows; ++i) {
+                    SpGradient& Ai = MatEvalType::GetElem(A, i, j);
+
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::iGetSize(Ai) == 0);
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::dGetValue(Ai) == 0.);
+
+                    Ai.ResizeReset(dGetValue(i, j), oDofMap.GetDofStat().iNumNz);
+                    Ai.InitDeriv(oDofMap.GetDofMap());
+                    AddDeriv(Ai, 1., oDofMap.GetDofMap(), i, j);
+
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::bIsUnique(Ai));
+               }
+          }
+     }
+
+     template <typename ValueType, typename DERIVED>
      template <util::MatTranspEvalFlag eTransp, typename Func, typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
      void SpMatElemExprBase<ValueType, DERIVED>::ElemAssignCompr(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A) const {
           util::ElemAssignHelper<ValueTypeA, ValueType>::template ElemAssignCompr<eTransp, Func, DERIVED, NumRowsA, NumColsA>(A, *this);
@@ -3066,6 +3609,44 @@ namespace sp_grad {
 
           template <util::MatTranspEvalFlag eTransp, bool bIsGradientLhs, bool bIsGradientRhs, bool bIsSparse, bool bOneDofMap>
           struct MatMulExprLoop;
+
+          template <util::MatTranspEvalFlag eTransp>
+          struct MatMulExprLoop2 {
+               template <typename MatA, typename MatU, typename MatV>
+               static inline void InnerProduct(MatA& Atmp,
+                                               const MatU& utmp,
+                                               const MatV& vtmp,
+                                               const index_type iNumRows,
+                                               const index_type iNumCols,
+                                               const index_type iRowSizeU,
+                                               const index_type iRowOffsetU,
+                                               const index_type iColOffsetU,
+                                               const index_type iRowOffsetV,
+                                               const index_type iColOffsetV,
+                                               const index_type iColSizeV,
+                                               const SpGradExpDofMapHelper<typename MatA::ValueType>& oDofMap) {
+                    typedef MatEvalHelperTransp<eTransp> MatEvalType;
+                    typedef InnerProductHelper<typename std::iterator_traits<decltype(utmp.begin())>::value_type,
+                                               typename std::iterator_traits<decltype(vtmp.begin())>::value_type> IPH;
+
+                    for (index_type j = 1; j <= iNumCols; ++j) {
+                         const auto* const pvtmp_j = vtmp.begin() + (j - 1) * iColOffsetV;
+
+                         for (index_type i = 1; i <= iNumRows; ++i) {
+                              const auto* const putmp_i = utmp.begin() + (i - 1) * iRowOffsetU;
+
+                              IPH::MapEval(MatEvalType::GetElem(Atmp, i, j),
+                                           putmp_i,
+                                           putmp_i + iRowSizeU,
+                                           iColOffsetU,
+                                           pvtmp_j,
+                                           pvtmp_j + iColSizeV,
+                                           iRowOffsetV,
+                                           oDofMap);
+                         }
+                    }
+               }
+          };
 
           template <util::MatTranspEvalFlag eTransp>
           struct MatMulExprLoop<eTransp, true, true, true, false> {
@@ -3204,7 +3785,7 @@ namespace sp_grad {
                     }
 
                     oMatMulHelper.InsertDone();
-                    
+
                     for (index_type i = 1; i <= iNumRows; ++i) {
                          const SpGradient* const putmp_i = utmp.begin() + (i - 1) * iRowOffsetU;
 
@@ -3222,7 +3803,7 @@ namespace sp_grad {
                     }
 
                }
-          };          
+          };
 
           template <util::MatTranspEvalFlag eTransp>
           struct MatMulExprLoop<eTransp, true, false, true, false> {
@@ -3300,7 +3881,7 @@ namespace sp_grad {
                     }
 
                     oMatMulHelper.InsertDone();
-                    
+
                     for (index_type j = 1; j <= iNumCols; ++j) {
                          const SpGradient* const pvtmp_j = vtmp.begin() + (j - 1) * iColOffsetV;
 
@@ -3318,7 +3899,7 @@ namespace sp_grad {
                     }
                }
           };
-          
+
           template <util::MatTranspEvalFlag eTransp>
           struct MatMulExprLoop<eTransp, false, true, true, false> {
                template <typename MatA, typename MatU, typename MatV>
@@ -3500,6 +4081,75 @@ namespace sp_grad {
                                        iColSizeV);
      }
 
+     template <typename LhsValue, typename RhsValue, typename LhsExpr, typename RhsExpr>
+     template <util::MatTranspEvalFlag eTransp, SpGradCommon::ExprEvalFlags eCompr, typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+     void SpMatMulExpr<LhsValue, RhsValue, LhsExpr, RhsExpr>::Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+          constexpr bool bTransposedEval = eTransp == util::MatTranspEvalFlag::TRANSPOSED;
+
+          typedef util::MatEvalHelperTransp<eTransp> MatEvalType;
+
+          static_assert(NumRowsA == (!bTransposedEval ? iNumRowsStatic : iNumColsStatic), "Number of rows do not match");
+          static_assert(NumColsA == (!bTransposedEval ? iNumColsStatic : iNumRowsStatic), "Number of columns do not match");
+
+          SP_GRAD_ASSERT(!bHaveRefTo(A));
+
+          MatEvalType::ResizeReset(A, iGetNumRows(), iGetNumCols(), 0);
+
+          typedef typename util::remove_all<LhsExpr>::type LhsExprType;
+          typedef typename util::remove_all<RhsExpr>::type RhsExprType;
+
+          constexpr bool bLhsUsesIterators = (LhsExprType::uMatAccess & util::MatAccessFlag::ITERATORS) != 0;
+          constexpr bool bRhsUsesIterators = (RhsExprType::uMatAccess & util::MatAccessFlag::ITERATORS) != 0;
+
+          constexpr bool bUseTmpExprLhs = !(LhsExprType::iNumElemOps == 0 && bLhsUsesIterators);
+          constexpr bool bUseTmpExprRhs = !(RhsExprType::iNumElemOps == 0 && bRhsUsesIterators);
+
+          typedef util::TempExprHelper<LhsExpr, bUseTmpExprLhs> UTmpType;
+          typedef util::TempExprHelper<RhsExpr, bUseTmpExprRhs> VTmpType;
+
+          typename UTmpType::Type utmp{u, oDofMap}; // FIXME: should use oDofMap
+          typename VTmpType::Type vtmp{v, oDofMap};
+
+          static_assert(utmp.iNumElemOps == 0);
+          static_assert(vtmp.iNumElemOps == 0);
+          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+
+          const index_type iRowOffsetU = utmp.iGetRowOffset();
+          const index_type iColOffsetU = utmp.iGetColOffset();
+          const index_type iRowSizeU = utmp.iGetColOffset() * utmp.iGetNumCols();
+          const index_type iRowOffsetV = vtmp.iGetRowOffset();
+          const index_type iColOffsetV = vtmp.iGetColOffset();
+          const index_type iColSizeV = vtmp.iGetRowOffset() * vtmp.iGetNumRows();
+
+          constexpr bool bIsGradientLhs = std::is_same<SpGradient, LhsValue>::value;
+          constexpr bool bIsGradientRhs = std::is_same<SpGradient, RhsValue>::value;
+          constexpr bool bIsGradProdLhs = std::is_same<GpGradProd, LhsValue>::value;
+          constexpr bool bIsGradProdRhs = std::is_same<GpGradProd, RhsValue>::value;
+          constexpr bool bIsGradOrGradProdLhs = bIsGradientLhs || bIsGradProdLhs;
+          constexpr bool bIsGradOrGradProdRhs = bIsGradientRhs || bIsGradProdRhs;
+          constexpr bool bIsSparseRep = !(bIsGradProdLhs || bIsGradProdRhs);
+          constexpr bool bSingleDofMap = bIsSparseRep && (bIsGradientLhs && bIsGradientRhs);
+
+          static_assert(!(bIsGradientRhs && bIsGradProdLhs));
+          static_assert(!(bIsGradProdRhs && bIsGradientLhs));
+
+          typedef util::MatMulExprLoop2<eTransp> MatMulExprLoop2;
+
+          MatMulExprLoop2::InnerProduct(A,
+                                        utmp,
+                                        vtmp,
+                                        iGetNumRows(),
+                                        iGetNumCols(),
+                                        iRowSizeU,
+                                        iRowOffsetU,
+                                        iColOffsetU,
+                                        iRowOffsetV,
+                                        iColOffsetV,
+                                        iColSizeV,
+                                        oDofMap);
+     }
+
      template <typename ValueType, typename ScalarExpr, index_type NumRows, index_type NumCols>
      void SpMatElemScalarExpr<ValueType, ScalarExpr, NumRows, NumCols>::InsertDof(SpGradExpDofMap& oExpDofMap, index_type i, index_type j) const {
           SpGradientTraits<ValueType>::InsertDof(u, oExpDofMap);
@@ -3549,6 +4199,66 @@ namespace sp_grad {
           }
 #endif
           SP_GRAD_ASSERT(bValid());
+     }
+
+     template <typename ValueType, index_type NumRows, index_type NumCols>
+     template <typename ValueTypeExpr, typename Expr>
+     SpMatrixBase<ValueType, NumRows, NumCols>::SpMatrixBase(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr,
+                                                             const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+          constexpr bool bThisIsGradient = std::is_same<ValueType, SpGradient>::value;
+          constexpr bool bThisIsGradProd = std::is_same<ValueType, GpGradProd>::value;
+          constexpr bool bThisIsDouble = std::is_same<ValueType, doublereal>::value;
+          constexpr bool bExprIsGradient = std::is_same<ValueTypeExpr, SpGradient>::value;
+          constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
+          constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
+          constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = bThisIsGradient ? SpGradCommon::ExprEvalUnique : SpGradCommon::ExprEvalDuplicate;
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
+          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)));
+          static_assert((bThisIsGradient || bThisIsGradProd) || !bExprIsGradient, "Cannot convert SpGradient to doublereal");
+
+          oExpr.template Eval<util::MatTranspEvalFlag::DIRECT, eExprEvalFlags>(*this, oDofMap);
+
+#ifdef SP_GRAD_DEBUG
+          if (Expr::eExprEvalFlags == SpGradCommon::ExprEvalUnique) {
+               for (const auto& a: *this) {
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::bIsUnique(a));
+               }
+          }
+#endif
+          SP_GRAD_ASSERT(bValid());
+     }
+
+     template <typename ValueType, index_type NumRows, index_type NumCols>
+     template <typename ValueTypeExpr, typename Expr>
+     inline SpMatrixBase<ValueType, NumRows, NumCols>&
+     SpMatrixBase<ValueType, NumRows, NumCols>::MapAssign(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr,
+                                                          const SpGradExpDofMapHelper<ValueType>& oDofMap)
+     {
+          constexpr bool bThisIsGradient = std::is_same<ValueType, SpGradient>::value;
+          constexpr bool bThisIsGradProd = std::is_same<ValueType, GpGradProd>::value;
+          constexpr bool bThisIsDouble = std::is_same<ValueType, doublereal>::value;
+          constexpr bool bExprIsGradient = std::is_same<ValueTypeExpr, SpGradient>::value;
+          constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
+          constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
+          constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = bThisIsGradient ? SpGradCommon::ExprEvalUnique : SpGradCommon::ExprEvalDuplicate;
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
+          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)));
+          static_assert((bThisIsGradient || bThisIsGradProd) || !bExprIsGradient, "Cannot convert SpGradient to doublereal");
+
+          oExpr.template Eval<util::MatTranspEvalFlag::DIRECT, eExprEvalFlags>(*this, oDofMap);
+
+#ifdef SP_GRAD_DEBUG
+          if (Expr::eExprEvalFlags == SpGradCommon::ExprEvalUnique) {
+               for (const auto& a: *this) {
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::bIsUnique(a));
+               }
+          }
+#endif
+          SP_GRAD_ASSERT(bValid());
+
+          return *this;
      }
 
      template <typename ValueType, index_type NumRows, index_type NumCols>
@@ -4151,6 +4861,13 @@ namespace sp_grad {
           this->template ElemEval<eTransp, eCompr>(A);
      }
 
+
+     template <typename ValueType, index_type NumRows, index_type NumCols>
+     template <util::MatTranspEvalFlag eTransp, SpGradCommon::ExprEvalFlags eCompr, typename ValueTypeA, index_type NumRowsA, index_type NumColsA>
+     void SpMatrixBase<ValueType, NumRows, NumCols>::Eval(SpMatrixBase<ValueTypeA, NumRowsA, NumColsA>& A, const SpGradExpDofMapHelper<ValueTypeA>& oDofMap) const {
+          this->template ElemEval<eTransp, eCompr>(A, oDofMap);
+     }
+
      template <typename ValueType, index_type NumRows, index_type NumCols>
      template <util::MatTranspEvalFlag eTransp,
                SpGradCommon::ExprEvalFlags eCompr,
@@ -4191,6 +4908,12 @@ namespace sp_grad {
      template <typename ValueTypeExpr, typename Expr>
      SpMatrix<ValueType, NumRows, NumCols>::SpMatrix(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr)
           :SpMatrixBase<ValueType, NumRows, NumCols>(oExpr) {
+     }
+
+     template <typename ValueType, index_type NumRows, index_type NumCols>
+     template <typename ValueTypeExpr, typename Expr>
+     SpMatrix<ValueType, NumRows, NumCols>::SpMatrix(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr, const SpGradExpDofMapHelper<ValueType>& oDofMap)
+          :SpMatrixBase<ValueType, NumRows, NumCols>(oExpr, oDofMap) {
      }
 
      template <typename ValueType, index_type NumRows, index_type NumCols>
@@ -4720,20 +5443,20 @@ namespace sp_grad {
                ValueType phi2;
 
                oDofMap.MapAssign(phi2, phi * phi);
-               
+
                std::array<ValueType, N> phip;
-               
+
                SpGradientTraits<ValueType>::ResizeReset(phip[0], 1., 0);
-               
+
                index_type iSize_phip = 0;
-               
+
                for (index_type j = 1; j <= N - 1; j++) {
                     oDofMap.MapAssign(phip[j], phip[j - 1] * phi2);
                     iSize_phip += SpGradientTraits<ValueType>::iGetSize(phip[j]);
                }
 
                ValueType cf;
-               
+
                SpGradientTraits<ValueType>::ResizeReset(cf, 0., iSize_phip);
 
                for (index_type j = 0; j < RotCoeff::SerTrunc[0]; j++) {
@@ -4741,14 +5464,14 @@ namespace sp_grad {
                }
 
                oDofMap.MapAssign(cf, cf);
-               
+
                return cf;
           }
 
           ValueType pd;
 
           oDofMap.MapAssign(pd, sin(phi) / phi);
-          
+
           return pd;
      }
 
@@ -4756,12 +5479,12 @@ namespace sp_grad {
      inline SpColVector<ValueType, 3>
      VecRotMat(const SpMatrix<ValueType, 3, 3>& R) {
           SpGradExpDofMapHelper<ValueType> oDofMap;
-          
+
           oDofMap.GetDofStat(R);
           oDofMap.Reset();
           oDofMap.InsertDof(R);
           oDofMap.InsertDone();
-          
+
           // Modified from Appendix 2.4 of
           //
           // author = {Marco Borri and Lorenzo Trainelli and Carlo L. Bottasso},
@@ -4777,7 +5500,7 @@ namespace sp_grad {
           using std::sqrt;
 
           ValueType cosphi;
-          
+
           oDofMap.MapAssign(cosphi, 0.5 * (R(1, 1) + R(2, 2) + R(3, 3) - 1.));
 
           if (cosphi > 0.) {
@@ -4786,9 +5509,9 @@ namespace sp_grad {
                oDofMap.MapAssign(unit(3), 0.5*(R(2, 1) - R(1, 2)));
 
                ValueType sinphi2;
-               
+
                oDofMap.MapAssign(sinphi2, unit(1) * unit(1) + unit(2) * unit(2) + unit(3) * unit(3));
-               
+
                ValueType sinphi;
 
                if (sinphi2 != 0) {
@@ -4820,9 +5543,9 @@ namespace sp_grad {
                if (eet(3, 3) > eet(maxcol, maxcol)) {
                     maxcol = 3;
                }
-               
+
                ValueType d;
-               
+
                oDofMap.MapAssign(d, sqrt(eet(maxcol, maxcol) * (1. - cosphi)));
 
                for (index_type i = 1; i <= 3; ++i) {
@@ -4832,7 +5555,7 @@ namespace sp_grad {
                ValueType sinphi;
 
                SpGradientTraits<ValueType>::ResizeReset(sinphi, 0., 9 * (R.iGetMaxSize() + unit.iGetMaxSize()));
-               
+
                for (index_type i = 1; i <= 3; ++i) {
                     SpColVector<ValueType, 1> xi = SubMatrix<1, 1>(Cross(unit, R.GetCol(i)), i, 1, 1, 1);
                     sinphi -= xi(1) * 0.5;
@@ -4872,27 +5595,54 @@ namespace sp_grad {
      inline T Det(const SpMatrix<T, 2, 2>& A) {
           return A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1);
      }
-     
+
+     template <typename T>
+     inline void Det(const SpMatrix<T, 2, 2>& A, T& detA, const SpGradExpDofMapHelper<T>& oDofMap) {
+          oDofMap.MapAssign(detA, A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1));
+     }
+
      template <typename T>
      inline void Inv(const SpMatrix<T, 2, 2>& A, SpMatrix<T, 2, 2>& invA, T& detA) {
-          detA = Det(A);
-          
-          invA(1, 1) = A(2, 2) / detA;
-          invA(2, 1) = -A(2, 1) / detA;
-          invA(1, 2) = -A(1, 2) / detA;
-          invA(2, 2) = A(1, 1) / detA;
+          SpGradExpDofMapHelper<T> oDofMap;
+          oDofMap.GetDofStat(A);
+          oDofMap.Reset();
+          oDofMap.InsertDof(A);
+          oDofMap.InsertDone();
+
+          Inv(A, invA, detA, oDofMap);
+     }
+
+     template <typename T>
+     inline void Inv(const SpMatrix<T, 2, 2>& A, SpMatrix<T, 2, 2>& invA, T& detA, const SpGradExpDofMapHelper<T>& oDofMap) {
+          Det(A, detA, oDofMap);
+
+          oDofMap.MapAssign(invA(1, 1), A(2, 2) / detA);
+          oDofMap.MapAssign(invA(2, 1), -A(2, 1) / detA);
+          oDofMap.MapAssign(invA(1, 2), -A(1, 2) / detA);
+          oDofMap.MapAssign(invA(2, 2), A(1, 1) / detA);
      }
 
      template <typename T>
      inline void InvSymm(const SpMatrix<T, 2, 2>& A, SpMatrix<T, 2, 2>& invA, T& detA) {
-          detA = Det(A);
-          
-          invA(1, 1) = A(2, 2) / detA;
-          invA(2, 1) = -A(2, 1) / detA;
-          invA(1, 2) = invA(2, 1);
-          invA(2, 2) = A(1, 1) / detA;
+          SpGradExpDofMapHelper<T> oDofMap;
+          oDofMap.GetDofStat(A);
+          oDofMap.Reset();
+          oDofMap.InsertDof(A);
+          oDofMap.InsertDone();
+
+          InvSymm(A, invA, detA, oDofMap);
      }
-     
+
+     template <typename T>
+     inline void InvSymm(const SpMatrix<T, 2, 2>& A, SpMatrix<T, 2, 2>& invA, T& detA, const SpGradExpDofMapHelper<T>& oDofMap) {
+          Det(A, detA, oDofMap);
+
+          oDofMap.MapAssign(invA(1, 1), A(2, 2) / detA);
+          oDofMap.MapAssign(invA(2, 1), -A(2, 1) / detA);
+          oDofMap.MapAssign(invA(2, 2), A(1, 1) / detA);
+          invA(1, 2) = invA(2, 1);
+     }
+
      template <typename T>
      inline SpMatrix<T, 2, 2> Inv(const SpMatrix<T, 2, 2>& A) {
           const T detA = Det(A);
@@ -4921,9 +5671,14 @@ namespace sp_grad {
           oDofMap.Reset();
           oDofMap.InsertDof(A);
           oDofMap.InsertDone();
-          
+
+          Inv(A, invA, detA, oDofMap);
+     }
+
+     template <typename T>
+     inline void Inv(const SpMatrix<T, 3, 3>& A, SpMatrix<T, 3, 3>& invA, T& detA, const SpGradExpDofMapHelper<T>& oDofMap) {
           Det(A, detA, oDofMap);
-          
+
           oDofMap.MapAssign(invA(1, 1),  (A(2, 2) * A(3, 3) - A(2, 3) * A(3, 2)) / detA);
           oDofMap.MapAssign(invA(1, 2), -(A(1, 2) * A(3, 3) - A(1, 3) * A(3, 2)) / detA);
           oDofMap.MapAssign(invA(1, 3),  (A(1, 2) * A(2, 3) - A(1, 3) * A(2, 2)) / detA);
@@ -4944,8 +5699,14 @@ namespace sp_grad {
           oDofMap.InsertDof(A);
           oDofMap.InsertDone();
 
+          InvSymm(A, invA, detA, oDofMap);
+     }
+
+     template <typename T>
+     inline void InvSymm(const SpMatrix<T, 3, 3>& A, SpMatrix<T, 3, 3>& invA, T& detA, const SpGradExpDofMapHelper<T>& oDofMap) {
+
           T a11, a12, a13, a22, a23, a33;
-          
+
           oDofMap.MapAssign(a11, A(3, 3) * A(2, 2) - A(2, 3) * A(2, 3));
           oDofMap.MapAssign(a12, A(1, 3) * A(2, 3) - A(3, 3) * A(1, 2));
           oDofMap.MapAssign(a13, A(1, 2) * A(2, 3) - A(1, 3) * A(2, 2));
@@ -4961,20 +5722,20 @@ namespace sp_grad {
           oDofMap.MapAssign(invA(2, 2), a22 / detA);
           oDofMap.MapAssign(invA(2, 3), a23 / detA);
           oDofMap.MapAssign(invA(3, 3), a33 / detA);
-          
+
           invA(2, 1) = invA(1, 2);
           invA(3, 1) = invA(1, 3);
           invA(3, 2) = invA(2, 3);
      }
-     
+
      template <typename T>
      inline SpMatrix<T, 3, 3> Inv(const SpMatrix<T, 3, 3>& A) {
           SpMatrix<T, 3, 3> invA(3, 3, 0);
-          
+
           T detA;
-          
+
           Inv(A, invA, detA);
-          
+
           return invA;
      }
 

@@ -111,6 +111,9 @@ namespace sp_grad {
      template <typename ValueType>
      class SpMatrixData;
 
+     template <typename ValueType>
+     class SpGradExpDofMapHelper;
+     
      namespace util {
 	  template <typename T1, typename T2>
 	  struct ResultType;
@@ -308,6 +311,14 @@ namespace sp_grad {
 	       static inline void Eval(SpGradient& g, const SpGradBase<Expr>& f);
 	       template <typename Func, typename Expr>
 	       static inline void AssignOper(SpGradient& g, const SpGradBase<Expr>& f);
+	       template <typename Expr>
+	       static inline void Eval(SpGradient& g,
+                                       const SpGradBase<Expr>& f,
+                                       const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+	       template <typename Func, typename Expr>
+	       static inline void AssignOper(SpGradient& g,
+                                             const SpGradBase<Expr>& f,
+                                             const SpGradExpDofMapHelper<SpGradient>& oDofMap);
 	  };
 
 	  template <>
@@ -316,6 +327,14 @@ namespace sp_grad {
 	       static inline void Eval(SpGradient& g, const SpGradBase<Expr>& f);
 	       template <typename Func, typename Expr>
 	       static inline void AssignOper(SpGradient& g, const SpGradBase<Expr>& f);
+	       template <typename Expr>
+	       static inline void Eval(SpGradient& g,
+                                       const SpGradBase<Expr>& f,
+                                       const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+	       template <typename Func, typename Expr>
+	       static inline void AssignOper(SpGradient& g,
+                                             const SpGradBase<Expr>& f,
+                                             const SpGradExpDofMapHelper<SpGradient>& oDofMap);               
 	  };
      }
 
