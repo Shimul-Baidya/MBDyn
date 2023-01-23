@@ -92,29 +92,6 @@ namespace sp_grad_test {
           f /= u;
      }
 
-     // template <typename T>
-     // void func_scalar2(const T& u, const T& v, const T& w, doublereal e, T& f, const SpGradExpDofMapHelper<T>& oDofMap) {
-     //      oDofMap.MapAssign(f, u);
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, 3.);
-     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, 2 * v);
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, u - v);
-     //      oDofMap.template MapAssignOper<SpGradBinDiv>(f, (1 - w));
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, pow(fabs(u/w), v - 1));
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, sin(v));
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, cos(w));
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, (1 - tan(-w + v)));
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, e);
-     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, 1);
-     //      oDofMap.template MapAssignOper<SpGradBinMinus>(f, 11);
-     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, 4.5 - 1);
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, 3.5);
-     //      oDofMap.template MapAssignOper<SpGradBinDiv>(f, 2.8);
-     //      oDofMap.template MapAssignOper<SpGradBinPlus>(f, u);
-     //      oDofMap.template MapAssignOper<SpGradBinMinus>(f, v);
-     //      oDofMap.template MapAssignOper<SpGradBinMult>(f, w);
-     //      oDofMap.template MapAssignOper<SpGradBinDiv>(f, u);
-     // }
-     
      template
      void func_scalar2<doublereal>(const doublereal& u, const doublereal& v, const doublereal& w, doublereal e, doublereal& f);
 
@@ -124,15 +101,6 @@ namespace sp_grad_test {
      template
      void func_scalar2<GpGradProd>(const GpGradProd& u, const GpGradProd& v, const GpGradProd& w, doublereal e, GpGradProd& f);
 
-     // template
-     // void func_scalar2<doublereal>(const doublereal& u, const doublereal& v, const doublereal& w, doublereal e, doublereal& f, const SpGradExpDofMapHelper<doublereal>& oDofMap);
-
-     // template
-     // void func_scalar2<SpGradient>(const SpGradient& u, const SpGradient& v, const SpGradient& w, doublereal e, SpGradient& f, const SpGradExpDofMapHelper<SpGradient>& oDofMap);
-
-     // template
-     // void func_scalar2<GpGradProd>(const GpGradProd& u, const GpGradProd& v, const GpGradProd& w, doublereal e, GpGradProd& f, const SpGradExpDofMapHelper<GpGradProd>& oDofMap);
-     
      template <typename U, typename V, typename W>
      bool func_bool1(const U& u, const V& v, const W& w, doublereal e) {
           return u + v >= e * (v - w);

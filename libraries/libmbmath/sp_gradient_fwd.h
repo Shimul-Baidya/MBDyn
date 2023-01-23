@@ -79,11 +79,6 @@ namespace sp_grad {
           static inline void MapAssign(T& g, const T& expr) {
                g = expr;
           }
-
-          // template <typename Func, typename Expr>
-          // static inline void MapAssignOper(T& g, const SpGradBase<Expr>& expr) {
-          //      g = Func::f(g, expr);
-          // }
      };
 
      template <>
