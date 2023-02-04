@@ -203,12 +203,12 @@ doublereal OffsetDispJointAd::dGetPrivData(unsigned int i) const
      case 2:
      case 3:
           return -F1Tmp(i);
-          
+
      case 4:
      case 5:
      case 6:
           return -M1Tmp(i - 3);
-          
+
      default:
           ASSERT(0);
           return 0.;
