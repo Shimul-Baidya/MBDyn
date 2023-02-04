@@ -75,6 +75,8 @@ modalmappingext.cc \
 modalmappingext.h \
 modalforce.cc \
 modalforce.h \
+offdispjad.cc \
+offdispjad.h \
 planej.cc \
 planej.h \
 point_contact.cc \
@@ -85,6 +87,8 @@ pzbeam.cc \
 pzbeam.h \
 pzbeam2.cc \
 pzbeam2.h \
+rbdispjad.cc \
+rbdispjad.h \
 rodbezj.cc \
 rodbezj.h \
 rodj.cc \

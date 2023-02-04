@@ -55,6 +55,8 @@
 #include "inplanej.h"  /* Vincoli di giacitura nel piano */
 #include "inline.h"
 #include "modal.h"
+#include "offdispjad.h"
+#include "rbdispjad.h"
 #if 0 /* No longer supported */
 #include "planedj.h"
 #endif
@@ -262,7 +264,8 @@ ReadJoint(DataManager* pDM,
 #ifdef MBDYN_DEVEL
 		"screw",
 #endif // MBDYN_DEVEL
-
+                "offset" "displacement" "joint",
+                "rigid" "body" "displacement" "joint",
 		NULL
 	};
 
@@ -329,7 +332,8 @@ ReadJoint(DataManager* pDM,
 #ifdef MBDYN_DEVEL
 		SCREWJOINT,
 #endif // MBDYN_DEVEL
-		
+		OFFSETDISPLACEMENTJOINT,
+                RIGIDBODYDISPLACEMENTJOINT,
 		LASTKEYWORD
 	};
 
@@ -4092,8 +4096,121 @@ ReadJoint(DataManager* pDM,
 			<< std::endl;
 	} break;
 #endif // MBDYN_DEVEL
+        case OFFSETDISPLACEMENTJOINT: {
+             if (!pDM->bUseAutoDiff()) {
+                  silent_cerr("offset displacement joint(" << uLabel << "): requires support for automatic differentiation at line"
+                              << HP.GetLineData() << "\n"
+                              "add \"use automatic differentiation;\" inside the control data section\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
 
-	/* Aggiungere qui altri vincoli */
+             const StructNodeAd* pNode1 = pDM->ReadNode<const StructNodeAd, Node::STRUCTURAL>(HP);
+             const ReferenceFrame RF1{pNode1};
+
+             const StructDispNodeAd* pNode2 = pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP);
+             const ReferenceFrame RF2{pNode2};
+
+             const Vec3 X2 = HP.IsKeyWord("position") ? HP.GetPosAbs(RF2) : RF2.GetX();
+             const Vec3 o1 = RF1.GetR().MulTV(X2 - RF1.GetX());
+
+             flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
+
+             SAFENEWWITHCONSTRUCTOR(pEl,
+                                    OffsetDispJointAd,
+                                    OffsetDispJointAd(uLabel, pDO,
+                                                      pNode1, o1,
+                                                      pNode2,
+                                                      fOut));
+
+             std::ostream& out = pDM->GetLogFile();
+
+             out << "offsetdisplacementjoint: " << uLabel
+                 << " " << pNode1->GetLabel()
+                 << " " << o1
+                 << " " << pNode2->GetLabel()
+                 << "\n";
+        } break;
+
+        case RIGIDBODYDISPLACEMENTJOINT: {
+             if (!pDM->bUseAutoDiff()) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): requires support for automatic differentiation at line"
+                              << HP.GetLineData() << "\n"
+                              "add \"use automatic differentiation;\" inside the control data section\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const StructNodeAd* pNodeMaster = pDM->ReadNode<const StructNodeAd, Node::STRUCTURAL>(HP);
+             const ReferenceFrame RFm(pNodeMaster);
+
+             const integer iNumNodesSlave = HP.GetInt();
+
+             if (iNumNodesSlave < 3) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): minimum three slave nodes are required at line "
+                              << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             std::vector<RigidBodyDispJointAd::SlaveNodeData> rgNodesSlave;
+
+             rgNodesSlave.reserve(iNumNodesSlave);
+
+             doublereal dWeightTot = 0.;
+             doublereal dOffset2 = 0.;
+
+             for (integer j = 1; j <= iNumNodesSlave; ++j) {
+                  const StructDispNodeAd* const pNodeSlave = pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP);
+                  const ReferenceFrame RFj{pNodeSlave};
+                  const Vec3 Xj = HP.IsKeyWord("position") ? HP.GetPosAbs(RFj) : RFj.GetX();
+                  const Vec3 oj = RFm.GetR().MulTV(Xj - RFm.GetX());
+                  const doublereal dWeight = HP.IsKeyWord("weight") ? HP.GetReal() : 1.;
+
+                  dWeightTot += dWeight;
+                  dOffset2 += oj.Dot();
+
+                  rgNodesSlave.emplace_back(pNodeSlave, oj, dWeight);
+             }
+
+             if (dWeightTot <= 0.) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): total weight must be greather than zero at line "
+                              << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             if (dOffset2 <= 0.) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): sum of square of all distances must be greater than zero at line "
+                              << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const doublereal dAlpha = HP.IsKeyWord("alpha") ? HP.GetReal() : std::pow(rgNodesSlave.size(), 2) / dOffset2;
+
+             for (auto& oNDS: rgNodesSlave) {
+                  oNDS.weight *= dAlpha / dWeightTot;
+             }
+
+             flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
+
+             std::ostream& out = pDM->GetLogFile();
+
+             out << "rigidbodydisplacementjoint: " << uLabel
+                 << " " << pNodeMaster->GetLabel();
+
+             for (const auto& oNDS: rgNodesSlave) {
+                  out << oNDS.pNode->GetLabel() << ' '
+                      << oNDS.offset << ' '
+                      << oNDS.weight << ' ';
+             }
+
+             out << '\n';
+
+             SAFENEWWITHCONSTRUCTOR(pEl,
+                                    RigidBodyDispJointAd,
+                                    RigidBodyDispJointAd(uLabel, pDO,
+                                                         pNodeMaster,
+                                                         std::move(rgNodesSlave),
+                                                         fOut));
+        } break;
+        /* Aggiungere qui altri vincoli */
 
 	default:
 		silent_cerr("Joint(" << uLabel << "): unknown joint type "
