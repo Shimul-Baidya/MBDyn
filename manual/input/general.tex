@@ -600,9 +600,9 @@ To extract the current from an electric circuit where a resistor $R$ is defined 
 		\kw{zposition}	& Real	& Integer		& $Z$ component of structural node position \\
 		\kw{distance}	& Real	& Integer, Integer	& distance between structural nodes \\
 		\kw{distance2}	& Real	& Integer, Integer	& square distance between structural nodes \\
-		\kw{xdistance}	& Real	& Integer, Integer	& $X$ component of distance between structural nodes \\
-		\kw{ydistance}	& Real	& Integer, Integer	& $Y$ component of distance between structural nodes \\
-		\kw{zdistance}	& Real	& Integer, Integer	& $Z$ component of distance between structural nodes \\
+		\kw{xdistance}	& Real	& Integer, Integer	& $X$ component of distance between structural nodes$^*$ \\
+		\kw{ydistance}	& Real	& Integer, Integer	& $Y$ component of distance between structural nodes$^*$ \\
+		\kw{zdistance}	& Real	& Integer, Integer	& $Z$ component of distance between structural nodes$^*$ \\
 		\kw{distancep}	& Real	& Integer, Integer	& relative velocity along distance between structural nodes \\
 		\kw{xunitvec}	& Real	& Integer, Integer	& $X$ component of unit vector between structural nodes \\
 		\kw{yunitvec}	& Real	& Integer, Integer	& $Y$ component of unit vector between structural nodes \\
@@ -612,9 +612,9 @@ To extract the current from an electric circuit where a resistor $R$ is defined 
 		\kw{yangle}	& Real	& Integer		& $Y$ component of structural node rotation vector \\
 		\kw{zangle}	& Real	& Integer		& $Z$ component of structural node rotation vector \\
 		\kw{anglerel}	& Real	& Integer, Integer	& angle between structural nodes (norm of rotation vector) \\
-		\kw{xanglerel}	& Real	& Integer, Integer	& $X$ component of rotation vector between structural nodes \\
-		\kw{yanglerel}	& Real	& Integer, Integer	& $Y$ component of rotation vector between structural nodes \\
-		\kw{zanglerel}	& Real	& Integer, Integer	& $Z$ component of rotation vector between structural nodes \\
+		\kw{xanglerel}	& Real	& Integer, Integer	& $X$ component of rotation vector between structural nodes$^*$ \\
+		\kw{yanglerel}	& Real	& Integer, Integer	& $Y$ component of rotation vector between structural nodes$^*$ \\
+		\kw{zanglerel}	& Real	& Integer, Integer	& $Z$ component of rotation vector between structural nodes$^*$ \\
 		\kw{velocity}	& Real	& Integer		& norm of structural node velocity \\
 		\kw{velocity2}	& Real	& Integer		& square norm of structural node velocity \\
 		\kw{xvelocity}	& Real	& Integer		& $X$ component of structural node velocity \\
@@ -624,11 +624,11 @@ To extract the current from an electric circuit where a resistor $R$ is defined 
 		\kw{vrel2}	& Real	& Integer, Integer	&
 				square norm of relative velocity between structural nodes \\
 		\kw{xvrel}	& Real	& Integer, Integer	&
-				$X$ component of relative velocity between structural nodes \\
+				$X$ component of relative velocity between structural nodes$^*$ \\
 		\kw{yvrel}	& Real	& Integer, Integer	&
-				$Y$ component of relative velocity between structural nodes \\
+				$Y$ component of relative velocity between structural nodes$^*$ \\
 		\kw{zvrel}	& Real	& Integer, Integer	&
-				$Z$ component of relative velocity between structural nodes \\
+				$Z$ component of relative velocity between structural nodes$^*$ \\
 		\kw{angvel}	& Real	& Integer		& norm of structural node angular velocity \\
 		\kw{angvel}	& Real	& Integer		& square norm of structural node angular velocity \\
 		\kw{xangvel}	& Real	& Integer		& $X$ component of structural node angular velocity \\
@@ -638,14 +638,15 @@ To extract the current from an electric circuit where a resistor $R$ is defined 
 		\kw{angvrel2}	& Real	& Integer, Integer	&
 				square norm of rel.\ angular velocity between structural nodes \\
 		\kw{xangvrel}	& Real	& Integer, Integer	&
-				$X$ component of rel.\ angular velocity between structural nodes \\
+				$X$ component of rel.\ angular velocity between structural nodes$^*$ \\
 		\kw{yangvrel}	& Real	& Integer, Integer	&
-				$Y$ component of rel.\ angular velocity between structural nodes \\
+				$Y$ component of rel.\ angular velocity between structural nodes$^*$ \\
 		\kw{zangvrel}	& Real	& Integer, Integer	&
-				$Z$ component of rel.\ angular velocity between structural nodes \\
+				$Z$ component of rel.\ angular velocity between structural nodes$^*$ \\
 		\kw{current}	& Real	& String		& allows to retrieve data specific to the current context \\
 	\end{tabular}
 	\end{center}
+	{\footnotesize $^*$``relative'' is intended as second node minus first node}
 \end{table}
 \begin{table}
 	\begin{center}
