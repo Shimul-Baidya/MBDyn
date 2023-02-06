@@ -3278,19 +3278,26 @@ would use the value of \texttt{CURR\_NODE} at the time the string was parsed.
     \bnt{drive_caller} ::= \kw{tanh} ,
         \bnt{initial_time} ,
         \bnt{amplitude} ,
-        \bnt{slope} ,
+        \bnt{nd_slope} ,
         \bnt{initial_value}
 \end{Verbatim}
 %\end{verbatim}
 This drive computes a function of the type
 \begin{displaymath}
 	f\plbr{t} = \nt{initial\_value} + \nt{amplitude} \cdot\llk{tanh}\plbr{
-			\nt{slope} \cdot \plbr{
+			\nt{nd\_slope} \cdot \plbr{
 				t - \nt{initial\_time}
 			}
 		} .
 \end{displaymath}
-It is differentiable.
+It is differentiable; its derivative is
+\begin{displaymath}
+	\dot{f}\plbr{t} = \cfrac{\nt{amplitude} \cdot \nt{ns\_slope}}{\llk{cosh}^2\plbr{
+			\nt{nd\_slope} \cdot \plbr{
+				t - \nt{initial\_time}
+			}
+		}} .
+\end{displaymath}
 
 %%% TODO: add a plot that exemplifies the three cases
 
