@@ -2180,6 +2180,7 @@ Drive callers are listed in Table~\ref{tab:DRIVE:DRIVE-CALLERS}.
 \textbf{Name} & \textbf{Differentiable} & \textbf{Notes} \\
 \hline\hline
 \kw{array} & $\surd$ & depends on subordinate drive callers \\
+\kw{bistop} & & \\ %
 \kw{closest next} & $\surd$ & depends on subordinate drive caller \\
 \kw{const} & $\surd$ & \\
 \kw{cosine} & $\surd$ & \\
@@ -2235,6 +2236,29 @@ normal drives; \nt{num\_drives} must be at least 1, in which case
 a simple drive caller is created, otherwise an array of drive callers 
 is created and at every call their value is added to give 
 the final value of the array drive.
+
+\subsection{Bistop drive}
+%\begin{verbatim}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{drive_caller} ::= \kw{bistop} ,
+        [ \kw{initial status}, \{ \kw{active} | \kw{inactive} \} , ]
+            (\hty{DriveCaller}) \bnt{activation_condition} ,
+            (\hty{DriveCaller}) \bnt{deactivation_condition}
+\end{Verbatim}
+%\end{verbatim}
+This drive caller returns 1.0 (\kw{TRUE}) when its status is \kw{active} and 0.0 (\kw{FALSE}) when it is \kw{inactive}.
+When in \kw{inactive} status, it turns to \kw{active} if the \nt{activation\_condition} is \kw{TRUE}.
+When in \kw{active} status, it turns to \kw{inactive} if the \nt{deactivation\_condition} is \kw{TRUE}.
+
+This drive caller is useful to implement a ``robust'' and irreversible status change, for example the deactivation of something, as
+\begin{verbatim}
+    bistop,
+        initial status, active,
+        # never re-activate
+        null,
+        # deactivate when the vertical component of node 1 velocity becomes negative
+        string, "model::node::structural(1, \"XP[3]\") < 0"
+\end{verbatim}
 
 \subsection{Closest next drive}
 \label{sec:DriveCaller:CLOSEST_NEXT}
@@ -3278,19 +3302,26 @@ would use the value of \texttt{CURR\_NODE} at the time the string was parsed.
     \bnt{drive_caller} ::= \kw{tanh} ,
         \bnt{initial_time} ,
         \bnt{amplitude} ,
-        \bnt{slope} ,
+        \bnt{nd_slope} ,
         \bnt{initial_value}
 \end{Verbatim}
 %\end{verbatim}
 This drive computes a function of the type
 \begin{displaymath}
 	f\plbr{t} = \nt{initial\_value} + \nt{amplitude} \cdot\llk{tanh}\plbr{
-			\nt{slope} \cdot \plbr{
+			\nt{nd\_slope} \cdot \plbr{
 				t - \nt{initial\_time}
 			}
 		} .
 \end{displaymath}
-It is differentiable.
+It is differentiable; its derivative is
+\begin{displaymath}
+	\dot{f}\plbr{t} = \cfrac{\nt{amplitude} \cdot \nt{ns\_slope}}{\llk{cosh}^2\plbr{
+			\nt{nd\_slope} \cdot \plbr{
+				t - \nt{initial\_time}
+			}
+		}} .
+\end{displaymath}
 
 %%% TODO: add a plot that exemplifies the three cases
 
