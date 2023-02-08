@@ -53,6 +53,7 @@
 #include "streamdrive.h"
 #include "socketstreamdrive.h"
 #include "bufferstreamdrive.h"
+#include "bistopdrive.h"
 
 #ifdef USE_GINAC
 #include "ginacdrive.h"
@@ -3247,6 +3248,7 @@ InitDriveCallerData(void)
 	}
 
 	SetDriveCallerData("array", new ArrayDCR);
+	SetDriveCallerData("bistop", new BiStopDCR);
 	SetDriveCallerData("closest" "next", new ClosestNextDCR);
 	SetDriveCallerData("const", new ConstDCR);
 	SetDriveCallerData("cosine", new CosineDCR);
