@@ -71,8 +71,8 @@ public:
 
 	virtual
 	~BiStopDriveCaller(void) {
-		// FIXME: destroy drive callers?
-		NO_OP;
+		SAFEDELETE(m_pActivatingCondition);
+		SAFEDELETE(m_pDeactivatingCondition);
 	};
 
 	virtual std::ostream&

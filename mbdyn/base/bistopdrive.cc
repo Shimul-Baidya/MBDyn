@@ -55,10 +55,10 @@ BiStopDriveCaller::pCopy(void) const
 std::ostream&
 BiStopDriveCaller::Restart(std::ostream& out) const
 {
-	return out << "bistop, \""
+	return out << "bistop, initial status, "
 		<< (m_status == ACTIVE ? "active" : "inactive" ) << ", ",
 		m_pActivatingCondition->Restart(out) << ", ",
-		m_pDeactivatingCondition->Restart(out) << "\"";
+		m_pDeactivatingCondition->Restart(out);
 }
 
 /* this is about drives that are differentiable */
@@ -95,7 +95,7 @@ BiStopDCR::Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred)
 	DriveCaller *pDC = 0;
 
 	bool bStatus(0);
-	if (HP.IsKeyWord("initial" "state")) {
+	if (HP.IsKeyWord("initial" "status")) {
 		if (HP.IsKeyWord("active")) {
 			bStatus = true;
 		} else if (HP.IsKeyWord("inactive")) {
