@@ -2191,7 +2191,9 @@ public:
 
 	virtual
 	~BiStopCLWrapper(void) {
-		NO_OP;
+		SAFEDELETE(m_pCL);
+		SAFEDELETE(m_pActivatingCondition);
+		SAFEDELETE(m_pDeactivatingCondition);
 	};
 
 	ConstLawType::Type GetConstLawType(void) const {

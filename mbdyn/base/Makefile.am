@@ -10,6 +10,8 @@ auth.cc \
 auth.h \
 bicg.cc \
 bicg.h \
+bistopdrive.cc \
+bistopdrive.h \
 bufferstream_out_elem.cc \
 bufferstream_out_elem.h \
 bufferstreamdrive.cc \
