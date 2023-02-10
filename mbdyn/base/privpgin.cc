@@ -214,7 +214,7 @@ NodePrivPlugIn::ReadSE(unsigned int uLabel, const char *ss)
 	
 	SAFEDELETEARR(s);
 	
-	if (i == Node::UNKNOWN) {
+	if (Node::Type(i) == Node::UNKNOWN) {
 		silent_cerr("unknown node type '" << ss << "'" << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
