@@ -70,7 +70,7 @@ void OffsetDispJointAd::Output(OutputHandler& OH) const
 {
      using namespace sp_grad;
 
-     if (OH.UseText(OutputHandler::JOINTS)) {
+     if (bToBeOutput() && OH.UseText(OutputHandler::JOINTS)) {
           const Mat3x3& R1 = pNode1->GetRCurr();
           Joint::Output(OH.Joints(), "OffsetDispJoint", GetLabel(), -R1.MulTV(F1Tmp), -R1.MulTV(M1Tmp), -F1Tmp, -M1Tmp) << '\n';
      }
@@ -203,12 +203,10 @@ doublereal OffsetDispJointAd::dGetPrivData(unsigned int i) const
      case 2:
      case 3:
           return -F1Tmp(i);
-
      case 4:
      case 5:
      case 6:
           return -M1Tmp(i - 3);
-
      default:
           ASSERT(0);
           return 0.;

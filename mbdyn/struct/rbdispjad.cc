@@ -68,7 +68,7 @@ void RigidBodyDispJointAd::Output(OutputHandler& OH) const
 {
      using namespace sp_grad;
 
-     if (OH.UseText(OutputHandler::JOINTS)) {
+     if (bToBeOutput() && OH.UseText(OutputHandler::JOINTS)) {
           const Mat3x3& Rm = pNodeMaster->GetRCurr();
           Joint::Output(OH.Joints(), "OffsetDispJoint", GetLabel(), -Rm.MulTV(FmTmp), -Rm.MulTV(MmTmp), -FmTmp, -MmTmp) << '\n';
      }
