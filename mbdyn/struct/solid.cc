@@ -2140,7 +2140,7 @@ void SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>
 {
      using namespace sp_grad;
 
-     if (bToBeOutput()) {
+     if (bToBeOutput() && OH.UseText(OutputHandler::SOLIDS)) {
           sp_grad::SpMatrixA<doublereal, iNumEvalPointsStiffness, 6> epsilone;
           sp_grad::SpMatrixA<doublereal, iNumEvalPointsStiffness, 6> taue;
           sp_grad::SpMatrixA<doublereal, iNumNodes, 6> epsilonn;
