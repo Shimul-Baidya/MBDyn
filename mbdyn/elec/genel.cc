@@ -352,7 +352,15 @@ ReadGenel(DataManager* pDM,
 			throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
 
-		DriveCaller* pDC = HP.GetDriveCaller();
+                DriveCaller* pDC = nullptr;
+
+                if (HP.IsKeyWord("from" "node")) {
+                     SAFENEWWITHCONSTRUCTOR(pDC,
+                                            ConstDriveCaller,
+                                            ConstDriveCaller{SD.dGetValue()});
+                } else {
+                     pDC = HP.GetDriveCaller();
+                }
 
 		flag fOut = pDM->fReadOutput(HP, Elem::GENEL);
 
