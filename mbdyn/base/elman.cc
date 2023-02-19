@@ -99,6 +99,10 @@ DataManager::ElemManager(void)
 	ElemData[Elem::SOLID].OutFile = OutputHandler::SOLIDS;
 	ElemData[Elem::SOLID].Desc = "Solid";
 	ElemData[Elem::SOLID].ShortDesc = "solid";
+
+	ElemData[Elem::PRESSURE_LOAD].OutFile = OutputHandler::PRESSURE_LOADS;
+	ElemData[Elem::PRESSURE_LOAD].Desc = "PressureLoad";
+	ElemData[Elem::PRESSURE_LOAD].ShortDesc = "pressure" "load";
         
 	ElemData[Elem::AIRPROPERTIES].OutFile = OutputHandler::AIRPROPS;
 	ElemData[Elem::AIRPROPERTIES].Desc = "AirProperties";
@@ -152,6 +156,7 @@ DataManager::ElemManager(void)
 	ElemData[Elem::BEAM].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
 	ElemData[Elem::PLATE].iDerivation = ELEM | GRAVITYOWNER | DOFOWNER | INITIALASSEMBLY;
         ElemData[Elem::SOLID].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
+        ElemData[Elem::PRESSURE_LOAD].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::AIRPROPERTIES].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::INDUCEDVELOCITY].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
 	ElemData[Elem::AEROMODAL].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
@@ -174,6 +179,7 @@ DataManager::ElemManager(void)
 	ElemData[Elem::BEAM].ToBeUsedInAssembly(true);
 	ElemData[Elem::PLATE].ToBeUsedInAssembly(true);
 	ElemData[Elem::SOLID].ToBeUsedInAssembly(true);
+        ElemData[Elem::PRESSURE_LOAD].ToBeUsedInAssembly(true);
         
 	/* Aggiungere qui se un tipo genera forze d'inerzia e quindi
 	 * deve essere collegato all'elemento accelerazione di gravita' */

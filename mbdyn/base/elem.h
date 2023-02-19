@@ -105,6 +105,7 @@ public:
 		BEAM,
 		PLATE,
                 SOLID,
+                PRESSURE_LOAD,
                 
 		FORCE,
 

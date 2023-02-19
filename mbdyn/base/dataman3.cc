@@ -97,6 +97,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		psReadControlElems[Elem::BEAM],
 		psReadControlElems[Elem::PLATE],
                 psReadControlElems[Elem::SOLID],
+                psReadControlElems[Elem::PRESSURE_LOAD],
 		psReadControlElems[Elem::AIRPROPERTIES],
 		psReadControlElems[Elem::INDUCEDVELOCITY],
 		psReadControlElems[Elem::AEROMODAL],
@@ -193,6 +194,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		BEAMS,
 		PLATES,
                 SOLIDS,
+                PRESSURE_LOADS,
 		AIRPROPERTIES,
 		INDUCEDVELOCITYELEMENTS,
 		AEROMODALS,
@@ -415,6 +417,12 @@ DataManager::ReadControl(MBDynParser& HP,
 			// 	bInitialJointAssemblyToBeDone = true;
 			// }
 		} break;
+
+                case PRESSURE_LOADS: {
+			integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
+			ElemData[Elem::PRESSURE_LOAD].iExpectedNum = iDmy;
+			DEBUGLCOUT(MYDEBUG_INPUT, "PressureLoads: " << iDmy << std::endl);                     
+                } break;
                      
 		/* Elementi aerodinamici: proprieta' dell'aria */
 		case AIRPROPERTIES: {
@@ -676,7 +684,15 @@ DataManager::ReadControl(MBDynParser& HP,
 						<< std::endl);
 					break;
                                         
-				case AERODYNAMICELEMENTS:
+				case PRESSURE_LOADS:
+					ElemData[Elem::PRESSURE_LOAD].ToBeUsedInAssembly(true);
+					DEBUGLCOUT(MYDEBUG_INPUT,
+						"Pressure loads will be used "
+						"in initial joint assembly"
+						<< std::endl);
+					break;
+
+                                case AERODYNAMICELEMENTS:
 					ElemData[Elem::AERODYNAMIC].ToBeUsedInAssembly(true);
 					DEBUGLCOUT(MYDEBUG_INPUT,
 						"Aerodynamic Elements will be used "
@@ -1181,6 +1197,10 @@ EndOfUse:
 					ElemData[Elem::SOLID].DefaultOut(true);
 					break;                          
 
+                                case PRESSURE_LOADS:
+                                        ElemData[Elem::PRESSURE_LOAD].DefaultOut(true);
+                                        break;
+                                      
 				case RIGIDBODIES:
 					ElemData[Elem::BODY].DefaultOut(true);
 					break;

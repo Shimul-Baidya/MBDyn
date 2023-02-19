@@ -109,8 +109,9 @@ public:
 		DRIVECALLERS,			// 30
 		TRACES,
                 SOLIDS,
+                PRESSURE_LOADS,
 		EIGENANALYSIS,			// NOTE: ALWAYS LAST!
-		LASTFILE			// 33
+		LASTFILE			// 35
 	};
 	enum struct Dimensions {
 		Dimensionless,
@@ -243,6 +244,7 @@ private:
 	std::ofstream ofDriveCallers;
 	std::ofstream ofTraces;
         std::ofstream ofSolids;
+        std::ofstream ofPressureLoads;
 	std::ofstream ofEigenanalysis;
 
 	int iCurrWidth;
@@ -336,6 +338,7 @@ public:
 	inline std::ostream& DriveCallers(void) const;
 	inline std::ostream& Traces(void) const;
         inline std::ostream& Solids(void) const;
+        inline std::ostream& PressureLoads(void) const;
 	inline std::ostream& Eigenanalysis(void) const;
 
 	inline int iW(void) const;
@@ -718,7 +721,14 @@ OutputHandler::Solids(void) const
 	ASSERT(IsOpen(SOLIDS));
 	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofSolids));
 }
-        
+
+inline std::ostream&
+OutputHandler::PressureLoads(void) const
+{
+	ASSERT(IsOpen(PRESSURE_LOADS));
+	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofPressureLoads));
+}
+
 inline std::ostream&
 OutputHandler::Traces(void) const
 {

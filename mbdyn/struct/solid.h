@@ -2,7 +2,7 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
  * Pierangelo Masarati  <masarati@aero.polimi.it>
  * Paolo Mantegazza     <mantegazza@aero.polimi.it>
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2022(-2022) all rights reserved.
+        Copyright (C) 2022(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -55,8 +55,11 @@ class Hexahedron20;
 class Hexahedron20r;
 class Pentahedron15;
 class Tetrahedron10h;
-class Gauss2;
-class Gauss3;
+class Quadrangle4;
+class Gauss2x2;
+class Gauss3x3;
+class Gauss2x2x2;
+class Gauss3x3x3;
 class GaussH20r;
 class GaussP15;
 class GaussT10h;
@@ -81,9 +84,33 @@ public:
      virtual bool bIsDeformable() const override;
 };
 
+class PressureLoadElem: virtual public Elem, public InitialAssemblyElem {
+public:
+     PressureLoadElem(unsigned uLabel,
+                      flag fOut);
+     virtual ~PressureLoadElem();
+
+     virtual Elem::Type GetElemType() const override;
+
+     virtual void
+     SetValue(DataManager *pDM,
+              VectorHandler& X, VectorHandler& XP,
+              SimulationEntity::Hints *ph) override;
+
+     virtual std::ostream& Restart(std::ostream& out) const override;
+
+     virtual unsigned int iGetInitialNumDof() const override;
+
+     virtual bool bIsDeformable() const override;
+};
+
 template <typename ElementType, typename CollocationType>
 SolidElem*
 ReadSolid(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
+
+template <typename ElementType, typename CollocationType>
+PressureLoadElem*
+ReadPressureLoad(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
 
 void InitSolidCL();
 
