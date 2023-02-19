@@ -472,7 +472,7 @@ Rod::iGetPrivDataIdx(const char *s) const
 {
 	ASSERT(s != NULL);
 
-	if (strcmp(s, "f") == 0) {
+	if (strcmp(s, "F") == 0) {
 		return 1;
 	}
 
@@ -484,8 +484,8 @@ Rod::iGetPrivDataIdx(const char *s) const
 		return 3;
 	}
 
-	size_t l = STRLENOF("CL.");
-	if (strncmp(s, "CL.", l) == 0) {
+	size_t l = STRLENOF("constitutiveLaw.");
+	if (strncmp(s, "constitutiveLaw.", l) == 0) {
 		if (s[l] == '\0') {
 			// no room for constitutive law string
 			return 0;
@@ -500,11 +500,7 @@ Rod::iGetPrivDataIdx(const char *s) const
 		return 3 + iIdx;
 	}
 
-	if (strcmp(s, "F") == 0) {
-		silent_cerr("warning, \"F\" to request rod force is obsolete; use \"f\" instead" << std::endl);
-		return 1;
-	}
-
+	// obsolete forms
 	if (strcmp(s, "L") == 0) {
 		silent_cerr("warning, \"L\" to request rod length is obsolete; use \"l\" instead" << std::endl);
 		return 2;
@@ -513,23 +509,6 @@ Rod::iGetPrivDataIdx(const char *s) const
 	if (strcmp(s, "LPrime") == 0) {
 		silent_cerr("warning, \"LPrime\" to request rod elongation rate is obsolete; use \"lP\" instead" << std::endl);
 		return 3;
-	}
-
-	l = STRLENOF("constitutiveLaw.");
-	if (strncmp(s, "constitutiveLaw.", l) == 0) {
-		silent_cerr("warning, \"constitutiveLaw\" to request rod constitutive law data is obsolete; use \"CL\" instead" << std::endl);
-		if (s[l] == '\0') {
-			// no room for constitutive law string
-			return 0;
-		}
-
-		unsigned int iIdx = ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
-		if (iIdx == 0) {
-			// propagate error
-			return 0;
-		}
-
-		return 3 + iIdx;
 	}
 
 	/* error; handle later */
