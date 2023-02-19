@@ -2408,11 +2408,14 @@ The latter could be moved to a more specific class in future releases.
 
     \bnt{genel_arglist} ::=
         (\hty{NodeDof}) \bnt{clamped_node} ,
-        (\hty{DriveCaller}) \bnt{imposed_value}
+        \{ \kw{from node} | (\hty{DriveCaller}) \bnt{imposed_value} \}
 \end{Verbatim}
 %\end{verbatim}
 This element simply forces one arbitrary degree of freedom to assume a value
-depending on the drive.
+depending on the drive. If the keyword \kw{from node} is used, then the
+initial value of \bnt{clamped\_node} is used as an imposed value for that node.
+This is useful especially to clamp structural displacement nodes, if their position
+is defined in a non trivial reference frame.
 
 \paragraph{Output}
 The format is:
