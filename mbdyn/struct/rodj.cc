@@ -308,7 +308,7 @@ Rod::OutputPrepare(OutputHandler& OH)
 			Var_v = OH.CreateVar<Vec3>(name + "v",
 				OutputHandler::Dimensions::Dimensionless,
 				"direction unit vector");
-			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, name + "CL");
+			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, name + "constitutiveLaw");
 		}
 #endif // USE_NETCDF
 	}
@@ -476,17 +476,39 @@ Rod::iGetPrivDataIdx(const char *s) const
 		return 1;
 	}
 
-	if (strcmp(s, "L") == 0) {
+	if (strcmp(s, "l") == 0) {
 		return 2;
 	}
 
-	if (strcmp(s, "LPrime") == 0) {
+	if (strcmp(s, "lP") == 0) {
 		return 3;
 	}
 
 	size_t l = STRLENOF("constitutiveLaw.");
 	if (strncmp(s, "constitutiveLaw.", l) == 0) {
-		return 3 + ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
+		if (s[l] == '\0') {
+			// no room for constitutive law string
+			return 0;
+		}
+
+		unsigned int iIdx = ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
+		if (iIdx == 0) {
+			// propagate error
+			return 0;
+		}
+
+		return 3 + iIdx;
+	}
+
+	// obsolete forms
+	if (strcmp(s, "L") == 0) {
+		silent_cerr("warning, \"L\" to request rod length is obsolete; use \"l\" instead" << std::endl);
+		return 2;
+	}
+
+	if (strcmp(s, "LPrime") == 0) {
+		silent_cerr("warning, \"LPrime\" to request rod elongation rate is obsolete; use \"lP\" instead" << std::endl);
+		return 3;
 	}
 
 	/* error; handle later */

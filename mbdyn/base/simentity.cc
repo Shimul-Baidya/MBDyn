@@ -156,8 +156,13 @@ SimulationEntity::iGetNumPrivData(void) const
 unsigned int
 SimulationEntity::iGetPrivDataIdx(const char *s) const 
 {
+#if 0
 	silent_cerr("no private data available" << std::endl);
 	throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+#endif
+
+	// handled later
+	return 0;
 }
 
 doublereal
