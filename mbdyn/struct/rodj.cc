@@ -308,7 +308,7 @@ Rod::OutputPrepare(OutputHandler& OH)
 			Var_v = OH.CreateVar<Vec3>(name + "v",
 				OutputHandler::Dimensions::Dimensionless,
 				"direction unit vector");
-			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, name + "CL");
+			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, name + "constitutiveLaw");
 		}
 #endif // USE_NETCDF
 	}
