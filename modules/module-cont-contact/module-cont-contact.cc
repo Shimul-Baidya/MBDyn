@@ -254,6 +254,8 @@ struct ContContactCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 				"                exp , <exponent> , (>= 1)\n"
 				"                [ , EpsPrimeTol , <EpsPrimeTol> ]\n"
 				"                [ , prestrain , (DriveCaller) <prestrain> ]\n"
+				"\n"
+				"	appended output (txt): <initialEpsPrime> <dissCoef>\n"
 				<< std::endl);
 
 			if (!HP.IsArg()) {
@@ -563,6 +565,8 @@ struct ContContact3DCLR : public ConstitutiveLawRead<Vec3, Mat3x3> {
 				"                exp , <exponent> , (>= 1)\n"
 				"                [ , EpsPrimeTol , <EpsPrimeTol> ]\n"
 				"                [ , prestrain , (DriveCaller) <prestrain> ]\n"
+				"\n"
+				"	appended output (txt): <initialEpsPrime> <dissCoef>\n"
 				<< std::endl);
 
 			if (!HP.IsArg()) {
