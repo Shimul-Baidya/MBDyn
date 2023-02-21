@@ -74,6 +74,11 @@ protected:
 	mutable doublereal m_dInitialEpsPrime;	// initial contact velocity
 	mutable doublereal m_dDissCoef;		// actual dissipation coefficient
 
+#ifdef USE_NETCDF
+	MBDynNcVar Var_dInitialEpsPrime;
+	MBDynNcVar Var_dDissCoef;
+#endif // USE_NETCDF
+
 public:
 	ContContactCL(const TplDriveCaller<doublereal> *pTplDC,
 		doublereal dSign, ContContactCL::Type type, doublereal dRest,
@@ -198,6 +203,64 @@ public:
 		return out << " " << m_dInitialEpsPrime << " " << m_dDissCoef;
 	};
 	
+	virtual void NetCDFOutputAppend(OutputHandler& OH) const {
+#ifdef USE_NETCDF
+		OH.WriteNcVar(Var_dInitialEpsPrime, m_dInitialEpsPrime);
+		OH.WriteNcVar(Var_dDissCoef, m_dDissCoef);
+#endif // USE_NETCDF
+	};
+
+	virtual void OutputAppendPrepare(OutputHandler& OH, const std::string& name) {
+#ifdef USE_NETCDF
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+		Var_dInitialEpsPrime = OH.CreateVar<doublereal>(name + ".xPi", 
+				OutputHandler::Dimensions::Velocity, 
+				"Velocity at contact");
+		Var_dDissCoef = OH.CreateVar<doublereal>(name + ".dc", 
+				OutputHandler::Dimensions::Dimensionless, 
+				"Dissipation coefficient");
+#endif // USE_NETCDF
+	};
+
+	unsigned int
+	iGetNumPrivData(void) const
+	{
+		return 2;
+	}
+
+	unsigned int
+	iGetPrivDataIdx(const char *s) const
+	{
+		ASSERT(s != NULL);
+
+		if (strcmp(s, "xPi") == 0) {
+			return 1;
+		}
+
+		if (strcmp(s, "dc") == 0) {
+			return 2;
+		}
+
+		/* error; handled later */
+		return 0;
+	}
+
+	doublereal
+	dGetPrivData(unsigned int i) const
+	{
+		ASSERT(i > 0);
+
+		switch (i) {
+		case 1:
+			return m_dInitialEpsPrime;
+
+		case 2:
+			return m_dDissCoef;
+		}
+
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	};
 
 	virtual void AfterConvergence(const doublereal& Eps, const doublereal& EpsPrime = 0.) {
 
