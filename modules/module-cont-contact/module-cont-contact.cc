@@ -82,7 +82,8 @@ public:
 	m_dSign(dSign), m_dInitialEpsPrimeTol(dInitialEpsPrimeTol),
 	m_dRest(dRest), m_type(type), m_dK(dK), m_dExp(dExp),
 	m_bActive(false), m_bToggling(false),
-	m_dInitialEpsPrime(0.)
+	m_dInitialEpsPrime(0.),
+	m_dDissCoef(0.) // to avoid pointless warnings
 	{
 		NO_OP;
 	};
