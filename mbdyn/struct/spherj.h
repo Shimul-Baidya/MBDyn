@@ -170,11 +170,16 @@ class PinJoint : virtual public Elem, public Joint {
    MBDynNcVar Var_Phi;
 #endif // USE_NETCDF
 
+ protected:
+	OrientationDescription od;
+
  public:
    /* Costruttore non banale */
    PinJoint(unsigned int uL, const DofOwner* pDO,
 	    const StructNode* pN, 
-	    const Vec3& X0Tmp, const Vec3& dTmp, flag fOut);
+	    const Vec3& X0Tmp, const Vec3& dTmp,
+	    const OrientationDescription& od,
+	    flag fOut);
    
    ~PinJoint(void);
 

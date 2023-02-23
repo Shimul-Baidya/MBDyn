@@ -841,8 +841,7 @@ void TotalEquation::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Total equation", OH, name);
+			OutputPrepare_int("Total equation", OH);
 		}
 #endif // USE_NETCDF
 	}
@@ -1897,8 +1896,7 @@ void TotalReaction::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Total reaction", OH, name);
+			OutputPrepare_int("Total reaction", OH);
 		}
 #endif // USE_NETCDF
 	}

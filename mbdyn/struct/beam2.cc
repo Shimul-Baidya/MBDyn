@@ -648,54 +648,53 @@ Beam2::OutputPrepare(OutputHandler &OH)
 
 			(void)OH.CreateVar(os.str(), type);
 
-			os << '.';
-			std::string name(os.str());
+			m_sOutputNameBase = os.str();
 
 			unsigned uOutputFlags = (fToBeOutput() & ToBeOutput::OUTPUT_PRIVATE_MASK);
 
 			if (uOutputFlags & Beam::OUTPUT_EP_X) {
-				Var_X = OH.CreateVar<Vec3>(name + "X",
+				Var_X = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "X",
 					OutputHandler::Dimensions::Length,
 					"evaluation point global position vector (X, Y, Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_R) {
-				Var_Phi = OH.CreateRotationVar(name, "", od,
+				Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od,
 					" evaluation point global orientation matrix");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_F) {
-				Var_F = OH.CreateVar<Vec3>(name + "F",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 					OutputHandler::Dimensions::Force,
 					"evaluation point internal force in local frame (F_X, F_Y, F_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_M) {
-				Var_M = OH.CreateVar<Vec3>(name + "M",
+				Var_M = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 					OutputHandler::Dimensions::Moment,
 					"evaluation point internal force in local frame (M_X, M_Y, M_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_NU) {
-				Var_Nu = OH.CreateVar<Vec3>(name + "nu",
+				Var_Nu = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "nu",
 					OutputHandler::Dimensions::LinearStrain,
 					"evaluation point linear strain in local frame (nu_X, nu_Y, nu_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_K) {
-				Var_K = OH.CreateVar<Vec3>(name + "k",
+				Var_K = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "k",
 					OutputHandler::Dimensions::AngularStrain,
 					"evaluation point angular strain in local frame (K_X, K_Y, K_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_NUP) {
-				Var_NuP = OH.CreateVar<Vec3>(name + "nuP",
+				Var_NuP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "nuP",
 					OutputHandler::Dimensions::LinearStrainRate,
 					"evaluation point linear strain rate in local frame (nuP_X, nuP_Y, nuP_Z)");
 			}
 
 			if (uOutputFlags & Beam::OUTPUT_EP_KP) {
-				Var_KP = OH.CreateVar<Vec3>(name + "kP",
+				Var_KP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "kP",
 					OutputHandler::Dimensions::AngularStrainRate,
 					"evaluation point angular strain rate in local frame (KP_X, KP_Y, KP_Z)");
 			}

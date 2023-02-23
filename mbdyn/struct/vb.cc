@@ -96,14 +96,13 @@ ViscousBody::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("viscous body", OH, name);
+			OutputPrepare_int("viscous body", OH);
 
-			Var_v = OH.CreateVar<Vec3>(name + "V",
+			Var_v = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "V",
 				OutputHandler::Dimensions::Velocity,
 				"local relative linear velocity (x, y, z)");
 			
-			Var_omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}

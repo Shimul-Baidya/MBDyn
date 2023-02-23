@@ -294,7 +294,7 @@ Inertia::Output(OutputHandler& OH) const
 }
 
 void
-Inertia::OutputPrepare_int(OutputHandler &OH, std::string& name)
+Inertia::OutputPrepare_int(OutputHandler &OH)
 {
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
@@ -302,10 +302,8 @@ Inertia::OutputPrepare_int(OutputHandler &OH, std::string& name)
 
 		std::ostringstream os;
 		os << "elem.inertia." << GetLabel();
-		(void)OH.CreateVar(os.str(), "inertia");
-
-		os << ".";
-		name = os.str();
+		m_sOutputNameBase = os.str();
+		(void)OH.CreateVar(m_sOutputNameBase, "inertia");
 #endif // USE_NETCDF
 	}
 }
@@ -317,32 +315,31 @@ Inertia::OutputPrepare(OutputHandler &OH)
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::INERTIA))
 		{
-			std::string name;
-			OutputPrepare_int(OH, name);
+			OutputPrepare_int(OH);
 
-			Var_dMass = OH.CreateVar<doublereal>(name + "M",
+			Var_dMass = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "M",
 				OutputHandler::Dimensions::Mass,
 				"total mass");
-			Var_X_cm = OH.CreateVar<Vec3>(name + "X_cm",
+			Var_X_cm = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "X_cm",
 				OutputHandler::Dimensions::Length,
 				"center of mass position (x, y, z)");
-			Var_V_cm = OH.CreateVar<Vec3>(name + "V_cm",
+			Var_V_cm = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "V_cm",
 				OutputHandler::Dimensions::Velocity,
 				"center of mass velocity (x, y, z)");
-			Var_Omega_cm = OH.CreateVar<Vec3>(name + "Omega_cm",
+			Var_Omega_cm = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega_cm",
 				OutputHandler::Dimensions::AngularVelocity,
 				"center of mass angular velocity (x, y, z)");
 
-			Var_DX = OH.CreateVar<Vec3>(name + "DX",
+			Var_DX = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "DX",
 				OutputHandler::Dimensions::Length,
 				"relative center of mass position, global frame (x, y, z)");
-			Var_dx = OH.CreateVar<Vec3>(name + "dx",
+			Var_dx = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "dx",
 				OutputHandler::Dimensions::Length,
 			 	"relative center of mass position, local frame (x, y, z)");
-			Var_Jp = OH.CreateVar<Vec3>(name + "Jp",
+			Var_Jp = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Jp",
 				OutputHandler::Dimensions::MomentOfInertia,
 				"global inertia matrix, w.r.t. principal axes");
-			Var_Phip = OH.CreateVar<Vec3>(name + "Phip",
+			Var_Phip = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Phip",
 				OutputHandler::Dimensions::Dimensionless,
 				"orientation vector of principal axes, global frame");
 		}

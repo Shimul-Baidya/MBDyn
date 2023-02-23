@@ -1474,21 +1474,20 @@ TotalJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Total joint", OH, name);
+			OutputPrepare_int("Total joint", OH);
 
-			Var_X = OH.CreateVar<Vec3>(name + "X",
+			Var_X = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "X",
 				OutputHandler::Dimensions::Length,
 				"local relative position (x, y, z)");
 
 			// NOTE: by now, force ORIENTATION_VECTOR
-			Var_Phi = OH.CreateRotationVar(name, "", ORIENTATION_VECTOR, "local relative");
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", ORIENTATION_VECTOR, "local relative");
 
-			Var_V = OH.CreateVar<Vec3>(name + "V",
+			Var_V = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "V",
 				OutputHandler::Dimensions::Velocity,
 				"local relative velocity (x, y, z)");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}
@@ -3330,21 +3329,20 @@ TotalPinJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Total pin joint", OH, name);
+			OutputPrepare_int("Total pin joint", OH);
 
-			Var_X = OH.CreateVar<Vec3>(name + "X",
+			Var_X = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "X",
 				OutputHandler::Dimensions::Length,
 				"local relative position (x, y, z)");
 
 			// NOTE: by now, force ORIENTATION_VECTOR
-			Var_Phi = OH.CreateRotationVar(name, "", ORIENTATION_VECTOR, "local relative");
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", ORIENTATION_VECTOR, "local relative");
 
-			Var_V = OH.CreateVar<Vec3>(name + "V",
+			Var_V = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "V",
 				OutputHandler::Dimensions::Velocity,
 				"local relative velocity (x, y, z)");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}

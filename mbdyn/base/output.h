@@ -761,6 +761,7 @@ public:
 
 protected:
 	flag fOutput;
+	std::string m_sOutputNameBase;
 
 public:
 	ToBeOutput(flag fOut = fDefaultOut);
@@ -778,6 +779,7 @@ public:
 	virtual flag fToBeOutput(void) const;
 	virtual bool bToBeOutput(void) const;
 	virtual void SetOutputFlag(flag f = flag(1));
+	virtual const std::string& sGetOutputNameBase(void) const;
 };
 
 /* ToBeOutput - end */

@@ -96,7 +96,7 @@ protected:
 	virtual void Collect_int(void);
 
 	virtual std::ostream& Output_int(std::ostream& out) const;
-	void OutputPrepare_int(OutputHandler &OH, std::string& name);
+	void OutputPrepare_int(OutputHandler &OH);
 	void OutputPrepare(OutputHandler &OH);
 
 #ifdef USE_NETCDF

@@ -948,21 +948,20 @@ PlaneHingeJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("revolute hinge", OH, name);
+			OutputPrepare_int("revolute hinge", OH);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, "global");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 
 			if (fc) {
-				Var_MFR = OH.CreateVar<doublereal>(name + "MFR",
+				Var_MFR = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "MFR",
 						OutputHandler::Dimensions::Moment,
 						"friciton moment ");
 
-				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+				Var_fc = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "fc",
 						OutputHandler::Dimensions::Dimensionless,
 						"friction model specific data: friction coefficient");
 			}
@@ -2047,13 +2046,12 @@ PlaneRotationJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("revolute rotation", OH, name);
+			OutputPrepare_int("revolute rotation", OH);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, 
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, 
 				"relative orientation");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}
@@ -3396,21 +3394,20 @@ AxialRotationJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("axial rotation", OH, name);
+			OutputPrepare_int("axial rotation", OH);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, "Relative orientation");
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, "Relative orientation");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 
 			if (fc) {
-				Var_MFR = OH.CreateVar<doublereal>(name + "MFR",
+				Var_MFR = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "MFR",
 						OutputHandler::Dimensions::Moment,
 						"friciton moment");
 
-				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+				Var_fc = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "fc",
 						OutputHandler::Dimensions::Dimensionless,
 						"friction model specific data: friction coefficient");
 			}
@@ -4572,7 +4569,7 @@ PlanePinJoint::OutputPrepare(OutputHandler& OH)
 #ifdef USE_NETCDF
 	   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 		   std::string name;
-		   OutputPrepare_int("Plane Pin", OH, name);
+		   OutputPrepare_int("Plane Pin", OH);
 	   }
 #endif // USE_NETCDF
    }

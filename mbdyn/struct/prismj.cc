@@ -266,8 +266,7 @@ void PrismaticJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Prismatic", OH, name);
+			OutputPrepare_int("Prismatic", OH);
 		}
 #endif // USE_NETCDF
 	}

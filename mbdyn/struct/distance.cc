@@ -344,13 +344,12 @@ DistanceJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("distance", OH, name);
+			OutputPrepare_int("distance", OH);
 			
-			Var_V = OH.CreateVar<Vec3>(name + "V", "-",
+			Var_V = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "V", "-",
 				"constrained distance direction unit vector (x, y, z)");
 			
-			Var_d = OH.CreateVar<doublereal>(name + "d", "m",
+			Var_d = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "d", "m",
 				"constrained distance magnitude");
 		}
 #endif // USE_NETCDF

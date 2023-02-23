@@ -169,8 +169,7 @@ void InPlaneJoint::OutputPrepare(OutputHandler& OH)
 	if(bToBeOutput()) {      
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("In plane", OH, name);
+			OutputPrepare_int("In plane", OH);
 	}
 #endif // USE_NETCDF
 	}
@@ -559,8 +558,7 @@ void InPlaneWithOffsetJoint::OutputPrepare(OutputHandler& OH)
 	if(bToBeOutput()) {      
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("In plane with offset", OH, name);
+			OutputPrepare_int("In plane with offset", OH);
 	}
 #endif // USE_NETCDF
 	}

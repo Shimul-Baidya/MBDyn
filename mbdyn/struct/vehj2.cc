@@ -333,19 +333,18 @@ DeformableDispJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("deformable displacement", OH, name);
+			OutputPrepare_int("deformable displacement", OH);
 
-			Var_tilde_d = OH.CreateVar<Vec3>(name + "d",
+			Var_tilde_d = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "d",
 					OutputHandler::Dimensions::Length,
 					"relative position in local frame (x, y, z)");
-			Var_tilde_dPrime = OH.CreateVar<Vec3>(name + "dPrime",
+			Var_tilde_dPrime = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "dPrime",
 					OutputHandler::Dimensions::Velocity,
 					"relative linear velocity in local frame (x, y, z)");
-			Var_d = OH.CreateVar<Vec3>(name + "D",
+			Var_d = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "D",
 					OutputHandler::Dimensions::Length,
 					"relative position in global frame (x, y, z)");
-			Var_dPrime = OH.CreateVar<Vec3>(name + "DPrime",
+			Var_dPrime = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "DPrime",
 					OutputHandler::Dimensions::Velocity,
 					"relative linear velocity in global frame (x, y, z)");
 		}
