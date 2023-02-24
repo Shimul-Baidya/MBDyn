@@ -30,7 +30,7 @@
 
 /* here goes Morandini's copyright */
 
-/* Portions Copyright (C) 2009 Pierangelo Masarati <masarati@aero.polimi.it> */
+/* Portions Copyright (C) 2009 Pierangelo Masarati <pierangelo.masarati@polimi.it> */
 
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 

@@ -28,7 +28,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* Portions Copyright (C) 2009 Pierangelo Masarati <masarati@aero.polimi.it> */
+/* Portions Copyright (C) 2009 Pierangelo Masarati <pierangelo.masarati@polimi.it> */
 
 
 #ifndef JacSubMatrix_hh
