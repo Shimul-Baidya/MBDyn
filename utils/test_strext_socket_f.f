@@ -2,10 +2,10 @@ C $Header$ */
 C MBDyn (C) is a multibody analysis code. 
 C http://www.mbdyn.org
 C 
-C Copyright (C) 1996-2017
+C Copyright (C) 1996-2023
 C 
-C Pierangelo Masarati	<masarati@aero.polimi.it>
-C Paolo Mantegazza	<mantegazza@aero.polimi.it>
+C Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+C Paolo Mantegazza	<paolo.mantegazza@polimi.it>
 C 
 C Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 C via La Masa, 34 - 20156 Milano, Italy
