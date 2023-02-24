@@ -1,4 +1,4 @@
-This patch is provided by Pierangelo Masarati <masarati@aero.polimi.it>
+This patch is provided by Pierangelo Masarati <pierangelo.masarati@polimi.it>
 to allow building AeroDyn as a library with gfortran (tested with 4.1.2) 
 for linking with MBDyn's module-aerodyn.
 
@@ -34,15 +34,15 @@ instructions at <https://www.mbdyn.org/mailman/listinfo/mbdyn-users>)
 
     --- o --- o --- o ---
 
-2008-09-06 Pierangelo Masarati <masarati@aero.polimi.it>
+2008-09-06 Pierangelo Masarati <pierangelo.masarati@polimi.it>
 	* add default case for output file name in AD_InputGate
 	* remove line length limitations
 	  (use -ffixed-line-length-none -ffree-line-length-none instead)
 
-2008-08-25 Pierangelo Masarati <masarati@aero.polimi.it>
+2008-08-25 Pierangelo Masarati <pierangelo.masarati@polimi.it>
 	* release with MBDyn 1.3.4-Beta
 
-2008-01-04 Pierangelo Masarati <masarati@aero.polimi.it>
+2008-01-04 Pierangelo Masarati <pierangelo.masarati@polimi.it>
 	* add MBDyn to supported structural solvers
 	* s/Abort/AD_Abort/
 	* limit line length
@@ -59,7 +59,7 @@ diff -u -r1.1 -r1.5
  
  !  UNIVERSITY OF UTAH, MECHANICAL ENGINEERING DEPARTMENT
  
-+! Modified by Pierangelo Masarati <masarati@aero.polimi.it>
++! Modified by Pierangelo Masarati <pierangelo.masarati@polimi.it>
 +! January 2008 to build with gfortran, for interfacing with
 +! the free general-purpose multibody software MBDyn
 +! <http://www.aero.polimi.it/~mbdyn/>
@@ -274,7 +274,7 @@ diff -u -r1.1 -r1.4
 --- GenSubs.f90	4 Jan 2008 10:59:34 -0000	1.1
 +++ GenSubs.f90	4 Jan 2008 11:27:24 -0000	1.4
 @@ -1,3 +1,8 @@
-+! Modified by Pierangelo Masarati <masarati@aero.polimi.it>
++! Modified by Pierangelo Masarati <pierangelo.masarati@polimi.it>
 +! January 2008 to build with gfortran, for interfacing with
 +! the free general-purpose multibody software MBDyn
 +! <http://www.aero.polimi.it/~mbdyn/>

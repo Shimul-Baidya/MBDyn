@@ -30,10 +30,10 @@ function [S, Aout, B, mn, scl, ee, vv, X, H, BB, fm] = pod(A, ns, dt, uu, dec, o
 % MBDyn (C) is a multibody analysis code. 
 % http://www.mbdyn.org
 % 
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 % 
-% Pierangelo Masarati	<masarati@aero.polimi.it>
-% Paolo Mantegazza	<mantegazza@aero.polimi.it>
+% Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+% Paolo Mantegazza	<paolo.mantegazza@polimi.it>
 % 
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -57,7 +57,7 @@ function [S, Aout, B, mn, scl, ee, vv, X, H, BB, fm] = pod(A, ns, dt, uu, dec, o
 % 
 %
 % Authors:	Giuseppe Quaranta	<quaranta@aero.polimi.it>
-%		Pierangelo Masarati	<masarati@aero.polimi.it>
+%		Pierangelo Masarati	<pierangelo.masarati@polimi.it>
 %
 
 if (nargin < 8 || isempty(wgt)),

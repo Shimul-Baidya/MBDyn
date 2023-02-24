@@ -462,7 +462,7 @@ diff -ur GenSubs.f90 GenSubs.f90
 +   SUBROUTINE AD_Abort( Msg )
 + !  This subroutine wraps calls to Abort.
 + !
-+ ! Added by Pierangelo Masarati <masarati@aero.polimi.it>
++ ! Added by Pierangelo Masarati <pierangelo.masarati@polimi.it>
 + ! January 2008 to allow compilation with gfortran,
 + ! for integration with the free general purpose multibody
 + ! analysis software MBDyn <http://www.aero.polimi.it/~mbdyn/>
