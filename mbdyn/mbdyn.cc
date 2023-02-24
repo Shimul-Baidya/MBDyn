@@ -271,7 +271,7 @@ mbdyn_welcome(void)
 {
 	mbdyn_version();
 	silent_cout(std::endl
-		<< "Copyright 1996-2017 (C) Paolo Mantegazza "
+		<< "Copyright 1996-2023 (C) Paolo Mantegazza "
 			"and Pierangelo Masarati," << std::endl
 		<< "Dipartimento di Ingegneria Aerospaziale "
 			"<http://www.aero.polimi.it/>" << std::endl
