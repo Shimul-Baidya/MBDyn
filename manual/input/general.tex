@@ -579,16 +579,16 @@ but often needs to refer to the configuration
 at the previous, just completed time step.
 
 \paragraph{Example 1.} \
-This string returns the $y$ component of the relative angular velocity between structural nodes ``\verb;NODENAME_1;'' and ``\verb;NODENAME_2;'' at the current timestep:
+This string returns the $y$ component of the relative angular velocity between structural nodes ``\verb;NODELABEL_1;'' and ``\verb;NODELABEL_2;'' at the current timestep:
 \begin{verbatim}
-    string, "model::yangvrel(NODENAME_1,NODENAME_2)", ...
+    string, "model::yangvrel(NODELABEL_1,NODELABEL_2)", ...
 \end{verbatim}
 
 \paragraph{Example 2.} \
-This string returns the absolute $x$ component of the position of node ``\verb;NODENAME;'' at the previous timestep, plus the value of ``\verb;DRIVE_1 * DRIVE_2;'' when time is greater than 5 seconds:
+This string returns the absolute $x$ component of the position of node ``\verb;NODELABEL;'' at the previous timestep, plus the value of ``\verb;DRIVELABEL_1 * DRIVELABEL_2;'' when time is greater than 5 seconds:
 \begin{verbatim}
-    string, "model::xposition_prev(NODENAME) + \
-        model::drive(DRIVE_1, Time) * model::drive(DRIVE_2, Time) * (Time > 5.)",
+    string, "model::xposition_prev(NODELABEL) + \
+        model::drive(DRIVELABEL_1, Time) * model::drive(DRIVELABEL_2, Time) * (Time > 5.)",
 \end{verbatim}
 
 \paragraph{Example 3.} \
@@ -761,11 +761,11 @@ When \nt{prev} is \kw{true}, the value at the previous time step is used.
 
 \paragraph{Example.} \
 The variable \texttt{VARNAME} takes the value of the derivative
-of \kw{abstract} node \texttt{NODENAME}
+of \kw{abstract} node \texttt{NODELABEL}
 \begin{verbatim}
-    set: integer NODENAME = 1000;
+    set: integer NODELABEL = 1000;
     # the node must exist
-    set: [dof,VARNAME,NODENAME,abstract,differential];
+    set: [dof,VARNAME,NODELABEL,abstract,differential];
 \end{verbatim}
 
 
@@ -802,11 +802,11 @@ of the plugin variable specification.
 This implements a variable \texttt{VARNAME} with exactly the same value
 of the one defined in the example of the \kw{dof} plugin,
 where the variable takes the value of the derivative
-of the \kw{abstract} node \texttt{NODENAME}
+of the \kw{abstract} node \texttt{NODELABEL}
 \begin{verbatim}
-    set: integer NODENAME = 1000;
+    set: integer NODELABEL = 1000;
     # the node must exist
-    set: [node,VARNAME,NODENAME,abstract,string="xP"];
+    set: [node,VARNAME,NODELABEL,abstract,string="xP"];
 \end{verbatim}
 
 
@@ -841,11 +841,11 @@ of the plugin variable specification.
 
 \paragraph{Example.} \
 The variable \texttt{VARNAME} takes the value of the $z$ component 
-of the reaction force of \kw{joint} \texttt{ELEMNAME}
+of the reaction force of \kw{joint} \texttt{ELEMLABEL}
 \begin{verbatim}
-    set: integer ELEMNAME = 1000;
+    set: integer ELEMLABEL = 1000;
     # the joint must exist
-    set: [element,VARNAME,ELEMNAME,joint,string="Fz"];
+    set: [element,VARNAME,ELEMLABEL,joint,string="Fz"];
 \end{verbatim}
 
 
