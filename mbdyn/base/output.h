@@ -445,14 +445,17 @@ OutputHandler::CreateVar(const std::string& name,
 	if (typeid(T) == typeid(integer)) {
 		attrs[1] = AttrVal("type", "integer");
 		return CreateVar(name, MbNcInt, attrs, dims); // put this one inside if because couldn't figure out how to assign type inside if while declaring it outside of if.. alternative would be to create a pointer and change CreateVar function to copy type parameter instead of passing by reference (because type cannot be delete in CreateVar since addVar passes it by reference to netcdf)...
+
 	} else if (typeid(T) == typeid(doublereal)) {
 		attrs[1] = AttrVal("type", "doublereal");
-	return CreateVar(name, MbNcDouble, attrs, dims); // see comment above
+		return CreateVar(name, MbNcDouble, attrs, dims); // see comment above
+
 	} else if (typeid(T) == typeid(Vec3)) {
 		attrs[1] = AttrVal("type", "Vec3");
 		dims.resize(2);
 		dims[1] = DimV3();
 		return CreateVar(name, MbNcDouble, attrs, dims); // see comment above
+
 	} else {
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
