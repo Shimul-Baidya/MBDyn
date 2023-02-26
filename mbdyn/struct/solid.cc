@@ -429,6 +429,41 @@ private:
      static constexpr sp_grad::index_type sidx[] = {0, 1, 0, 1};
 };
 
+class Gauss3x3: private Gauss3 {
+public:
+     static constexpr sp_grad::index_type iNumEvalPoints = iGaussOrder * iGaussOrder;
+
+     static inline void
+     GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r);
+
+     static inline doublereal
+     dGetWeight(sp_grad::index_type i);
+
+private:
+     static constexpr sp_grad::index_type ridx[] = {0, 0, 0, 1, 1, 1, 2, 2, 2};
+     static constexpr sp_grad::index_type sidx[] = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+};
+
+class CollocTria6h {
+public:
+     static constexpr sp_grad::index_type iNumEvalPoints = 7;
+
+     static inline void
+     GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r);
+
+     static inline doublereal
+     dGetWeight(sp_grad::index_type i);
+
+private:
+     static constexpr double A = 0.470142064105115;
+     static constexpr double B = 0.101286507323456;
+     static constexpr double P1 = 0.066197076394253;
+     static constexpr double P2 = 0.062969590272413;
+     static constexpr doublereal zeta[7] =  {1./3., A, 1. - 2. * A, A, B, 1. - 2. * B, B};
+     static constexpr doublereal eta[7] = {1./3., A, A, 1. - 2. * A, B, B, 1. - 2. * B};
+     static constexpr doublereal w[7] = {9./80., P1, P1, P1, P2, P2, P2};
+};
+
 class Quadrangle4 {
 public:
      static const char* ElementName() {
@@ -436,6 +471,40 @@ public:
      }
 
      static constexpr sp_grad::index_type iNumNodes = 4;
+
+     static inline void
+     ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
+                        sp_grad::SpMatrix<doublereal, iNumNodes, 2>& hd);
+
+     static inline void
+     ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
+                   sp_grad::SpColVector<doublereal, iNumNodes>& h);
+};
+
+class Quadrangle8 {
+public:
+     static const char* ElementName() {
+          return "quadrangle8";
+     }
+
+     static constexpr sp_grad::index_type iNumNodes = 8;
+
+     static inline void
+     ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
+                        sp_grad::SpMatrix<doublereal, iNumNodes, 2>& hd);
+
+     static inline void
+     ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
+                   sp_grad::SpColVector<doublereal, iNumNodes>& h);
+};
+
+class Triangle6h {
+public:
+     static const char* ElementName() {
+          return "triangle6";
+     }
+
+     static constexpr sp_grad::index_type iNumNodes = 6;
 
      static inline void
      ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
@@ -670,7 +739,7 @@ public:
      using Gauss3x3x3::dGetWeightMassLumped;
 };
 
-class GaussP15 {
+class CollocPenta15 {
      static constexpr sp_grad::index_type M = 7;
      static constexpr sp_grad::index_type N = 3;
      static constexpr sp_grad::index_type M_lumped = 6;
@@ -736,7 +805,7 @@ private:
      static constexpr doublereal alphai_lumped[] = {2./3., 2./3., 2./3.};
 };
 
-class GaussT10h {
+class CollocTet10h {
 public:
      static constexpr sp_grad::index_type iNumEvalPointsStiffness = 5;
      static constexpr sp_grad::index_type iNumEvalPointsMass = 15;
@@ -1002,6 +1071,8 @@ Quadrangle4::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1 = r(1);
      const doublereal r2 = r(2);
 
+     static_assert(iNumNodes == 4);
+
      hd(1,1) = (r2+1)/4.0E+0;
      hd(1,2) = (r1+1)/4.0E+0;
      hd(2,1) = -(r2+1)/4.0E+0;
@@ -1019,10 +1090,102 @@ Quadrangle4::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1 = r(1);
      const doublereal r2 = r(2);
 
+     static_assert(iNumNodes == 4);
+
      h(1) = ((r1+1)*(r2+1))/4.0E+0;
      h(2) = ((1-r1)*(r2+1))/4.0E+0;
      h(3) = ((1-r1)*(1-r2))/4.0E+0;
      h(4) = ((r1+1)*(1-r2))/4.0E+0;
+}
+
+void
+Quadrangle8::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
+                                sp_grad::SpMatrix<doublereal, iNumNodes, 2>& hd)
+{
+     const doublereal r1 = r(1);
+     const doublereal r2 = r(2);
+     const doublereal r1_2 = r1 * r1;
+     const doublereal r2_2 = r2 * r2;
+
+     static_assert(iNumNodes == 8);
+
+     hd(1,1) = (r2+1)/4.0E+0-((1-r2_2)/2.0E+0-r1*(r2+1))/2.0E+0;
+     hd(1,2) = (r1+1)/4.0E+0-((1-r1_2)/2.0E+0-(r1+1)*r2)/2.0E+0;
+     hd(2,1) = (-((-(1-r2_2)/2.0E+0)-r1*(r2+1))/2.0E+0)-(r2+1)/4.0E+0;
+     hd(2,2) = (1-r1)/4.0E+0-((1-r1_2)/2.0E+0-(1-r1)*r2)/2.0E+0;
+     hd(3,1) = (-((-(1-r2_2)/2.0E+0)-r1*(1-r2))/2.0E+0)-(1-r2)/4.0E+0;
+     hd(3,2) = (-((-(1-r1)*r2)-(1-r1_2)/2.0E+0)/2.0E+0)-(1-r1)/4.0E+0;
+     hd(4,1) = (1-r2)/4.0E+0-((1-r2_2)/2.0E+0-r1*(1-r2))/2.0E+0;
+     hd(4,2) = (-((-(r1+1)*r2)-(1-r1_2)/2.0E+0)/2.0E+0)-(r1+1)/4.0E+0;
+     hd(5,1) = -r1*(r2+1);
+     hd(5,2) = (1-r1_2)/2.0E+0;
+     hd(6,1) = -(1-r2_2)/2.0E+0;
+     hd(6,2) = -(1-r1)*r2;
+     hd(7,1) = -r1*(1-r2);
+     hd(7,2) = -(1-r1_2)/2.0E+0;
+     hd(8,1) = (1-r2_2)/2.0E+0;
+     hd(8,2) = -(r1+1)*r2;
+}
+
+void
+Quadrangle8::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
+                           sp_grad::SpColVector<doublereal, iNumNodes>& h)
+{
+     const doublereal r1 = r(1);
+     const doublereal r2 = r(2);
+     const doublereal r1_2 = r1 * r1;
+     const doublereal r2_2 = r2 * r2;
+
+     static_assert(iNumNodes == 8);
+
+     h(1) = ((r1+1)*(r2+1))/4.0E+0-(((r1+1)*(1-r2_2))/2.0E+0+((1-r1_2)*(r2+1))/2.0E+0)/2.0E+0;
+     h(2) = ((1-r1)*(r2+1))/4.0E+0-(((1-r1)*(1-r2_2))/2.0E+0+((1-r1_2)*(r2+1))/2.0E+0)/2.0E+0;
+     h(3) = ((1-r1)*(1-r2))/4.0E+0-(((1-r1)*(1-r2_2))/2.0E+0+((1-r1_2)*(1-r2))/2.0E+0)/2.0E+0;
+     h(4) = ((r1+1)*(1-r2))/4.0E+0-(((r1+1)*(1-r2_2))/2.0E+0+((1-r1_2)*(1-r2))/2.0E+0)/2.0E+0;
+     h(5) = ((1-r1_2)*(r2+1))/2.0E+0;
+     h(6) = ((1-r1)*(1-r2_2))/2.0E+0;
+     h(7) = ((1-r1_2)*(1-r2))/2.0E+0;
+     h(8) = ((r1+1)*(1-r2_2))/2.0E+0;
+}
+
+void
+Triangle6h::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
+                               sp_grad::SpMatrix<doublereal, iNumNodes, 2>& hd)
+{
+     const doublereal zeta = r(1);
+     const doublereal eta = r(2);
+
+     static_assert(iNumNodes == 6);
+
+     hd(1,1) = 2*(zeta+eta-1)-2*((-zeta)-eta+1)+1;
+     hd(1,2) = 2*(zeta+eta-1)-2*((-zeta)-eta+1)+1;
+     hd(2,1) = 4*zeta-1;
+     hd(2,2) = 0;
+     hd(3,1) = 0;
+     hd(3,2) = 4*eta-1;
+     hd(4,1) = 4*((-zeta)-eta+1)-4*zeta;
+     hd(4,2) = -4*zeta;
+     hd(5,1) = 4*eta;
+     hd(5,2) = 4*zeta;
+     hd(6,1) = -4*eta;
+     hd(6,2) = 4*((-zeta)-eta+1)-4*eta;
+}
+
+void
+Triangle6h::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
+                          sp_grad::SpColVector<doublereal, iNumNodes>& h)
+{
+     const doublereal zeta = r(1);
+     const doublereal eta = r(2);
+
+     static_assert(iNumNodes == 6);
+
+     h(1) = (1-2*((-zeta)-eta+1))*(zeta+eta-1);
+     h(2) = -(1-2*zeta)*zeta;
+     h(3) = -(1-2*eta)*eta;
+     h(4) = 4*((-zeta)-eta+1)*zeta;
+     h(5) = 4*eta*zeta;
+     h(6) = 4*eta*((-zeta)-eta+1);
 }
 
 constexpr sp_grad::index_type Hexahedron8::iNumNodes;
@@ -1647,6 +1810,77 @@ Gauss2x2::dGetWeight(sp_grad::index_type i)
      return alphai[ridx[i]] * alphai[sidx[i]];
 }
 
+constexpr sp_grad::index_type Gauss3x3::iNumEvalPoints;
+constexpr sp_grad::index_type Gauss3x3::ridx[];
+constexpr sp_grad::index_type Gauss3x3::sidx[];
+
+void
+Gauss3x3::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r)
+{
+     ASSERT(i >= 0);
+     ASSERT(i < iNumEvalPoints);
+     ASSERT(ridx[i] >= 0);
+     ASSERT(ridx[i] < iGaussOrder);
+     ASSERT(sidx[i] >= 0);
+     ASSERT(sidx[i] < iGaussOrder);
+
+     static_assert(sizeof(ri) / sizeof(ri[0]) == iGaussOrder);
+     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPoints);
+     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPoints);
+
+     r(1) = ri[ridx[i]];
+     r(2) = ri[sidx[i]];
+}
+
+doublereal
+Gauss3x3::dGetWeight(sp_grad::index_type i)
+{
+     ASSERT(i >= 0);
+     ASSERT(i < iNumEvalPoints);
+     ASSERT(ridx[i] >= 0);
+     ASSERT(ridx[i] < iGaussOrder);
+     ASSERT(sidx[i] >= 0);
+     ASSERT(sidx[i] < iGaussOrder);
+
+     static_assert(sizeof(alphai) / sizeof(alphai[0]) == iGaussOrder);
+     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPoints);
+     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPoints);
+
+     return alphai[ridx[i]] * alphai[sidx[i]];
+}
+
+constexpr doublereal CollocTria6h::A;
+constexpr doublereal CollocTria6h::B;
+constexpr doublereal CollocTria6h::P1;
+constexpr doublereal CollocTria6h::P2;
+constexpr doublereal CollocTria6h::zeta[7];
+constexpr doublereal CollocTria6h::eta[7];
+constexpr doublereal CollocTria6h::w[7];
+
+void
+CollocTria6h::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r)
+{
+     ASSERT(i >= 0);
+     ASSERT(i < iNumEvalPoints);
+
+     static_assert(sizeof(zeta) / sizeof(zeta[0]) == iNumEvalPoints);
+     static_assert(sizeof(eta) / sizeof(eta[0]) == iNumEvalPoints);
+
+     r(1) = zeta[i];
+     r(2) = eta[i];
+}
+
+doublereal
+CollocTria6h::dGetWeight(sp_grad::index_type i)
+{
+     ASSERT(i >= 0);
+     ASSERT(i < iNumEvalPoints);
+
+     static_assert(sizeof(w) / sizeof(w[0]) == iNumEvalPoints);
+
+     return w[i];
+}
+
 constexpr sp_grad::index_type Gauss2x2x2::iNumEvalPointsStiffness;
 constexpr sp_grad::index_type Gauss2x2x2::iNumEvalPointsMass;
 constexpr sp_grad::index_type Gauss2x2x2::iNumEvalPointsMassLumped;
@@ -1834,20 +2068,20 @@ Gauss3x3x3::dGetWeightMassLumped(sp_grad::index_type i)
      return alphai_lumped[ridx[i]] * alphai_lumped[sidx[i]] * alphai_lumped[tidx[i]];
 }
 
-constexpr doublereal GaussP15::ri[];
-constexpr doublereal GaussP15::si[];
-constexpr doublereal GaussP15::wi[];
-constexpr doublereal GaussP15::ti[];
-constexpr doublereal GaussP15::alphai[];
+constexpr doublereal CollocPenta15::ri[];
+constexpr doublereal CollocPenta15::si[];
+constexpr doublereal CollocPenta15::wi[];
+constexpr doublereal CollocPenta15::ti[];
+constexpr doublereal CollocPenta15::alphai[];
 
-constexpr doublereal GaussP15::ri_lumped[];
-constexpr doublereal GaussP15::si_lumped[];
-constexpr doublereal GaussP15::wi_lumped[];
-constexpr doublereal GaussP15::ti_lumped[];
-constexpr doublereal GaussP15::alphai_lumped[];
+constexpr doublereal CollocPenta15::ri_lumped[];
+constexpr doublereal CollocPenta15::si_lumped[];
+constexpr doublereal CollocPenta15::wi_lumped[];
+constexpr doublereal CollocPenta15::ti_lumped[];
+constexpr doublereal CollocPenta15::alphai_lumped[];
 
 void
-GaussP15::GetPositionStiffness(sp_grad::index_type idx, sp_grad::SpColVector<doublereal, 3>& r)
+CollocPenta15::GetPositionStiffness(sp_grad::index_type idx, sp_grad::SpColVector<doublereal, 3>& r)
 {
      ASSERT(idx >= 0);
      ASSERT(idx < iNumEvalPointsStiffness);
@@ -1872,7 +2106,7 @@ GaussP15::GetPositionStiffness(sp_grad::index_type idx, sp_grad::SpColVector<dou
 }
 
 doublereal
-GaussP15::dGetWeightStiffness(sp_grad::index_type idx)
+CollocPenta15::dGetWeightStiffness(sp_grad::index_type idx)
 {
      ASSERT(idx >= 0);
      ASSERT(idx < iNumEvalPointsStiffness);
@@ -1894,7 +2128,7 @@ GaussP15::dGetWeightStiffness(sp_grad::index_type idx)
 }
 
 void
-GaussP15::GetPositionMassLumped(sp_grad::index_type idx, sp_grad::SpColVector<doublereal, 3>& r)
+CollocPenta15::GetPositionMassLumped(sp_grad::index_type idx, sp_grad::SpColVector<doublereal, 3>& r)
 {
      ASSERT(idx >= 0);
      ASSERT(idx < iNumEvalPointsMassLumped);
@@ -1919,7 +2153,7 @@ GaussP15::GetPositionMassLumped(sp_grad::index_type idx, sp_grad::SpColVector<do
 }
 
 doublereal
-GaussP15::dGetWeightMassLumped(sp_grad::index_type idx)
+CollocPenta15::dGetWeightMassLumped(sp_grad::index_type idx)
 {
      ASSERT(idx >= 0);
      ASSERT(idx < iNumEvalPointsMassLumped);
@@ -1940,26 +2174,26 @@ GaussP15::dGetWeightMassLumped(sp_grad::index_type idx)
      return 0.5 * wi_lumped[i] * alphai_lumped[j];
 }
 
-constexpr sp_grad::index_type GaussT10h::iNumEvalPointsStiffness;
-constexpr sp_grad::index_type GaussT10h::iNumEvalPointsMass;
-constexpr sp_grad::index_type GaussT10h::iNumEvalPointsMassLumped;
-constexpr doublereal GaussT10h::r1[];
-constexpr doublereal GaussT10h::s1[];
-constexpr doublereal GaussT10h::t1[];
-constexpr doublereal GaussT10h::w1[];
+constexpr sp_grad::index_type CollocTet10h::iNumEvalPointsStiffness;
+constexpr sp_grad::index_type CollocTet10h::iNumEvalPointsMass;
+constexpr sp_grad::index_type CollocTet10h::iNumEvalPointsMassLumped;
+constexpr doublereal CollocTet10h::r1[];
+constexpr doublereal CollocTet10h::s1[];
+constexpr doublereal CollocTet10h::t1[];
+constexpr doublereal CollocTet10h::w1[];
 
-constexpr doublereal GaussT10h::r2[];
-constexpr doublereal GaussT10h::s2[];
-constexpr doublereal GaussT10h::t2[];
-constexpr doublereal GaussT10h::w2[];
+constexpr doublereal CollocTet10h::r2[];
+constexpr doublereal CollocTet10h::s2[];
+constexpr doublereal CollocTet10h::t2[];
+constexpr doublereal CollocTet10h::w2[];
 
-constexpr doublereal GaussT10h::r3[];
-constexpr doublereal GaussT10h::s3[];
-constexpr doublereal GaussT10h::t3[];
-constexpr doublereal GaussT10h::w3[];
+constexpr doublereal CollocTet10h::r3[];
+constexpr doublereal CollocTet10h::s3[];
+constexpr doublereal CollocTet10h::t3[];
+constexpr doublereal CollocTet10h::w3[];
 
 void
-GaussT10h::GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
+CollocTet10h::GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
 {
      static_assert(sizeof(r1) / sizeof(r1[0]) == N1);
      static_assert(sizeof(s1) / sizeof(s1[0]) == N1);
@@ -1976,7 +2210,7 @@ GaussT10h::GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doub
 }
 
 doublereal
-GaussT10h::dGetWeightStiffness(sp_grad::index_type i)
+CollocTet10h::dGetWeightStiffness(sp_grad::index_type i)
 {
      static_assert(sizeof(w1) / sizeof(w1[0]) == N1);
 
@@ -1989,7 +2223,7 @@ GaussT10h::dGetWeightStiffness(sp_grad::index_type i)
 }
 
 void
-GaussT10h::GetPositionMass(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
+CollocTet10h::GetPositionMass(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
 {
      static_assert(sizeof(r2) / sizeof(r2[0]) == N2);
      static_assert(sizeof(s2) / sizeof(s2[0]) == N2);
@@ -2005,7 +2239,7 @@ GaussT10h::GetPositionMass(sp_grad::index_type i, sp_grad::SpColVector<doublerea
 }
 
 doublereal
-GaussT10h::dGetWeightMass(sp_grad::index_type i)
+CollocTet10h::dGetWeightMass(sp_grad::index_type i)
 {
      static_assert(sizeof(w2) / sizeof(w2[0]) == N2);
      static_assert(iNumEvalPointsMass == N2);
@@ -2017,13 +2251,13 @@ GaussT10h::dGetWeightMass(sp_grad::index_type i)
 }
 
 void
-GaussT10h::GetPositionMassLumped(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
+CollocTet10h::GetPositionMassLumped(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
 {
      throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
 }
 
 doublereal
-GaussT10h::dGetWeightMassLumped(sp_grad::index_type i)
+CollocTet10h::dGetWeightMassLumped(sp_grad::index_type i)
 {
      throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
 }
@@ -4533,10 +4767,12 @@ ReadPressureLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
 template SolidElem* ReadSolid<Hexahedron8, Gauss2x2x2>(DataManager*, MBDynParser&, unsigned int);
 template SolidElem* ReadSolid<Hexahedron20, Gauss3x3x3>(DataManager*, MBDynParser&, unsigned int);
 template SolidElem* ReadSolid<Hexahedron20r, GaussH20r>(DataManager*, MBDynParser&, unsigned int);
-template SolidElem* ReadSolid<Pentahedron15, GaussP15>(DataManager*, MBDynParser&, unsigned int);
-template SolidElem* ReadSolid<Tetrahedron10h, GaussT10h>(DataManager*, MBDynParser&, unsigned int);
+template SolidElem* ReadSolid<Pentahedron15, CollocPenta15>(DataManager*, MBDynParser&, unsigned int);
+template SolidElem* ReadSolid<Tetrahedron10h, CollocTet10h>(DataManager*, MBDynParser&, unsigned int);
 
 template PressureLoadElem* ReadPressureLoad<Quadrangle4, Gauss2x2>(DataManager*, MBDynParser&, unsigned int);
+template PressureLoadElem* ReadPressureLoad<Quadrangle8, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
+template PressureLoadElem* ReadPressureLoad<Triangle6h, CollocTria6h>(DataManager*, MBDynParser&, unsigned int);
 
 void InitSolidCL()
 {

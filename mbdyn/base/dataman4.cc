@@ -118,6 +118,8 @@ enum KeyWords {
         PENTAHEDRON15,
         TETRAHEDRON10,
         PRESSUREQ4,
+        PRESSUREQ8,
+        PRESSURET6,
         
 	AIRPROPERTIES,
 	GUST,
@@ -192,6 +194,8 @@ DataManager::ReadElems(MBDynParser& HP)
                 "pentahedron15",
                 "tetrahedron10",
                 "pressureq4",
+                "pressureq8",
+                "pressuret6",
                 
 		"air" "properties",
 		"gust",
@@ -384,7 +388,9 @@ DataManager::ReadElems(MBDynParser& HP)
                              break;
                         }
 
-                        case PRESSUREQ4: {
+                        case PRESSUREQ4:
+                        case PRESSUREQ8:
+                        case PRESSURET6: {
                              DEBUGLCOUT(MYDEBUG_INPUT, "pressure loads\n");
                              Typ = Elem::PRESSURE_LOAD;
                              break;
@@ -587,6 +593,8 @@ DataManager::ReadElems(MBDynParser& HP)
                                         break;
                                         
                                 case PRESSUREQ4:
+                                case PRESSUREQ8:
+                                case PRESSURET6:
                                         t = Elem::PRESSURE_LOAD;
                                         break;
                                      
@@ -913,6 +921,8 @@ DataManager::ReadElems(MBDynParser& HP)
                                         case PENTAHEDRON15:
                                         case TETRAHEDRON10:
                                         case PRESSUREQ4:
+                                        case PRESSUREQ8:
+                                        case PRESSURET6:
 					case INDUCEDVELOCITY:
 					case ROTOR:
 					case AERODYNAMICBODY:
@@ -1008,6 +1018,8 @@ DataManager::ReadElems(MBDynParser& HP)
                                                         ppE = ppFindElem(Elem::SOLID, uLabel);
                                                         break;
                                                 case PRESSUREQ4:
+                                                case PRESSUREQ8:
+                                                case PRESSURET6:
                                                         ppE = ppFindElem(Elem::PRESSURE_LOAD, uLabel);
                                                         break;
 						case INDUCEDVELOCITY:
@@ -1158,6 +1170,8 @@ DataManager::ReadElems(MBDynParser& HP)
                                 case PENTAHEDRON15:
                                 case TETRAHEDRON10:
                                 case PRESSUREQ4:
+                                case PRESSUREQ8:
+                                case PRESSURET6:
                                      
 				case GUST:
 				case INDUCEDVELOCITY:
@@ -1715,10 +1729,10 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                      pE = ReadSolid<Hexahedron20r, GaussH20r>(this, HP, uLabel);
                      break;
                 case PENTAHEDRON15:
-                     pE = ReadSolid<Pentahedron15, GaussP15>(this, HP, uLabel);
+                     pE = ReadSolid<Pentahedron15, CollocPenta15>(this, HP, uLabel);
                      break;
                 case TETRAHEDRON10:
-                     pE = ReadSolid<Tetrahedron10h, GaussT10h>(this, HP, uLabel);
+                     pE = ReadSolid<Tetrahedron10h, CollocTet10h>(this, HP, uLabel);
                      break;
                 default:
                      ASSERT(0);
@@ -1731,9 +1745,13 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                 break;
         }
              
-        case PRESSUREQ4: {
+        case PRESSUREQ4:
+        case PRESSUREQ8:
+        case PRESSURET6: {
                 static constexpr char sType[][11] = {
                         "pressureq4",
+                        "pressureq8",
+                        "pressuret6"
                 };
 
                 ASSERT(CurrType - PRESSUREQ4 < sizeof(sType) / sizeof(sType[0]));
@@ -1766,6 +1784,12 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                 case PRESSUREQ4:
                      pE = ReadPressureLoad<Quadrangle4, Gauss2x2>(this, HP, uLabel);
                      break;
+                case PRESSUREQ8:
+                     pE = ReadPressureLoad<Quadrangle8, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case PRESSURET6:
+                     pE = ReadPressureLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);
+                     break;
                 default:
                      ASSERT(0);
                 }
@@ -1775,7 +1799,7 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                 }
 
                 break;
-        }             
+        }
 	/* Elementi aerodinamici: rotori */
 	case ROTOR:
 	case INDUCEDVELOCITY: {
