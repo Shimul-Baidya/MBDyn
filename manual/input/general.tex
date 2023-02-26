@@ -94,7 +94,30 @@ and assignment (variable names and values are kept in memory throughout
 the input phase and the simulation) and simple math functions.
 Limited math on strings is also supported.
 Named variables and non-named constants are strongly typed.
+
 Four types are currently available: \kw{bool}, \kw{integer}, \kw{real}, and \kw{string}.
+They are listed in Table~\ref{tab:MATHP-TYPES}.
+
+\begin{table}
+	\begin{center}
+	\caption{Built-in types in math parser}\label{tab:MATHP-TYPES}
+	\begin{tabular}{ll}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Description}} \\
+		\hline
+		\kw{bool} & Boolean number (promoted to \kw{integer}, \kw{real},
+			or \kw{string} (0 or 1), whenever required) \\
+		\kw{integer} & Integer number (promoted to \kw{real}, or \kw{string},
+			whenever required) \\
+		\kw{real} & Real number (promoted to \kw{string}
+			whenever required) \\
+		\kw{string} & Text string \\
+		\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+
 
 \subsubsection{Bool}
 \label{sec:bool}
@@ -183,13 +206,66 @@ a value later.
 Examples:
 \begin{verbatim}
     set: integer N;
+    set: integer W = 10;
+    set: ifndef integer W = 11; # ignored, as W already exists
     set: const integer M = 100;
     set: string welcome_message = "hello";
     set: const real x = -1.e-3;
     set: real y;
     set: bool B;
-    set: const real z; # error!
+    set: const real z; # error: const'ants must be initialized!
 \end{verbatim}
+
+Table~\ref{tab:MATHP-VARS} lists the predefined variables; notice
+that those not defined as \kw{const} are treated exactly as user-defined variables, so they 
+can be reassigned.
+
+\begin{table}
+	\begin{center}
+	\caption{Predefined variables and constants in math parser}\label{tab:MATHP-VARS}
+	\begin{tabular}{lll}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Type}} &
+		\multicolumn{1}{c}{\textbf{Value}} \\
+		\hline
+		\kw{Time} & Real & Current simulation time \\
+		\kw{TimeStep} & Real & Current simulation time step \\
+		\kw{Step} & Integer & Current simulation step \\
+		\kw{Var} & Real & \multicolumn{1}{p{.5\textwidth}}{Set
+			by \kw{dof}, \kw{node}, or \kw{element}
+			drive callers with degree of freedom value,
+			node or element private data value, respectively} \\
+		\\
+		\kw{e} & Real & Neper's number \\
+		\kw{pi} & Real & $\pi$ \\
+		\\
+		\kw{FALSE} & Bool & `false' \\
+		\kw{TRUE} & Bool & `true' \\
+		\\
+		\kw{INT\_MAX} & Integer & Largest integer \\
+		\kw{INT\_MIN} & Integer & Smallest integer \\
+		\kw{RAND\_MAX} & Integer & Largest random integer \\
+		\kw{REAL\_MAX} & Real & Largest real \\
+		\kw{REAL\_MIN} & Real & Smallest real \\
+		\\
+		\kw{in2m} & Real & Inch to meter ratio (0.0254) \\
+		\kw{m2in} & Real & Meter to inch ratio (1.0/0.0254) \\
+		\kw{in2mm} & Real & Inch to meter ratio (25.4) \\
+		\kw{mm2in} & Real & Meter to inch ratio (1.0/25.4) \\
+		\kw{ft2m} & Real & Foot to meter ratio (0.3048) \\
+		\kw{m2ft} & Real & Meter to foot ratio (1.0/0.3048) \\
+		\kw{lb2kg} & Real & Pound to kilogram ratio (0.45359237) \\
+		\kw{kg2lb} & Real & Kilogram to pound ratio (1.0/0.45359237) \\
+		\kw{deg2rad} & Real & Degree to radian ratio ($\pi$/180) \\
+		\kw{rad2deg} & Real & Radian to degree ratio (180/$\pi$) \\
+		\kw{slug2kg} & Real & Slug to kilogram ratio (14.5939) \\
+		\kw{kg2slug} & Real & Kilogram to slug ratio (1.0/14.5939) \\
+		\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+
 
 Operations are strongly typed and perform implicit cast when allowed.
 For instance \texttt{1+2.5} returns a \kw{real} whose value 
@@ -287,48 +363,56 @@ The variable \kw{Time} is declared, defined and initialized\footnote{
 phase it is assigned the value of the current time. 
 
 Table~\ref{tab:MATHP-OPERATORS} shows the supported mathematical 
-operators, while Table~\ref{tab:MATHP-FUNCTIONS} shows the built-in
-mathematical functions.
+operators, their precedence and associativity.
+Notice that precedence may produce unexpected behavior; for example,
+\begin{verbatim}
+    -2^2 == (-2)^2 = 4
+\end{verbatim}
 
+Table~\ref{tab:MATHP-FUNCTIONS} shows the built-in
+mathematical functions.
 In addition, type names used as functions provide explicit type casting
 according to built-in casting rules (Table~\ref{tab:MATHP-CAST-FUNCTIONS}).
 The \bnt{type}\kw{\_eval} variants evaluate the argument during parsing, rather than run-time.
 This is useful when parsing strings that will be evaluated later, for example in \kw{string} drive callers
 or hints, if one wants a particular variable or expression to be evaluated at parsing time.
 
-The supported types are listed in Table~\ref{tab:MATHP-TYPES}.
-Table~\ref{tab:MATHP-VARS} lists the predefined variables; notice
-that they're treated exactly as user-defined variables, so they 
-can be reassigned.
-
 \begin{table}
 	\begin{center}
 	\caption{Built-in mathematical operators in math parser
 	(from higher to lower precedence)}\label{tab:MATHP-OPERATORS}
-	\begin{tabular}{lll}
+	\begin{tabular}{cccl}
 		\hline
-		\multicolumn{1}{c}{\textbf{Operator}} & 
-		\multicolumn{1}{c}{\textbf{Type}} &
-		\multicolumn{1}{c}{\textbf{Description}} \\
+		\textbf{Operator} & 
+		\textbf{Type} &
+		\textbf{Associativity} &
+		\textbf{Description} \\
 		\hline
-		\texttt{\^} & Binary, right & Power \\
-		\texttt{+} & Unary, left & Plus sign \\
-		\texttt{-} & Unary, left & Minus sign \\
-		\texttt{*} & Binary, left & Multiplication \\
-		\texttt{/} & Binary, left & Division \\
-		\texttt{+} & Binary, left & Addition \\
-		\texttt{-} & Binary, left & Subtraction \\
-		\texttt{>} & Binary, left & Greater than \\
-		\texttt{>=} & Binary, left & Greater than or equal to \\
-		\texttt{==} & Binary, left & Equal to \\
-		\texttt{<=} & Binary, left & Less than or equal to \\
-		\texttt{<} & Binary, left & Less than \\
-		\texttt{!=} & Binary, left & Not equal \\
-		\texttt{!} & Unary, right & NOT \\
-		\texttt{\&\&} & Binary, left & AND \\
-		\texttt{||} & Binary, left & OR \\
-		\texttt{\~{}|} & Binary, left & XOR (exclusive OR) \\
-		\texttt{=} & Binary, right & Assignment \\
+		\texttt{+} & Unary & --- & Plus sign \\
+		\texttt{-} & Unary & --- & Minus sign \\
+		\texttt{!} & Unary & --- & NOT \\
+		\hline
+		\texttt{\^} & Binary & Right & Power \\
+		\hline
+		\texttt{*} & Binary & Left & Multiplication \\
+		\texttt{/} & Binary & Left & Division \\
+		\texttt{\%} & Binary & Left & Integer division remainder \\
+		\hline
+		\texttt{+} & Binary & Left & Addition \\
+		\texttt{-} & Binary & Left & Subtraction \\
+		\hline
+		\texttt{>} & Binary & Left & Greater than \\
+		\texttt{>=} & Binary & Left & Greater than or equal to \\
+		\texttt{==} & Binary & Left & Equal to \\
+		\texttt{<=} & Binary & Left & Less than or equal to \\
+		\texttt{<} & Binary & Left & Less than \\
+		\texttt{!=} & Binary & Left & Not equal \\
+		\hline
+		\texttt{\&\&} & Binary & Left & AND \\
+		\texttt{||} & Binary & Left & OR \\
+		\texttt{\~{}|} & Binary & Left & XOR (exclusive OR) \\
+		\hline
+		\texttt{=} & Binary & Right & Assignment \\
 		\hline
 	\end{tabular}
 	\end{center}
@@ -336,72 +420,6 @@ can be reassigned.
 	Note: ``left'' and ``right'' refer to the associativity
 	of the operators. \\
 	Note: the \kw{string} type only supports the binary ``+'' operator.
-\end{table}
-
-\begin{table}
-	\begin{center}
-	\caption{Built-in types in math parser}\label{tab:MATHP-TYPES}
-	\begin{tabular}{ll}
-		\hline
-		\multicolumn{1}{c}{\textbf{Name}} &
-		\multicolumn{1}{c}{\textbf{Description}} \\
-		\hline
-		\kw{bool} & Boolean number (promoted to \kw{integer}, \kw{real},
-			or \kw{string} (0 or 1), whenever required) \\
-		\kw{integer} & Integer number (promoted to \kw{real}, or \kw{string},
-			whenever required) \\
-		\kw{real} & Real number (promoted to \kw{string}
-			whenever required) \\
-		\kw{string} & Text string \\
-		\hline
-	\end{tabular}
-	\end{center}
-\end{table}
-
-\begin{table}
-	\begin{center}
-	\caption{Predefined variables and constants in math parser}\label{tab:MATHP-VARS}
-	\begin{tabular}{lll}
-		\hline
-		\multicolumn{1}{c}{\textbf{Name}} &
-		\multicolumn{1}{c}{\textbf{Type}} &
-		\multicolumn{1}{c}{\textbf{Value}} \\
-		\hline
-		\kw{Time} & Real & Current simulation time \\
-		\kw{TimeStep} & Real & Current simulation time step \\
-		\kw{Step} & Integer & Current simulation step \\
-		\kw{Var} & Real & \multicolumn{1}{p{.5\textwidth}}{Set
-			by \kw{dof}, \kw{node}, or \kw{element}
-			drive callers with degree of freedom value,
-			node or element private data value, respectively} \\
-		\\
-		\kw{e} & Real & Neper's number \\
-		\kw{pi} & Real & $\pi$ \\
-		\\
-		\kw{FALSE} & Bool & `false' \\
-		\kw{TRUE} & Bool & `true' \\
-		\\
-		\kw{INT\_MAX} & Integer & Largest integer \\
-		\kw{INT\_MIN} & Integer & Smallest integer \\
-		\kw{RAND\_MAX} & Integer & Largest random integer \\
-		\kw{REAL\_MAX} & Real & Largest real \\
-		\kw{REAL\_MIN} & Real & Smallest real \\
-		\\
-		\kw{in2m} & Real & Inch to meter ratio (0.0254) \\
-		\kw{m2in} & Real & Meter to inch ratio (1.0/0.0254) \\
-		\kw{in2mm} & Real & Inch to meter ratio (25.4) \\
-		\kw{mm2in} & Real & Meter to inch ratio (1.0/25.4) \\
-		\kw{ft2m} & Real & Foot to meter ratio (0.3048) \\
-		\kw{m2ft} & Real & Meter to foot ratio (1.0/0.3048) \\
-		\kw{lb2kg} & Real & Pound to kilogram ratio (0.45359237) \\
-		\kw{kg2lb} & Real & Kilogram to pound ratio (1.0/0.45359237) \\
-		\kw{deg2rad} & Real & Degree to radian ratio ($\pi$/180) \\
-		\kw{rad2deg} & Real & Radian to degree ratio (180/$\pi$) \\
-		\kw{slug2kg} & Real & Slug to kilogram ratio (14.5939) \\
-		\kw{kg2slug} & Real & Kilogram to slug ratio (1.0/14.5939) \\
-		\hline
-	\end{tabular}
-	\end{center}
 \end{table}
 
 \begin{table}
@@ -529,8 +547,7 @@ yields
 
 \subsection{Namespaces}
 \label{sec:GENERAL:NAMESPACE}
-The math parser uses the notion of \emph{namespace} to separate
-functions.
+The math parser uses the notion of \emph{namespace} to group and uniquely identify functions.
 
 \subsubsection{Default Namespace}
 The functions listed in Table~\ref{tab:MATHP-FUNCTIONS}
@@ -562,16 +579,16 @@ but often needs to refer to the configuration
 at the previous, just completed time step.
 
 \paragraph{Example 1.} \
-This string returns the $y$ component of the relative angular velocity between structural nodes ``\verb;NODENAME_1;'' and ``\verb;NODENAME_2;'' at the current timestep:
+This string returns the $y$ component of the relative angular velocity between structural nodes ``\verb;NODELABEL_1;'' and ``\verb;NODELABEL_2;'' at the current timestep:
 \begin{verbatim}
-    string, "model::yangvrel(NODENAME_1,NODENAME_2)", ...
+    string, "model::yangvrel(NODELABEL_1,NODELABEL_2)", ...
 \end{verbatim}
 
 \paragraph{Example 2.} \
-This string returns the absolute $x$ component of the position of node ``\verb;NODENAME;'' at the previous timestep, plus the value of ``\verb;DRIVE_1 * DRIVE_2;'' when time is greater than 5 seconds:
+This string returns the absolute $x$ component of the position of node ``\verb;NODELABEL;'' at the previous timestep, plus the value of ``\verb;DRIVELABEL_1 * DRIVELABEL_2;'' when time is greater than 5 seconds:
 \begin{verbatim}
-    string, "model::xposition_prev(NODENAME) + \
-        model::drive(DRIVE_1, Time) * model::drive(DRIVE_2, Time) * (Time > 5.)",
+    string, "model::xposition_prev(NODELABEL) + \
+        model::drive(DRIVELABEL_1, Time) * model::drive(DRIVELABEL_2, Time) * (Time > 5.)",
 \end{verbatim}
 
 \paragraph{Example 3.} \
@@ -681,7 +698,7 @@ To extract the current from an electric circuit where a resistor $R$ is defined 
 \label{sec:GENERAL:PLUGIN}
 Plugin variables, or plugins, as the name states, are pluggable extensions
 to the math parser that allow to register mechanisms to bind a variable
-to some means to dynamically generate its value.
+to some means of dynamically generating its value.
 As a consequence, any time a variable declared as part of a plugin
 is used, its value is dynamically evaluated executing the related code.
 
@@ -744,11 +761,11 @@ When \nt{prev} is \kw{true}, the value at the previous time step is used.
 
 \paragraph{Example.} \
 The variable \texttt{VARNAME} takes the value of the derivative
-of \kw{abstract} node \texttt{NODENAME}
+of \kw{abstract} node \texttt{NODELABEL}
 \begin{verbatim}
-    set: integer NODENAME = 1000;
+    set: integer NODELABEL = 1000;
     # the node must exist
-    set: [dof,VARNAME,NODENAME,abstract,differential];
+    set: [dof,VARNAME,NODELABEL,abstract,differential];
 \end{verbatim}
 
 
@@ -785,11 +802,11 @@ of the plugin variable specification.
 This implements a variable \texttt{VARNAME} with exactly the same value
 of the one defined in the example of the \kw{dof} plugin,
 where the variable takes the value of the derivative
-of the \kw{abstract} node \texttt{NODENAME}
+of the \kw{abstract} node \texttt{NODELABEL}
 \begin{verbatim}
-    set: integer NODENAME = 1000;
+    set: integer NODELABEL = 1000;
     # the node must exist
-    set: [node,VARNAME,NODENAME,abstract,string="xP"];
+    set: [node,VARNAME,NODELABEL,abstract,string="xP"];
 \end{verbatim}
 
 
@@ -824,11 +841,11 @@ of the plugin variable specification.
 
 \paragraph{Example.} \
 The variable \texttt{VARNAME} takes the value of the $z$ component 
-of the reaction force of \kw{joint} \texttt{ELEMNAME}
+of the reaction force of \kw{joint} \texttt{ELEMLABEL}
 \begin{verbatim}
-    set: integer ELEMNAME = 1000;
+    set: integer ELEMLABEL = 1000;
     # the joint must exist
-    set: [element,VARNAME,ELEMNAME,joint,string="Fz"];
+    set: [element,VARNAME,ELEMLABEL,joint,string="Fz"];
 \end{verbatim}
 
 
