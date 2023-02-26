@@ -121,8 +121,8 @@ public:
 
           oDofMap.MapAssign(gamma, (lambda * (IIIC - sqrt(IIIC)) - mu) / IIIC);
 
-          constexpr index_type i1[] = {1, 2, 3, 1, 2, 3};
-          constexpr index_type i2[] = {1, 2, 3, 2, 3, 1};
+          static constexpr index_type i1[] = {1, 2, 3, 1, 2, 3};
+          static constexpr index_type i2[] = {1, 2, 3, 2, 3, 1};
 
           for (index_type i = 1; i <= 6; ++i) {
                const index_type j = i1[i - 1];
@@ -170,6 +170,224 @@ struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
              SAFENEWWITHCONSTRUCTOR(pCL,
                                     NeoHookean,
                                     NeoHookean(mu, lambda));
+
+             CLType = ConstLawType::ELASTIC;
+
+             return pCL;
+        }
+};
+
+class BilinearIsotropicHardening: public ConstitutiveLaw<Vec6, Mat6x6> {
+public:
+     BilinearIsotropicHardening(const doublereal E, const doublereal nu, const doublereal ET, const doublereal sigmayv)
+          :E(E), nu(nu), ET(ET), sigmayv(sigmayv), sigmay_prev(sigmayv), sigmay_curr(sigmayv), aE((1. + nu) / E), EP(E * ET / (E - ET)) {
+     }
+
+     virtual ConstLawType::Type GetConstLawType() const override {
+          return ConstLawType::ELASTIC;
+     }
+
+     virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
+          BilinearIsotropicHardening* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 BilinearIsotropicHardening,
+                                 BilinearIsotropicHardening(E, nu, ET, sigmayv)); // Not considering eP_prev
+          return pCL;
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+            sp_grad::SpColVector<doublereal, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+            sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+                         sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const Vec6& Eps, const Vec6& EpsPrime) override {
+          ConstitutiveLaw<Vec6, Mat6x6>::UpdateElasticSparse(this, Eps);
+     }
+
+     template <typename VectorType>
+     void UpdateElasticTpl(const VectorType& epsilon, VectorType& sigma) {
+          // Small strain elastoplasticity based on
+          // K.-J. Bathe Finite Element Procedures second edition 2014 ISBN 978-0-9790049-5-7
+          // Chapter 6.6.3, page 597
+
+          typedef typename VectorType::ValueType T;
+          using namespace sp_grad;
+
+          SpGradExpDofMapHelper<typename VectorType::ValueType> oDofMap;
+
+          oDofMap.GetDofStat(epsilon);
+          oDofMap.Reset();
+          oDofMap.InsertDof(epsilon);
+          oDofMap.InsertDone();
+
+          T em, sigmam; // mean stress, mean strain
+
+          oDofMap.MapAssign(em, (epsilon(1) + epsilon(2) + epsilon(3)) / 3.); // equation 6.219
+          oDofMap.MapAssign(sigmam, (E / (1 - 2 * nu)) * em); // equation 6.215
+
+          static constexpr index_type idx1[] = {1, 2, 3, 1, 2, 3};
+          static constexpr index_type idx2[] = {1, 2, 3, 2, 3, 1};
+          static constexpr index_type idx_tens[3][3] = {{1, 4, 6},
+                                                        {4, 2, 5},
+                                                        {6, 5, 3}};
+
+          SpMatrix<T, 3, 3> e2(3, 3, epsilon.iGetMaxSize());
+
+          for (index_type i = 1; i <= 3; ++i) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    oDofMap.MapAssign(e2(i, j), epsilon(idx_tens[i - 1][j - 1]) - em * (i == j) - eP_prev(i, j)); // equation 6.218, 6.221
+               }
+          }
+
+          const SpMatrix<T, 3, 3> SE(e2 / aE, oDofMap); // elastic portion of deviatoric stress tensor equation 6.239
+
+          T sum_e2ij_2;
+
+          SpGradientTraits<T>::ResizeReset(sum_e2ij_2, 0., 2 * e2.iGetMaxSize() * e2.iGetNumRows() * e2.iGetNumCols());
+
+          for (const auto& e2ij: e2) {
+               sum_e2ij_2 += e2ij * e2ij;
+          }
+
+          T d{0.};
+
+          if (sum_e2ij_2 > 0.) { // avoid division by zero
+               oDofMap.MapAssign(d, sqrt((3. / 2.) * sum_e2ij_2)); // equation 6.232
+          }
+
+          T sigma_barE; // equivalent elastic stress solution
+
+          oDofMap.MapAssign(sigma_barE, d / aE); // equation 6.238
+
+          SpMatrix<T, 3, 3> eP(3, 3, epsilon.iGetMaxSize()); // plastic strain tensor
+          SpMatrix<T, 3, 3> S(3, 3, epsilon.iGetMaxSize()); // deviatoric stress tensor
+
+          T sigmay{sigmay_prev}; // equivalent yield stress
+
+          if (sigma_barE > sigmay_prev) {
+               // yielding
+               T sigma_bar, lambda; // effective stress, yield parameter
+
+               oDofMap.MapAssign(sigma_bar, (2. * EP * d + 3. * sigmay_prev) / (2. * EP * aE + 3.)); // equation 6.236
+               oDofMap.MapAssign(lambda, d / sigma_bar - aE); // equation 6.230, 6.231
+
+               const SpMatrix<T, 3, 3> Delta_eP(SE * (aE * lambda / (aE + lambda)), oDofMap); // equation 6.240, 6.241, 6.225
+
+               sigmay = sigma_bar;
+               eP.MapAssign(eP_prev + Delta_eP, oDofMap);
+               S.MapAssign(SE - Delta_eP / aE, oDofMap); // stress correction equation 6.240
+          } else {
+               // not yielding
+               eP = eP_prev;
+               S = SE;
+          }
+
+          for (index_type i = 1; i <= 3; ++i) {
+               oDofMap.MapAssign(sigma(i), S(i, i) + sigmam); // equation 6.216
+          }
+
+          for (index_type i = 4; i <= 6; ++i) {
+               oDofMap.MapAssign(sigma(i), S(idx1[i - 1], idx2[i - 1])); // equation 6.216
+          }
+
+          UpdatePlasticStrain(eP, sigmay);
+     }
+
+     virtual void AfterConvergence(const Vec6& Eps, const Vec6& EpsPrime) override {
+          eP_prev = eP_curr;
+          sigmay_prev = sigmay_curr;
+     }
+
+private:
+     void UpdatePlasticStrain(const sp_grad::SpMatrix<doublereal, 3, 3>& eP, doublereal sigmay) {
+          eP_curr = eP;
+          sigmay_curr = sigmay;
+     }
+
+     void UpdatePlasticStrain(const sp_grad::SpMatrix<sp_grad::SpGradient, 3, 3>&,
+                              const sp_grad::SpGradient&) {
+     }
+
+     void UpdatePlasticStrain(const sp_grad::SpMatrix<sp_grad::GpGradProd, 3, 3>&,
+                              const sp_grad::GpGradProd&) {
+     }
+
+     const doublereal E, nu, ET, sigmayv;
+     sp_grad::SpMatrixA<doublereal, 3, 3> eP_prev, eP_curr;
+     doublereal sigmay_prev, sigmay_curr, aE, EP;
+};
+
+struct BilinearIsotropicHardeningRead: ConstitutiveLawRead<Vec6, Mat6x6> {
+        virtual ConstitutiveLaw<Vec6, Mat6x6>*
+        Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+             if (!HP.IsKeyWord("E")) {
+                  silent_cerr("keyword \"E\" expected at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+             const doublereal E = HP.GetReal();
+
+             if (E <= 0.) {
+                  silent_cerr("E must be greater than zero at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             if (!HP.IsKeyWord("nu")) {
+                  silent_cerr("keyword \"nu\" expected at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const doublereal nu = HP.GetReal();
+
+             if (nu < 0. || nu >= 0.5) {
+                  // FIXME: incompressible case not implemented yet
+                  silent_cerr("nu must be between 0 and 0.5 at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             if (!HP.IsKeyWord("ET")) {
+                  silent_cerr("keyword \"ET\" expected at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const doublereal ET = HP.GetReal();
+
+             if (ET < 0. || ET >= E) {
+                  silent_cerr("ET must be between zero and E at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             if (!HP.IsKeyWord("sigmayv")) {
+                  silent_cerr("keyword \"sigmayv\" expected at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const doublereal sigmayv = HP.GetReal();
+
+             if (sigmayv <= 0.) {
+                  silent_cerr("sigmayv must be greater than zero at line " << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             BilinearIsotropicHardening* pCL = nullptr;
+
+             SAFENEWWITHCONSTRUCTOR(pCL,
+                                    BilinearIsotropicHardening,
+                                    BilinearIsotropicHardening(E, nu, ET, sigmayv));
 
              CLType = ConstLawType::ELASTIC;
 
@@ -4323,4 +4541,5 @@ template PressureLoadElem* ReadPressureLoad<Quadrangle4, Gauss2x2>(DataManager*,
 void InitSolidCL()
 {
      SetCL6D("neo" "hookean", new NeoHookeanRead);
+     SetCL6D("bilinear" "isotropic" "hardening", new BilinearIsotropicHardeningRead);
 }
