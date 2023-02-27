@@ -250,7 +250,7 @@ public:
 
           for (index_type i = 1; i <= 3; ++i) {
                for (index_type j = 1; j <= 3; ++j) {
-                    oDofMap.MapAssign(e2(i, j), epsilon(idx_tens[i - 1][j - 1]) - em * (i == j) - eP_prev(i, j)); // equation 6.218, 6.221
+                    oDofMap.MapAssign(e2(i, j), ((i == j) ? 1. : 0.5) * epsilon(idx_tens[i - 1][j - 1]) - em * (i == j) - eP_prev(i, j)); // equation 6.218, 6.221
                }
           }
 
