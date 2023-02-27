@@ -144,6 +144,7 @@ public:
 		ConstitutiveLaw<doublereal, doublereal>::Epsilon = Eps - ElasticConstitutiveLaw<doublereal, doublereal>::Get();
 		ConstitutiveLaw<doublereal, doublereal>::EpsilonPrime = EpsPrime;
 
+		// x > 0: no contact
 		doublereal x = m_dSign*ConstitutiveLaw<doublereal, doublereal>::Epsilon;
 		if (x < 0.) {
 			if (m_bActive) {
@@ -513,6 +514,7 @@ public:
 		ConstitutiveLaw<Vec3, Mat3x3>::Epsilon = Eps - ElasticConstitutiveLaw<Vec3, Mat3x3>::Get();
 		ConstitutiveLaw<Vec3, Mat3x3>::EpsilonPrime = EpsPrime;
 
+		// x > 0: no contact
 		doublereal x = m_dSign*ConstitutiveLaw<Vec3, Mat3x3>::Epsilon(3);
 		if (x < 0.) {
 			if (m_bActive) {
