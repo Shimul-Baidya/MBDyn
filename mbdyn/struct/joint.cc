@@ -98,7 +98,7 @@ Joint::~Joint(void)
 
 
 void
-Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH, std::string& name)
+Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH)
 {
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
@@ -108,22 +108,21 @@ Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH, std::string
 	(void)OH.CreateVar(os.str(), type);
 
 	// joint sub-data
-	os << '.';
-	name = os.str();
+	m_sOutputNameBase = os.str();
 
-	Var_F_local = OH.CreateVar<Vec3>(name + "f",
+	Var_F_local = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "f",
 		OutputHandler::Dimensions::Force,
 		"local reaction force (fx, fy, fz)");
 
-	Var_M_local = OH.CreateVar<Vec3>(name + "m",
+	Var_M_local = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "m",
 		OutputHandler::Dimensions::Moment,
 		"local reaction moment (mx, my, mz)");
 
-	Var_F_global = OH.CreateVar<Vec3>(name + "F",
+	Var_F_global = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 		OutputHandler::Dimensions::Force,
 		"global reaction force (FX, FY, FZ)");
 
-	Var_M_global = OH.CreateVar<Vec3>(name + "M",
+	Var_M_global = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 		OutputHandler::Dimensions::Moment,
 		"global reaction moment (MX, MY, MZ)");
 
@@ -666,13 +665,14 @@ ReadJoint(DataManager* pDM,
 			(void)HP.GetRotAbs(::AbsRefFrame);
 		}
 
+		OrientationDescription od = ReadOptionalOrientationDescription(pDM, HP);
 
 		flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
 
 		/* allocazione e creazione */
 		SAFENEWWITHCONSTRUCTOR(pEl,
 			PinJoint,
-			PinJoint(uLabel, pDO, pNode, X0, d, fOut));
+			PinJoint(uLabel, pDO, pNode, X0, d, od, fOut));
 
 		std::ostream& out = pDM->GetLogFile();
 		out << "sphericalpin: " << uLabel

@@ -166,18 +166,17 @@ BeamSliderJoint::OutputPrepare(OutputHandler &OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Beam slider", OH, name);
+			OutputPrepare_int("Beam slider", OH);
 			
-			Var_Beam = OH.CreateVar<integer>(name + "Beam",
+			Var_Beam = OH.CreateVar<integer>(m_sOutputNameBase + "." "Beam",
 				OutputHandler::Dimensions::Dimensionless,
 				"current beam label");
 
-			Var_sRef = OH.CreateVar<doublereal>(name + "sRef",
+			Var_sRef = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "sRef",
 				OutputHandler::Dimensions::Dimensionless,
 				"current curvilinear abscissa");
 
-			Var_l = OH.CreateVar<Vec3>(name + "l",
+			Var_l = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "l",
 				OutputHandler::Dimensions::Dimensionless,
 				"local direction vector (x, y, z)");
 			if (fc) {

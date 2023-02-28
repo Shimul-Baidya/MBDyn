@@ -59,7 +59,7 @@ protected:
 	MBDynNcVar Var_M_global;
 #endif /* USE_NETCDF */
 
-	virtual void OutputPrepare_int(const std::string& type, OutputHandler &OH, std::string& name);
+	virtual void OutputPrepare_int(const std::string& type, OutputHandler &OH);
 
 public:
 	/* Tipi di Joint */
