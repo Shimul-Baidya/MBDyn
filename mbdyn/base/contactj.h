@@ -187,8 +187,7 @@ class ContactJoint : virtual public Elem, public Joint {
 	   if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		   if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			   std::string name;
-			   OutputPrepare_int("Contact", OH, name);
+			   OutputPrepare_int("Contact", OH);
 		   }
 #endif // USE_NETCDF
 	   }

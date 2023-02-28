@@ -283,12 +283,11 @@ UniversalHingeJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Cardano hinge", OH, name);
+			OutputPrepare_int("Cardano hinge", OH);
 
 			// Only orientation vector for now. 
 			// TODO use orientation description?
-			Var_Phi = OH.CreateRotationVar(name, "", ORIENTATION_VECTOR, 
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", ORIENTATION_VECTOR, 
 					"Orientation vector of node in relative frame (x, y, z)");
 
 		}
@@ -859,10 +858,9 @@ UniversalRotationJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Cardano rotation", OH, name);
+			OutputPrepare_int("Cardano rotation", OH);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, 
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, 
 					"Relative orientation");
 
 		}
@@ -1398,12 +1396,11 @@ UniversalPinJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Cardano pin", OH, name);
+			OutputPrepare_int("Cardano pin", OH);
 
 			// Only orientation vector for now. 
 			// TODO use orientation description?
-			Var_Phi = OH.CreateRotationVar(name, "", ORIENTATION_VECTOR, 
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", ORIENTATION_VECTOR, 
 					"Orientation vector of node in relative frame (x, y, z)");
 
 		}

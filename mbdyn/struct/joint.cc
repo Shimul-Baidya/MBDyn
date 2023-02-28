@@ -98,7 +98,7 @@ Joint::~Joint(void)
 
 
 void
-Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH, std::string& name)
+Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH)
 {
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
@@ -108,22 +108,21 @@ Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH, std::string
 	(void)OH.CreateVar(os.str(), type);
 
 	// joint sub-data
-	os << '.';
-	name = os.str();
+	m_sOutputNameBase = os.str();
 
-	Var_F_local = OH.CreateVar<Vec3>(name + "f",
+	Var_F_local = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "f",
 		OutputHandler::Dimensions::Force,
 		"local reaction force (fx, fy, fz)");
 
-	Var_M_local = OH.CreateVar<Vec3>(name + "m",
+	Var_M_local = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "m",
 		OutputHandler::Dimensions::Moment,
 		"local reaction moment (mx, my, mz)");
 
-	Var_F_global = OH.CreateVar<Vec3>(name + "F",
+	Var_F_global = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 		OutputHandler::Dimensions::Force,
 		"global reaction force (FX, FY, FZ)");
 
-	Var_M_global = OH.CreateVar<Vec3>(name + "M",
+	Var_M_global = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 		OutputHandler::Dimensions::Moment,
 		"global reaction moment (MX, MY, MZ)");
 
@@ -666,13 +665,14 @@ ReadJoint(DataManager* pDM,
 			(void)HP.GetRotAbs(::AbsRefFrame);
 		}
 
+		OrientationDescription od = ReadOptionalOrientationDescription(pDM, HP);
 
 		flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
 
 		/* allocazione e creazione */
 		SAFENEWWITHCONSTRUCTOR(pEl,
 			PinJoint,
-			PinJoint(uLabel, pDO, pNode, X0, d, fOut));
+			PinJoint(uLabel, pDO, pNode, X0, d, od, fOut));
 
 		std::ostream& out = pDM->GetLogFile();
 		out << "sphericalpin: " << uLabel
@@ -3960,6 +3960,30 @@ ReadJoint(DataManager* pDM,
 
 		out << std::endl;
 
+		BasicFriction *bf = 0;
+		BasicShapeCoefficient *bsh = 0;
+		doublereal preload = 0.;
+		if (HP.IsKeyWord("friction")) {
+			if (sliderType != BeamSliderJoint::SPHERICAL) {
+// 				silent_cerr("Error defining the beam slider joint" << uLabel
+// 					<< " at line " << HP.GetLineData() 
+// 					<< ": friction allowd only for \"spherical\"  beam sliders"
+// 					<< std::endl);
+// 				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+				silent_cerr("Warning: the beam slider joint" << uLabel
+					<< " at line " << HP.GetLineData() 
+					<< ": is not  \"spherical\", but "
+					<< "friction account only for the contact force and not the moment"
+					<< std::endl);
+			}
+			//~ r = HP.GetReal();
+			if (HP.IsKeyWord("preload")) {
+				preload = HP.GetReal();
+			}
+			bf = ParseFriction(HP,pDM);
+			bsh = ParseShapeCoefficient(HP);
+		}
+
 		flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
 		SAFENEWWITHCONSTRUCTOR(pEl, BeamSliderJoint,
 			BeamSliderJoint(uLabel, pDO,
@@ -3967,7 +3991,7 @@ ReadJoint(DataManager* pDM,
 				sliderType,
 				nB, bc,
 				uIB, uIN, dL,
-				f, R, fOut));
+				f, R, fOut, preload, bsh, bf));
 		} break;
 
 	case MODAL:

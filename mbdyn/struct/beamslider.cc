@@ -76,7 +76,10 @@ BeamSliderJoint::BeamSliderJoint(unsigned int uL, const DofOwner* pDO,
 		unsigned int nB, const BeamConn *const * ppB,
 		unsigned int uIB, unsigned int uIN,
 		doublereal dl,
-		const Vec3& fTmp, const Mat3x3& RTmp, flag fOut)
+		const Vec3& fTmp, const Mat3x3& RTmp, flag fOut,
+          const doublereal pref,
+          BasicShapeCoefficient *const sh,
+          BasicFriction *const f)
 : Elem(uL, fOut),
 Joint(uL, pDO, fOut),
 nRotConstr(0), nBeams(nB), iCurrBeam(0), iType(iT),
@@ -85,7 +88,11 @@ f(fTmp), R(RTmp),
 F(Zero3), M(Zero3),
 sRef(0.), s(0.),
 dL(dl),
-x(Zero3), l(Zero3)
+x(Zero3), l(Zero3),
+Sh_c(sh),
+fc(f),
+preF(pref),
+NumSelfDof(4)
 {
 	ASSERT(pNode != NULL);
 	ASSERT(nBeams > 0);
@@ -114,16 +121,19 @@ x(Zero3), l(Zero3)
 
 	switch (iType) {
 	case CLASSIC:
-		nRotConstr = 2;
+		const_cast<unsigned int&>(nRotConstr) = 2;
 		break;
 		
 	case SPLINE:
-		nRotConstr = 3;
+		const_cast<unsigned int&>(nRotConstr) = 3;
 		break;
 
 	default:
 		break;
 	}
+
+	const_cast<unsigned int&>(NumSelfDof) += nRotConstr;
+	//if (fc) const_cast<unsigned int&>(NumSelfDof) += 1;
 
 #ifdef DEBUG
 	for (unsigned int i = 0; i < nBeams; i++) {
@@ -134,7 +144,13 @@ x(Zero3), l(Zero3)
 
 BeamSliderJoint::~BeamSliderJoint(void)
 {
-	NO_OP;
+	if (Sh_c) {
+		delete Sh_c;
+	}
+
+	if (fc) {
+		delete fc;
+	}
 }
 
 std::ostream& 
@@ -150,20 +166,32 @@ BeamSliderJoint::OutputPrepare(OutputHandler &OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Beam slider", OH, name);
+			OutputPrepare_int("Beam slider", OH);
 			
-			Var_Beam = OH.CreateVar<integer>(name + "Beam",
+			Var_Beam = OH.CreateVar<integer>(m_sOutputNameBase + "." "Beam",
 				OutputHandler::Dimensions::Dimensionless,
 				"current beam label");
 
-			Var_sRef = OH.CreateVar<doublereal>(name + "sRef",
+			Var_sRef = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "sRef",
 				OutputHandler::Dimensions::Dimensionless,
 				"current curvilinear abscissa");
 
-			Var_l = OH.CreateVar<Vec3>(name + "l",
+			Var_l = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "l",
 				OutputHandler::Dimensions::Dimensionless,
 				"local direction vector (x, y, z)");
+			if (fc) {
+				Var_FF = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "FF",
+						OutputHandler::Dimensions::Force,
+						"friction force (x, y, z)");
+
+				Var_fc = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "fc",
+						OutputHandler::Dimensions::Dimensionless,
+						"friction coefficient");
+
+				Var_v = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "v",
+						OutputHandler::Dimensions::Velocity,
+						"relative sliding velocity");
+			}
 		}
 #endif // USE_NETCDF
 	}
@@ -177,10 +205,14 @@ BeamSliderJoint::Output(OutputHandler& OH) const
 		Mat3x3 RTmpT(RTmp.Transpose());
 	
 		if (OH.UseText(OutputHandler::JOINTS)) {
-			Joint::Output(OH.Joints(), "BeamSlider", GetLabel(),
+			std::ostream &of = Joint::Output(OH.Joints(), "BeamSlider", GetLabel(),
 					RTmpT*F, M, F, RTmp*M)
 				<< " " << ppBeam[iCurrBeam]->pGetBeam()->GetLabel()
-				<< " " << sRef << " " << l << std::endl;
+				<< " " << sRef << " " << l;
+			if (fc) {
+				of << " " << F3 << " " << fc->fc() << " " << v_rel_scalar;
+			}
+			of << std::endl;
 		}
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
@@ -189,6 +221,11 @@ BeamSliderJoint::Output(OutputHandler& OH) const
 			OH.WriteNcVar(Var_Beam, (int)(ppBeam[iCurrBeam]->pGetBeam()->GetLabel()));
 			OH.WriteNcVar(Var_sRef, sRef);
 			OH.WriteNcVar(Var_l, l);
+			if (fc) {
+				OH.WriteNcVar(Var_FF, F3);
+				OH.WriteNcVar(Var_fc, fc->fc());
+				OH.WriteNcVar(Var_v, v_rel_scalar);
+			}
 		}
 #endif // USE_NETCDF
 	}
@@ -276,7 +313,97 @@ BeamSliderJoint::AssJac(VariableSubMatrixHandler& WorkMat,
 				iFirstReactionIndex+iCnt);
 	}
 
-	/* vincolo in posizione */
+
+	ExpandableRowVector dfc;
+	ExpandableRowVector dF;
+	//variation of relative velocity
+	ExpandableRowVector dv;
+	ExpandableMatrix dF3;
+	ExpandableRowVector dShc;
+
+	if (fc) {
+		// friction specific contributions:
+		//Vec3 e3a(RvTmp.GetVec(3));
+		doublereal l2 = l.Dot(l);
+		doublereal sqrtl2 = sqrt(l2);
+		Vec3 e3a = l / sqrtl2; //?????
+		//retrieve friction coef
+		doublereal f = fc->fc();
+		//shape function
+		doublereal shc = Sh_c->Sh_c();
+		//compute relative velocity
+		//doublereal v = (vrel).Dot(e3a);
+		//reaction norm
+		doublereal modF = std::max(F.Norm(), preF); // F is not updated inside AssJac?
+		//reaction moment
+		//doublereal M3 = shc*modF*r;
+
+		//ExpandableMatrix dv_rel;
+		dv.ReDim(6*(1+Beam::NUMNODES)+1);
+		//dv_rel.ReDim(3, (1+Beam::NUMNODES)+1);
+
+		// dv_rel / ds
+		//dv.Set(-e3a.Dot(l + lp * sRef_dot * dCoef), 6*(1+Beam::NUMNODES)+1, 6*(1+Beam::NUMNODES)+1);
+		Vec3 ttt(Zero3);
+		for (unsigned int i = 0; i < Beam::NUMNODES; i++) {
+			ttt += ((pBeamNode[i]->GetVCurr()
+				+ pBeamNode[i]->GetWCurr().Cross(fTmp[i]))) * dNp[i];
+		}
+		doublereal dtmp = -e3a.Dot(ttt);
+		dv.Set(dtmp, 6*(1+Beam::NUMNODES)+1, 6*(1+Beam::NUMNODES)+1);
+
+		// dv_rel / dv nodes
+		for (unsigned int i = 0; i < Beam::NUMNODES; i++) {
+			Mat3x3 tm(Eye3 - Mat3x3(MatCross, pBeamNode[i]->GetWRef() * dCoef));
+			//dv.Set(-e3a * dNp[i] * sRef_dot * dCoef - e3a * dN[i], 6*(i+1) + 1, 6*(i+1) + 1);
+			dv.Set(- e3a * dN[i], 6*(i+1) + 1, 6*(i+1) + 1);
+			Vec3 ftmp_cross_e3a = fTmp[i].Cross(e3a);
+			dv.Set(//-ftmp_cross_e3a * (dNp[i] * sRef_dot * dCoef)
+				-ftmp_cross_e3a * tm * dN[i]
+				- Mat3x3(MatCross, fTmp[i]) * (pBeamNode[i]->GetWCurr().Cross(e3a)) * (dN[i] * dCoef),
+				6*(i+1) + 4, 6*(i+1)+4);
+		}
+		// v.Dot(delta(e3a)
+		ttt = v_rel / l2 - l * (v_rel_scalar / (sqrtl2 * l2));
+		for (unsigned int i = 0; i < Beam::NUMNODES; i++) {
+			//dv.Add(ttt.Dot(xTmp[i]) * dNpp[i] * dCoef, 6*(1+Beam::NUMNODES)+1);
+			//dv.Add(ttt * (dNp[i] * dCoef), 6*(i+1) + 1);
+			//dv.Add(fTmp[i].Cross(ttt) * (dCoef * dNp[i]), 6*(i+1) + 4);
+			dv.Add(ttt.Dot(xTmp[i]) * dNpp[i], 6*(1+Beam::NUMNODES)+1);
+			dv.Add(ttt * (dNp[i] * dCoef), 6*(i+1) + 1);
+			dv.Add(fTmp[i].Cross(ttt) * (dCoef * dNp[i]), 6*(i+1) + 4);
+		}
+
+		// dv_rel / d node body
+// 		dv.Set(Zero3, 1, 1);
+// 		dv.Set(Zero3, 4, 4);
+		dv.Set(e3a, 1, 1);
+		Mat3x3 tm(Eye3 - Mat3x3(MatCross, pNode->GetWRef() * dCoef));
+		dv.Set(-fb.Cross(e3a) * tm, 4, 4);
+		dv.Add(-Mat3x3(MatCross, fb) * (pNode->GetWCurr().Cross(e3a)) * dCoef, 4);
+
+		//variation of reaction force
+		dF.ReDim(3);
+		if ((modF == 0.) or (F.Norm() < preF)) {
+			dF.Set(Vec3(Zero3), 1, 26); // dF/d(13) ? = dF/d(1st reaction) ?
+		} else {
+			dF.Set(F/modF, 1, 26);
+		}
+
+		//assemble friction states
+		fc->AssJac(WM,dfc,24+NumSelfDof,iFirstReactionIndex+NumSelfDof,dCoef,modF,v_rel_scalar,
+				XCurr,XPrimeCurr,dF,dv);
+		//compute variation of shape function
+		Sh_c->dSh_c(dShc,f,modF,v_rel_scalar,dfc,dF,dv);
+		//variation of force component
+		dF3.ReDim(3,2);
+		dF3.SetBlockDim(1,1);
+		dF3.SetBlockDim(2,1);
+		dF3.Set(-e3a*shc,1,1); dF3.Link(1,&dF); // dF3/dF * dF/d(pos1?)
+		dF3.Set(-e3a*modF,1,2); dF3.Link(2,&dShc); // dF3/dShc * dShc/d(?)
+	}
+
+   /* vincolo in posizione */
 	for (unsigned int i = 1; i <= 3; i++) {
 		/* l^T F = 0 : Delta F */
 		doublereal d = l.dGet(i)/dCoef;
@@ -291,12 +418,8 @@ BeamSliderJoint::AssJac(VariableSubMatrixHandler& WorkMat,
 		WM.DecCoef(6*(1+Beam::NUMNODES)+1+i, i, 1.);
 	}
 
-	Vec3 lp(Zero3);
 	for (unsigned int iN = 0; iN < Beam::NUMNODES; iN++) {
 		Vec3 Tmp(fTmp[iN].Cross(F));
-
-		/* l^T F = 0 : Delta s */
-		lp += xTmp[iN]*dNpp[iN];
 
 		for (unsigned int i = 1; i <= 3; i++) {
 			/* l^T F = 0 : Delta x */
@@ -331,25 +454,41 @@ BeamSliderJoint::AssJac(VariableSubMatrixHandler& WorkMat,
 		/* trave: Delta F */
 		WM.IncCoef(6*activeNode+i, 6*(1+Beam::NUMNODES)+1+i, dW[0]);
 	}
+	if (fc) {
+		dF3.Sub(WM, 1, 1.);
+		dF3.Add(WM, 6*activeNode+1, dW[0]);
+	}
 
 	/* corpo: Delta F (momento) */
 	Mat3x3 MTmp(MatCross, fb);
+	ExpandableMatrix dM3;
 	WM.Sub(3+1, 6*(1+Beam::NUMNODES)+1+1, MTmp);
+	if (fc) {
+		dM3.ReDim(3,1);
+		dM3.SetBlockDim(1,3);
+		dM3.Set(MTmp, 1, 1, 1); dM3.Link(1, &dF3);
+		dM3.Sub(WM, 4, 1.);
+	}
 
 	/* vincolo posizione: Delta gb */
 	WM.Add(6*(1+Beam::NUMNODES)+1+1, 3+1, MTmp);
 
 	/* corpo: Delta gb (momento) */
-	Mat3x3 Ffb(MatCrossCross, F, fb*dCoef);
+	Mat3x3 Ffb(MatCrossCross, F_res, fb*dCoef);
 	WM.Sub(3+1, 3+1, Ffb);
 
 	/* trave: Delta gb (momento) */
 	WM.Add(6*activeNode+3+1, 3+1, Ffb*dW[0]);
 
 	/* trave: Delta F (momento) */
-	MTmp = Mat3x3(MatCross, F*(dCoef*dW[0]));
-	WM.Add(6*activeNode+3+1, 6*(1+Beam::NUMNODES)+1+1, 
-			Mat3x3(MatCross, (xc - xNod[activeNode-1])*dW[0]));
+	MTmp = Mat3x3(MatCross, F_res*(dCoef*dW[0]));
+	Mat3x3 MCross(MatCross, (xc - xNod[activeNode-1])*dW[0]);
+	WM.Add(6*activeNode+3+1, 6*(1+Beam::NUMNODES)+1+1, MCross);
+	if (fc) {
+		dM3.Set(MCross, 1, 1, 1); dM3.Link(1, &dF3);
+		dM3.Add(WM, 6*activeNode+3+1);
+	}
+
 	WM.Sub(6*activeNode+3+1, 1, MTmp);
 	WM.Add(6*activeNode+3+1, 6*activeNode+1, MTmp);
 
@@ -363,8 +502,8 @@ BeamSliderJoint::AssJac(VariableSubMatrixHandler& WorkMat,
  * in convergence */
 #define DELTADW
 #ifdef DELTADW
-		Vec3 m1(M+(xc-xNod[activeNode-1]).Cross(F));
-		Vec3 m2(M+(xc-xNod[activeNode]).Cross(F));
+		Vec3 m1(M+(xc-xNod[activeNode-1]).Cross(F_res));
+		Vec3 m2(M+(xc-xNod[activeNode]).Cross(F_res));
 #endif /* DELTADW */
 
 		/* reazioni vincolari */
@@ -372,6 +511,9 @@ BeamSliderJoint::AssJac(VariableSubMatrixHandler& WorkMat,
 			/* trave: Delta F */
 			WM.IncCoef(6*(activeNode+1)+i, 
 					6*(1+Beam::NUMNODES)+1+i, dW[1]);
+			if (fc) {
+				dF3.Add(WM, 6*(activeNode+1)+1, dW[1]);
+			}
 
 #ifdef DELTADW
 			/* trave: Delta s (Delta dW forza) */
@@ -392,9 +534,14 @@ BeamSliderJoint::AssJac(VariableSubMatrixHandler& WorkMat,
 		}
 
 		/* trave: Delta F (momento) */
-		Mat3x3 MTmp(MatCross, F*(dCoef*dW[1]));
-		WM.Add(6*(activeNode+1)+3+1, 6*(1+Beam::NUMNODES)+1+1, 
-				Mat3x3(MatCross, (xc-xNod[activeNode]))*dW[1]);
+		Mat3x3 MTmp(MatCross, F_res*(dCoef*dW[1]));
+		Mat3x3 MCross(MatCross, (xc-xNod[activeNode])*dW[1]);
+		WM.Add(6*(activeNode+1)+3+1, 6*(1+Beam::NUMNODES)+1+1, MCross);
+		if (fc) {
+			dM3.Set(MCross, 1, 1, 1); dM3.Link(1, &dF3);
+			dM3.Add(WM, 6*(activeNode+1)+3+1);
+		}
+
 		WM.Sub(6*(activeNode+1)+3+1, 1, MTmp);
 		WM.Add(6*(activeNode+1)+3+1, 6*(activeNode+1)+1, MTmp);
 	}
@@ -545,7 +692,7 @@ SubVectorHandler&
 BeamSliderJoint::AssRes(SubVectorHandler& WorkVec,
 		doublereal dCoef,
 		const VectorHandler& XCurr,
-		const VectorHandler& /* XPrimeCurr */ )
+		const VectorHandler& XPrimeCurr )
 {
 	DEBUGCOUT("Entering BeamSliderJoint::AssRes()" << std::endl);
 
@@ -595,6 +742,8 @@ BeamSliderJoint::AssRes(SubVectorHandler& WorkVec,
 		/* M is set to zero by someone else ... */
 		break;
 	}
+
+	if (fc) sRef_dot = XPrimeCurr(iFirstReactionIndex+1);
 
 	/*
 	 * in base al valore di s decide su quale trave sta operando
@@ -684,8 +833,10 @@ BeamSliderJoint::AssRes(SubVectorHandler& WorkVec,
 	/*
 	 * Recupero dati
 	 */
-	x = Vec3(Zero3);
-	l = Vec3(Zero3);
+	x = Zero3;
+	l = Zero3;
+	lp = Zero3;
+	v_rel = Zero3;
 	for (unsigned int i = 0; i < Beam::NUMNODES; i++) {
 		xNod[i] = pBeamNode[i]->GetXCurr();
 		fTmp[i] = pBeamNode[i]->GetRCurr()*ppBeam[iCurrBeam]->Getf(i+1);
@@ -693,14 +844,23 @@ BeamSliderJoint::AssRes(SubVectorHandler& WorkVec,
 
 		dN[i] = ShapeFunc3N(s, i+1);
 		dNp[i] = ShapeFunc3N(s, i+1, ORD_D1);
-		dNpp[i] = ShapeFunc3N(s, i+1, ORD_D2);
+//		dNpp[i] = ShapeFunc3N(s, i+1, ORD_D2);
 		x += xTmp[i]*dN[i];
 		l += xTmp[i]*dNp[i];
+		lp += xTmp[i]*dNpp[i];
+		if (fc) {
+// 			v_rel -= xTmp[i] * dNp[i] * sRef_dot;
+			v_rel -= (pBeamNode[i]->GetVCurr()
+				+ pBeamNode[i]->GetWCurr().Cross(fTmp[i])) * dN[i];
+		}
 	}
 	
 	Rb = pNode->GetRCurr()*R;
 	fb = pNode->GetRCurr()*f;
 	xc = pNode->GetXCurr()+fb;
+	if (fc) {
+		v_rel += pNode->GetVCurr() + pNode->GetWCurr().Cross(fb);
+	}
 
 	Vec3 eb2 = Rb.GetVec(2);
 	Vec3 eb3 = Rb.GetVec(3);
@@ -730,23 +890,60 @@ BeamSliderJoint::AssRes(SubVectorHandler& WorkVec,
 		}
 	}
 
+	F_res = F;
+	if (fc) {
+		bool ChangeJac(false);
+
+		Vec3 e3a = l / sqrt(l.Dot(l)); //?????
+		v_rel_scalar = v_rel.Dot(e3a);
+		doublereal modF = std::max(F.Norm(), preF);
+
+		try {
+			fc->AssRes(WorkVec,24+NumSelfDof,iFirstReactionIndex+NumSelfDof,modF,v_rel_scalar,XCurr,XPrimeCurr);
+		}
+		catch (Elem::ChangedEquationStructure& e) {
+			ChangeJac = true;
+		}
+		doublereal f = fc->fc();
+		doublereal shc = Sh_c->Sh_c(f,modF, v_rel_scalar);
+		F3 = shc*modF;  // or M(3) with a Vec3 ?
+		//WorkVec.Sub(1,e3a*F3); // subtracting a vector
+		//WorkVec.Add(7,e3a*F3); // adding a vector
+		F_res -= e3a*F3;
+		if (ChangeJac) {
+			throw Elem::ChangedEquationStructure(MBDYN_EXCEPT_ARGS);
+		}
+	}
+
 	/*
 	 * reazioni vincolari
 	 */
-	WorkVec.Add(1, F);
-	WorkVec.Add(3+1, M+fb.Cross(F));
+	WorkVec.Add(1, F_res);
+	WorkVec.Add(3+1, M+fb.Cross(F_res));
 
-	WorkVec.Sub(6*activeNode+1, F*dW[0]);
-	WorkVec.Sub(6*activeNode+3+1, 
-			(M+(xc-xNod[activeNode-1]).Cross(F))*dW[0]);
+	WorkVec.Sub(6*activeNode+1, F_res*dW[0]);
+	WorkVec.Sub(6*activeNode+3+1,
+			(M+(xc-xNod[activeNode-1]).Cross(F_res))*dW[0]);
 
 	if (dW[1] != 0.) {
-		WorkVec.Sub(6*(activeNode+1)+1, F*dW[1]);
-		WorkVec.Sub(6*(activeNode+1)+3+1, 
-				(M+(xc-xNod[activeNode]).Cross(F))*dW[1]);
+		WorkVec.Sub(6*(activeNode+1)+1, F_res*dW[1]);
+		WorkVec.Sub(6*(activeNode+1)+3+1,
+				(M+(xc-xNod[activeNode]).Cross(F_res))*dW[1]);
 	}
 
 	return WorkVec;
+}
+
+/* AfterConvergence */
+void
+BeamSliderJoint::AfterConvergence(const VectorHandler& X,
+		const VectorHandler& XP)
+{
+	if (fc) {
+		//reaction norm
+		doublereal modF = std::max(F.Norm(), preF);;
+		fc->AfterConvergence(modF,v_rel_scalar,X,XP,iGetFirstIndex()+NumSelfDof);
+	}
 }
 
 /* Contributo allo jacobiano durante l'assemblaggio iniziale */
@@ -827,8 +1024,55 @@ BeamSliderJoint::DescribeEq(std::ostream& out, const char *prefix, bool bInitial
 				<< prefix << iIndex + 5 << "->" << iIndex + 7 << ": "
 				"orientation constraints" << std::endl;
 		}
+		if (fc && fc->iGetNumDof() > 0) {
+			out
+				<< prefix << iIndex + NumSelfDof + 1 << "->" << iIndex + NumSelfDof + fc->iGetNumDof() << ": friction equation(s)" << std::endl
+				<< "        ", fc->DescribeEq(out, prefix, bInitial);
+   }
 
 	return out;
 }
+
+std::ostream&
+BeamSliderJoint::DescribeDof(std::ostream& out, const char *prefix, bool bInitial) const
+{
+        integer iIndex = iGetFirstIndex();
+
+        if (bInitial) {
+			return out;
+		}
+
+        out
+                << prefix << iIndex + 1 << ": "
+                        "contact local coordinate" << std::endl
+                << prefix << iIndex + 2 << "->" << iIndex + 4 << ": "
+                        "reaction forces [fx,fy,fz]" << std::endl;
+		if (iType == BeamSliderJoint::Type::CLASSIC) {
+			out
+				<< prefix << iIndex + 5 << "->" << iIndex + 6 << ": "
+					"reaction moments [my, mz]" << std::endl;
+		}
+		if (iType == BeamSliderJoint::Type::SPLINE) {
+			out
+				<< prefix << iIndex + 5 << "->" << iIndex + 7 << ": "
+					"reaction moments [mx, my, mz]" << std::endl;
+		}
+
+        iIndex += NumSelfDof;
+        if (fc) {
+                integer iFCDofs = fc->iGetNumDof();
+                if (iFCDofs > 0) {
+                        out << prefix << iIndex + 1;
+                        if (iFCDofs > 1) {
+                                out << "->" << iIndex + iFCDofs;
+                        }
+                        out << ": friction dof(s)" << std::endl
+                                << "        ", fc->DescribeDof(out, prefix, bInitial);
+                }
+        }
+
+        return out;
+}
+
 /* BeamSliderJoint - end */
 

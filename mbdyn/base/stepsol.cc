@@ -518,7 +518,7 @@ StepNIntegrator::Jacobian(MatrixHandler* pJac) const
  		MyVectorHandler incsol(pJac->iGetNumRows());
  		MyVectorHandler inc(pJac->iGetNumRows());
  		Residual(&basesol, 0);
- 		doublereal ddd = 0.001;
+		doublereal ddd = 0.001;
  		for (integer i = 1; i <= pJac->iGetNumRows(); i++) {
  			incsol.Reset();
  			inc.Reset();

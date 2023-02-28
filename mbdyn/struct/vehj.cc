@@ -175,13 +175,12 @@ DeformableHingeJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Deformable hinge", OH, name);
+			OutputPrepare_int("Deformable hinge", OH);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, 
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, 
 				"relative orientation, in joint reference frame");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}

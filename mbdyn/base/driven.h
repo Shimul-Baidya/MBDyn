@@ -51,6 +51,10 @@ protected:
 	SimulationEntity::Hints *pHints;
 	bool bActive;
 
+#ifdef USE_NETCDF
+	MBDynNcVar Var_status;
+#endif // USE_NETCDF
+
 public:
 	DrivenElem(DataManager *pDM, const DriveCaller* pDC, bool b_active,
 			const Elem* pE, SimulationEntity::Hints *ph = 0);
@@ -58,6 +62,7 @@ public:
 
 	virtual bool bIsActive(void) const;
 
+	virtual void OutputPrepare(OutputHandler& OH);
 	virtual void Output(OutputHandler& OH) const;
 
 	virtual void SetValue(DataManager *pdm,

@@ -78,9 +78,26 @@ DrivenElem::bIsActive(void) const
 }
 
 void
+DrivenElem::OutputPrepare(OutputHandler& OH)
+{
+	ASSERT(pElem != NULL);
+	pElem->OutputPrepare(OH);
+	m_sOutputNameBase = pElem->sGetOutputNameBase();
+
+#ifdef USE_NETCDF
+	Var_status = OH.CreateVar<integer>(m_sOutputNameBase + "." "driven", 
+		OutputHandler::Dimensions::Boolean, "activation flag (1: active, 0: inactive)");
+#endif // USE_NETCDF
+}
+
+void
 DrivenElem::Output(OutputHandler& OH) const
 {
 	ASSERT(pElem != 0);
+
+#ifdef USE_NETCDF
+	OH.WriteNcVar(Var_status, integer(bIsActive()));
+#endif // USE_NETCDF
 	if (bIsActive()) {
 		pElem->Output(OH);
 	}

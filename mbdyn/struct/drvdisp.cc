@@ -91,10 +91,9 @@ DriveDisplacementJoint::OutputPrepare(OutputHandler &OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Drive displacement", OH, name);
+			OutputPrepare_int("Drive displacement", OH);
 
-			Var_d = OH.CreateVar<Vec3>(name + "d",
+			Var_d = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "d",
 				OutputHandler::Dimensions::Length,
 				"imposed relative displacement, global frame (x, y, z)");
 		}
@@ -765,10 +764,9 @@ DriveDisplacementPinJoint::OutputPrepare(OutputHandler &OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Drive displacement pin", OH, name);
+			OutputPrepare_int("Drive displacement pin", OH);
 
-			Var_d = OH.CreateVar<Vec3>(name + "d",
+			Var_d = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "d",
 				OutputHandler::Dimensions::Length,
 				"imposed relative displacement (x, y, z)");
 		}
