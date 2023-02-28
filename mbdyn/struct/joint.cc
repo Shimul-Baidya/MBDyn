@@ -3960,6 +3960,30 @@ ReadJoint(DataManager* pDM,
 
 		out << std::endl;
 
+		BasicFriction *bf = 0;
+		BasicShapeCoefficient *bsh = 0;
+		doublereal preload = 0.;
+		if (HP.IsKeyWord("friction")) {
+			if (sliderType != BeamSliderJoint::SPHERICAL) {
+// 				silent_cerr("Error defining the beam slider joint" << uLabel
+// 					<< " at line " << HP.GetLineData() 
+// 					<< ": friction allowd only for \"spherical\"  beam sliders"
+// 					<< std::endl);
+// 				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+				silent_cerr("Warning: the beam slider joint" << uLabel
+					<< " at line " << HP.GetLineData() 
+					<< ": is not  \"spherical\", but "
+					<< "friction account only for the contact force and not the moment"
+					<< std::endl);
+			}
+			//~ r = HP.GetReal();
+			if (HP.IsKeyWord("preload")) {
+				preload = HP.GetReal();
+			}
+			bf = ParseFriction(HP,pDM);
+			bsh = ParseShapeCoefficient(HP);
+		}
+
 		flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
 		SAFENEWWITHCONSTRUCTOR(pEl, BeamSliderJoint,
 			BeamSliderJoint(uLabel, pDO,
@@ -3967,7 +3991,7 @@ ReadJoint(DataManager* pDM,
 				sliderType,
 				nB, bc,
 				uIB, uIN, dL,
-				f, R, fOut));
+				f, R, fOut, preload, bsh, bf));
 		} break;
 
 	case MODAL:

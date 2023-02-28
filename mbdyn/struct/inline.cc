@@ -354,7 +354,7 @@ void InLineJoint::Output(OutputHandler& OH) const
 			}
 			of << std::endl;
 		}
-   }   
+   }
 }
  
 
