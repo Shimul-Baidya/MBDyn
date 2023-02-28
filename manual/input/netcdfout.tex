@@ -536,6 +536,12 @@ If friction is present:
 \item \kw{elem.joint.}\bnt{label}\kw{.sRef} contains the current curvilinear abscissa;
 \item \kw{elem.joint.}\bnt{label}\kw{.l} contains the local direction unit vector.
 \end{itemize}
+If friction is defined,
+\begin{itemize}
+\item \kw{elem.joint.}\bnt{label}\kw{.FF} contains the tangential force component
+\item \kw{elem.joint.}\bnt{label}\kw{.fc} contains the friction coefficient
+\item \kw{elem.joint.}\bnt{label}\kw{.v} contains the sliding velocity
+\end{itemize}
 
 \paragraph{Brake:}
 \begin{itemize}
