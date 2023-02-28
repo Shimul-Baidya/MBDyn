@@ -180,15 +180,15 @@ BeamSliderJoint::OutputPrepare(OutputHandler &OH)
 				OutputHandler::Dimensions::Dimensionless,
 				"local direction vector (x, y, z)");
 			if (fc) {
-				Var_FF = OH.CreateVar<doublereal>(name + "FF",
+				Var_FF = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "FF",
 						OutputHandler::Dimensions::Force,
 						"friction force (x, y, z)");
 
-				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+				Var_fc = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "fc",
 						OutputHandler::Dimensions::Dimensionless,
 						"friction coefficient");
 
-				Var_v = OH.CreateVar<doublereal>(name + "v",
+				Var_v = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "v",
 						OutputHandler::Dimensions::Velocity,
 						"relative sliding velocity");
 			}
