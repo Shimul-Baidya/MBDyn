@@ -1534,16 +1534,21 @@ PlaneHingeJoint::GetEquationDimension(integer index) const {
 		case 5:
 			dimension = OutputHandler::Dimensions::rad;
          break;
+		default:
+			if (fc) {
+				index -= NumSelfDof;
+				integer iFCDofs = fc->iGetNumDof();
+				if (iFCDofs > 0) {
+					/* TODO */
+					/* not sure this is handled correctly */
+					dimension = fc->GetEquationDimension(index);
+				}
+			} else {
+				dimension = OutputHandler::Dimensions::UnknownDimension;
+			}
+	break;
 	}
 
-	if (fc) {
-      index -= NumSelfDof;
-		integer iFCDofs = fc->iGetNumDof();
-		if (iFCDofs > 0) {
-			/* TODO */
-         /* not sure how to handle this part currently */
-		}
-	}
 
 	return dimension;
 }
@@ -3409,7 +3414,7 @@ AxialRotationJoint::OutputPrepare(OutputHandler& OH)
 
 				Var_fc = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "fc",
 						OutputHandler::Dimensions::Dimensionless,
-						"friction model specific data: friction coefficient");
+						"friction coefficient");
 			}
 		}
 #endif // USE_NETCDF
