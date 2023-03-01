@@ -136,14 +136,13 @@ DeformableAxialJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Deformable axial joint", OH, name);
+			OutputPrepare_int("Deformable axial joint", OH);
 
-			Var_Theta = OH.CreateVar<doublereal>(name + "Theta",
+			Var_Theta = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Theta",
 				OutputHandler::Dimensions::rad,
 				"relative angle");
 
-			Var_Omega = OH.CreateVar<doublereal>(name + "Omega",
+			Var_Omega = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"relative angular velocity");
 		}

@@ -43,6 +43,7 @@
 #include <elem.h>
 #include <beam.h>
 #include <joint.h>
+#include "friction.h"
 
 /*
  * Beam connection: 
@@ -96,7 +97,7 @@ class BeamSliderJoint: virtual public Elem, public Joint {
 public:
 	enum Type { SPHERICAL, CLASSIC, SPLINE };
 private:
-	unsigned int nRotConstr;
+	const unsigned int nRotConstr;
 	unsigned int nBeams;
 	unsigned int iCurrBeam;
 
@@ -107,6 +108,7 @@ private:
 	Vec3 f;
 	Mat3x3 R;
 	Vec3 F;
+	Vec3 F_res;
 	Vec3 m;
 	Vec3 M;
 	doublereal sRef;
@@ -123,6 +125,7 @@ private:
 	doublereal dNpp[Beam::NUMNODES];
 	Vec3 x;
 	Vec3 l;
+	Vec3 lp;
 
 	Vec3 fb;
 	Vec3 xc;
@@ -132,7 +135,25 @@ private:
 	MBDynNcVar Var_Beam;
 	MBDynNcVar Var_sRef;
 	MBDynNcVar Var_l;
+
+	MBDynNcVar Var_FF;
+	MBDynNcVar Var_fc;
+	MBDynNcVar Var_v;
 #endif // USE_NETCDF
+
+   /* friction related data */
+   Vec3 VNod[Beam::NUMNODES];
+   BasicShapeCoefficient *const Sh_c;
+   BasicFriction *const fc;
+   const doublereal preF;
+   doublereal F3;
+   //doublereal v;
+   Vec3 v_rel;
+   doublereal sRef_dot;
+   doublereal v_rel_scalar;
+   doublereal displ;
+   const unsigned int NumSelfDof;
+   /* end of friction related data */
    
 public:
 	/* Costruttore non banale */
@@ -141,7 +162,10 @@ public:
 			unsigned int nB, const BeamConn *const *pB,
 			unsigned int uIB, unsigned int uIN,
 			doublereal dl,
-			const Vec3& fTmp, const Mat3x3& RTmp, flag fOut);
+			const Vec3& fTmp, const Mat3x3& RTmp, flag fOut,
+			const doublereal pref = 0.,
+			BasicShapeCoefficient *const sh = 0,
+			BasicFriction *const f = 0);
    
 	/* Distruttore */
 	~BeamSliderJoint(void);
@@ -155,13 +179,29 @@ public:
 	};
    
 	virtual unsigned int iGetNumDof(void) const { 
-		return 4+nRotConstr;
+		unsigned int i = NumSelfDof;
+		if (fc) {
+			i+=fc->iGetNumDof();
+		}
+		return i;
 	};
-   
+
 	DofOrder::Order GetDofType(unsigned int i) const {
 		ASSERT(i >= 0 && i < iGetNumDof());
-		return DofOrder::ALGEBRAIC;
+		if (i < NumSelfDof) {
+			return DofOrder::ALGEBRAIC;
+		} else {
+			return fc->GetDofType(i-NumSelfDof);
+		}
 	}
+
+	DofOrder::Order GetEqType(unsigned int i) const {
+		ASSERTMSGBREAK(i < iGetNumDof(), "INDEX ERROR in InLineJoint::GetEqType");
+		if (i<NumSelfDof) {
+			return DofOrder::ALGEBRAIC;
+		}
+		return fc->GetEqType(i-NumSelfDof);
+	};
 
 	void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const { 
 		*piNumRows = 6*(1+Beam::NUMNODES)+iGetNumDof();
@@ -233,10 +273,17 @@ public:
 	/* returns the dimension of the component */
 	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 
+	virtual void AfterConvergence(const VectorHandler& X,
+		const VectorHandler& XP);
+
 	/* describes the dimension of components of equation */
    virtual std::ostream& DescribeEq(std::ostream& out,
 		  const char *prefix = "",
 		  bool bInitial = false) const;
+
+	virtual std::ostream& DescribeDof(std::ostream& out,
+			const char *prefix = "",
+			bool bInitial = false) const;
 };
 
 #endif /* BEAMSLIDER_H */

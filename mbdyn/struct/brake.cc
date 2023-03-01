@@ -444,21 +444,20 @@ Brake::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("brake", OH, name);
+			OutputPrepare_int("brake", OH);
 			
-			Var_Phi = OH.CreateRotationVar(name + "Phi", "rad", ORIENTATION_VECTOR,
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase + "." "Phi", "rad", ORIENTATION_VECTOR,
 				"relative rotation (Euler123)");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity, node 2 RF (x, y, z)");
 			
-			Var_fc = OH.CreateVar<doublereal>(name + "fc",
+			Var_fc = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "fc",
 				OutputHandler::Dimensions::Dimensionless,
 				"friction coefficient");
 
-			Var_Fb = OH.CreateVar<doublereal>(name + "Fb",
+			Var_Fb = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Fb",
 				OutputHandler::Dimensions::Force,
 				"normal force the brake is activated with");
 		}

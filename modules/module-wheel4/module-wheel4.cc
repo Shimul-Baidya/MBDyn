@@ -261,125 +261,124 @@ Wheel4::OutputPrepare(OutputHandler &OH)
 		        (void)OH.CreateVar(os.str(), "wheel4");
 
 		        // joint sub-data
-		        os << '.';
-		        std::string name = os.str();
+		        m_sOutputNameBase = os.str();
 
 			/* Add NetCDF (output) variables to the BinFile object
 			 * and save the NcVar* pointer returned from add_var
 			 * as handle for later write accesses.
 			 * Define also variable attributes */
-			OH.CreateVar<Vec3>(name + "Fint",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Fint",
                                                 OutputHandler::Dimensions::Force,
                                                 "force btwn ring and patch acting on patch (x, y, z)");
-			OH.CreateVar<Vec3>(name + "Xpar",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xpar",
                                                 OutputHandler::Dimensions::Length,
                                                 "rel pos of patch (x, y, z)");
-			OH.CreateVar<Vec3>(name + "Xparp",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xparp",
                                                 OutputHandler::Dimensions::Length,
                                                 "rel pos of patch expressed in the ring non-rotating reference frame (x, y, z)");
-			OH.CreateVar<doublereal>(name + "dXxProj",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dXxProj",
                                                 OutputHandler::Dimensions::Length,
                                                 "patch center point x-value of the road profile (attention: this is not the same thing as the patch position)");
-			OH.CreateVar<doublereal>(name + "dRoad",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoad",
                                                 OutputHandler::Dimensions::Length,
                                                 "road height");
-			OH.CreateVar<Vec3>(name + "F",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
                                                 OutputHandler::Dimensions::Force,
                                                 "Road-patch friction force expressed in absolute reference frame (x, y, z)");
-			OH.CreateVar<doublereal>(name + "Fn",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Fn",
                                                 OutputHandler::Dimensions::Force,
                                                 "Normal force at the patch");
-			OH.CreateVar<doublereal>(name + "debug",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "debug",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "Debugging variable");
-			OH.CreateVar<doublereal>(name + "dSr",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dSr",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dSr");
-			OH.CreateVar<doublereal>(name + "ddistM",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "ddistM",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "ddistM");
-			OH.CreateVar<doublereal>(name + "Fcent",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Fcent",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "Fcent");
-			OH.CreateVar<doublereal>(name + "dLs",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dLs",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dLs");
-			OH.CreateVar<doublereal>(name + "R_e",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "R_e",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "R_e");
-			OH.CreateVar<doublereal>(name + "dSa",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dSa",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dSa");
-			OH.CreateVar<doublereal>(name + "dvax",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvax",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dvax");
-			OH.CreateVar<doublereal>(name + "dvx",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvx",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dvx");
-			OH.CreateVar<doublereal>(name + "dvay",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvay",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dvay");
-			OH.CreateVar<doublereal>(name + "dMuY",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dMuY",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dMuY");
-			OH.CreateVar<doublereal>(name + "dMuX",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dMuX",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dMuX");
-			OH.CreateVar<doublereal>(name + "KE",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "KE",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "KE");
-			OH.CreateVar<doublereal>(name + "PE",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "PE",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "PE");
-			OH.CreateVar<doublereal>(name + "E",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "E",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "E");
-			OH.CreateVar<doublereal>(name + "dRoadAhead",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoadAhead",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dRoadAhead");
-			OH.CreateVar<doublereal>(name + "dRoadBehind",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoadBehind",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dRoadBehind");
-			OH.CreateVar<doublereal>(name + "dCt",
+			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dCt",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "dCt");
-			OH.CreateVar<Vec3>(name + "M",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "M");
-			OH.CreateVar<Vec3>(name + "distM",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "distM",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "distM");
-			OH.CreateVar<Vec3>(name + "n",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "n",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "n");
-			OH.CreateVar<Vec3>(name + "Xpa",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xpa",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "Xpa");
-			OH.CreateVar<Vec3>(name + "Vpa",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Vpa",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "Vpa");
-			OH.CreateVar<Vec3>(name + "Vpar",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Vpar",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "Vpar");
-			OH.CreateVar<Vec3>(name + "fwd",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwd",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "fwd");
-			OH.CreateVar<Vec3>(name + "fwdRing",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwdRing",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "fwdRing");
-			OH.CreateVar<Vec3>(name + "fwdRingFlat",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwdRingFlat",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "fwdRingFlat");
-			OH.CreateVar<Vec3>(name + "pcRing",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "pcRing",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "pcRing");
-			OH.CreateVar<Vec3>(name + "VparWheel",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "VparWheel",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "VparWheel");
-			OH.CreateVar<Vec3>(name + "Fr",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Fr",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "Fr");
-			OH.CreateVar<Vec3>(name + "Mz",
+			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Mz",
                                                 OutputHandler::Dimensions::UnknownDimension,
                                                 "Mz");
 

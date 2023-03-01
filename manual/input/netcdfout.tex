@@ -406,6 +406,13 @@ evaluation point.
 
 
 
+\subsubsection{Driven}
+\label{sec:NetCDF:Elem:Driven}
+
+When an element is driven, a scalar field \kw{driven} is added to the driven element's entry.
+Its value is 1 when the driven element is active, and 0 otherwise.
+The content of the driven element's output should be disregarded when this flag is 0.
+
 
 \subsubsection{Force}
 \label{sec:NetCDF:Elem:Force}
@@ -516,7 +523,6 @@ Additional variables can be added, depending on the joint type.
 \item \kw{elem.joint.}\bnt{label}\kw{.Omega} contains the relative angular velocity
   of the two connected nodes, expressed in the joint reference frame attached to node 1.
 \end{itemize}
-
 If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.MR} contains the friction moment;
@@ -527,7 +533,13 @@ If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.Beam} contains the label of the current beam;
 \item \kw{elem.joint.}\bnt{label}\kw{.sRef} contains the current curvilinear abscissa;
-\item \kw{elem.joint.}\bnt{label}\kw{.l} contains the local direction unit vector.
+\item \kw{elem.joint.}\bnt{label}\kw{.l} contains the three components of the local direction unit vector, in the absolute reference frame.
+\end{itemize}
+If friction is present:
+\begin{itemize}
+\item \kw{elem.joint.}\bnt{label}\kw{.FF} contains the tangential force component;
+\item \kw{elem.joint.}\bnt{label}\kw{.fc} contains the friction coefficient;
+\item \kw{elem.joint.}\bnt{label}\kw{.v} contains the sliding velocity.
 \end{itemize}
 
 \paragraph{Brake:}
@@ -537,7 +549,6 @@ If friction is present:
 \item \kw{elem.joint.}\bnt{label}\kw{.Omega} contains the relative angular
   velocity, expressed in the reference frame of node 2.
 \end{itemize}
-
 If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.fc} contains the friction coefficient;
@@ -653,7 +664,7 @@ If friction is present:
 \end{itemize}
 
 \paragraph{In line:}
-Only if friction is present:
+If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.FF} contains the friction force along
   the constraint direction;
@@ -686,7 +697,6 @@ Only if friction is present:
 \item \kw{elem.joint.}\bnt{label}\kw{.Omega} contains the relative angular
   velocity of the connected nodes, expressed in the joint reference frame.
 \end{itemize}
-
 If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.MRF} contains the friction moment

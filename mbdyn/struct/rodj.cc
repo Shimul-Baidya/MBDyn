@@ -296,19 +296,18 @@ Rod::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Rod", OH, name);
+			OutputPrepare_int("Rod", OH);
 
-			Var_dElle = OH.CreateVar<doublereal>(name + "l",
+			Var_dElle = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "l",
 				OutputHandler::Dimensions::Length,
 				"length of the element");
-			Var_dEllePrime = OH.CreateVar<doublereal>(name + "lP",
+			Var_dEllePrime = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "lP",
 				OutputHandler::Dimensions::Velocity,
 				"lengthening velocity of the element");
-			Var_v = OH.CreateVar<Vec3>(name + "v",
+			Var_v = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "v",
 				OutputHandler::Dimensions::Dimensionless,
 				"direction unit vector");
-			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, name + "constitutiveLaw");
+			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, m_sOutputNameBase + "." "constitutiveLaw");
 		}
 #endif // USE_NETCDF
 	}

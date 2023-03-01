@@ -138,11 +138,11 @@ AbsoluteDispForce::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.force." << GetLabel();
-			(void)OH.CreateVar(os.str(), "absolute displacement");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "absolute displacement");
 
 			// joint sub-data
-			os << '.';
-			Var_F = OH.CreateVar<Vec3>(os.str() + "F",
+			Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 				OutputHandler::Dimensions::Force,
 				"force components (x, y, z)");
 		}
@@ -309,11 +309,11 @@ AbsoluteInternalDispForce::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.force." << GetLabel();
-			(void)OH.CreateVar(os.str(), "internal absolute displacement");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "internal absolute displacement");
 
 			// joint sub-data
-			os << '.';
-			Var_F = OH.CreateVar<Vec3>(os.str() + "F",
+			Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 				OutputHandler::Dimensions::Force,
 				"force components (x, y, z)");
 		}
@@ -572,15 +572,15 @@ AbsoluteForce::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.force." << GetLabel();
-			(void)OH.CreateVar(os.str(), "absolute");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "absolute");
 
 			// joint sub-data
-			os << '.';
-			Var_F = OH.CreateVar<Vec3>(os.str() + "F",
+			Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 				OutputHandler::Dimensions::Force,
 				"global force components (x, y, z)");
 
-			Var_A = OH.CreateVar<Vec3>(os.str() + "Arm",
+			Var_A = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Arm",
 				OutputHandler::Dimensions::Length,
 				"arm in global frame (x, y, z)");
 		}
@@ -860,23 +860,22 @@ FollowerForce::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.force." << GetLabel();
-			(void)OH.CreateVar(os.str(), "follower");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "follower");
 
 			// joint sub-data
 			if (fToBeOutput() & StructuralForce::OUTPUT_REL) {
-				os << '.';
-				Var_F = OH.CreateVar<Vec3>(os.str() + "f",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "f",
 					OutputHandler::Dimensions::Force,
 					"local force components (x, y, z)");
 
 			} else {
-				os << '.';
-				Var_F = OH.CreateVar<Vec3>(os.str() + "F",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 					OutputHandler::Dimensions::Force,
 					"global force components (x, y, z)");
 			}
 
-			Var_A = OH.CreateVar<Vec3>(os.str() + "Arm",
+			Var_A = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Arm",
 				OutputHandler::Dimensions::Length,
 				"arm in global frame (x, y, z)");
 		}
@@ -1113,11 +1112,11 @@ AbsoluteCouple::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.couple." << GetLabel();
-			(void)OH.CreateVar(os.str(), "absolute");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "absolute");
 
 			// joint sub-data
-			os << '.';
-			Var_F = OH.CreateVar<Vec3>(os.str() + "M",
+			Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 				OutputHandler::Dimensions::Moment,
 				"global couple components (x, y, z)");
 		}
@@ -1317,18 +1316,17 @@ FollowerCouple::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.couple." << GetLabel();
-			(void)OH.CreateVar(os.str(), "follower");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "follower");
 
 			// joint sub-data
-			os << '.';
-
 			if (fToBeOutput() & StructuralForce::OUTPUT_REL) {
-				Var_F = OH.CreateVar<Vec3>(os.str() + "m",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "m",
 					OutputHandler::Dimensions::Moment,
 					"local couple components (x, y, z)");
 
 			} else {
-				Var_F = OH.CreateVar<Vec3>(os.str() + "M",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 					OutputHandler::Dimensions::Moment,
 					"global couple components (x, y, z)");
 			}
@@ -1657,19 +1655,19 @@ AbsoluteInternalForce::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.force." << GetLabel();
-			(void)OH.CreateVar(os.str(), "internal absolute");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "internal absolute");
 
 			// joint sub-data
-			os << '.';
-			Var_F = OH.CreateVar<Vec3>(os.str() + "F",
+			Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 				OutputHandler::Dimensions::Force,
 				"global force components (x, y, z)");
 
-			Var_A1 = OH.CreateVar<Vec3>(os.str() + "Arm1",
+			Var_A1 = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Arm1",
 				OutputHandler::Dimensions::Length,
 				"node 1 arm in global frame (x, y, z)");
 
-			Var_A2 = OH.CreateVar<Vec3>(os.str() + "Arm2",
+			Var_A2 = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Arm2",
 				OutputHandler::Dimensions::Length,
 				"node 2 arm in global frame (x, y, z)");
 		}
@@ -2008,25 +2006,25 @@ FollowerInternalForce::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.force." << GetLabel();
-			(void)OH.CreateVar(os.str(), "internal follower");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "internal follower");
 
 			// joint sub-data
-			os << '.';
 			if (fToBeOutput() & StructuralForce::OUTPUT_REL) {
-				Var_F = OH.CreateVar<Vec3>(os.str() + "f",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "f",
 					OutputHandler::Dimensions::Force,
 					"local force components (x, y, z)");
 			} else {
-				Var_F = OH.CreateVar<Vec3>(os.str() + "F",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 					OutputHandler::Dimensions::Force,
 					"global force components (x, y, z)");
 			}
 
-			Var_A1 = OH.CreateVar<Vec3>(os.str() + "Arm1",
+			Var_A1 = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Arm1",
 				OutputHandler::Dimensions::Length,
 				"node 1 arm in global frame (x, y, z)");
 
-			Var_A2 = OH.CreateVar<Vec3>(os.str() + "Arm2",
+			Var_A2 = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Arm2",
 				OutputHandler::Dimensions::Length,
 				"node 2 arm in global frame (x, y, z)");
 		}
@@ -2323,11 +2321,11 @@ AbsoluteInternalCouple::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.couple." << GetLabel();
-			(void)OH.CreateVar(os.str(), "internal absolute");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "internal absolute");
 
 			// joint sub-data
-			os << '.';
-			Var_F = OH.CreateVar<Vec3>(os.str() + "M",
+			Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 				OutputHandler::Dimensions::Moment,
 				"global couple components (x, y, z)");
 		}
@@ -2548,17 +2546,17 @@ FollowerInternalCouple::OutputPrepare(OutputHandler& OH)
 
 			std::ostringstream os;
 			os << "elem.couple." << GetLabel();
-			(void)OH.CreateVar(os.str(), "internal follower");
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, "internal follower");
 
 			// joint sub-data
-			os << '.';
 			if (fToBeOutput() & StructuralForce::OUTPUT_REL) {
-				Var_F = OH.CreateVar<Vec3>(os.str() + "m",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "m",
 					OutputHandler::Dimensions::Moment,
 					"local couple components (x, y, z)");
 
 			} else {
-				Var_F = OH.CreateVar<Vec3>(os.str() + "M",
+				Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 					OutputHandler::Dimensions::Moment,
 					"global couple components (x, y, z)");
 			}

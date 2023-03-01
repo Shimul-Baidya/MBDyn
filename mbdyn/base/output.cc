@@ -1072,7 +1072,7 @@ OutputHandler::CreateRotationVar(const std::string& name_prefix,
 {
 	NcDimVec dim;
 	AttrValVec attrs;
-	std::string name(name_prefix);
+	std::string name(name_prefix + ".");
 
 	switch (od) {
 	case ORIENTATION_MATRIX:
@@ -1208,6 +1208,12 @@ ToBeOutput::SetOutputFlag(flag f)
 	ASSERT(f ? f & flag(1) : 1);
 
   	fOutput = f;
+}
+
+const std::string&
+ToBeOutput::sGetOutputNameBase(void) const
+{
+	return m_sOutputNameBase;
 }
 
 Traceable::Traceable(flag fTrace)

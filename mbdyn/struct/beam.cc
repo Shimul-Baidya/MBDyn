@@ -1134,11 +1134,9 @@ Beam::OutputPrepare(OutputHandler &OH)
 
 			std::ostringstream os;
 			os << "elem.beam." << GetLabel();
+			m_sOutputNameBase = os.str();
 
-			(void)OH.CreateVar(os.str(), type);
-
-			os << '.';
-			std::string name(os.str());
+			(void)OH.CreateVar(m_sOutputNameBase, type);
 
 			unsigned uOutputFlags = (fToBeOutput() & ToBeOutput::OUTPUT_PRIVATE_MASK);
 
@@ -1149,48 +1147,48 @@ Beam::OutputPrepare(OutputHandler &OH)
 				std::string ep(os.str());
 
 				if (uOutputFlags & Beam::OUTPUT_EP_X) {
-					Var_X[iSez] = OH.CreateVar<Vec3>(name + "X_" + sez[iSez], 
+					Var_X[iSez] = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "X_" + sez[iSez], 
 						OutputHandler::Dimensions::Length,
 						ep + "global position vector (X, Y, Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_R) {
-					Var_Phi[iSez] = OH.CreateRotationVar(name,
+					Var_Phi[iSez] = OH.CreateRotationVar(m_sOutputNameBase,
 						std::string("_") + sez[iSez], od, ep + "global");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_F) {
-					Var_F[iSez] = OH.CreateVar<Vec3>(name + "F_" + sez[iSez], 
+					Var_F[iSez] = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F_" + sez[iSez], 
 						OutputHandler::Dimensions::Force,
 						ep + "internal force in local frame (F_X, F_Y, F_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_M) {
-					Var_M[iSez] = OH.CreateVar<Vec3>(name + "M_" + sez[iSez],  
+					Var_M[iSez] = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M_" + sez[iSez],  
 						OutputHandler::Dimensions::Moment,
 						ep + "internal moment in local frame (M_X, M_Y, M_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_NU) {
-					Var_Nu[iSez] = OH.CreateVar<Vec3>(name + "nu_" + sez[iSez],  
+					Var_Nu[iSez] = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "nu_" + sez[iSez],  
 						OutputHandler::Dimensions::LinearStrain,
 						ep + "linear strain in local frame (nu_X, nu_Y, nu_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_K) {
-					Var_K[iSez] = OH.CreateVar<Vec3>(name + "k_" + sez[iSez],  
+					Var_K[iSez] = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "k_" + sez[iSez],  
 						OutputHandler::Dimensions::AngularStrain,
 						ep + "angular strain in local frame (K_X, K_Y, K_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_NUP) {
-					Var_NuP[iSez] = OH.CreateVar<Vec3>(name + "nuP_" + sez[iSez],  
+					Var_NuP[iSez] = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "nuP_" + sez[iSez],  
 						OutputHandler::Dimensions::LinearStrainRate,
 						ep + "linear strain rate in local frame (nuP_X, nuP_Y, nuP_Z)");
 				}
 
 				if (uOutputFlags & Beam::OUTPUT_EP_KP) {
-					Var_KP[iSez] = OH.CreateVar<Vec3>(name + "kP_" + sez[iSez],  
+					Var_KP[iSez] = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "kP_" + sez[iSez],  
 						OutputHandler::Dimensions::AngularStrainRate,
 						ep + "angular strain rate in local frame (KP_X, KP_Y, KP_Z)");
 				}
