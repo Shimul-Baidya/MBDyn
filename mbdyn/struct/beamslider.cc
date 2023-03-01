@@ -998,6 +998,19 @@ BeamSliderJoint::GetEquationDimension(integer index) const {
 		case 7:
 			dimension = OutputHandler::Dimensions::rad;
 			break;
+		default:
+			if (fc) {
+				index -= NumSelfDof;
+				integer iFCDofs = fc->iGetNumDof();
+				if (iFCDofs > 0) {
+					/* TODO */
+					/* not sure this is handled correctly */
+					dimension = fc->GetEquationDimension(index);
+				}
+			} else {
+				dimension = OutputHandler::Dimensions::UnknownDimension;
+			}
+			break;
 	}
 
 	return dimension;

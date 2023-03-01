@@ -581,14 +581,20 @@ InLineJoint::GetEquationDimension(integer index) const {
 		case 2:
 			dimension = OutputHandler::Dimensions::Length;
 			break;
+		default:
+			if (fc) {
+				index -= NumSelfDof;
+				integer iFCDofs = fc->iGetNumDof();
+				if (iFCDofs > 0) {
+					/* TODO */
+					/* not sure this is handled correctly */
+					dimension = fc->GetEquationDimension(index);
+				}
+			} else {
+				dimension = OutputHandler::Dimensions::UnknownDimension;
+			}
+			break;
 	}
-
-   if (fc && fc->iGetNumDof() > 0) {
-      unsigned int i = index;
-      if ( i >= NumSelfDof + 1 && i <= NumSelfDof + fc->iGetNumDof() ) {
-         dimension = fc->GetEquationDimension(index - NumSelfDof);
-      }
-   }
 
 	return dimension;
 }
