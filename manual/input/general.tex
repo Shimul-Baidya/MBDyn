@@ -5218,11 +5218,11 @@ Finally there are some miscellaneous points:
     \begin{enumerate}
   
         \item \texttt{\kw{MBDYNVARS}=\bnt{expr\_list}}
-	where \nt{expr\_list} is a series of mathematical expressions
+	where \nt{expr\_list} is a list of mathematical expressions
 	separated by semicolons. 
-	They are parsed and evaluated; if variables are declared, they are
-	added to the symbol table to be used during the whole execution 
-	of the program.
+	They are parsed and evaluated; declared variables are
+	added to the symbol table and can be subsequently dereferenced
+	during the whole execution of the program.
     
         \item \texttt{\kw{MBDYN\_\bnt{type}\_\bnt{name}}=\bnt{value}},
 	where \nt{type} is a legal mbdyn type (\kw{integer}, \kw{real}
@@ -5286,12 +5286,13 @@ Finally there are some miscellaneous points:
 \begin{verbatim}
     dt = 1.e-3;
     mbdynvars = sprintf('real DT = %s', dt);
-    system(['wsl MBDYNVARS=' mbdynvars ' /absolute/path/to/mbdyn/mbdyn.sh \
+    system(['wsl MBDYNVARS="' mbdynvars '" /absolute/path/to/mbdyn/mbdyn.sh \
         -f /absolute/path/to/input/input.mbd \
         -o /absolute/path/to/output/output \
         > /absolute/path/to/output/output.txt 2>&1']);
     # use 'dt' in the matlab peer's analysis as appropriate...
 \end{verbatim}
+    Note: writing the output directly to a Windows partition can significantly slow down the execution of MBDyn.
 
 
     \item Newlines and indentations are not meaningful. But good indentation
