@@ -5218,11 +5218,11 @@ Finally there are some miscellaneous points:
     \begin{enumerate}
   
         \item \texttt{\kw{MBDYNVARS}=\bnt{expr\_list}}
-	where \nt{expr\_list} is a series of mathematical expressions
+	where \nt{expr\_list} is a list of mathematical expressions
 	separated by semicolons. 
-	They are parsed and evaluated; if variables are declared, they are
-	added to the symbol table to be used during the whole execution 
-	of the program.
+	They are parsed and evaluated; declared variables are
+	added to the symbol table and can be subsequently dereferenced
+	during the whole execution of the program.
     
         \item \texttt{\kw{MBDYN\_\bnt{type}\_\bnt{name}}=\bnt{value}},
 	where \nt{type} is a legal mbdyn type (\kw{integer}, \kw{real}
@@ -5241,15 +5241,59 @@ Finally there are some miscellaneous points:
     os.environ['MBDYNVARS'] = 'real DT = ' + str(dt) + ';';
     os.system('mbdyn -f input.mbd -o output > output.txt 2>&1 &');
     # use 'dt' in the python peer's analysis as appropriate...
+
+    # NOTE: a trailing '&' is placed to send mbdyn in background;
+    # the call to system() will return immediately, and the python
+    # script will have the opportunity to interact with the mbdyn
+    # execution, e.g., through socket streams
 \end{verbatim}
 
     same thing, but now using Matlab:
 \begin{verbatim}
     dt = 1.e-3;
     setenv('MBDYNVARS', sprintf('real DT = %s', dt));
-    system('mbdyn -f input.mbd -o output > output.txt 2>&1 &');
+    system('mbdyn -f input.mbd -o output > output.txt 2>&1');
+    # use 'dt' in the matlab peer's analysis as appropriate...
+
+    # NOTE: no trailing '&' is placed to avoid sending mbdyn in background;
+    # the call to system() will return when the simulation is over
+\end{verbatim}
+
+
+    \textbf{Note on running mbdyn from Matlab:} \
+    often, Matlab links its own dynamic libraries, which may be incompatible with those used to build mbdyn.
+    For this reason, it may be convenient to run mbdyn from within a shell script that sets a ``sane'' environment.
+    An example script, \texttt{mbdyn.sh}, can be found in \texttt{contrib/SimulinkInterface/}.
+    For example:
+\begin{verbatim}
+    system('./mbdyn.sh -f input.mbd -o output > output.txt 2>&1');
+\end{verbatim}
+
+    
+    \textbf{Note on using Windows >= 10 and WSL:} \
+    when executed by calling \texttt{system()} from Matlab running in Windows 10, Matlab must be instructed to use Windows Subsystem for Linux (WSL).
+    Furthermore, the correct paths need to be used.
+    To this end, use
+\begin{verbatim}
+    system('wsl /absolute/path/to/mbdyn/mbdyn.sh \
+        -f /absolute/path/to/input/input.mbd \
+        -o /absolute/path/to/output/output \
+        > /absolute/path/to/output/output.txt 2>&1');
+\end{verbatim}
+    Note: in this case, WSL will not see the environment populated by calling \texttt{setenv()} within Matlab.
+    To populate the environment, one can place the environment variables definition directly in the command line.
+    For example:
+\begin{verbatim}
+    dt = 1.e-3;
+    mbdynvars = sprintf('real DT = %s', dt);
+    system(['wsl MBDYNVARS="' mbdynvars '" /absolute/path/to/mbdyn/mbdyn.sh \
+        -f /absolute/path/to/input/input.mbd \
+        -o /absolute/path/to/output/output \
+        > /absolute/path/to/output/output.txt 2>&1']);
     # use 'dt' in the matlab peer's analysis as appropriate...
 \end{verbatim}
+    Note: writing the output directly to a Windows partition can significantly slow down the execution of MBDyn.
+
 
     \item Newlines and indentations are not meaningful. But good indentation
     habits can lead to better and more readable input files.
