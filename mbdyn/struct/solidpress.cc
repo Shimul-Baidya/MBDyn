@@ -316,8 +316,8 @@ PressureLoad<ElementType, CollocationType, PressureSource>::PressureLoad(unsigne
                                                                          const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
                                                                          PressureSource&& oPressureTmp,
                                                                          flag fOut)
-     :PressureLoadElem(uLabel, fOut),
-      Elem(uLabel, fOut),
+     :Elem(uLabel, fOut),
+      PressureLoadElem(uLabel, fOut),
       rgNodes(rgNodesTmp),
       oPressure(std::move(oPressureTmp)),
       Ftot(::Zero3)
