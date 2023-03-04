@@ -660,9 +660,9 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Sol
                                                                                              const sp_grad::SpColVector<doublereal, iNumNodes>& rhon,
                                                                                              std::array<SolidMaterialData, iNumEvalPointsStiffness>&& rgMaterialData,
                                                                                              flag fOut)
-:SolidElem{uLabel, fOut},
- Elem{uLabel, fOut},
- rhon{rhon}
+: Elem{uLabel, fOut},
+  SolidElem{uLabel, fOut},
+  rhon{rhon}
 {
      using namespace sp_grad;
 
@@ -1973,7 +1973,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
      }
 
      if (bIsotropicMaterial && eConstLawType == ConstLawType::VISCOELASTIC) {
-          eConstLawType == ConstLawType::ELASTIC;
+          eConstLawType = ConstLawType::ELASTIC;
 
           for (index_type i = 0; i < iNumEvalPointsStiffness; ++i) {
                if (rgMaterialData[i].beta != 0.) {
