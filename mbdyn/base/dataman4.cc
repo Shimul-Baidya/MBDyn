@@ -89,6 +89,7 @@
 #include "membrane.h"
 #include "shell.h"
 #include "solid.h"
+#include "solidpress.h"
 
 static int iNumTypes[Elem::LASTELEMTYPE];
 

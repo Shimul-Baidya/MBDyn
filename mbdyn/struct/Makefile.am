@@ -102,6 +102,14 @@ socketstreammotionelem.cc \
 socketstreammotionelem.h \
 solid.h \
 solid.cc \
+solidcsl.h \
+solidcsl.cc \
+solidinteg.h \
+solidinteg.cc \
+solidpress.h \
+solidpress.cc \
+solidshape.h \
+solidshape.cc \
 spherj.cc \
 spherj.h \
 stredge.cc \

@@ -38,50 +38,9 @@
         in the GNU Public License version 2.1
 */
 
-#ifndef ___SOLID_H__INCLUDED___
-#define ___SOLID_H__INCLUDED___
+#ifndef ___SOLID_CSL_H__INCLUDED___
+#define ___SOLID_CSL_H__INCLUDED___
 
-#include "dataman.h"
-#include "elem.h"
-#include "gravity.h"
-
-// 3D elements
-class Hexahedron8;
-class Hexahedron20;
-class Hexahedron20r;
-class Pentahedron15;
-class Tetrahedron10h;
-
-// 3D collocation rules
-class Gauss2x2x2;
-class Gauss3x3x3;
-class GaussH20r;
-class CollocPenta15;
-class CollocTet10h;
-
-// 3D base class
-class SolidElem: virtual public Elem, public ElemGravityOwner, public InitialAssemblyElem {
-public:
-     SolidElem(unsigned uLabel,
-               flag fOut);
-     virtual ~SolidElem();
-
-     virtual Elem::Type GetElemType() const override;
-
-     virtual void
-     SetValue(DataManager *pDM,
-              VectorHandler& X, VectorHandler& XP,
-              SimulationEntity::Hints *ph) override;
-
-     virtual std::ostream& Restart(std::ostream& out) const override;
-
-     virtual unsigned int iGetInitialNumDof() const override;
-
-     virtual bool bIsDeformable() const override;
-};
-
-template <typename ElementType, typename CollocationType>
-SolidElem*
-ReadSolid(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
+void InitSolidCSL();
 
 #endif

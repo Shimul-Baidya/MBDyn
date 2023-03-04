@@ -38,33 +38,27 @@
         in the GNU Public License version 2.1
 */
 
-#ifndef ___SOLID_H__INCLUDED___
-#define ___SOLID_H__INCLUDED___
+#ifndef ___SOLID_PRESS_H__INCLUDED___
+#define ___SOLID_PRESS_H__INCLUDED___
 
 #include "dataman.h"
-#include "elem.h"
-#include "gravity.h"
 
-// 3D elements
-class Hexahedron8;
-class Hexahedron20;
-class Hexahedron20r;
-class Pentahedron15;
-class Tetrahedron10h;
+// 2D elements
+class Quadrangle4;
+class Quadrangle8;
+class Triangle6h;
 
-// 3D collocation rules
-class Gauss2x2x2;
-class Gauss3x3x3;
-class GaussH20r;
-class CollocPenta15;
-class CollocTet10h;
+// 2D collocation rules
+class Gauss2x2;
+class Gauss3x3;
+class CollocTria6h;
 
-// 3D base class
-class SolidElem: virtual public Elem, public ElemGravityOwner, public InitialAssemblyElem {
+// 2D base class
+class PressureLoadElem: virtual public Elem, public InitialAssemblyElem {
 public:
-     SolidElem(unsigned uLabel,
-               flag fOut);
-     virtual ~SolidElem();
+     PressureLoadElem(unsigned uLabel,
+                      flag fOut);
+     virtual ~PressureLoadElem();
 
      virtual Elem::Type GetElemType() const override;
 
@@ -81,7 +75,7 @@ public:
 };
 
 template <typename ElementType, typename CollocationType>
-SolidElem*
-ReadSolid(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
+PressureLoadElem*
+ReadPressureLoad(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
 
 #endif
