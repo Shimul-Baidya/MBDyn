@@ -930,7 +930,7 @@ OctaveInterface::~OctaveInterface(void)
 #elif defined(HAVE_CLEAN_UP_AND_EXIT)
         clean_up_and_exit(0, true);
 #endif        
-#elif OCTAVE_MAJOR_VERSION >= 6
+#elif OCTAVE_MAJOR_VERSION >= 6 && OCTAVE_MAJOR_VERSION < 8
         interpreter.shutdown();
 #endif
 
