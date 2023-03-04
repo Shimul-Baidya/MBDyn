@@ -2201,7 +2201,6 @@ namespace sp_grad_test {
                          const doublereal dijr1 = SpGradientTraits<TD>::dGetValue(D.GetElem(i, j));
                          const doublereal dijr2 = Dv[(j - 1) * imatrows + i - 1];
                          const doublereal dijr3 = SpGradientTraits<TD>::dGetValue(DMap.GetElem(i, j));
-                         const doublereal dijr4 = SpGradientTraits<TD>::dGetValue(Da.GetElem(i, j));
                          const doublereal dij = -aij / 3. + (bij * 5. - cij / 4.) * 1.5;
 
                          assert(fabs(dij - dijr1) / std::max(1., fabs(dij)) < dTol);

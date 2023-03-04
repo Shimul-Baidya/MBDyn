@@ -4126,10 +4126,6 @@ namespace sp_grad {
           constexpr bool bIsGradientRhs = std::is_same<SpGradient, RhsValue>::value;
           constexpr bool bIsGradProdLhs = std::is_same<GpGradProd, LhsValue>::value;
           constexpr bool bIsGradProdRhs = std::is_same<GpGradProd, RhsValue>::value;
-          constexpr bool bIsGradOrGradProdLhs = bIsGradientLhs || bIsGradProdLhs;
-          constexpr bool bIsGradOrGradProdRhs = bIsGradientRhs || bIsGradProdRhs;
-          constexpr bool bIsSparseRep = !(bIsGradProdLhs || bIsGradProdRhs);
-          constexpr bool bSingleDofMap = bIsSparseRep && (bIsGradientLhs && bIsGradientRhs);
 
           static_assert(!(bIsGradientRhs && bIsGradProdLhs));
           static_assert(!(bIsGradProdRhs && bIsGradientLhs));
