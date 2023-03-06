@@ -95,28 +95,32 @@ Resistor::~Resistor(void)
 void
 Resistor::OutputPrepare(OutputHandler& OH)
 {
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 	if (bToBeOutput()) {
-		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-		std::ostringstream os;
-		os << "elem.loadable." << GetLabel();
-		(void)OH.CreateVar(os.str(), "Resistor");
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			std::ostringstream os;
+			os << "elem.loadable." << GetLabel();
+			(void)OH.CreateVar(os.str(), "Resistor");
 
-		os << '.';
-		std::string name = os.str();
+			os << '.';
+			m_sOutputNameBase = os.str();
 
-		Var_dR1 = OH.CreateVar<doublereal>(name + "Var_dR1",
-				OutputHandler::Dimensions::Resistance,
-				"Resistor constant");
-		Var_di_curr = OH.CreateVar<doublereal>(name + "Var_di_curr",
-				OutputHandler::Dimensions::Current,
-				"Current on resistor");
-		Var_dVoltage1 = OH.CreateVar<doublereal>(name + "Var_dVoltage1",
-				OutputHandler::Dimensions::Voltage,
-				"Voltage on node 1");
-		Var_dVoltage2 = OH.CreateVar<doublereal>(name + "Var_dVoltage2",
-				OutputHandler::Dimensions::Voltage,
-				"Voltage on node 2");
+			Var_dR1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "R1",
+					OutputHandler::Dimensions::Resistance,
+					"Resistor constant");
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "I",
+					OutputHandler::Dimensions::Current,
+					"Current on resistor");
+			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V1",
+					OutputHandler::Dimensions::Voltage,
+					"Voltage on node 1");
+			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V2",
+					OutputHandler::Dimensions::Voltage,
+					"Voltage on node 2");
+		}
 	}
+#endif // USE_NETCDF
 }
 
 void
@@ -374,29 +378,32 @@ Capacitor::~Capacitor(void)
 void
 Capacitor::OutputPrepare(OutputHandler& OH)
 {
-	if (bToBeOutput()) {
-		
-		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-		std::ostringstream os;
-		os << "elem.loadable." << GetLabel();
-		(void)OH.CreateVar(os.str(), "Capacitor");
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+	if (bToBeOutput()) {	
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			std::ostringstream os;
+			os << "elem.loadable." << GetLabel();
+			(void)OH.CreateVar(os.str(), "Capacitor");
 
-		os << '.';
-		std::string name = os.str();
+			os << '.';
+			std::string m_sOutputNameBase = os.str();
 
-		Var_dC1 = OH.CreateVar<doublereal>(name + "Var_dC1",
-				OutputHandler::Dimensions::Capacitance,
-				"Capacitor constant");
-		Var_di_curr = OH.CreateVar<doublereal>(name + "Var_di_curr",
-				OutputHandler::Dimensions::Current,
-				"Current on capacitor");
-		Var_dVoltage1 = OH.CreateVar<doublereal>(name + "Var_dVoltage1",
-				OutputHandler::Dimensions::Voltage,
-				"Voltage on node 1");
-		Var_dVoltage2 = OH.CreateVar<doublereal>(name + "Var_dVoltage2",
-				OutputHandler::Dimensions::Voltage,
-				"Voltage on node 2");
+			Var_dC1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "C1",
+					OutputHandler::Dimensions::Capacitance,
+					"Capacitor constant");
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "I",
+					OutputHandler::Dimensions::Current,
+					"Current on capacitor");
+			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V1",
+					OutputHandler::Dimensions::Voltage,
+					"Voltage on node 1");
+			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V2",
+					OutputHandler::Dimensions::Voltage,
+					"Voltage on node 2");
+		}
 	}
+#endif // USE_NETCDF
 }
 
 void
