@@ -101,19 +101,18 @@ Resistor::OutputPrepare(OutputHandler& OH)
 		os << "elem.loadable." << GetLabel();
 		(void)OH.CreateVar(os.str(), "Resistor");
 
-		os << '.';
-		std::string name = os.str();
+		m_sOutputNameBase = os.str();
 
-		Var_dR1 = OH.CreateVar<doublereal>(name + "Var_dR1",
+		Var_dR1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_dR1",
 				OutputHandler::Dimensions::Resistance,
 				"Resistor constant");
-		Var_di_curr = OH.CreateVar<doublereal>(name + "Var_di_curr",
+		Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_di_curr",
 				OutputHandler::Dimensions::Current,
 				"Current on resistor");
-		Var_dVoltage1 = OH.CreateVar<doublereal>(name + "Var_dVoltage1",
+		Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_dVoltage1",
 				OutputHandler::Dimensions::Voltage,
 				"Voltage on node 1");
-		Var_dVoltage2 = OH.CreateVar<doublereal>(name + "Var_dVoltage2",
+		Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_dVoltage2",
 				OutputHandler::Dimensions::Voltage,
 				"Voltage on node 2");
 	}
@@ -381,19 +380,18 @@ Capacitor::OutputPrepare(OutputHandler& OH)
 		os << "elem.loadable." << GetLabel();
 		(void)OH.CreateVar(os.str(), "Capacitor");
 
-		os << '.';
-		std::string name = os.str();
+		m_sOutputNameBase = os.str();
 
-		Var_dC1 = OH.CreateVar<doublereal>(name + "Var_dC1",
+		Var_dC1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_dC1",
 				OutputHandler::Dimensions::Capacitance,
 				"Capacitor constant");
-		Var_di_curr = OH.CreateVar<doublereal>(name + "Var_di_curr",
+		Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_di_curr",
 				OutputHandler::Dimensions::Current,
 				"Current on capacitor");
-		Var_dVoltage1 = OH.CreateVar<doublereal>(name + "Var_dVoltage1",
+		Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_dVoltage1",
 				OutputHandler::Dimensions::Voltage,
 				"Voltage on node 1");
-		Var_dVoltage2 = OH.CreateVar<doublereal>(name + "Var_dVoltage2",
+		Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Var_dVoltage2",
 				OutputHandler::Dimensions::Voltage,
 				"Voltage on node 2");
 	}
