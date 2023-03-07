@@ -105,9 +105,6 @@ Resistor::OutputPrepare(OutputHandler& OH)
 
 			m_sOutputNameBase = os.str();
 
-			Var_dR1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "R1",
-					OutputHandler::Dimensions::Resistance,
-					"Resistor constant");
 			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on resistor");
@@ -128,7 +125,6 @@ Resistor::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-			OH.WriteNcVar(Var_dR1, R1);
 			OH.WriteNcVar(Var_di_curr, i_curr);
 			OH.WriteNcVar(Var_dVoltage1, Voltage1);
 			OH.WriteNcVar(Var_dVoltage2, Voltage2);
@@ -387,9 +383,6 @@ Capacitor::OutputPrepare(OutputHandler& OH)
 
 			std::string m_sOutputNameBase = os.str();
 
-			Var_dC1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "C1",
-					OutputHandler::Dimensions::Capacitance,
-					"Capacitor constant");
 			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on capacitor");
@@ -410,7 +403,6 @@ Capacitor::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-			OH.WriteNcVar(Var_dC1, C1);
 			OH.WriteNcVar(Var_di_curr, i_curr);
 			OH.WriteNcVar(Var_dVoltage1, Voltage1);
 			OH.WriteNcVar(Var_dVoltage2, Voltage2);
@@ -670,9 +662,6 @@ Inductor::OutputPrepare(OutputHandler& OH)
 
 			m_sOutputNameBase = os.str();
 
-			Var_dL1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "L1",
-					OutputHandler::Dimensions::Inductance,
-					"Inductor constant");
 			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on inductor");
@@ -693,7 +682,6 @@ Inductor::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-			OH.WriteNcVar(Var_dL1, L1);
 			OH.WriteNcVar(Var_di_curr, i_curr);
 			OH.WriteNcVar(Var_dVoltage1, Voltage1);
 			OH.WriteNcVar(Var_dVoltage2, Voltage2);

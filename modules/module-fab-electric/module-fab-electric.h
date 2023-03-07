@@ -45,7 +45,6 @@ private:
    doublereal Voltage1;
    doublereal Voltage2;
 #ifdef USE_NETCDF
-   MBDynNcVar Var_dR1;
    MBDynNcVar Var_di_curr;
    MBDynNcVar Var_dVoltage1;
    MBDynNcVar Var_dVoltage2;
@@ -98,7 +97,6 @@ private:
    doublereal Voltage1;
    doublereal Voltage2;
 #ifdef USE_NETCDF
-   MBDynNcVar Var_dC1;
    MBDynNcVar Var_di_curr;
    MBDynNcVar Var_dVoltage1;
    MBDynNcVar Var_dVoltage2;
@@ -153,7 +151,6 @@ private:
    doublereal Voltage1;
    doublereal Voltage2;
 #ifdef USE_NETCDF
-   MBDynNcVar Var_dL1;
    MBDynNcVar Var_di_curr;
    MBDynNcVar Var_dVoltage1;
    MBDynNcVar Var_dVoltage2;
