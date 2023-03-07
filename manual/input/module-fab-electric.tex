@@ -52,20 +52,50 @@ This module implements several electric components.
 The format is:
 \begin{itemize}
 \item the label of the element;
-\item the current in the element;
-\item the voltage on the first node;
-\item the voltage on the second node.
+\item the current in the element (\kw{I} in NetCDF format);
+\item the voltage on the first node (\kw{V1} in NetCDF format);
+\item the voltage on the second node (\kw{V2} in NetCDF format).
 \end{itemize}
 
 \subsubsection{Capacitor}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{name} ::= \kw{capacitor}
+
+    \bnt{module_data} ::=
+        \bnt{electric_node_1_label} ,
+        \bnt{electric_node_2_label} ,
+        (\hty{real}) \bnt{capacitance}
 \end{Verbatim}
+
+\paragraph{Output.}
+\label{sec:MODULE:FAB-ELECTRIC:CAPACITOR:OUTPUT}
+The format is:
+\begin{itemize}
+\item the label of the element;
+\item the current in the element (\kw{I} in NetCDF format);
+\item the voltage on the first node (\kw{V1} in NetCDF format);
+\item the voltage on the second node (\kw{V2} in NetCDF format).
+\end{itemize}
 
 \subsubsection{Inductor}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{name} ::= \kw{inductor}
+
+    \bnt{module_data} ::=
+        \bnt{electric_node_1_label} ,
+        \bnt{electric_node_2_label} ,
+        (\hty{real}) \bnt{inductance}
 \end{Verbatim}
+
+\paragraph{Output.}
+\label{sec:MODULE:FAB-ELECTRIC:INDUCTOR:OUTPUT}
+The format is:
+\begin{itemize}
+\item the label of the element;
+\item the current in the element (\kw{I} in NetCDF format);
+\item the voltage on the first node (\kw{V1} in NetCDF format);
+\item the voltage on the second node (\kw{V2} in NetCDF format).
+\end{itemize}
 
 \subsubsection{Diode}
 \begin{Verbatim}[commandchars=\\\{\}]
