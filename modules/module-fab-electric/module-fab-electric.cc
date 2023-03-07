@@ -53,9 +53,13 @@ UserDefinedElem(uLabel, pDO)
 	// help
 	if (HP.IsKeyWord("help")) {
 		silent_cout(
-"									\n"
-"Module: 	resistor			\n"
-"									\n"
+"\n"
+"<name> ::= resistor\n"
+"\n"
+"<module_data> ::=\n"
+"<electric_node_1_label> ,\n"
+"<electric_node_2_label> ,\n"
+"(real) <resistance>\n"
 			<< std::endl);
 
 		if (!HP.IsArg()) {
@@ -331,9 +335,13 @@ UserDefinedElem(uLabel, pDO)
 	// help
 	if (HP.IsKeyWord("help")) {
 		silent_cout(
-"									\n"
-"Module: 	Capacitor			\n"
-"									\n"
+"\n"
+"<name> ::= capacitor\n"
+"\n"
+"<module_data> ::=\n"
+"<electric_node_1_label> ,\n"
+"<electric_node_2_label> ,\n"
+"(real) <capacitance>\n"
 			<< std::endl);
 
 		if (!HP.IsArg()) {
@@ -610,9 +618,13 @@ UserDefinedElem(uLabel, pDO)
 	// help
 	if (HP.IsKeyWord("help")) {
 		silent_cout(
-"									\n"
-"Module: 	Inductor			\n"
-"									\n"
+"\n"
+"<name> ::= inductor\n"
+"\n"
+"<module_data> ::=\n"
+"<electric_node_1_label> ,\n"
+"<electric_node_2_label> ,\n"
+"(real) <inductance>\n"
 			<< std::endl);
 
 		if (!HP.IsArg()) {
