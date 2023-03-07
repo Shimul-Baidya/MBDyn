@@ -72,7 +72,6 @@ begin: elements;
            
 	module load: "libmodule-fab-electric";
 
-
 	user defined: 1, resistor, 
 	   1,             # node of source 
 	   2,             # node 2 
@@ -117,3 +116,4 @@ begin: elements;
 
 end: elements;
 
+# vim:ft=mbd
