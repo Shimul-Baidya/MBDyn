@@ -152,6 +152,12 @@ private:
    doublereal i_curr;
    doublereal Voltage1;
    doublereal Voltage2;
+#ifdef USE_NETCDF
+   MBDynNcVar Var_dL1;
+   MBDynNcVar Var_di_curr;
+   MBDynNcVar Var_dVoltage1;
+   MBDynNcVar Var_dVoltage2;
+#endif // USE_NETCDF
 
 public:
 	Inductor(unsigned uLabel, const DofOwner *pDO,
@@ -188,6 +194,7 @@ public:
 	DofOrder::Order GetDofType(unsigned int i) const;
    void AfterConvergence(const VectorHandler& X, const VectorHandler& XP);
 
+   virtual void OutputPrepare(OutputHandler& OH);
 };
 
 

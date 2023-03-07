@@ -658,18 +658,57 @@ Inductor::~Inductor(void)
 }
 
 void
+Inductor::OutputPrepare(OutputHandler& OH)
+{
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+	if (bToBeOutput()) {
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			std::ostringstream os;
+			os << "elem.loadable." << GetLabel();
+			(void)OH.CreateVar(os.str(), "Inductor");
+
+			m_sOutputNameBase = os.str();
+
+			Var_dL1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "L1",
+					OutputHandler::Dimensions::Inductance,
+					"Inductor constant");
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
+					OutputHandler::Dimensions::Current,
+					"Current on inductor");
+			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V1",
+					OutputHandler::Dimensions::Voltage,
+					"Voltage on node 1");
+			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V2",
+					OutputHandler::Dimensions::Voltage,
+					"Voltage on node 2");
+		}
+	}
+#endif // USE_NETCDF
+}
+
+void
 Inductor::Output(OutputHandler& OH) const
 {
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			OH.WriteNcVar(Var_dL1, L1);
+			OH.WriteNcVar(Var_di_curr, i_curr);
+			OH.WriteNcVar(Var_dVoltage1, Voltage1);
+			OH.WriteNcVar(Var_dVoltage2, Voltage2);
+		}
+#endif // USE_NETCDF
 
-   if (bToBeOutput()) {
-   std::ostream& out = OH.Loadable();
-   out << std::setw(8) << GetLabel()
-      << " " << i_curr        // current on Inductor
-      << " " << Voltage1      // voltage on node 1
-      << " " << Voltage2      // voltage on node 2
-      << std::endl;
-   }
-
+		if (OH.UseText(OutputHandler::LOADABLE)) {
+			std::ostream& out = OH.Loadable();
+			out << std::setw(8) << GetLabel()
+				<< " " << i_curr        // current on resistor
+				<< " " << Voltage1      // voltage on node 1
+				<< " " << Voltage2      // voltage on node 2
+				<< std::endl;
+		}
+	}
 }
 
 unsigned int

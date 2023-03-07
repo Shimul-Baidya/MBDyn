@@ -150,6 +150,7 @@ public:
 		Charge,
 		Resistance,
 		Capacitance,
+		Inductance,
 		Frequency,
 		deg,
 		rad,
