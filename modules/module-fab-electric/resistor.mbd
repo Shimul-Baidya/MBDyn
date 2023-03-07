@@ -63,7 +63,7 @@ begin: elements;
       1, electric, algebraic, 
       sine, 0., 2.*pi, 1., forever, 0.;      
            
-	module load: "../../../build-dbg/modules/module-fab-electric/libmodule-fab-electric.la";
+	module load: "libmodule-fab-electric";
 	user defined: 1, resistor, 
 	   1,             # node of source 
 	   0,             # ground node 
