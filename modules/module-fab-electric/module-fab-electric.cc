@@ -103,19 +103,18 @@ Resistor::OutputPrepare(OutputHandler& OH)
 			os << "elem.loadable." << GetLabel();
 			(void)OH.CreateVar(os.str(), "Resistor");
 
-			os << '.';
 			m_sOutputNameBase = os.str();
 
-			Var_dR1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "R1",
+			Var_dR1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "R1",
 					OutputHandler::Dimensions::Resistance,
 					"Resistor constant");
-			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "I",
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on resistor");
-			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V1",
+			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V1",
 					OutputHandler::Dimensions::Voltage,
 					"Voltage on node 1");
-			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V2",
+			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V2",
 					OutputHandler::Dimensions::Voltage,
 					"Voltage on node 2");
 		}
@@ -386,19 +385,18 @@ Capacitor::OutputPrepare(OutputHandler& OH)
 			os << "elem.loadable." << GetLabel();
 			(void)OH.CreateVar(os.str(), "Capacitor");
 
-			os << '.';
 			std::string m_sOutputNameBase = os.str();
 
-			Var_dC1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "C1",
+			Var_dC1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "C1",
 					OutputHandler::Dimensions::Capacitance,
 					"Capacitor constant");
-			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "I",
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on capacitor");
-			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V1",
+			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V1",
 					OutputHandler::Dimensions::Voltage,
 					"Voltage on node 1");
-			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "V2",
+			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V2",
 					OutputHandler::Dimensions::Voltage,
 					"Voltage on node 2");
 		}
