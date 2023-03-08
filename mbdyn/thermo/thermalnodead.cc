@@ -47,10 +47,10 @@ ThermalNodeAd::ThermalNodeAd(unsigned int uL,
                              doublereal dx,
                              doublereal dxp,
                              flag fOut)
-     :ScalarNode(uL, pDO, OutputHandler::THERMALNODES, fOut),
-      ScalarDifferentialNode(uL, pDO, dx, dxp, OutputHandler::THERMALNODES, fOut),
+     :ScalarNode(uL, pDO, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut),
       ThermalNode(uL, pDO, dx, dxp, fOut),
-      ScalarDifferentialNodeAd(uL, pDO, dx, dxp, OutputHandler::THERMALNODES, fOut)
+      ScalarDifferentialNodeAd(uL, pDO, dx, dxp, fOut)
 {
 
 }

@@ -1997,21 +1997,21 @@ DataManager::ReadNodes(MBDynParser& HP)
                                         if (bUseAutoDiff()) {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarAlgebraicNodeAd,
-                                                                       ScalarAlgebraicNodeAd(uLabel, pDO, dx, OutputHandler::ABSTRACT, fOut));
+                                                                       ScalarAlgebraicNodeAd(uLabel, pDO, dx, fOut));
                                         } else {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarAlgebraicNode,
-                                                                       ScalarAlgebraicNode(uLabel, pDO, dx, OutputHandler::ABSTRACT, fOut));
+                                                                       ScalarAlgebraicNode(uLabel, pDO, dx, fOut));
                                         }
                                 } else {
                                         if (bUseAutoDiff()) {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarDifferentialNodeAd,
-                                                                       ScalarDifferentialNodeAd(uLabel, pDO, dx, dxp, OutputHandler::ABSTRACT, fOut));
+                                                                       ScalarDifferentialNodeAd(uLabel, pDO, dx, dxp, fOut));
                                         } else {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarDifferentialNode,
-                                                                       ScalarDifferentialNode(uLabel, pDO, dx, dxp, OutputHandler::ABSTRACT, fOut));
+                                                                       ScalarDifferentialNode(uLabel, pDO, dx, dxp, fOut));
                                         }
 				}
 

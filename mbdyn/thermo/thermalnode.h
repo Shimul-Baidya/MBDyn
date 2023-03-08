@@ -51,6 +51,7 @@ public:
 	virtual Node::Type GetNodeType(void) const;
 	
 	/* Output */
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::THERMALNODES; };
 	virtual void OutputPrepare(OutputHandler &OH);
 
 	/* returns the dimension of the component */

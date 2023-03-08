@@ -41,7 +41,7 @@ SampleAndHold::SampleAndHold(unsigned int uL,
 		DriveCaller *pDC,
 		const doublereal &dSP,
 		flag fOut)
-: ScalarNode(uL, pDO, OutputHandler::PARAMETERS, fOut),
+: ScalarNode(uL, pDO, fOut),
   ParameterNode(uL, pDO, 0., fOut),  
   pNode(pN),
   Time(pDC),

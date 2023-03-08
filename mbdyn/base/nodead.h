@@ -47,7 +47,7 @@
 
 class ScalarNodeAd: virtual public ScalarNode {
 public:
-     ScalarNodeAd(unsigned int uL, const DofOwner* pDO, OutputHandler::OutFiles out_type, flag fOut);
+     ScalarNodeAd(unsigned int uL, const DofOwner* pDO, flag fOut);
      virtual ~ScalarNodeAd(void);
 
      inline void GetX(doublereal& dX, doublereal dCoef, sp_grad::SpFunctionCall func) const;
@@ -62,7 +62,7 @@ protected:
 class ScalarDifferentialNodeAd: virtual public ScalarDifferentialNode, public ScalarNodeAd {
 public:
      ScalarDifferentialNodeAd(unsigned int uL, const DofOwner* pDO,
-                              const doublereal& dx, const doublereal& dxp, OutputHandler::OutFiles out_type, flag fOut);
+                              const doublereal& dx, const doublereal& dxp, flag fOut);
      virtual ~ScalarDifferentialNodeAd(void);
 
      inline void GetXPrime(doublereal& dXPrime, doublereal dCoef, sp_grad::SpFunctionCall func) const;
@@ -73,7 +73,7 @@ public:
 class ScalarAlgebraicNodeAd: virtual public ScalarAlgebraicNode, public ScalarNodeAd {
 public:
      ScalarAlgebraicNodeAd(unsigned int uL, const DofOwner* pDO,
-                           doublereal dx, OutputHandler::OutFiles out_type, flag fOut);
+                           doublereal dx, flag fOut);
 
      virtual ~ScalarAlgebraicNodeAd(void);
 };

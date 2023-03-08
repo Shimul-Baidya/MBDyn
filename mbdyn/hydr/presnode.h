@@ -47,6 +47,7 @@ public:
    
      virtual Node::Type GetNodeType(void) const;
    
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::PRESNODES; };
 	virtual void OutputPrepare(OutputHandler &OH);
 
      /* returns the dimension of the component */

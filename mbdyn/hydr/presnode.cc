@@ -43,8 +43,8 @@
 #include "presnode.h"
 
 PressureNode::PressureNode(unsigned int uL, const DofOwner* pDO, doublereal dx, flag fOut) 
-     :ScalarNode(uL, pDO, OutputHandler::PRESNODES, fOut),
-      ScalarAlgebraicNode(uL, pDO, dx, OutputHandler::PRESNODES, fOut)
+     :ScalarNode(uL, pDO, fOut),
+      ScalarAlgebraicNode(uL, pDO, dx, fOut)
 {
      NO_OP;
 }

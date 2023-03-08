@@ -93,6 +93,7 @@ public:
 	/* Tipo di nodo */
 	virtual Node::Type GetNodeType(void) const;
 
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::ELECTRIC; };
 	virtual void OutputPrepare(OutputHandler &OH);
 
 	 /* returns the dimension of the component */

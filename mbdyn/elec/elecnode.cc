@@ -43,8 +43,8 @@ ElectricNode::ElectricNode(unsigned int uL,
 	doublereal dx,
 	doublereal dxp,
 	flag fOut)
-     :ScalarNode(uL, pDO, OutputHandler::ELECTRIC, fOut),
-      ScalarDifferentialNode(uL, pDO, dx, dxp, OutputHandler::ELECTRIC, fOut)
+     :ScalarNode(uL, pDO, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
 {
      NO_OP;
 }

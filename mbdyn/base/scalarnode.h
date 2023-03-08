@@ -50,18 +50,18 @@ protected:
 	/* scrive l'output */
 	virtual std::ostream& Output(std::ostream& out) const;
 
-	OutputHandler::OutFiles m_out_type;
-
 public:
 	/* Costruttori */
 
 	/* Costruttore */
-	ScalarNode(unsigned int uL, const DofOwner* pDO, const OutputHandler::OutFiles out_type, flag fOut);
+	ScalarNode(unsigned int uL, const DofOwner* pDO, flag fOut);
 
 	/* Distruttore */
 	virtual ~ScalarNode(void);
 
 	/* Funzioni di servizio */
+
+	virtual OutputHandler::OutFiles GetOutputType(void) const = 0;
 
 	/* Initializes output (must be called by specialized classes) */
 	virtual void OutputPrepare_int(OutputHandler& OH);
@@ -158,8 +158,7 @@ public:
 	 * @param dxp valore iniziale della derivata
 	 */
 	ScalarDifferentialNode(unsigned int uL, const DofOwner* pDO,
-		const doublereal& dx, const doublereal& dxp,
-		const OutputHandler::OutFiles out_type, flag fOut);
+		const doublereal& dx, const doublereal& dxp, flag fOut);
 	/* Distruttore */
 	virtual ~ScalarDifferentialNode(void);
 
@@ -224,6 +223,7 @@ public:
 	/* restart */
 	std::ostream& Restart(std::ostream& out) const;
 
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::ABSTRACT; };
 	virtual void OutputPrepare(OutputHandler& OH);
 	virtual void Output(OutputHandler& OH) const;
 
@@ -298,8 +298,7 @@ public:
 
 	/* Costruttore */
 	ScalarAlgebraicNode(unsigned int uL, const DofOwner* pDO,
-		doublereal dx,
-		const OutputHandler::OutFiles out_type, flag fOut);
+		doublereal dx, flag fOut);
 
 	/* Distruttore */
 	virtual ~ScalarAlgebraicNode(void);
@@ -364,6 +363,7 @@ public:
 	/* restart */
 	std::ostream& Restart(std::ostream& out) const;
 
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::ABSTRACT; };
 	virtual void OutputPrepare(OutputHandler& OH);
 	virtual void Output(OutputHandler& OH) const;
 
@@ -427,6 +427,7 @@ public:
 
 	/* Metodi relativi al metodo di intergazione */
 
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::PARAMETERS; };
 	/* Output di default per nodi di cui non si desidera output */
 	virtual void Output(OutputHandler& OH) const;
 
@@ -503,6 +504,8 @@ public:
 
 	/* Contributo del nodo al file di restart */
 	virtual std::ostream& Restart(std::ostream& out) const;
+
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::ABSTRACT; };
 
 	/*
 	 * Ritorna il numero di dofs.
