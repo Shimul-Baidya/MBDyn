@@ -303,18 +303,19 @@ ScalarDifferentialNode::OutputPrepare_int(OutputHandler& OH,
 	const OutputHandler::Dimensions varP_dim,
 	const std::string& varP_desc)
 {
-#ifdef USE_NETCDF
-	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-
 	ScalarNode::OutputPrepare_int(OH, true);
 
-	ASSERT(!m_sOutputNameBase.empty());
+#ifdef USE_NETCDF
+	if (OH.UseNetCDF(GetOutputType())) {
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+		ASSERT(!m_sOutputNameBase.empty());
 
-	ScalarDifferentialNode::m_Var_dX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + var_name,
-		var_dim, var_desc);
+		ScalarDifferentialNode::m_Var_dX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + var_name,
+			var_dim, var_desc);
 
-	ScalarDifferentialNode::m_Var_dXP = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + varP_name,
-		varP_dim, varP_desc);
+		ScalarDifferentialNode::m_Var_dXP = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + varP_name,
+			varP_dim, varP_desc);
+	}
 #endif // USE_NETCDF
 }
 
@@ -557,15 +558,16 @@ ScalarAlgebraicNode::OutputPrepare_int(OutputHandler& OH,
 	const OutputHandler::Dimensions var_dim,
 	const std::string& var_desc)
 {
-#ifdef USE_NETCDF
-	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-
 	ScalarNode::OutputPrepare_int(OH, false);
 
-	ASSERT(!m_sOutputNameBase.empty());
+#ifdef USE_NETCDF
+	if (OH.UseNetCDF(GetOutputType())) {
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+		ASSERT(!m_sOutputNameBase.empty());
 
-	ScalarAlgebraicNode::m_Var_dX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + var_name,
-		var_dim, var_desc);
+		ScalarAlgebraicNode::m_Var_dX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + var_name,
+			var_dim, var_desc);
+	}
 #endif // USE_NETCDF
 }
 
