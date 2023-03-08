@@ -47,7 +47,7 @@ public:
    
      virtual Node::Type GetNodeType(void) const;
    
-     void Output(OutputHandler& OH) const;
+	virtual void OutputPrepare(OutputHandler &OH);
 
      /* returns the dimension of the component */
      const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;

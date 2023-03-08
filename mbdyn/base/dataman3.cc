@@ -1512,6 +1512,7 @@ EndOfUse:
 		OutHdl.SetNetCDF(OutputHandler::STRNODES);
 		OutHdl.SetNetCDF(OutputHandler::ELECTRIC);
 		OutHdl.SetNetCDF(OutputHandler::THERMALNODES);
+		OutHdl.SetNetCDF(OutputHandler::PRESNODES);
 		OutHdl.SetNetCDF(OutputHandler::INERTIA);
 		OutHdl.SetNetCDF(OutputHandler::JOINTS);
 		OutHdl.SetNetCDF(OutputHandler::BEAMS);
@@ -1996,21 +1997,21 @@ DataManager::ReadNodes(MBDynParser& HP)
                                         if (bUseAutoDiff()) {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarAlgebraicNodeAd,
-                                                                       ScalarAlgebraicNodeAd(uLabel, pDO, dx, fOut));
+                                                                       ScalarAlgebraicNodeAd(uLabel, pDO, dx, OutputHandler::ABSTRACT, fOut));
                                         } else {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarAlgebraicNode,
-                                                                       ScalarAlgebraicNode(uLabel, pDO, dx, fOut));
+                                                                       ScalarAlgebraicNode(uLabel, pDO, dx, OutputHandler::ABSTRACT, fOut));
                                         }
                                 } else {
                                         if (bUseAutoDiff()) {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarDifferentialNodeAd,
-                                                                       ScalarDifferentialNodeAd(uLabel, pDO, dx, dxp, fOut));
+                                                                       ScalarDifferentialNodeAd(uLabel, pDO, dx, dxp, OutputHandler::ABSTRACT, fOut));
                                         } else {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarDifferentialNode,
-                                                                       ScalarDifferentialNode(uLabel, pDO, dx, dxp, fOut));
+                                                                       ScalarDifferentialNode(uLabel, pDO, dx, dxp, OutputHandler::ABSTRACT, fOut));
                                         }
 				}
 

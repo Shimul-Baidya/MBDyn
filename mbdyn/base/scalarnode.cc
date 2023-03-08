@@ -38,9 +38,9 @@
 
 /* ScalarNode - begin */
 
-ScalarNode::ScalarNode(unsigned int uL, const DofOwner* pDO, flag fOut)
+ScalarNode::ScalarNode(unsigned int uL, const DofOwner* pDO, const OutputHandler::OutFiles out_type, flag fOut)
 : Node(uL, pDO, fOut),
-m_out_type(OutputHandler::UNKNOWN)
+m_out_type(out_type)
 {
 	NO_OP;
 }
@@ -51,16 +51,15 @@ ScalarNode::~ScalarNode(void)
 }
 
 void
-ScalarNode::OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out_type)
+ScalarNode::OutputPrepare_int(OutputHandler& OH)
 {
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
-		if (OH.UseNetCDF(out_type)) {
+		if (OH.UseNetCDF(m_out_type)) {
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-			// FIXME: perhaps should be somewhere else, e.g. in OutputHandler?
 			const char *type = 0;
-			switch (out_type) {
+			switch (m_out_type) {
 			case OutputHandler::ELECTRIC:
 				type = "elec"; // FIXME: use ShortDesc!
 				break;
@@ -81,8 +80,6 @@ ScalarNode::OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles o
 				silent_cerr("Unhandled scalar node type" << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
-
-			m_out_type = out_type;
 
 			std::ostringstream os;
 			os << "node." << type << "." << GetLabel();
@@ -157,8 +154,9 @@ ScalarDifferentialNode::ScalarDifferentialNode(unsigned int uL,
 	const DofOwner* pDO,
 	const doublereal& dx,
 	const doublereal& dxp,
+	const OutputHandler::OutFiles out_type,
 	flag fOut)
-: ScalarNode(uL, pDO, fOut), dX(dx), dXP(dxp), dXPrev(dx), dXPPrev(dxp)
+: ScalarNode(uL, pDO, out_type, fOut), dX(dx), dXP(dxp), dXPrev(dx), dXPPrev(dxp)
 {
 	NO_OP;
 }
@@ -298,7 +296,6 @@ ScalarDifferentialNode::Restart(std::ostream& out) const
 
 void
 ScalarDifferentialNode::OutputPrepare_int(OutputHandler& OH,
-	const OutputHandler::OutFiles out_type,
 	const std::string& var_name,
 	const OutputHandler::Dimensions var_dim,
 	const std::string& var_desc,
@@ -309,7 +306,7 @@ ScalarDifferentialNode::OutputPrepare_int(OutputHandler& OH,
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-	ScalarNode::OutputPrepare_int(OH, out_type);
+	ScalarNode::OutputPrepare_int(OH);
 
 	ASSERT(!m_sOutputNameBase.empty());
 
@@ -325,7 +322,7 @@ void
 ScalarDifferentialNode::OutputPrepare(OutputHandler& OH)
 {
 	if (fToBeOutput()) {
-		OutputPrepare_int(OH, OutputHandler::ABSTRACT,
+		OutputPrepare_int(OH,
 			"X", OutputHandler::Dimensions::Dimensionless, "State",
 			"XP", OutputHandler::Dimensions::Frequency, "State time derivative");
 	}
@@ -430,8 +427,9 @@ ScalarDifferentialNode::DescribeEq(std::ostream& out, const char *prefix, bool b
 ScalarAlgebraicNode::ScalarAlgebraicNode(unsigned int uL,
 	const DofOwner* pDO,
 	doublereal dx,
+	const OutputHandler::OutFiles out_type,
 	flag fOut)
-: ScalarNode(uL, pDO, fOut), dX(dx), dXPrev(dx)
+: ScalarNode(uL, pDO, out_type, fOut), dX(dx), dXPrev(dx)
 {
 	NO_OP;
 }
@@ -556,7 +554,6 @@ ScalarAlgebraicNode::Restart(std::ostream& out) const
 
 void
 ScalarAlgebraicNode::OutputPrepare_int(OutputHandler& OH,
-	const OutputHandler::OutFiles out_type,
 	const std::string& var_name,
 	const OutputHandler::Dimensions var_dim,
 	const std::string& var_desc)
@@ -564,7 +561,7 @@ ScalarAlgebraicNode::OutputPrepare_int(OutputHandler& OH,
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-	ScalarNode::OutputPrepare_int(OH, out_type);
+	ScalarNode::OutputPrepare_int(OH);
 
 	ASSERT(!m_sOutputNameBase.empty());
 
@@ -577,7 +574,7 @@ void
 ScalarAlgebraicNode::OutputPrepare(OutputHandler& OH)
 {
 	if (fToBeOutput()) {
-		OutputPrepare_int(OH, OutputHandler::ABSTRACT,
+		OutputPrepare_int(OH,
 			"X", OutputHandler::Dimensions::Dimensionless, "State");
 	}
 }
@@ -623,8 +620,8 @@ ParameterNode::ParameterNode(unsigned int uL,
 	const DofOwner* pDO,
 	doublereal dx,
 	flag fOut)
-     : ScalarNode(uL, pDO, fOut),
-       ScalarAlgebraicNode(uL, pDO, dx, fOut)
+     : ScalarNode(uL, pDO, OutputHandler::PARAMETERS, fOut),
+       ScalarAlgebraicNode(uL, pDO, dx, OutputHandler::PARAMETERS, fOut)
        
 {
 	NO_OP;
@@ -660,6 +657,7 @@ void
 ParameterNode::Output(OutputHandler& OH) const
 {
 	if (bToBeOutput()) {
+		// TODO: NetCDF
 		std::ostream& out = OH.Parameters();
 
 		out << std::setw(8) << GetLabel()
@@ -721,7 +719,7 @@ NodeDof::~NodeDof(void)
 }
 
 Node2Scalar::Node2Scalar(const NodeDof& nd)
-: ScalarNode(nd.pNode->GetLabel(), nd.pNode->pGetDofOwner(), 0), ND(nd)
+: ScalarNode(nd.pNode->GetLabel(), nd.pNode->pGetDofOwner(), OutputHandler::ABSTRACT, 0), ND(nd)
 {
 	NO_OP;
 }

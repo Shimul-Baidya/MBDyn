@@ -43,8 +43,8 @@ ThermalNode::ThermalNode(unsigned int uL,
 	doublereal dx,
 	doublereal dxp,
 	flag fOut)
-     :ScalarNode(uL, pDO, fOut),
-      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
+     :ScalarNode(uL, pDO, OutputHandler::THERMALNODES, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, OutputHandler::THERMALNODES, fOut)
 
 {
 	NO_OP;
@@ -71,7 +71,7 @@ ThermalNode::OutputPrepare(OutputHandler &OH)
 		if (OH.UseNetCDF(OutputHandler::THERMALNODES)) {
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-			ScalarDifferentialNode::OutputPrepare_int(OH, OutputHandler::THERMALNODES,
+			ScalarDifferentialNode::OutputPrepare_int(OH,
 				"T", OutputHandler::Dimensions::Temperature, "Temperature",
 				"TP", OutputHandler::Dimensions::TemperatureDerivative, "Temperature time derivative");
 		}

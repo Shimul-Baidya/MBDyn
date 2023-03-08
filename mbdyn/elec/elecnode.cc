@@ -43,8 +43,8 @@ ElectricNode::ElectricNode(unsigned int uL,
 	doublereal dx,
 	doublereal dxp,
 	flag fOut)
-     :ScalarNode(uL, pDO, fOut),
-      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
+     :ScalarNode(uL, pDO, OutputHandler::ELECTRIC, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, OutputHandler::ELECTRIC, fOut)
 {
      NO_OP;
 }
@@ -98,7 +98,7 @@ ElectricNode::OutputPrepare(OutputHandler &OH)
 		if (OH.UseNetCDF(OutputHandler::ELECTRIC)) {
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-			ScalarDifferentialNode::OutputPrepare_int(OH, OutputHandler::ELECTRIC,
+			ScalarDifferentialNode::OutputPrepare_int(OH,
 				"V", OutputHandler::Dimensions::Voltage, "Voltage",
 				"VP", OutputHandler::Dimensions::VoltageDerivative, "Voltage time derivative");
 		}

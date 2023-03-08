@@ -48,13 +48,15 @@ ElectricNodeAd::ElectricNodeAd(unsigned int uL,
 	doublereal dx,
 	doublereal dxp,
 	flag fOut)
-     :ScalarNode(uL, pDO, fOut),
-      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut),
+     :ScalarNode(uL, pDO, OutputHandler::ELECTRIC, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, OutputHandler::ELECTRIC, fOut),
       ElectricNode(uL, pDO, dx, dxp, fOut),
-      ScalarDifferentialNodeAd(uL, pDO, dx, dxp, fOut)
+      ScalarDifferentialNodeAd(uL, pDO, dx, dxp, OutputHandler::ELECTRIC, fOut)
 {
+	NO_OP;
 }
 
-ElectricNodeAd::~ElectricNodeAd()
+ElectricNodeAd::~ElectricNodeAd(void)
 {
+	NO_OP;
 }

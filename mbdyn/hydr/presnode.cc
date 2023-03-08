@@ -43,8 +43,8 @@
 #include "presnode.h"
 
 PressureNode::PressureNode(unsigned int uL, const DofOwner* pDO, doublereal dx, flag fOut) 
-     :ScalarNode(uL, pDO, fOut),
-      ScalarAlgebraicNode(uL, pDO, dx, fOut)
+     :ScalarNode(uL, pDO, OutputHandler::PRESNODES, fOut),
+      ScalarAlgebraicNode(uL, pDO, dx, OutputHandler::PRESNODES, fOut)
 {
      NO_OP;
 }
@@ -59,9 +59,19 @@ Node::Type PressureNode::GetNodeType() const
      return Node::HYDRAULIC;
 }
    
-void PressureNode::Output(OutputHandler& OH) const
+void
+PressureNode::OutputPrepare(OutputHandler &OH)
 {
-     ScalarAlgebraicNode::Output(OH.PresNodes());
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::PRESNODES)) {
+			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+			ScalarAlgebraicNode::OutputPrepare_int(OH,
+				"p", OutputHandler::Dimensions::Pressure, "Pressure");
+		}
+#endif // USE_NETCDF
+	}
 }
 
 /* returns the dimension of the component */

@@ -123,10 +123,33 @@ contained in specific variables, whose names describe the contents.
 
 Currently supported node types are:
 \begin{itemize}
-\item Structural nodes, indicated as \kw{struct}.
 \item Electric nodes, indicated as \kw{elec}.
+\item Pressure nodes, indicated as \kw{pres}.
+\item Structural nodes, indicated as \kw{struct}.
+\item Thermal nodes, indicated as \kw{thermal}.
 \end{itemize}
 
+
+\subsubsection{Electric Node}
+\label{sec:NetCDF:Node:Electric Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.elec.}\bnt{label} is actually empty;
+
+\item \kw{node.elec.}\bnt{label}\kw{.V} contains the voltage of the node;
+
+\item \kw{node.elec.}\bnt{label}\kw{.VP} contains the time derivative of the voltage of the node.
+\end{itemize}
+
+
+\subsubsection{Pressure Node}
+\label{sec:NetCDF:Node:Pressure Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.pres.}\bnt{label} is actually empty;
+
+\item \kw{node.pres.}\bnt{label}\kw{.p} contains the pressure of the node;
+\end{itemize}
 
 
 \subsubsection{Structural Node}
@@ -191,15 +214,15 @@ of the inertia associated with the node, in the appropriate reference frame.
 \end{itemize}
 
 
-\subsubsection{Electric Node}
-\label{sec:NetCDF:Node:Electric Node}
+\subsubsection{Thermal Node}
+\label{sec:NetCDF:Node:Thermal Node}
 The following variables are defined.
 \begin{itemize}
-\item \kw{node.elec.}\bnt{label} is actually empty;
+\item \kw{node.thermal.}\bnt{label} is actually empty;
 
-\item \kw{node.elec.}\bnt{label}\kw{.V} contains the voltage of the node;
+\item \kw{node.thermal.}\bnt{label}\kw{.T} contains the temperature of the node;
 
-\item \kw{node.elec.}\bnt{label}\kw{.VP} contains the time derivative of the voltage of the node.
+\item \kw{node.thermal.}\bnt{label}\kw{.TP} contains the time derivative of the temperature of the node.
 \end{itemize}
 
 

@@ -41,8 +41,8 @@
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 #include "nodead.h"
 
-ScalarNodeAd::ScalarNodeAd(unsigned int uL, const DofOwner* pDO, flag fOut)
-     :ScalarNode(uL, pDO, fOut),
+ScalarNodeAd::ScalarNodeAd(unsigned int uL, const DofOwner* pDO, OutputHandler::OutFiles out_type, flag fOut)
+     :ScalarNode(uL, pDO, out_type, fOut),
       XY(0.)
 {
 }
@@ -60,28 +60,31 @@ ScalarDifferentialNodeAd::ScalarDifferentialNodeAd(unsigned int uL,
                                                    const DofOwner* pDO,
                                                    const doublereal& dx,
                                                    const doublereal& dxp,
+						   OutputHandler::OutFiles out_type,
                                                    flag fOut)
-     :ScalarNode(uL, pDO, fOut),
-      ScalarDifferentialNode(uL, pDO, dx, dxp, fOut),
-      ScalarNodeAd(uL, pDO, fOut)      
+     :ScalarNode(uL, pDO, out_type, fOut),
+      ScalarDifferentialNode(uL, pDO, dx, dxp, out_type, fOut),
+      ScalarNodeAd(uL, pDO, out_type, fOut)      
 {
-
+	NO_OP;
 }
 
-ScalarDifferentialNodeAd::~ScalarDifferentialNodeAd()
+ScalarDifferentialNodeAd::~ScalarDifferentialNodeAd(void)
 {
+	NO_OP;
 }
 
 ScalarAlgebraicNodeAd::ScalarAlgebraicNodeAd(unsigned int uL,
                                              const DofOwner* pDO,
                                              doublereal dx,
+					     OutputHandler::OutFiles out_type,
                                              flag fOut)
-     :ScalarNode(uL, pDO, fOut),
-      ScalarAlgebraicNode(uL, pDO, dx, fOut),
-      ScalarNodeAd(uL, pDO, fOut)      
+     :ScalarNode(uL, pDO, out_type, fOut),
+      ScalarAlgebraicNode(uL, pDO, dx, out_type, fOut),
+      ScalarNodeAd(uL, pDO, out_type, fOut)      
 {
 }
 
-ScalarAlgebraicNodeAd::~ScalarAlgebraicNodeAd()
+ScalarAlgebraicNodeAd::~ScalarAlgebraicNodeAd(void)
 {
 }

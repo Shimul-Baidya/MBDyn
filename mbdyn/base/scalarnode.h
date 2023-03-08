@@ -56,7 +56,7 @@ public:
 	/* Costruttori */
 
 	/* Costruttore */
-	ScalarNode(unsigned int uL, const DofOwner* pDO, flag fOut);
+	ScalarNode(unsigned int uL, const DofOwner* pDO, const OutputHandler::OutFiles out_type, flag fOut);
 
 	/* Distruttore */
 	virtual ~ScalarNode(void);
@@ -64,7 +64,7 @@ public:
 	/* Funzioni di servizio */
 
 	/* Initializes output (must be called by specialized classes) */
-	virtual void OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out_type);
+	virtual void OutputPrepare_int(OutputHandler& OH);
 
 	/* Scrive l'output come abstract */
 	virtual void Output(OutputHandler& OH) const;
@@ -139,7 +139,6 @@ protected:
 
 	/* Initializes output (must be called by specialized classes) */
 	virtual void OutputPrepare_int(OutputHandler& OH,
-		const OutputHandler::OutFiles out_type,
 		const std::string& var_name,
 		const OutputHandler::Dimensions var_dim,
 		const std::string& var_desc,
@@ -159,7 +158,8 @@ public:
 	 * @param dxp valore iniziale della derivata
 	 */
 	ScalarDifferentialNode(unsigned int uL, const DofOwner* pDO,
-		const doublereal& dx, const doublereal& dxp, flag fOut);
+		const doublereal& dx, const doublereal& dxp,
+		const OutputHandler::OutFiles out_type, flag fOut);
 	/* Distruttore */
 	virtual ~ScalarDifferentialNode(void);
 
@@ -289,7 +289,6 @@ protected:
 
 	/* Initializes output (must be called by specialized classes) */
 	virtual void OutputPrepare_int(OutputHandler& OH,
-		const OutputHandler::OutFiles out_type,
 		const std::string& var_name,
 		const OutputHandler::Dimensions var_dim,
 		const std::string& var_desc);
@@ -299,7 +298,8 @@ public:
 
 	/* Costruttore */
 	ScalarAlgebraicNode(unsigned int uL, const DofOwner* pDO,
-		doublereal dx, flag fOut);
+		doublereal dx,
+		const OutputHandler::OutFiles out_type, flag fOut);
 
 	/* Distruttore */
 	virtual ~ScalarAlgebraicNode(void);
