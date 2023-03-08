@@ -37,7 +37,7 @@
 #ifndef PRESNODE_H
 #define PRESNODE_H
 
-#include "node.h"
+#include "scalarnode.h"
 
 class PressureNode : virtual public ScalarAlgebraicNode {
 public:

@@ -32,7 +32,7 @@
 #ifndef ELECNODE_H
 #define ELECNODE_H
 
-#include "node.h"
+#include "scalarnode.h"
 
 #if 0 /* TBZ */
 
@@ -93,17 +93,16 @@ public:
 	/* Tipo di nodo */
 	virtual Node::Type GetNodeType(void) const;
 
-    	virtual void Output(OutputHandler& OH) const {
-       	ScalarDifferentialNode::Output(OH.Electric());
-    	};
+	virtual void OutputPrepare(OutputHandler &OH);
+    	virtual void Output(OutputHandler& OH) const;
 
 	 /* returns the dimension of the component */
 	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 
 	/* describes the dimension of components of equation */
-    virtual std::ostream& DescribeEq(std::ostream& out,
-		  const char *prefix = "",
-		  bool bInitial = false) const;
+	virtual std::ostream& DescribeEq(std::ostream& out,
+		const char *prefix = "",
+		bool bInitial = false) const;
 
 };
 

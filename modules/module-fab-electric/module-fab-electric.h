@@ -46,8 +46,6 @@ private:
    doublereal Voltage2;
 #ifdef USE_NETCDF
    MBDynNcVar Var_di_curr;
-   MBDynNcVar Var_dVoltage1;
-   MBDynNcVar Var_dVoltage2;
 #endif // USE_NETCDF
 public:
 	Resistor(unsigned uLabel, const DofOwner *pDO,
@@ -98,8 +96,6 @@ private:
    doublereal Voltage2;
 #ifdef USE_NETCDF
    MBDynNcVar Var_di_curr;
-   MBDynNcVar Var_dVoltage1;
-   MBDynNcVar Var_dVoltage2;
 #endif // USE_NETCDF
 public:
 	Capacitor(unsigned uLabel, const DofOwner *pDO,
@@ -152,8 +148,6 @@ private:
    doublereal Voltage2;
 #ifdef USE_NETCDF
    MBDynNcVar Var_di_curr;
-   MBDynNcVar Var_dVoltage1;
-   MBDynNcVar Var_dVoltage2;
 #endif // USE_NETCDF
 
 public:

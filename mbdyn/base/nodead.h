@@ -42,7 +42,7 @@
 #define NODEAD_H
 
 #include "myassert.h"
-#include "node.h"
+#include "scalarnode.h"
 #include "sp_gradient.h"
 
 class ScalarNodeAd: virtual public ScalarNode {

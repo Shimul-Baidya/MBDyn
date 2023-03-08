@@ -89,5 +89,47 @@ ElectricNode::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) c
 
 	return out;
 }
+
+void
+ElectricNode::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::ELECTRIC)) {
+			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+			ScalarNode::OutputPrepare_int(OH, OutputHandler::ELECTRIC);
+
+			ASSERT(!m_sOutputNameBase.empty());
+
+			ScalarDifferentialNode::m_Var_dX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V",
+				OutputHandler::Dimensions::Voltage,
+				"Voltage");
+
+			ScalarDifferentialNode::m_Var_dXP = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "VP",
+				OutputHandler::Dimensions::VoltageDerivative,
+				"Voltage time derivative");
+		}
+#endif // USE_NETCDF
+	}
+}
+
+void
+ElectricNode::Output(OutputHandler& OH) const
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::ELECTRIC)) {
+			OH.WriteNcVar(ScalarDifferentialNode::m_Var_dX, ScalarDifferentialNode::dX);
+			OH.WriteNcVar(ScalarDifferentialNode::m_Var_dXP, ScalarDifferentialNode::dXP);
+		}
+#endif /* USE_NETCDF */
+
+		if (OH.UseText(OutputHandler::ELECTRIC)) {
+			ScalarDifferentialNode::Output(OH.Electric());
+		}
+	}
+}
+
 /* ElectricNode - end */
 

@@ -112,12 +112,6 @@ Resistor::OutputPrepare(OutputHandler& OH)
 			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on resistor");
-			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V1",
-					OutputHandler::Dimensions::Voltage,
-					"Voltage on node 1");
-			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V2",
-					OutputHandler::Dimensions::Voltage,
-					"Voltage on node 2");
 		}
 	}
 #endif // USE_NETCDF
@@ -130,8 +124,6 @@ Resistor::Output(OutputHandler& OH) const
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 			OH.WriteNcVar(Var_di_curr, i_curr);
-			OH.WriteNcVar(Var_dVoltage1, Voltage1);
-			OH.WriteNcVar(Var_dVoltage2, Voltage2);
 		}
 #endif // USE_NETCDF
 
@@ -139,8 +131,6 @@ Resistor::Output(OutputHandler& OH) const
 			std::ostream& out = OH.Loadable();
 			out << std::setw(8) << GetLabel()
 				<< " " << i_curr        // current on resistor
-				<< " " << Voltage1      // voltage on node 1
-				<< " " << Voltage2      // voltage on node 2
 				<< std::endl;
 		}
 	}
@@ -394,12 +384,6 @@ Capacitor::OutputPrepare(OutputHandler& OH)
 			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on capacitor");
-			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V1",
-					OutputHandler::Dimensions::Voltage,
-					"Voltage on node 1");
-			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V2",
-					OutputHandler::Dimensions::Voltage,
-					"Voltage on node 2");
 		}
 	}
 #endif // USE_NETCDF
@@ -412,8 +396,6 @@ Capacitor::Output(OutputHandler& OH) const
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 			OH.WriteNcVar(Var_di_curr, i_curr);
-			OH.WriteNcVar(Var_dVoltage1, Voltage1);
-			OH.WriteNcVar(Var_dVoltage2, Voltage2);
 		}
 #endif // USE_NETCDF
 
@@ -421,8 +403,6 @@ Capacitor::Output(OutputHandler& OH) const
 			std::ostream& out = OH.Loadable();
 			out << std::setw(8) << GetLabel()
 				<< " " << i_curr        // current on Capacitor
-				<< " " << Voltage1      // voltage on node 1
-				<< " " << Voltage2      // voltage on node 2
 				<< std::endl;
 		}
 	}
@@ -677,12 +657,6 @@ Inductor::OutputPrepare(OutputHandler& OH)
 			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
 					OutputHandler::Dimensions::Current,
 					"Current on inductor");
-			Var_dVoltage1 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V1",
-					OutputHandler::Dimensions::Voltage,
-					"Voltage on node 1");
-			Var_dVoltage2 = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "V2",
-					OutputHandler::Dimensions::Voltage,
-					"Voltage on node 2");
 		}
 	}
 #endif // USE_NETCDF
@@ -695,8 +669,6 @@ Inductor::Output(OutputHandler& OH) const
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 			OH.WriteNcVar(Var_di_curr, i_curr);
-			OH.WriteNcVar(Var_dVoltage1, Voltage1);
-			OH.WriteNcVar(Var_dVoltage2, Voltage2);
 		}
 #endif // USE_NETCDF
 
@@ -704,8 +676,6 @@ Inductor::Output(OutputHandler& OH) const
 			std::ostream& out = OH.Loadable();
 			out << std::setw(8) << GetLabel()
 				<< " " << i_curr        // current on resistor
-				<< " " << Voltage1      // voltage on node 1
-				<< " " << Voltage2      // voltage on node 2
 				<< std::endl;
 		}
 	}

@@ -147,6 +147,8 @@ rtsolver.cc \
 rtsolver.h \
 sah.cc \
 sah.h \
+scalarnode.cc \
+scalarnode.h \
 scalarvalue.cc \
 scalarvalue.h \
 shape.cc \

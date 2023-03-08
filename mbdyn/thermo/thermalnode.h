@@ -31,7 +31,7 @@
 #ifndef THERMALNODE_H
 #define THERMALNODE_H
 
-#include "node.h"
+#include "scalarnode.h"
 
 /* ThermalNode - begin */
 
