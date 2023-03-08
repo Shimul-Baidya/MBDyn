@@ -123,6 +123,7 @@ contained in specific variables, whose names describe the contents.
 
 Currently supported node types are:
 \begin{itemize}
+\item Abstract nodes, indicated as \kw{abstr}.
 \item Electric nodes, indicated as \kw{elec}.
 \item Pressure nodes, indicated as \kw{pres}.
 \item Structural nodes, indicated as \kw{struct}.
@@ -130,11 +131,23 @@ Currently supported node types are:
 \end{itemize}
 
 
+\subsubsection{Abstract Node}
+\label{sec:NetCDF:Node:Abstract Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.abstr.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state is present;
+
+\item \kw{node.elec.}\bnt{label}\kw{.X} contains the state of the node;
+
+\item \kw{node.elec.}\bnt{label}\kw{.XP} contains the time derivative of the state of the node.
+\end{itemize}
+
+
 \subsubsection{Electric Node}
 \label{sec:NetCDF:Node:Electric Node}
 The following variables are defined.
 \begin{itemize}
-\item \kw{node.elec.}\bnt{label} is actually empty;
+\item \kw{node.elec.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state (of the voltage) is present;
 
 \item \kw{node.elec.}\bnt{label}\kw{.V} contains the voltage of the node;
 
@@ -146,7 +159,7 @@ The following variables are defined.
 \label{sec:NetCDF:Node:Pressure Node}
 The following variables are defined.
 \begin{itemize}
-\item \kw{node.pres.}\bnt{label} is actually empty;
+\item \kw{node.pres.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{algebraic}, indicating that the time derivative of the state (of the pressure) is not present;
 
 \item \kw{node.pres.}\bnt{label}\kw{.p} contains the pressure of the node;
 \end{itemize}
@@ -218,7 +231,7 @@ of the inertia associated with the node, in the appropriate reference frame.
 \label{sec:NetCDF:Node:Thermal Node}
 The following variables are defined.
 \begin{itemize}
-\item \kw{node.thermal.}\bnt{label} is actually empty;
+\item \kw{node.thermal.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state (of the temperature) is present;
 
 \item \kw{node.thermal.}\bnt{label}\kw{.T} contains the temperature of the node;
 
