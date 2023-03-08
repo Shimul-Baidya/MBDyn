@@ -63,11 +63,20 @@ ThermalNode::GetNodeType(void) const
 	return Node::THERMAL;
 }
 
-/* Output */
 void
-ThermalNode::Output(OutputHandler& OH) const
+ThermalNode::OutputPrepare(OutputHandler &OH)
 {
-	ScalarDifferentialNode::Output(OH.Get(OutputHandler::THERMALNODES));
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::THERMALNODES)) {
+			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+			ScalarDifferentialNode::OutputPrepare_int(OH, OutputHandler::THERMALNODES,
+				"T", OutputHandler::Dimensions::Temperature, "Temperature",
+				"TP", OutputHandler::Dimensions::TemperatureDerivative, "Temperature time derivative");
+		}
+#endif // USE_NETCDF
+	}
 }
 
 const OutputHandler::Dimensions 

@@ -159,6 +159,7 @@ public:
 		MassFlow,
 		Jerk,
 		VoltageDerivative,
+		TemperatureDerivative,
 		UnknownDimension
 	};
 

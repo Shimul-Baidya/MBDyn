@@ -135,6 +135,7 @@ const std::unordered_map<const OutputHandler::Dimensions, const std::string> Dim
 	{ OutputHandler::Dimensions::MassFlow, std::string("Mass flow")},
 	{ OutputHandler::Dimensions::Jerk , std::string("Jerk") },
 	{ OutputHandler::Dimensions::VoltageDerivative , std::string("Voltage derivative") },
+	{ OutputHandler::Dimensions::TemperatureDerivative , std::string("Temperature derivative") },
 	{ OutputHandler::Dimensions::UnknownDimension , std::string("Unknown dimension") }
 });
 
@@ -402,7 +403,8 @@ OutputHandler::OutputHandler_int(void)
 	OutData[ELECTRIC].pof= &ofElectric;
 
 	OutData[THERMALNODES].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[THERMALNODES].pof= &ofThermalNodes;
 
 	OutData[THERMALELEMENTS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
