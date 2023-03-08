@@ -124,6 +124,7 @@ contained in specific variables, whose names describe the contents.
 Currently supported node types are:
 \begin{itemize}
 \item Structural nodes, indicated as \kw{struct}.
+\item Electric nodes, indicated as \kw{elec}.
 \end{itemize}
 
 
@@ -187,6 +188,18 @@ of the inertia associated to the node, in the appropriate reference frame;
 
 \item \kw{node.struct.}\bnt{label}\kw{.GP} contains the derivative of momenta moment
 of the inertia associated to the node, in the appropriate reference frame.
+\end{itemize}
+
+
+\subsubsection{Electric Node}
+\label{sec:NetCDF:Node:Electric Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.elec.}\bnt{label} is actually empty;
+
+\item \kw{node.elec.}\bnt{label}\kw{.V} contains the voltage of the node;
+
+\item \kw{node.elec.}\bnt{label}\kw{.VP} contains the time derivative of the voltage of the node.
 \end{itemize}
 
 
