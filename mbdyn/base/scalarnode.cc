@@ -50,7 +50,7 @@ ScalarNode::~ScalarNode(void)
 }
 
 void
-ScalarNode::OutputPrepare_int(OutputHandler& OH)
+ScalarNode::OutputPrepare_int(OutputHandler& OH, bool bDifferential)
 {
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
@@ -80,9 +80,11 @@ ScalarNode::OutputPrepare_int(OutputHandler& OH)
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 
+			const char *ad = bDifferential ? "differential" : "algebraic";
+
 			std::ostringstream os;
 			os << "node." << type << "." << GetLabel();
-			(void)OH.CreateVar(os.str(), type);
+			(void)OH.CreateVar(os.str(), ad);
 
 			// node sub-data
 			m_sOutputNameBase = os.str();
@@ -304,7 +306,7 @@ ScalarDifferentialNode::OutputPrepare_int(OutputHandler& OH,
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-	ScalarNode::OutputPrepare_int(OH);
+	ScalarNode::OutputPrepare_int(OH, true);
 
 	ASSERT(!m_sOutputNameBase.empty());
 
@@ -558,7 +560,7 @@ ScalarAlgebraicNode::OutputPrepare_int(OutputHandler& OH,
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-	ScalarNode::OutputPrepare_int(OH);
+	ScalarNode::OutputPrepare_int(OH, false);
 
 	ASSERT(!m_sOutputNameBase.empty());
 

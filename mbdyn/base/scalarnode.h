@@ -64,7 +64,7 @@ public:
 	virtual OutputHandler::OutFiles GetOutputType(void) const = 0;
 
 	/* Initializes output (must be called by specialized classes) */
-	virtual void OutputPrepare_int(OutputHandler& OH);
+	virtual void OutputPrepare_int(OutputHandler& OH, bool bDifferential);
 
 	/* Scrive l'output come abstract */
 	virtual void Output(OutputHandler& OH) const;
