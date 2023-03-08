@@ -50,6 +50,8 @@ protected:
 	/* scrive l'output */
 	virtual std::ostream& Output(std::ostream& out) const;
 
+	OutputHandler::OutFiles m_out_type;
+
 public:
 	/* Costruttori */
 
@@ -62,7 +64,7 @@ public:
 	/* Funzioni di servizio */
 
 	/* Initializes output (must be called by specialized classes) */
-	virtual void OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out);
+	virtual void OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out_type);
 
 	/* Scrive l'output come abstract */
 	virtual void Output(OutputHandler& OH) const;
@@ -136,7 +138,14 @@ protected:
 #endif // USE_NETCDF
 
 	/* Initializes output (must be called by specialized classes) */
-	// virtual void OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out);
+	virtual void OutputPrepare_int(OutputHandler& OH,
+		const OutputHandler::OutFiles out_type,
+		const std::string& var_name,
+		const OutputHandler::Dimensions var_dim,
+		const std::string& var_desc,
+		const std::string& varP_name,
+		const OutputHandler::Dimensions varP_dim,
+		const std::string& varP_desc);
 
 public:
 	/* Costruttori */
@@ -215,6 +224,9 @@ public:
 	/* restart */
 	std::ostream& Restart(std::ostream& out) const;
 
+	virtual void OutputPrepare(OutputHandler& OH);
+	virtual void Output(OutputHandler& OH) const;
+
 	/*
 	 * Metodi per l'estrazione di dati "privati".
 	 * Si suppone che l'estrattore li sappia interpretare.
@@ -276,7 +288,11 @@ protected:
 #endif // USE_NETCDF
 
 	/* Initializes output (must be called by specialized classes) */
-	// virtual void OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out);
+	virtual void OutputPrepare_int(OutputHandler& OH,
+		const OutputHandler::OutFiles out_type,
+		const std::string& var_name,
+		const OutputHandler::Dimensions var_dim,
+		const std::string& var_desc);
 
 public:
 	/* Costruttori */
@@ -347,6 +363,9 @@ public:
 
 	/* restart */
 	std::ostream& Restart(std::ostream& out) const;
+
+	virtual void OutputPrepare(OutputHandler& OH);
+	virtual void Output(OutputHandler& OH) const;
 
 	/*
 	 * Maps a string (possibly with substrings) to a private data;

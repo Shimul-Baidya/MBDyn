@@ -39,7 +39,8 @@
 /* ScalarNode - begin */
 
 ScalarNode::ScalarNode(unsigned int uL, const DofOwner* pDO, flag fOut)
-: Node(uL, pDO, fOut)
+: Node(uL, pDO, fOut),
+m_out_type(OutputHandler::UNKNOWN)
 {
 	NO_OP;
 }
@@ -50,16 +51,16 @@ ScalarNode::~ScalarNode(void)
 }
 
 void
-ScalarNode::OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out)
+ScalarNode::OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles out_type)
 {
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
-		if (OH.UseNetCDF(OutputHandler::STRNODES)) {
+		if (OH.UseNetCDF(out_type)) {
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
 			// FIXME: perhaps should be somewhere else, e.g. in OutputHandler?
 			const char *type = 0;
-			switch (out) {
+			switch (out_type) {
 			case OutputHandler::ELECTRIC:
 				type = "elec"; // FIXME: use ShortDesc!
 				break;
@@ -80,6 +81,8 @@ ScalarNode::OutputPrepare_int(OutputHandler& OH, const OutputHandler::OutFiles o
 				silent_cerr("Unhandled scalar node type" << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
+
+			m_out_type = out_type;
 
 			std::ostringstream os;
 			os << "node." << type << "." << GetLabel();
@@ -293,6 +296,58 @@ ScalarDifferentialNode::Restart(std::ostream& out) const
 		<< ", derivative, " << dXP << ";" << std::endl;
 }
 
+void
+ScalarDifferentialNode::OutputPrepare_int(OutputHandler& OH,
+	const OutputHandler::OutFiles out_type,
+	const std::string& var_name,
+	const OutputHandler::Dimensions var_dim,
+	const std::string& var_desc,
+	const std::string& varP_name,
+	const OutputHandler::Dimensions varP_dim,
+	const std::string& varP_desc)
+{
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+	ScalarNode::OutputPrepare_int(OH, out_type);
+
+	ASSERT(!m_sOutputNameBase.empty());
+
+	ScalarDifferentialNode::m_Var_dX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + var_name,
+		var_dim, var_desc);
+
+	ScalarDifferentialNode::m_Var_dXP = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + varP_name,
+		varP_dim, varP_desc);
+#endif // USE_NETCDF
+}
+
+void
+ScalarDifferentialNode::OutputPrepare(OutputHandler& OH)
+{
+	if (fToBeOutput()) {
+		OutputPrepare_int(OH, OutputHandler::ABSTRACT,
+			"X", OutputHandler::Dimensions::Dimensionless, "State",
+			"XP", OutputHandler::Dimensions::Frequency, "State time derivative");
+	}
+}
+
+void
+ScalarDifferentialNode::Output(OutputHandler& OH) const
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(m_out_type)) {
+			OH.WriteNcVar(m_Var_dX, dX);
+			OH.WriteNcVar(m_Var_dXP, dXP);
+		}
+#endif /* USE_NETCDF */
+
+		if (OH.UseText(m_out_type)) {
+			Output(OH.Get(m_out_type));
+		}
+	}
+}
+
 unsigned int
 ScalarDifferentialNode::iGetNumPrivData(void) const
 {
@@ -497,6 +552,50 @@ ScalarAlgebraicNode::Restart(std::ostream& out) const
 	}
 
 	return out << ", value, " << dX << ";" << std::endl;
+}
+
+void
+ScalarAlgebraicNode::OutputPrepare_int(OutputHandler& OH,
+	const OutputHandler::OutFiles out_type,
+	const std::string& var_name,
+	const OutputHandler::Dimensions var_dim,
+	const std::string& var_desc)
+{
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+	ScalarNode::OutputPrepare_int(OH, out_type);
+
+	ASSERT(!m_sOutputNameBase.empty());
+
+	ScalarAlgebraicNode::m_Var_dX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." + var_name,
+		var_dim, var_desc);
+#endif // USE_NETCDF
+}
+
+void
+ScalarAlgebraicNode::OutputPrepare(OutputHandler& OH)
+{
+	if (fToBeOutput()) {
+		OutputPrepare_int(OH, OutputHandler::ABSTRACT,
+			"X", OutputHandler::Dimensions::Dimensionless, "State");
+	}
+}
+
+void
+ScalarAlgebraicNode::Output(OutputHandler& OH) const
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(m_out_type)) {
+			OH.WriteNcVar(m_Var_dX, dX);
+		}
+#endif /* USE_NETCDF */
+
+		if (OH.UseText(m_out_type)) {
+			Output(OH.Get(m_out_type));
+		}
+	}
 }
 
 unsigned int

@@ -98,6 +98,11 @@ ElectricNode::OutputPrepare(OutputHandler &OH)
 		if (OH.UseNetCDF(OutputHandler::ELECTRIC)) {
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
+			ScalarDifferentialNode::OutputPrepare_int(OH, OutputHandler::ELECTRIC,
+				"V", OutputHandler::Dimensions::Voltage, "Voltage",
+				"VP", OutputHandler::Dimensions::VoltageDerivative, "Voltage time derivative");
+				
+#if 0
 			ScalarNode::OutputPrepare_int(OH, OutputHandler::ELECTRIC);
 
 			ASSERT(!m_sOutputNameBase.empty());
@@ -109,11 +114,13 @@ ElectricNode::OutputPrepare(OutputHandler &OH)
 			ScalarDifferentialNode::m_Var_dXP = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "VP",
 				OutputHandler::Dimensions::VoltageDerivative,
 				"Voltage time derivative");
+#endif
 		}
 #endif // USE_NETCDF
 	}
 }
 
+#if 0
 void
 ElectricNode::Output(OutputHandler& OH) const
 {
@@ -130,6 +137,8 @@ ElectricNode::Output(OutputHandler& OH) const
 		}
 	}
 }
+
+#endif
 
 /* ElectricNode - end */
 
