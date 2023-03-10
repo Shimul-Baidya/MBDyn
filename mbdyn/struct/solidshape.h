@@ -78,6 +78,23 @@ public:
                    sp_grad::SpColVector<doublereal, iNumNodes>& h);
 };
 
+class Quadrangle8r {
+public:
+     static const char* ElementName() {
+          return "quadrangle8r";
+     }
+
+     static constexpr sp_grad::index_type iNumNodes = 8;
+
+     static inline void
+     ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
+                        sp_grad::SpMatrix<doublereal, iNumNodes, 2>& hd);
+
+     static inline void
+     ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
+                   sp_grad::SpColVector<doublereal, iNumNodes>& h);
+};
+
 class Triangle6h {
 public:
      static const char* ElementName() {
@@ -317,6 +334,52 @@ Quadrangle8::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
      h(6) = ((1-r1)*(1-r2_2))/2.0E+0;
      h(7) = ((1-r1_2)*(1-r2))/2.0E+0;
      h(8) = ((r1+1)*(1-r2_2))/2.0E+0;
+}
+
+void
+Quadrangle8r::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
+                                 sp_grad::SpMatrix<doublereal, iNumNodes, 2>& hd)
+{
+     const doublereal r1 = r(1);
+     const doublereal r2 = r(2);
+
+     static_assert(iNumNodes == 8);
+
+     hd(1,1) = 2.5E-1*(1.0E+0-r2)*(r2+r1+1.0E+0)+2.5E-1*(r1-1.0E+0)*(1.0E+0-r2);
+     hd(1,2) = 2.5E-1*(r1-1.0E+0)*(1.0E+0-r2)-2.5E-1*(r1-1.0E+0)*(r2+r1+1.0E+0);
+     hd(2,1) = (-2.5E-1*(1.0E+0-r2)*(r2-r1+1.0E+0))-2.5E-1*((-r1)-1.0E+0)*(1.0E+0-r2);
+     hd(2,2) = 2.5E-1*((-r1)-1.0E+0)*(1.0E+0-r2)-2.5E-1*((-r1)-1.0E+0)*(r2-r1+1.0E+0);
+     hd(3,1) = (-2.5E-1*((-r2)-r1+1.0E+0)*(r2+1.0E+0))-2.5E-1*((-r1)-1.0E+0)*(r2+1.0E+0);
+     hd(3,2) = 2.5E-1*((-r1)-1.0E+0)*((-r2)-r1+1.0E+0)-2.5E-1*((-r1)-1.0E+0)*(r2+1.0E+0);
+     hd(4,1) = 2.5E-1*((-r2)+r1+1.0E+0)*(r2+1.0E+0)+2.5E-1*(r1-1.0E+0)*(r2+1.0E+0);
+     hd(4,2) = 2.5E-1*(r1-1.0E+0)*((-r2)+r1+1.0E+0)-2.5E-1*(r1-1.0E+0)*(r2+1.0E+0);
+     hd(5,1) = 5.0E-1*(1.0E+0-r1)*(1.0E+0-r2)-5.0E-1*(r1+1.0E+0)*(1.0E+0-r2);
+     hd(5,2) = -5.0E-1*(1.0E+0-r1)*(r1+1.0E+0);
+     hd(6,1) = 5.0E-1*(1.0E+0-r2)*(r2+1.0E+0);
+     hd(6,2) = 5.0E-1*(r1+1.0E+0)*(1.0E+0-r2)-5.0E-1*(r1+1.0E+0)*(r2+1.0E+0);
+     hd(7,1) = 5.0E-1*(1.0E+0-r1)*(r2+1.0E+0)-5.0E-1*(r1+1.0E+0)*(r2+1.0E+0);
+     hd(7,2) = 5.0E-1*(1.0E+0-r1)*(r1+1.0E+0);
+     hd(8,1) = -5.0E-1*(1.0E+0-r2)*(r2+1.0E+0);
+     hd(8,2) = 5.0E-1*(1.0E+0-r1)*(1.0E+0-r2)-5.0E-1*(1.0E+0-r1)*(r2+1.0E+0);
+}
+
+void
+Quadrangle8r::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
+                            sp_grad::SpColVector<doublereal, iNumNodes>& h)
+{
+     const doublereal r1 = r(1);
+     const doublereal r2 = r(2);
+
+     static_assert(iNumNodes == 8);
+
+     h(1) = 2.5E-1*(r1-1.0E+0)*(1.0E+0-r2)*(r2+r1+1.0E+0);
+     h(2) = 2.5E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(r2-r1+1.0E+0);
+     h(3) = 2.5E-1*((-r1)-1.0E+0)*((-r2)-r1+1.0E+0)*(r2+1.0E+0);
+     h(4) = 2.5E-1*(r1-1.0E+0)*((-r2)+r1+1.0E+0)*(r2+1.0E+0);
+     h(5) = 5.0E-1*(1.0E+0-r1)*(r1+1.0E+0)*(1.0E+0-r2);
+     h(6) = 5.0E-1*(r1+1.0E+0)*(1.0E+0-r2)*(r2+1.0E+0);
+     h(7) = 5.0E-1*(1.0E+0-r1)*(r1+1.0E+0)*(r2+1.0E+0);
+     h(8) = 5.0E-1*(1.0E+0-r1)*(1.0E+0-r2)*(r2+1.0E+0);
 }
 
 void

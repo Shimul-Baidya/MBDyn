@@ -120,6 +120,7 @@ enum KeyWords {
         TETRAHEDRON10,
         PRESSUREQ4,
         PRESSUREQ8,
+        PRESSUREQ8R,
         PRESSURET6,
         
 	AIRPROPERTIES,
@@ -196,6 +197,7 @@ DataManager::ReadElems(MBDynParser& HP)
                 "tetrahedron10",
                 "pressureq4",
                 "pressureq8",
+                "pressureq8r",
                 "pressuret6",
                 
 		"air" "properties",
@@ -391,6 +393,7 @@ DataManager::ReadElems(MBDynParser& HP)
 
                         case PRESSUREQ4:
                         case PRESSUREQ8:
+                        case PRESSUREQ8R:
                         case PRESSURET6: {
                              DEBUGLCOUT(MYDEBUG_INPUT, "pressure loads\n");
                              Typ = Elem::PRESSURE_LOAD;
@@ -595,6 +598,7 @@ DataManager::ReadElems(MBDynParser& HP)
                                         
                                 case PRESSUREQ4:
                                 case PRESSUREQ8:
+                                case PRESSUREQ8R:
                                 case PRESSURET6:
                                         t = Elem::PRESSURE_LOAD;
                                         break;
@@ -923,6 +927,7 @@ DataManager::ReadElems(MBDynParser& HP)
                                         case TETRAHEDRON10:
                                         case PRESSUREQ4:
                                         case PRESSUREQ8:
+                                        case PRESSUREQ8R:
                                         case PRESSURET6:
 					case INDUCEDVELOCITY:
 					case ROTOR:
@@ -1020,6 +1025,7 @@ DataManager::ReadElems(MBDynParser& HP)
                                                         break;
                                                 case PRESSUREQ4:
                                                 case PRESSUREQ8:
+                                                case PRESSUREQ8R:
                                                 case PRESSURET6:
                                                         ppE = ppFindElem(Elem::PRESSURE_LOAD, uLabel);
                                                         break;
@@ -1172,6 +1178,7 @@ DataManager::ReadElems(MBDynParser& HP)
                                 case TETRAHEDRON10:
                                 case PRESSUREQ4:
                                 case PRESSUREQ8:
+                                case PRESSUREQ8R:
                                 case PRESSURET6:
                                      
 				case GUST:
@@ -1748,10 +1755,12 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
              
         case PRESSUREQ4:
         case PRESSUREQ8:
+        case PRESSUREQ8R:
         case PRESSURET6: {
-                static constexpr char sType[][11] = {
+                static constexpr char sType[][12] = {
                         "pressureq4",
                         "pressureq8",
+                        "pressureq8r",
                         "pressuret6"
                 };
 
@@ -1787,6 +1796,9 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                      break;
                 case PRESSUREQ8:
                      pE = ReadPressureLoad<Quadrangle8, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case PRESSUREQ8R:
+                     pE = ReadPressureLoad<Quadrangle8r, Gauss3x3>(this, HP, uLabel);
                      break;
                 case PRESSURET6:
                      pE = ReadPressureLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);

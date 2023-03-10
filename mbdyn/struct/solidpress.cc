@@ -707,4 +707,5 @@ ReadPressureLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
 
 template PressureLoadElem* ReadPressureLoad<Quadrangle4, Gauss2x2>(DataManager*, MBDynParser&, unsigned int);
 template PressureLoadElem* ReadPressureLoad<Quadrangle8, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
+template PressureLoadElem* ReadPressureLoad<Quadrangle8r, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
 template PressureLoadElem* ReadPressureLoad<Triangle6h, CollocTria6h>(DataManager*, MBDynParser&, unsigned int);

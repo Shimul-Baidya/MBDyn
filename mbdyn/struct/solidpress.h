@@ -46,6 +46,7 @@
 // 2D elements
 class Quadrangle4;
 class Quadrangle8;
+class Quadrangle8r;
 class Triangle6h;
 
 // 2D collocation rules
