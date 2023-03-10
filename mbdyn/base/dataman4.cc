@@ -122,6 +122,10 @@ enum KeyWords {
         PRESSUREQ8,
         PRESSUREQ8R,
         PRESSURET6,
+        TRACTIONQ4,
+        TRACTIONQ8,
+        TRACTIONQ8R,
+        TRACTIONT6,
         
 	AIRPROPERTIES,
 	GUST,
@@ -199,7 +203,11 @@ DataManager::ReadElems(MBDynParser& HP)
                 "pressureq8",
                 "pressureq8r",
                 "pressuret6",
-                
+                "tractionq4",
+                "tractionq8",
+                "tractionq8r",
+                "tractiont6",
+
 		"air" "properties",
 		"gust",
 		"induced" "velocity",
@@ -400,7 +408,16 @@ DataManager::ReadElems(MBDynParser& HP)
                              break;
                         }
 
-			case INDUCEDVELOCITY:
+                        case TRACTIONQ4:
+                        case TRACTIONQ8:
+                        case TRACTIONQ8R:
+                        case TRACTIONT6: {
+                             DEBUGLCOUT(MYDEBUG_INPUT, "traction loads\n");
+                             Typ = Elem::TRACTION_LOAD;
+                             break;
+                        }
+
+                        case INDUCEDVELOCITY:
 			case ROTOR: {
 				DEBUGLCOUT(MYDEBUG_INPUT, "induced velocity elements" << std::endl);
 				Typ = Elem::INDUCEDVELOCITY;
@@ -595,15 +612,22 @@ DataManager::ReadElems(MBDynParser& HP)
                                 case TETRAHEDRON10:
                                         t = Elem::SOLID;
                                         break;
-                                        
+
                                 case PRESSUREQ4:
                                 case PRESSUREQ8:
                                 case PRESSUREQ8R:
                                 case PRESSURET6:
                                         t = Elem::PRESSURE_LOAD;
                                         break;
-                                     
-				case INDUCEDVELOCITY:
+
+                                case TRACTIONQ4:
+                                case TRACTIONQ8:
+                                case TRACTIONQ8R:
+                                case TRACTIONT6:
+                                        t = Elem::TRACTION_LOAD;
+                                        break;
+
+                                case INDUCEDVELOCITY:
 				case ROTOR:
 					t = Elem::INDUCEDVELOCITY;
 					break;
@@ -929,6 +953,10 @@ DataManager::ReadElems(MBDynParser& HP)
                                         case PRESSUREQ8:
                                         case PRESSUREQ8R:
                                         case PRESSURET6:
+                                        case TRACTIONQ4:
+                                        case TRACTIONQ8:
+                                        case TRACTIONQ8R:
+                                        case TRACTIONT6:
 					case INDUCEDVELOCITY:
 					case ROTOR:
 					case AERODYNAMICBODY:
@@ -1023,12 +1051,21 @@ DataManager::ReadElems(MBDynParser& HP)
                                                 case TETRAHEDRON10:
                                                         ppE = ppFindElem(Elem::SOLID, uLabel);
                                                         break;
+
                                                 case PRESSUREQ4:
                                                 case PRESSUREQ8:
                                                 case PRESSUREQ8R:
                                                 case PRESSURET6:
                                                         ppE = ppFindElem(Elem::PRESSURE_LOAD, uLabel);
                                                         break;
+
+                                                case TRACTIONQ4:
+                                                case TRACTIONQ8:
+                                                case TRACTIONQ8R:
+                                                case TRACTIONT6:
+                                                        ppE = ppFindElem(Elem::TRACTION_LOAD, uLabel);
+                                                        break;
+
 						case INDUCEDVELOCITY:
 						case ROTOR:
 							ppE = ppFindElem(Elem::INDUCEDVELOCITY, uLabel);
@@ -1180,7 +1217,11 @@ DataManager::ReadElems(MBDynParser& HP)
                                 case PRESSUREQ8:
                                 case PRESSUREQ8R:
                                 case PRESSURET6:
-                                     
+                                case TRACTIONQ4:
+                                case TRACTIONQ8:
+                                case TRACTIONQ8R:
+                                case TRACTIONT6:
+
 				case GUST:
 				case INDUCEDVELOCITY:
 				case ROTOR:
@@ -1809,6 +1850,66 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 
                 if (pE) {
                         ppE = InsertElem(ElemData[Elem::PRESSURE_LOAD], uLabel, pE);
+                }
+
+                break;
+        }
+        case TRACTIONQ4:
+        case TRACTIONQ8:
+        case TRACTIONQ8R:
+        case TRACTIONT6: {
+                static constexpr char sType[][12] = {
+                        "tractionq4",
+                        "tractionq8",
+                        "tractionq8r",
+                        "tractiont6"
+                };
+
+                ASSERT(CurrType - TRACTIONQ4 < sizeof(sType) / sizeof(sType[0]));
+
+                if (!bUseAutoDiff()) {
+                     silent_cerr("element type " << sType[CurrType - TRACTIONQ4] << " requires support for automatic differentiation at line " << HP.GetLineData()
+                                 << "\nadd the statement \"use automatic differentiation;\" inside the control data section in order to enable it!\n");
+                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (iNumTypes[Elem::TRACTION_LOAD]-- <= 0) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - TRACTIONQ4] << "(" << uLabel << ") "
+                                "exceeds traction load elements number" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (pFindElem(Elem::TRACTION_LOAD, uLabel) != nullptr) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - TRACTIONQ4] << "(" << uLabel << ") "
+                                "already defined" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                switch (CurrType) {
+                case TRACTIONQ4:
+                     pE = ReadTractionLoad<Quadrangle4, Gauss2x2>(this, HP, uLabel);
+                     break;
+                case TRACTIONQ8:
+                     pE = ReadTractionLoad<Quadrangle8, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case TRACTIONQ8R:
+                     pE = ReadTractionLoad<Quadrangle8r, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case TRACTIONT6:
+                     pE = ReadTractionLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);
+                     break;
+                default:
+                     ASSERT(0);
+                }
+
+                if (pE) {
+                        ppE = InsertElem(ElemData[Elem::TRACTION_LOAD], uLabel, pE);
                 }
 
                 break;

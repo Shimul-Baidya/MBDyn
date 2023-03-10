@@ -109,7 +109,7 @@ public:
 		DRIVECALLERS,			// 30
 		TRACES,
                 SOLIDS,
-                PRESSURE_LOADS,
+                SURFACE_LOADS,
 		EIGENANALYSIS,			// NOTE: ALWAYS LAST!
 		LASTFILE			// 35
 	};
@@ -244,7 +244,7 @@ private:
 	std::ofstream ofDriveCallers;
 	std::ofstream ofTraces;
         std::ofstream ofSolids;
-        std::ofstream ofPressureLoads;
+        std::ofstream ofSurfaceLoads;
 	std::ofstream ofEigenanalysis;
 
 	int iCurrWidth;
@@ -338,7 +338,7 @@ public:
 	inline std::ostream& DriveCallers(void) const;
 	inline std::ostream& Traces(void) const;
         inline std::ostream& Solids(void) const;
-        inline std::ostream& PressureLoads(void) const;
+        inline std::ostream& SurfaceLoads(void) const;
 	inline std::ostream& Eigenanalysis(void) const;
 
 	inline int iW(void) const;
@@ -726,10 +726,10 @@ OutputHandler::Solids(void) const
 }
 
 inline std::ostream&
-OutputHandler::PressureLoads(void) const
+OutputHandler::SurfaceLoads(void) const
 {
-	ASSERT(IsOpen(PRESSURE_LOADS));
-	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofPressureLoads));
+	ASSERT(IsOpen(SURFACE_LOADS));
+	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofSurfaceLoads));
 }
 
 inline std::ostream&

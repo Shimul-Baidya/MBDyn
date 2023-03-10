@@ -106,6 +106,7 @@ public:
 		PLATE,
                 SOLID,
                 PRESSURE_LOAD,
+                TRACTION_LOAD,
                 
 		FORCE,
 

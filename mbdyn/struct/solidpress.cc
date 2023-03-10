@@ -134,20 +134,118 @@ private:
      std::array<std::unique_ptr<DriveCaller>, iNumDrives> rgDrives;
 };
 
+template <sp_grad::index_type iNumDrives>
+class SurfLoadFromDrives {
+public:
+     SurfLoadFromDrives() {}
+     SurfLoadFromDrives(SurfLoadFromDrives&& oLoadTmp)
+          :rgDrives(std::move(oLoadTmp.rgDrives)) {
+     }
+
+     template <typename T>
+     inline void
+     GetNodalLoad(sp_grad::SpMatrix<T, 3, iNumDrives>& F,
+                  doublereal dCoef,
+                  sp_grad::SpFunctionCall func) const {
+          using namespace sp_grad;
+
+          for (index_type j = 1; j <= iNumDrives; ++j) {
+               const Vec3 Fj = rgDrives[j - 1]->Get();
+
+               for (index_type i = 1; i <= 3; ++i) {
+                    F(i, j) = Fj(i);
+               }
+          }
+     }
+
+     void SetDrive(sp_grad::index_type i, std::unique_ptr<TplDriveCaller<Vec3>>&& pDrive) {
+          ASSERT(i >= 0);
+          ASSERT(i < iNumDrives);
+
+          rgDrives[i] = std::move(pDrive);
+     }
+
+     static inline constexpr int
+     GetNumConnectedNodes() { return 0; }
+
+     static inline void
+     GetConnectedNodes(std::vector<const Node*>&) {
+     }
+
+     void PrintLogFile(std::ostream& of) const {
+     }
+private:
+     std::array<std::unique_ptr<TplDriveCaller<Vec3>>, iNumDrives> rgDrives;
+};
+
 template <typename ElementType, typename CollocationType, typename PressureSource>
-class PressureLoad: public PressureLoadElem {
+class SurfaceLoad: public SurfaceLoadElem {
 public:
      static constexpr sp_grad::index_type iNumNodes = ElementType::iNumNodes;
      static constexpr sp_grad::index_type iNumEvalPoints = CollocationType::iNumEvalPoints;
      static constexpr sp_grad::index_type iNumDof = iNumNodes * 3;
+
+     SurfaceLoad(unsigned uLabel,
+                 const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
+                 PressureSource&& oPressureTmp,
+                 flag fOut);
+     virtual ~SurfaceLoad();
+
+     virtual int
+     GetNumConnectedNodes() const override;
+
+     virtual void
+     GetConnectedNodes(std::vector<const Node*>& connectedNodes) const override;
+
+protected:
+     template <typename T>
+     inline void
+     AssVector(sp_grad::SpGradientAssVec<T>& WorkVec,
+               sp_grad::SpColVector<T, iNumDof>& R,
+               integer (StructDispNode::*pfnGetFirstIndex)(void) const);
+
+     template <typename T>
+     inline void
+     GetNodalPosition(sp_grad::SpColVector<T, 3 * iNumNodes>& x,
+                      doublereal dCoef,
+                      sp_grad::SpFunctionCall func) const;
+
+     inline void
+     UpdateTotalForce(const sp_grad::SpColVector<doublereal, iNumDof>& R);
+
+     inline void
+     UpdateTotalForce(const sp_grad::SpColVector<sp_grad::SpGradient, iNumDof>& R) {}
+
+     inline void
+     UpdateTotalForce(const sp_grad::SpColVector<sp_grad::GpGradProd, iNumDof>& R) {}
+
+     std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
+     PressureSource oPressure;
+
+     struct CollocData {
+          static constexpr sp_grad::index_type iNumNodes = SurfaceLoad::iNumNodes;
+
+          sp_grad::SpColVectorA<doublereal, iNumNodes> HA;
+          sp_grad::SpMatrixA<doublereal, 3, 3 * iNumNodes> Hf, dHf_dr, dHf_ds;
+     };
+
+     template <typename CollocDataType>
+     static inline void InitCollocData(std::array<CollocDataType, iNumEvalPoints>& rgCollocData);
+};
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+class PressureLoad: public SurfaceLoad<ElementType, CollocationType, PressureSource> {
+     typedef SurfaceLoad<ElementType, CollocationType, PressureSource> BaseType;
+public:
+     using BaseType::iNumNodes;
+     using BaseType::iNumEvalPoints;
+     using BaseType::iNumDof;
 
      PressureLoad(unsigned uLabel,
                   const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
                   PressureSource&& oPressureTmp,
                   flag fOut);
      virtual ~PressureLoad();
-
-     virtual void Output(OutputHandler& OH) const override;
 
      virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
 
@@ -197,12 +295,6 @@ public:
      InitialWorkSpaceDim(integer* piNumRows,
                          integer* piNumCols) const override;
 
-     virtual int
-     GetNumConnectedNodes() const override;
-
-     virtual void
-     GetConnectedNodes(std::vector<const Node*>& connectedNodes) const override;
-
 protected:
      template <typename T>
      inline void
@@ -210,38 +302,84 @@ protected:
                      doublereal dCoef,
                      enum sp_grad::SpFunctionCall func);
 
-     template <typename T>
-     inline void
-     AssVector(sp_grad::SpGradientAssVec<T>& WorkVec,
-               sp_grad::SpColVector<T, iNumDof>& R,
-               integer (StructDispNode::*pfnGetFirstIndex)(void) const);
+     std::array<typename BaseType::CollocData, iNumEvalPoints> rgCollocData;
+};
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+class SurfaceTraction: public SurfaceLoad<ElementType, CollocationType, PressureSource> {
+     typedef SurfaceLoad<ElementType, CollocationType, PressureSource> BaseType;
+public:
+     using BaseType::iNumNodes;
+     using BaseType::iNumEvalPoints;
+     using BaseType::iNumDof;
+
+     SurfaceTraction(unsigned uLabel,
+                     const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
+                     PressureSource&& oPressureTmp,
+                     const Mat3x3& Rf,
+                     flag fOut);
+     virtual ~SurfaceTraction();
+
+     virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
 
      template <typename T>
      inline void
-     GetNodalPosition(sp_grad::SpColVector<T, 3 * iNumNodes>& x,
-                      doublereal dCoef,
-                      sp_grad::SpFunctionCall func) const;
+     AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+            doublereal dCoef,
+            const sp_grad::SpGradientVectorHandler<T>& XCurr,
+            const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+            enum sp_grad::SpFunctionCall func);
 
+     virtual SubVectorHandler&
+     AssRes(SubVectorHandler& WorkVec,
+            doublereal dCoef,
+            const VectorHandler& XCurr,
+            const VectorHandler& XPrimeCurr) override;
+
+     virtual VariableSubMatrixHandler&
+     AssJac(VariableSubMatrixHandler& WorkMat,
+            doublereal dCoef,
+            const VectorHandler& XCurr,
+            const VectorHandler& XPrimeCurr) override;
+
+     virtual void
+     AssJac(VectorHandler& JacY,
+            const VectorHandler& Y,
+            doublereal dCoef,
+            const VectorHandler& XCurr,
+            const VectorHandler& XPrimeCurr,
+            VariableSubMatrixHandler& WorkMat) override;
+
+     template <typename T>
      inline void
-     UpdateTotalForce(const sp_grad::SpColVector<doublereal, iNumDof>& R);
+     InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                   const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                   enum sp_grad::SpFunctionCall func);
 
+     virtual VariableSubMatrixHandler&
+     InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                   const VectorHandler& XCurr) override;
+
+     virtual SubVectorHandler&
+     InitialAssRes(SubVectorHandler& WorkVec,
+                   const VectorHandler& XCurr) override;
+
+     virtual void
+     InitialWorkSpaceDim(integer* piNumRows,
+                         integer* piNumCols) const override;
+
+protected:
+     template <typename T>
      inline void
-     UpdateTotalForce(const sp_grad::SpColVector<sp_grad::SpGradient, iNumDof>& R) {}
+     AssSurfaceTraction(sp_grad::SpColVector<T, iNumNodes * 3>& f,
+                        doublereal dCoef,
+                        enum sp_grad::SpFunctionCall func);
 
-     inline void
-     UpdateTotalForce(const sp_grad::SpColVector<sp_grad::GpGradProd, iNumDof>& R) {}
-
-     struct CollocData {
-          static constexpr sp_grad::index_type iNumNodes = PressureLoad::iNumNodes;
-
-          sp_grad::SpColVectorA<doublereal, iNumNodes> HA;
-          sp_grad::SpMatrixA<doublereal, 3, 3 * iNumNodes> Hf, dHf_dr, dHf_ds;
+     struct CollocData: public BaseType::CollocData {
+          sp_grad::SpMatrixA<doublereal, 3, 3> Rrel;
      };
 
-     std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
-     PressureSource oPressure;
      std::array<CollocData, iNumEvalPoints> rgCollocData;
-     Vec3 Ftot;
 };
 
 template <sp_grad::index_type iNumDrives>
@@ -272,55 +410,157 @@ PressureFromNodes<iNumNodes>::GetNodalPressure(sp_grad::SpColVector<T, iNumNodes
      }
 }
 
-PressureLoadElem::PressureLoadElem(unsigned uLabel,
-                                   flag fOut)
-     :Elem(uLabel, fOut), InitialAssemblyElem(uLabel, fOut)
+SurfaceLoadElem::SurfaceLoadElem(unsigned uLabel,
+                                 flag fOut)
+     :Elem(uLabel, fOut),
+      InitialAssemblyElem(uLabel, fOut),
+      Ftot(::Zero3)
 {
 }
 
-PressureLoadElem::~PressureLoadElem()
+SurfaceLoadElem::~SurfaceLoadElem()
 {
 }
 
-Elem::Type PressureLoadElem::GetElemType() const
+Elem::Type SurfaceLoadElem::GetElemType() const
 {
      return Elem::PRESSURE_LOAD;
 }
 
 void
-PressureLoadElem::SetValue(DataManager *pDM,
-                           VectorHandler& X, VectorHandler& XP,
-                           SimulationEntity::Hints *ph)
+SurfaceLoadElem::SetValue(DataManager *pDM,
+                          VectorHandler& X, VectorHandler& XP,
+                          SimulationEntity::Hints *ph)
 {
 }
 
-std::ostream& PressureLoadElem::Restart(std::ostream& out) const
+std::ostream& SurfaceLoadElem::Restart(std::ostream& out) const
 {
      out << "## pressure load element: Restart not implemented yet\n";
 
      return out;
 }
 
-unsigned int PressureLoadElem::iGetInitialNumDof() const
+unsigned int SurfaceLoadElem::iGetInitialNumDof() const
 {
      return 0;
 }
 
-bool PressureLoadElem::bIsDeformable() const
+bool SurfaceLoadElem::bIsDeformable() const
 {
      return false;
 }
 
+void SurfaceLoadElem::Output(OutputHandler& OH) const
+{
+     using namespace sp_grad;
+
+     if (bToBeOutput() && OH.UseText(OutputHandler::SURFACE_LOADS)) {
+          if (OH.UseText(OutputHandler::SURFACE_LOADS)) {
+               std::ostream& of = OH.SurfaceLoads();
+
+               of << std::setw(8) << GetLabel() << ' ' << Ftot << '\n';
+          }
+     }
+}
+
 template <typename ElementType, typename CollocationType, typename PressureSource>
-PressureLoad<ElementType, CollocationType, PressureSource>::PressureLoad(unsigned uLabel,
-                                                                         const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
-                                                                         PressureSource&& oPressureTmp,
-                                                                         flag fOut)
+SurfaceLoad<ElementType, CollocationType, PressureSource>::SurfaceLoad(unsigned uLabel,
+                                                                       const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
+                                                                       PressureSource&& oPressureTmp,
+                                                                       flag fOut)
      :Elem(uLabel, fOut),
-      PressureLoadElem(uLabel, fOut),
+      SurfaceLoadElem(uLabel, fOut),
       rgNodes(rgNodesTmp),
-      oPressure(std::move(oPressureTmp)),
-      Ftot(::Zero3)
+      oPressure(std::move(oPressureTmp))
+{
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+SurfaceLoad<ElementType, CollocationType, PressureSource>::~SurfaceLoad()
+{
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename T>
+inline void
+SurfaceLoad<ElementType, CollocationType, PressureSource>::AssVector(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                     sp_grad::SpColVector<T, iNumDof>& R,
+                                                                     integer (StructDispNode::*pfnGetFirstIndex)(void) const)
+{
+     using namespace sp_grad;
+
+     for (index_type i = 1; i <= iNumNodes; ++i) {
+          const index_type iEqIndex = (rgNodes[i - 1]->*pfnGetFirstIndex)();
+
+          for (index_type j = 1; j <= 3; ++j) {
+               WorkVec.AddItem(iEqIndex + j, R((i - 1) * 3 + j));
+          }
+     }
+
+     UpdateTotalForce(R);
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+int
+SurfaceLoad<ElementType, CollocationType, PressureSource>::GetNumConnectedNodes() const
+{
+     return iNumNodes + oPressure.GetNumConnectedNodes();
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+void
+SurfaceLoad<ElementType, CollocationType, PressureSource>::GetConnectedNodes(std::vector<const Node*>& connectedNodes) const
+{
+     connectedNodes.reserve(GetNumConnectedNodes());
+     connectedNodes.clear();
+
+     for (const Node* pNode:rgNodes) {
+          connectedNodes.push_back(pNode);
+     }
+
+     oPressure.GetConnectedNodes(connectedNodes);
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename T>
+inline void
+SurfaceLoad<ElementType, CollocationType, PressureSource>::GetNodalPosition(sp_grad::SpColVector<T, 3 * iNumNodes>& x,
+                                                                            doublereal dCoef,
+                                                                            sp_grad::SpFunctionCall func) const
+{
+     using namespace sp_grad;
+
+     SpColVector<T, 3> Xj(3, 1);
+
+     for (index_type j = 1; j <= iNumNodes; ++j) {
+          rgNodes[j - 1]->GetXCurr(Xj, dCoef, func);
+
+          for (index_type i = 1; i <= 3; ++i) {
+               x(i + (j - 1) * 3) = std::move(Xj(i));
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+inline void
+SurfaceLoad<ElementType, CollocationType, PressureSource>::UpdateTotalForce(const sp_grad::SpColVector<doublereal, iNumDof>& R)
+{
+     using namespace sp_grad;
+
+     Ftot = ::Zero3;
+
+     for (index_type j = 1; j <= iNumNodes; ++j) {
+          for (index_type i = 1; i <= 3; ++i) {
+               Ftot(i) += R((j - 1) * 3 + i);
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename CollocDataType>
+inline void
+SurfaceLoad<ElementType, CollocationType, PressureSource>::InitCollocData(std::array<CollocDataType, iNumEvalPoints>& rgCollocData)
 {
      using namespace sp_grad;
 
@@ -343,22 +583,19 @@ PressureLoad<ElementType, CollocationType, PressureSource>::PressureLoad(unsigne
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
-PressureLoad<ElementType, CollocationType, PressureSource>::~PressureLoad()
+PressureLoad<ElementType, CollocationType, PressureSource>::PressureLoad(unsigned uLabel,
+                                                                         const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
+                                                                         PressureSource&& oPressureTmp,
+                                                                         flag fOut)
+:Elem(uLabel, fOut),
+ BaseType(uLabel, rgNodesTmp, std::move(oPressureTmp), fOut)
 {
+     BaseType::InitCollocData(rgCollocData);
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
-void PressureLoad<ElementType, CollocationType, PressureSource>::Output(OutputHandler& OH) const
+PressureLoad<ElementType, CollocationType, PressureSource>::~PressureLoad()
 {
-     using namespace sp_grad;
-
-     if (bToBeOutput() && OH.UseText(OutputHandler::PRESSURE_LOADS)) {
-          if (OH.UseText(OutputHandler::PRESSURE_LOADS)) {
-               std::ostream& of = OH.PressureLoads();
-
-               of << std::setw(8) << GetLabel() << ' ' << Ftot << '\n';
-          }
-     }
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
@@ -383,7 +620,7 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssRes(sp_grad::SpGr
 
      AssPressureLoad(R, dCoef, func);
 
-     AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstMomentumIndex);
+     this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstMomentumIndex);
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
@@ -402,8 +639,8 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssPressureLoad(sp_g
      SpColVector<T, 3> n1(3, iNumDof), n2(3, iNumDof), n(3, iNumDof), F_i(3, iNumDof + iNumNodes);
      SpColVector<T, iNumDof> HfT_F_i(iNumDof, iNumDof + iNumNodes);
 
-     GetNodalPosition(x, dCoef, func);
-     oPressure.GetNodalPressure(p, dCoef, func);
+     this->GetNodalPosition(x, dCoef, func);
+     this->oPressure.GetNodalPressure(p, dCoef, func);
 
      sp_grad::SpGradExpDofMapHelper<T> oDofMap;
 
@@ -425,26 +662,6 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssPressureLoad(sp_g
           HfT_F_i.MapAssign(Transpose(rgCollocData[i].Hf) * F_i, oDofMap);
           R += HfT_F_i;
      }
-}
-
-template <typename ElementType, typename CollocationType, typename PressureSource>
-template <typename T>
-inline void
-PressureLoad<ElementType, CollocationType, PressureSource>::AssVector(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                                      sp_grad::SpColVector<T, iNumDof>& R,
-                                                                      integer (StructDispNode::*pfnGetFirstIndex)(void) const)
-{
-     using namespace sp_grad;
-
-     for (index_type i = 1; i <= iNumNodes; ++i) {
-          const index_type iEqIndex = (rgNodes[i - 1]->*pfnGetFirstIndex)();
-
-          for (index_type j = 1; j <= 3; ++j) {
-               WorkVec.AddItem(iEqIndex + j, R((i - 1) * 3 + j));
-          }
-     }
-
-     UpdateTotalForce(R);
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
@@ -517,7 +734,7 @@ PressureLoad<ElementType, CollocationType, PressureSource>::InitialAssRes(sp_gra
 
      AssPressureLoad(R, 1., func);
 
-     AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstPositionIndex);
+     this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstPositionIndex);
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
@@ -560,63 +777,246 @@ PressureLoad<ElementType, CollocationType, PressureSource>::InitialWorkSpaceDim(
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
-int
-PressureLoad<ElementType, CollocationType, PressureSource>::GetNumConnectedNodes() const
+SurfaceTraction<ElementType, CollocationType, PressureSource>::SurfaceTraction(unsigned uLabel,
+                                                                               const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
+                                                                               PressureSource&& oPressureTmp,
+                                                                               const Mat3x3& Rf,
+                                                                               flag fOut)
+     :Elem(uLabel, fOut),
+      BaseType(uLabel, rgNodesTmp, std::move(oPressureTmp), fOut)
 {
-     return iNumNodes + oPressure.GetNumConnectedNodes();
+     using namespace sp_grad;
+
+     SpColVector<doublereal, 3 * iNumNodes> x(3 * iNumNodes, 0);
+     SpMatrix<doublereal, 3, 3> Relem(3, 3, 0);
+
+     BaseType::InitCollocData(rgCollocData);
+
+     this->GetNodalPosition(x, 1., SpFunctionCall::REGULAR_RES);
+
+     for (index_type i = 0; i < iNumEvalPoints; ++i) {
+          SpColVector<doublereal, 3> e1 = rgCollocData[i].dHf_dr * x;
+          SpColVector<doublereal, 3> e2 = rgCollocData[i].dHf_ds * x;
+          SpColVector<doublereal, 3> e3 = Cross(e1, e2);
+
+          e2 = Cross(e3, e1);
+
+          const doublereal Norm_e1 = Norm(e1);
+          const doublereal Norm_e2 = Norm(e2);
+          const doublereal Norm_e3 = Norm(e3);
+
+          for (index_type j = 1; j <= 3; ++j) {
+               Relem(j, 1) = e1(j) / Norm_e1;
+               Relem(j, 2) = e2(j) / Norm_e2;
+               Relem(j, 3) = e3(j) / Norm_e3;
+          }
+
+          rgCollocData[i].Rrel = Transpose(Relem) * Rf;
+     }
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
-void
-PressureLoad<ElementType, CollocationType, PressureSource>::GetConnectedNodes(std::vector<const Node*>& connectedNodes) const
+SurfaceTraction<ElementType, CollocationType, PressureSource>::~SurfaceTraction()
 {
-     connectedNodes.reserve(GetNumConnectedNodes());
-     connectedNodes.clear();
+}
 
-     for (const Node* pNode:rgNodes) {
-          connectedNodes.push_back(pNode);
-     }
-
-     oPressure.GetConnectedNodes(connectedNodes);
+template <typename ElementType, typename CollocationType, typename PressureSource>
+void SurfaceTraction<ElementType, CollocationType, PressureSource>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
+{
+     *piNumRows = iNumDof;
+     *piNumCols = 0;
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
 template <typename T>
 inline void
-PressureLoad<ElementType, CollocationType, PressureSource>::GetNodalPosition(sp_grad::SpColVector<T, 3 * iNumNodes>& x,
-                                                                             doublereal dCoef,
-                                                                             sp_grad::SpFunctionCall func) const
+SurfaceTraction<ElementType, CollocationType, PressureSource>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                      doublereal dCoef,
+                                                                      const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                                                      const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+                                                                      enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
 
-     SpColVector<T, 3> Xj(3, 1);
+     SpColVector<T, iNumNodes * 3> R(iNumDof, (iNumDof + iNumNodes) * iNumEvalPoints);
 
-     for (index_type j = 1; j <= iNumNodes; ++j) {
-          rgNodes[j - 1]->GetXCurr(Xj, dCoef, func);
+     AssSurfaceTraction(R, dCoef, func);
 
-          for (index_type i = 1; i <= 3; ++i) {
-               x(i + (j - 1) * 3) = std::move(Xj(i));
+     this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstMomentumIndex);
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename T>
+inline void
+SurfaceTraction<ElementType, CollocationType, PressureSource>::AssSurfaceTraction(sp_grad::SpColVector<T, iNumNodes * 3>& R,
+                                                                                  doublereal dCoef,
+                                                                                  enum sp_grad::SpFunctionCall func)
+{
+     using namespace sp_grad;
+
+     T Norm_e1, Norm_e2, dA;
+     SpColVector<doublereal, 3> fl_i(3, 0), frel_i(3, 0);
+     SpMatrix<T, 3, 3> Relem_i(3, 3, iNumDof);
+     SpColVector<T, 3 * iNumNodes> x(3 * iNumNodes, 1);
+     SpMatrix<doublereal, 3, iNumNodes> fl_n(3, iNumNodes, 0);
+     SpColVector<T, 3> e1(3, iNumDof), e2(3, iNumDof), e3(3, iNumDof), Fg_i(3, iNumDof + iNumNodes);
+     SpColVector<T, iNumDof> HfT_Fg_i(iNumDof, iNumDof + iNumNodes);
+
+     this->GetNodalPosition(x, dCoef, func);
+     this->oPressure.GetNodalLoad(fl_n, dCoef, func);
+
+     sp_grad::SpGradExpDofMapHelper<T> oDofMap;
+
+     oDofMap.GetDofStat(x);
+     oDofMap.Reset();
+     oDofMap.InsertDof(x);
+     oDofMap.InsertDone();
+
+     for (index_type i = 0; i < iNumEvalPoints; ++i) {
+          const doublereal alpha = CollocationType::dGetWeight(i);
+
+          for (index_type j = 1; j <= 3; ++j) {
+               fl_i(j) = Dot(rgCollocData[i].HA, Transpose(fl_n.GetRow(j))) * alpha;
           }
+
+          frel_i = rgCollocData[i].Rrel * fl_i;
+
+          e1.MapAssign(rgCollocData[i].dHf_dr * x, oDofMap);
+          e2.MapAssign(rgCollocData[i].dHf_ds * x, oDofMap);
+
+          e3.MapAssign(Cross(e1, e2), oDofMap);
+          e2.MapAssign(Cross(e3, e1), oDofMap);
+
+          oDofMap.MapAssign(Norm_e1, Norm(e1));
+          oDofMap.MapAssign(Norm_e2, Norm(e2));
+          oDofMap.MapAssign(dA, Norm(e3));
+
+          for (index_type k = 1; k <= 3; ++k) {
+               oDofMap.MapAssign(Relem_i(k, 1), e1(k) * dA / Norm_e1);
+               oDofMap.MapAssign(Relem_i(k, 2), e2(k) * dA / Norm_e2);
+               oDofMap.MapAssign(Relem_i(k, 3), e3(k));
+          }
+
+          Fg_i.MapAssign(Relem_i * frel_i, oDofMap);
+          HfT_Fg_i.MapAssign(Transpose(rgCollocData[i].Hf) * Fg_i, oDofMap);
+          R += HfT_Fg_i;
      }
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
-inline void
-PressureLoad<ElementType, CollocationType, PressureSource>::UpdateTotalForce(const sp_grad::SpColVector<doublereal, iNumDof>& R)
+SubVectorHandler&
+SurfaceTraction<ElementType, CollocationType, PressureSource>::AssRes(SubVectorHandler& WorkVec,
+                                                                      doublereal dCoef,
+                                                                      const VectorHandler& XCurr,
+                                                                      const VectorHandler& XPrimeCurr)
+{
+     DEBUGCOUTFNAME("SurfaceTraction::AssRes");
+
+     sp_grad::SpGradientAssVec<doublereal>::AssRes(this,
+                                                   WorkVec,
+                                                   dCoef,
+                                                   XCurr,
+                                                   XPrimeCurr,
+                                                   sp_grad::SpFunctionCall::REGULAR_RES);
+
+     return WorkVec;
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+VariableSubMatrixHandler&
+SurfaceTraction<ElementType, CollocationType, PressureSource>::AssJac(VariableSubMatrixHandler& WorkMat,
+                                                                      doublereal dCoef,
+                                                                      const VectorHandler& XCurr,
+                                                                      const VectorHandler& XPrimeCurr)
+{
+     DEBUGCOUTFNAME("SurfaceTraction::AssJac");
+
+     sp_grad::SpGradientAssVec<sp_grad::SpGradient>::AssJac(this,
+                                                            WorkMat.SetSparseGradient(),
+                                                            dCoef,
+                                                            XCurr,
+                                                            XPrimeCurr,
+                                                            sp_grad::SpFunctionCall::REGULAR_JAC);
+     return WorkMat;
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+void
+SurfaceTraction<ElementType, CollocationType, PressureSource>::AssJac(VectorHandler& JacY,
+                                                                      const VectorHandler& Y,
+                                                                      doublereal dCoef,
+                                                                      const VectorHandler& XCurr,
+                                                                      const VectorHandler& XPrimeCurr,
+                                                                      VariableSubMatrixHandler& WorkMat)
 {
      using namespace sp_grad;
 
-     Ftot = ::Zero3;
+     SpGradientAssVec<GpGradProd>::AssJac(this,
+                                          JacY,
+                                          Y,
+                                          dCoef,
+                                          XCurr,
+                                          XPrimeCurr,
+                                          SpFunctionCall::REGULAR_JAC);
+}
 
-     for (index_type j = 1; j <= iNumNodes; ++j) {
-          for (index_type i = 1; i <= 3; ++i) {
-               Ftot(i) += R((j - 1) * 3 + i);
-          }
-     }
+template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename T>
+void
+SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                             const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                                                             enum sp_grad::SpFunctionCall func)
+{
+     using namespace sp_grad;
+
+     SpColVector<T, iNumNodes * 3> R(iNumDof, (iNumDof + iNumNodes) * iNumEvalPoints);
+
+     AssSurfaceTraction(R, 1., func);
+
+     this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstPositionIndex);
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+VariableSubMatrixHandler&
+SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                                                                             const VectorHandler& XCurr)
+{
+     using namespace sp_grad;
+
+     SpGradientAssVec<SpGradient>::InitialAssJac(this,
+                                                 WorkMat.SetSparseGradient(),
+                                                 XCurr,
+                                                 sp_grad::INITIAL_ASS_JAC);
+
+     return WorkMat;
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+SubVectorHandler&
+SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssRes(SubVectorHandler& WorkVec,
+                                                                             const VectorHandler& XCurr)
+{
+     using namespace sp_grad;
+
+     SpGradientAssVec<doublereal>::InitialAssRes(this,
+                                                 WorkVec,
+                                                 XCurr,
+                                                 sp_grad::INITIAL_ASS_RES);
+
+     return WorkVec;
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource>
+void
+SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialWorkSpaceDim(integer* piNumRows,
+                                                                                   integer* piNumCols) const
+{
+     *piNumRows = iNumDof;
+     *piNumCols = 0;
 }
 
 template <typename ElementType, typename CollocationType>
-PressureLoadElem*
+SurfaceLoadElem*
 ReadPressureLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
 {
      DEBUGCOUTFNAME("ReadPressureLoad");
@@ -663,12 +1063,6 @@ ReadPressureLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
           throw ErrGeneric(MBDYN_EXCEPT_ARGS);
      }
 
-     if (HP.IsArg()) {
-          silent_cerr("semicolon expected "
-                      "at line " << HP.GetLineData() << std::endl);
-          throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
-     }
-
      const flag fOut = pDM->fReadOutput(HP, Elem::PRESSURE_LOAD);
 
      std::ostream& out = pDM->GetLogFile();
@@ -679,7 +1073,7 @@ ReadPressureLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
           out << ' ' << rgNodes[i]->GetLabel();
      }
 
-     PressureLoadElem* pElem = nullptr;
+     SurfaceLoadElem* pElem = nullptr;
 
      switch (ePressureSource) {
      case PRESSURE_FROM_NODES:
@@ -702,10 +1096,87 @@ ReadPressureLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
 
      out << '\n';
 
+     if (HP.IsArg()) {
+          silent_cerr("semicolon expected "
+                      "at line " << HP.GetLineData() << std::endl);
+          throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
+
      return pElem;
 }
 
-template PressureLoadElem* ReadPressureLoad<Quadrangle4, Gauss2x2>(DataManager*, MBDynParser&, unsigned int);
-template PressureLoadElem* ReadPressureLoad<Quadrangle8, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
-template PressureLoadElem* ReadPressureLoad<Quadrangle8r, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
-template PressureLoadElem* ReadPressureLoad<Triangle6h, CollocTria6h>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadPressureLoad<Quadrangle4, Gauss2x2>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadPressureLoad<Quadrangle8, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadPressureLoad<Quadrangle8r, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadPressureLoad<Triangle6h, CollocTria6h>(DataManager*, MBDynParser&, unsigned int);
+
+template <typename ElementType, typename CollocationType>
+SurfaceLoadElem*
+ReadTractionLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
+{
+     DEBUGCOUTFNAME("ReadTractionLoad");
+
+     using namespace sp_grad;
+
+     constexpr index_type iNumNodes = ElementType::iNumNodes;
+
+     typedef SurfaceTraction<ElementType, CollocationType, SurfLoadFromDrives<iNumNodes>> SurfaceTractionFromDrives;
+
+     std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
+
+     SurfLoadFromDrives<iNumNodes> oSurfLoadFromDrives;
+
+     for (index_type i = 0; i < iNumNodes; ++i) {
+          rgNodes[i] = pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP);
+     }
+
+     ReferenceFrame oGlobalRefFrame;
+
+     const Mat3x3 Rf = HP.IsKeyWord("orientation") ? HP.GetRotAbs(oGlobalRefFrame) : Eye3;
+
+     if (HP.IsKeyWord("from" "drives")) {
+          std::unique_ptr<TplDriveCaller<Vec3>> pDrive;
+
+          for (index_type i = 0; i < iNumNodes; ++i) {
+               pDrive.reset(ReadDC3D(pDM, HP));
+
+               oSurfLoadFromDrives.SetDrive(i, std::move(pDrive));
+          }
+     } else {
+          silent_cerr("keyword \"from drives\" expected at line " << HP.GetLineData() << "\n");
+          throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
+
+     const flag fOut = pDM->fReadOutput(HP, Elem::PRESSURE_LOAD);
+
+     std::ostream& out = pDM->GetLogFile();
+
+     if (HP.IsArg()) {
+          silent_cerr("semicolon expected "
+                      "at line " << HP.GetLineData() << std::endl);
+          throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
+
+     out << ElementType::ElementName() << ": " << uLabel;
+
+     for (sp_grad::index_type i = 0; i < iNumNodes; ++i) {
+          out << ' ' << rgNodes[i]->GetLabel();
+     }
+
+     SurfaceLoadElem* pElem = nullptr;
+
+     oSurfLoadFromDrives.PrintLogFile(out);
+
+     SAFENEWWITHCONSTRUCTOR(pElem,
+                            SurfaceTractionFromDrives,
+                            SurfaceTractionFromDrives(uLabel, rgNodes, std::move(oSurfLoadFromDrives), Rf, fOut));
+
+     out << '\n';
+
+     return pElem;
+}
+
+template SurfaceLoadElem* ReadTractionLoad<Quadrangle4, Gauss2x2>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadTractionLoad<Quadrangle8, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadTractionLoad<Quadrangle8r, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadTractionLoad<Triangle6h, CollocTria6h>(DataManager*, MBDynParser&, unsigned int);

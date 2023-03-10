@@ -511,10 +511,10 @@ OutputHandler::OutputHandler_int(void)
 
         OutData[SOLIDS].pof = &ofSolids;
 
-        OutData[PRESSURE_LOADS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+        OutData[SURFACE_LOADS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
              | OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 
-        OutData[PRESSURE_LOADS].pof = &ofPressureLoads;
+        OutData[SURFACE_LOADS].pof = &ofSurfaceLoads;
         
 	OutData[EIGENANALYSIS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;

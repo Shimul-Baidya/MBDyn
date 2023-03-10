@@ -55,11 +55,11 @@ class Gauss3x3;
 class CollocTria6h;
 
 // 2D base class
-class PressureLoadElem: virtual public Elem, public InitialAssemblyElem {
+class SurfaceLoadElem: virtual public Elem, public InitialAssemblyElem {
 public:
-     PressureLoadElem(unsigned uLabel,
+     SurfaceLoadElem(unsigned uLabel,
                       flag fOut);
-     virtual ~PressureLoadElem();
+     virtual ~SurfaceLoadElem();
 
      virtual Elem::Type GetElemType() const override;
 
@@ -73,10 +73,19 @@ public:
      virtual unsigned int iGetInitialNumDof() const override;
 
      virtual bool bIsDeformable() const override;
+
+     virtual void Output(OutputHandler& OH) const override;
+
+protected:
+     Vec3 Ftot;
 };
 
 template <typename ElementType, typename CollocationType>
-PressureLoadElem*
+SurfaceLoadElem*
 ReadPressureLoad(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
+
+template <typename ElementType, typename CollocationType>
+SurfaceLoadElem*
+ReadTractionLoad(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
 
 #endif
