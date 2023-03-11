@@ -316,7 +316,7 @@ public:
      SurfaceTraction(unsigned uLabel,
                      const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
                      PressureSource&& oPressureTmp,
-                     const Mat3x3& Rf,
+                     const std::array<Mat3x3, iNumEvalPoints>& Rf,
                      flag fOut);
      virtual ~SurfaceTraction();
 
@@ -780,7 +780,7 @@ template <typename ElementType, typename CollocationType, typename PressureSourc
 SurfaceTraction<ElementType, CollocationType, PressureSource>::SurfaceTraction(unsigned uLabel,
                                                                                const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
                                                                                PressureSource&& oPressureTmp,
-                                                                               const Mat3x3& Rf,
+                                                                               const std::array<Mat3x3, iNumEvalPoints>& Rf,
                                                                                flag fOut)
      :Elem(uLabel, fOut),
       BaseType(uLabel, rgNodesTmp, std::move(oPressureTmp), fOut)
@@ -805,13 +805,19 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::SurfaceTraction(u
           const doublereal Norm_e2 = Norm(e2);
           const doublereal Norm_e3 = Norm(e3);
 
+          if (Norm_e1 == 0. || Norm_e2 == 0. || Norm_e3 == 0.) {
+               silent_cerr("traction(" << this->GetLabel() << "): orientation matrix is singular ("
+                           << Norm_e1 << "," << Norm_e2 << ", " << Norm_e3 << ")\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
           for (index_type j = 1; j <= 3; ++j) {
                Relem(j, 1) = e1(j) / Norm_e1;
                Relem(j, 2) = e2(j) / Norm_e2;
                Relem(j, 3) = e3(j) / Norm_e3;
           }
 
-          rgCollocData[i].Rrel = Transpose(Relem) * Rf;
+          rgCollocData[i].Rrel = Transpose(Relem) * Rf[i];
      }
 }
 
@@ -890,6 +896,11 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::AssSurfaceTractio
           oDofMap.MapAssign(Norm_e1, Norm(e1));
           oDofMap.MapAssign(Norm_e2, Norm(e2));
           oDofMap.MapAssign(dA, Norm(e3));
+
+          if (Norm_e1 == 0. || Norm_e2 == 0. || dA == 0.) {
+               silent_cerr("traction(" << this->GetLabel() << "): orientation matrix is singular\n");
+               throw NonlinearSolver::ErrSimulationDiverged(MBDYN_EXCEPT_ARGS);
+          }
 
           for (index_type k = 1; k <= 3; ++k) {
                oDofMap.MapAssign(Relem_i(k, 1), e1(k) * dA / Norm_e1);
@@ -1119,6 +1130,7 @@ ReadTractionLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
      using namespace sp_grad;
 
      constexpr index_type iNumNodes = ElementType::iNumNodes;
+     constexpr index_type iNumEvalPoints = CollocationType::iNumEvalPoints;
 
      typedef SurfaceTraction<ElementType, CollocationType, SurfLoadFromDrives<iNumNodes>> SurfaceTractionFromDrives;
 
@@ -1129,10 +1141,6 @@ ReadTractionLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
      for (index_type i = 0; i < iNumNodes; ++i) {
           rgNodes[i] = pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP);
      }
-
-     ReferenceFrame oGlobalRefFrame;
-
-     const Mat3x3 Rf = HP.IsKeyWord("orientation") ? HP.GetRotAbs(oGlobalRefFrame) : Eye3;
 
      if (HP.IsKeyWord("from" "drives")) {
           std::unique_ptr<TplDriveCaller<Vec3>> pDrive;
@@ -1145,6 +1153,14 @@ ReadTractionLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
      } else {
           silent_cerr("keyword \"from drives\" expected at line " << HP.GetLineData() << "\n");
           throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
+
+     ReferenceFrame oGlobalRefFrame;
+     std::array<Mat3x3, iNumEvalPoints> Rf;
+     const bool bReadOrientation = HP.IsKeyWord("orientation");
+
+     for (Mat3x3& Rf_i: Rf) {
+          Rf_i = bReadOrientation ? HP.GetRotAbs(oGlobalRefFrame) : Eye3;
      }
 
      const flag fOut = pDM->fReadOutput(HP, Elem::PRESSURE_LOAD);
