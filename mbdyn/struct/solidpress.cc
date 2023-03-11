@@ -305,7 +305,49 @@ protected:
      std::array<typename BaseType::CollocData, iNumEvalPoints> rgCollocData;
 };
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+enum class SurfaceTractionType {
+     RELATIVE,
+     ABSOLUTE
+};
+
+template <SurfaceTractionType eType>
+struct SurfaceTractionHelper;
+
+template <>
+struct SurfaceTractionHelper<SurfaceTractionType::RELATIVE> {
+     template <typename T, sp_grad::index_type iNumCols, typename ElementType>
+     static inline void
+     AssSurfaceTraction(ElementType& oElem,
+                        sp_grad::SpColVector<T, iNumCols>& f,
+                        doublereal dCoef,
+                        enum sp_grad::SpFunctionCall func) {
+          oElem.AssSurfaceTractionRel(f, dCoef, func);
+     }
+
+     template <typename ElementType, size_t uNumCols>
+     static inline void InitCollocData(ElementType& oElem, const std::array<Mat3x3, uNumCols>& Rf) {
+          oElem.InitCollocDataRel(Rf);
+     }
+};
+
+template <>
+struct SurfaceTractionHelper<SurfaceTractionType::ABSOLUTE> {
+     template <typename T, sp_grad::index_type iNumCols, typename ElementType>
+     static inline void
+     AssSurfaceTraction(ElementType& oElem,
+                        sp_grad::SpColVector<T, iNumCols>& f,
+                        doublereal dCoef,
+                        enum sp_grad::SpFunctionCall func) {
+          oElem.AssSurfaceTractionAbs(f, dCoef, func);
+     }
+
+     template <typename ElementType, size_t uNumCols>
+     static inline void InitCollocData(ElementType& oElem, const std::array<Mat3x3, uNumCols>& Rf) {
+          oElem.InitCollocDataAbs(Rf);
+     }
+};
+
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 class SurfaceTraction: public SurfaceLoad<ElementType, CollocationType, PressureSource> {
      typedef SurfaceLoad<ElementType, CollocationType, PressureSource> BaseType;
 public:
@@ -368,15 +410,24 @@ public:
      InitialWorkSpaceDim(integer* piNumRows,
                          integer* piNumCols) const override;
 
-protected:
      template <typename T>
      inline void
-     AssSurfaceTraction(sp_grad::SpColVector<T, iNumNodes * 3>& f,
-                        doublereal dCoef,
-                        enum sp_grad::SpFunctionCall func);
+     AssSurfaceTractionRel(sp_grad::SpColVector<T, iNumNodes * 3>& f,
+                           doublereal dCoef,
+                           enum sp_grad::SpFunctionCall func);
 
+     template <typename T>
+     inline void
+     AssSurfaceTractionAbs(sp_grad::SpColVector<T, iNumNodes * 3>& f,
+                           doublereal dCoef,
+                           enum sp_grad::SpFunctionCall func);
+
+     inline void InitCollocDataRel(const std::array<Mat3x3, iNumEvalPoints>& Rf);
+     inline void InitCollocDataAbs(const std::array<Mat3x3, iNumEvalPoints>& Rf);
+private:
      struct CollocData: public BaseType::CollocData {
           sp_grad::SpMatrixA<doublereal, 3, 3> Rrel;
+          doublereal dA;
      };
 
      std::array<CollocData, iNumEvalPoints> rgCollocData;
@@ -776,25 +827,33 @@ PressureLoad<ElementType, CollocationType, PressureSource>::InitialWorkSpaceDim(
      *piNumCols = 0;
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
-SurfaceTraction<ElementType, CollocationType, PressureSource>::SurfaceTraction(unsigned uLabel,
-                                                                               const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
-                                                                               PressureSource&& oPressureTmp,
-                                                                               const std::array<Mat3x3, iNumEvalPoints>& Rf,
-                                                                               flag fOut)
-     :Elem(uLabel, fOut),
-      BaseType(uLabel, rgNodesTmp, std::move(oPressureTmp), fOut)
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::SurfaceTraction(unsigned uLabel,
+                                                                                      const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
+                                                                                      PressureSource&& oPressureTmp,
+                                                                                      const std::array<Mat3x3, iNumEvalPoints>& Rf,
+                                                                                      flag fOut)
+:Elem(uLabel, fOut),
+ BaseType(uLabel, rgNodesTmp, std::move(oPressureTmp), fOut)
+{
+     using namespace sp_grad;
+
+     BaseType::InitCollocData(rgCollocData);
+
+     SurfaceTractionHelper<eType>::InitCollocData(*this, Rf);
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
+void SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitCollocDataRel(const std::array<Mat3x3, iNumEvalPoints>& Rf)
 {
      using namespace sp_grad;
 
      SpColVector<doublereal, 3 * iNumNodes> x(3 * iNumNodes, 0);
-     SpMatrix<doublereal, 3, 3> Relem(3, 3, 0);
-
-     BaseType::InitCollocData(rgCollocData);
 
      this->GetNodalPosition(x, 1., SpFunctionCall::REGULAR_RES);
 
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
+          SpMatrix<doublereal, 3, 3> Relem(3, 3, 0);
           SpColVector<doublereal, 3> e1 = rgCollocData[i].dHf_dr * x;
           SpColVector<doublereal, 3> e2 = rgCollocData[i].dHf_ds * x;
           SpColVector<doublereal, 3> e3 = Cross(e1, e2);
@@ -817,46 +876,74 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::SurfaceTraction(u
                Relem(j, 3) = e3(j) / Norm_e3;
           }
 
+          rgCollocData[i].dA = Norm_e3;
           rgCollocData[i].Rrel = Transpose(Relem) * Rf[i];
      }
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
-SurfaceTraction<ElementType, CollocationType, PressureSource>::~SurfaceTraction()
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
+void SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitCollocDataAbs(const std::array<Mat3x3, iNumEvalPoints>& Rf)
+{
+     using namespace sp_grad;
+
+     SpColVector<doublereal, 3 * iNumNodes> x(3 * iNumNodes, 0);
+
+     this->GetNodalPosition(x, 1., SpFunctionCall::REGULAR_RES);
+
+     for (index_type i = 0; i < iNumEvalPoints; ++i) {
+          SpColVector<doublereal, 3> e1 = rgCollocData[i].dHf_dr * x;
+          SpColVector<doublereal, 3> e2 = rgCollocData[i].dHf_ds * x;
+          SpColVector<doublereal, 3> e3 = Cross(e1, e2);
+
+          const doublereal Norm_e3 = Norm(e3);
+
+          if (Norm_e3 == 0.) {
+               silent_cerr("traction(" << this->GetLabel() << "): orientation matrix is singular ("
+                           << Norm_e3 << ")\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          rgCollocData[i].dA = Norm_e3;
+          rgCollocData[i].Rrel = Rf[i];
+     }     
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::~SurfaceTraction()
 {
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
-void SurfaceTraction<ElementType, CollocationType, PressureSource>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
+void SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 {
      *piNumRows = iNumDof;
      *piNumCols = 0;
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 template <typename T>
 inline void
-SurfaceTraction<ElementType, CollocationType, PressureSource>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                                      doublereal dCoef,
-                                                                      const sp_grad::SpGradientVectorHandler<T>& XCurr,
-                                                                      const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
-                                                                      enum sp_grad::SpFunctionCall func)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                             doublereal dCoef,
+                                                                             const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                                                             const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+                                                                             enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
 
      SpColVector<T, iNumNodes * 3> R(iNumDof, (iNumDof + iNumNodes) * iNumEvalPoints);
 
-     AssSurfaceTraction(R, dCoef, func);
+     SurfaceTractionHelper<eType>::AssSurfaceTraction(*this, R, dCoef, func);
 
      this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstMomentumIndex);
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 template <typename T>
 inline void
-SurfaceTraction<ElementType, CollocationType, PressureSource>::AssSurfaceTraction(sp_grad::SpColVector<T, iNumNodes * 3>& R,
-                                                                                  doublereal dCoef,
-                                                                                  enum sp_grad::SpFunctionCall func)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurfaceTractionRel(sp_grad::SpColVector<T, iNumNodes * 3>& R,
+                                                                                            doublereal dCoef,
+                                                                                            enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
 
@@ -914,12 +1001,41 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::AssSurfaceTractio
      }
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
+template <typename T>
+inline void
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurfaceTractionAbs(sp_grad::SpColVector<T, iNumNodes * 3>& R,
+                                                                                            doublereal dCoef,
+                                                                                            enum sp_grad::SpFunctionCall func)
+{
+     using namespace sp_grad;
+
+     SpColVector<doublereal, 3> fl_i(3, 0);
+     SpMatrix<doublereal, 3, iNumNodes> fl_n(3, iNumNodes, 0);
+     SpColVector<doublereal, 3> Fg_i(3, iNumDof + iNumNodes);
+     SpColVector<doublereal, iNumDof> HfT_Fg_i(iNumDof, iNumDof + iNumNodes);
+
+     this->oPressure.GetNodalLoad(fl_n, dCoef, func);
+
+     for (index_type i = 0; i < iNumEvalPoints; ++i) {
+          const doublereal alpha = CollocationType::dGetWeight(i);
+
+          for (index_type j = 1; j <= 3; ++j) {
+               fl_i(j) = Dot(rgCollocData[i].HA, Transpose(fl_n.GetRow(j))) * alpha;
+          }
+
+          Fg_i = (rgCollocData[i].Rrel * fl_i) * rgCollocData[i].dA;
+          HfT_Fg_i = Transpose(rgCollocData[i].Hf) * Fg_i;
+          R += HfT_Fg_i;
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 SubVectorHandler&
-SurfaceTraction<ElementType, CollocationType, PressureSource>::AssRes(SubVectorHandler& WorkVec,
-                                                                      doublereal dCoef,
-                                                                      const VectorHandler& XCurr,
-                                                                      const VectorHandler& XPrimeCurr)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssRes(SubVectorHandler& WorkVec,
+                                                                             doublereal dCoef,
+                                                                             const VectorHandler& XCurr,
+                                                                             const VectorHandler& XPrimeCurr)
 {
      DEBUGCOUTFNAME("SurfaceTraction::AssRes");
 
@@ -933,12 +1049,12 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::AssRes(SubVectorH
      return WorkVec;
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 VariableSubMatrixHandler&
-SurfaceTraction<ElementType, CollocationType, PressureSource>::AssJac(VariableSubMatrixHandler& WorkMat,
-                                                                      doublereal dCoef,
-                                                                      const VectorHandler& XCurr,
-                                                                      const VectorHandler& XPrimeCurr)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssJac(VariableSubMatrixHandler& WorkMat,
+                                                                             doublereal dCoef,
+                                                                             const VectorHandler& XCurr,
+                                                                             const VectorHandler& XPrimeCurr)
 {
      DEBUGCOUTFNAME("SurfaceTraction::AssJac");
 
@@ -951,14 +1067,14 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::AssJac(VariableSu
      return WorkMat;
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 void
-SurfaceTraction<ElementType, CollocationType, PressureSource>::AssJac(VectorHandler& JacY,
-                                                                      const VectorHandler& Y,
-                                                                      doublereal dCoef,
-                                                                      const VectorHandler& XCurr,
-                                                                      const VectorHandler& XPrimeCurr,
-                                                                      VariableSubMatrixHandler& WorkMat)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssJac(VectorHandler& JacY,
+                                                                             const VectorHandler& Y,
+                                                                             doublereal dCoef,
+                                                                             const VectorHandler& XCurr,
+                                                                             const VectorHandler& XPrimeCurr,
+                                                                             VariableSubMatrixHandler& WorkMat)
 {
      using namespace sp_grad;
 
@@ -971,26 +1087,26 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::AssJac(VectorHand
                                           SpFunctionCall::REGULAR_JAC);
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 template <typename T>
 void
-SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                                             const sp_grad::SpGradientVectorHandler<T>& XCurr,
-                                                                             enum sp_grad::SpFunctionCall func)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                                    const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                                                                    enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
 
      SpColVector<T, iNumNodes * 3> R(iNumDof, (iNumDof + iNumNodes) * iNumEvalPoints);
 
-     AssSurfaceTraction(R, 1., func);
+     SurfaceTractionHelper<eType>::AssSurfaceTraction(*this, R, 1., func);
 
      this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstPositionIndex);
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 VariableSubMatrixHandler&
-SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                                                                             const VectorHandler& XCurr)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                                                                                    const VectorHandler& XCurr)
 {
      using namespace sp_grad;
 
@@ -1002,10 +1118,10 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssJac(Var
      return WorkMat;
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 SubVectorHandler&
-SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssRes(SubVectorHandler& WorkVec,
-                                                                             const VectorHandler& XCurr)
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitialAssRes(SubVectorHandler& WorkVec,
+                                                                                    const VectorHandler& XCurr)
 {
      using namespace sp_grad;
 
@@ -1017,10 +1133,10 @@ SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialAssRes(Sub
      return WorkVec;
 }
 
-template <typename ElementType, typename CollocationType, typename PressureSource>
+template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
 void
-SurfaceTraction<ElementType, CollocationType, PressureSource>::InitialWorkSpaceDim(integer* piNumRows,
-                                                                                   integer* piNumCols) const
+SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitialWorkSpaceDim(integer* piNumRows,
+                                                                                          integer* piNumCols) const
 {
      *piNumRows = iNumDof;
      *piNumCols = 0;
@@ -1132,7 +1248,10 @@ ReadTractionLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
      constexpr index_type iNumNodes = ElementType::iNumNodes;
      constexpr index_type iNumEvalPoints = CollocationType::iNumEvalPoints;
 
-     typedef SurfaceTraction<ElementType, CollocationType, SurfLoadFromDrives<iNumNodes>> SurfaceTractionFromDrives;
+     typedef SurfaceTraction<ElementType, CollocationType, SurfLoadFromDrives<iNumNodes>, SurfaceTractionType::RELATIVE> SurfaceTractionRel;
+     typedef SurfaceTraction<ElementType, CollocationType, SurfLoadFromDrives<iNumNodes>, SurfaceTractionType::ABSOLUTE> SurfaceTractionAbs;
+
+     const SurfaceTractionType eTractionType = HP.IsKeyWord("absolute") ? SurfaceTractionType::ABSOLUTE : SurfaceTractionType::RELATIVE;
 
      std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
 
@@ -1183,9 +1302,18 @@ ReadTractionLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
 
      oSurfLoadFromDrives.PrintLogFile(out);
 
-     SAFENEWWITHCONSTRUCTOR(pElem,
-                            SurfaceTractionFromDrives,
-                            SurfaceTractionFromDrives(uLabel, rgNodes, std::move(oSurfLoadFromDrives), Rf, fOut));
+     switch (eTractionType) {
+     case SurfaceTractionType::RELATIVE:
+          SAFENEWWITHCONSTRUCTOR(pElem,
+                                 SurfaceTractionRel,
+                                 SurfaceTractionRel(uLabel, rgNodes, std::move(oSurfLoadFromDrives), Rf, fOut));
+          break;
+     case SurfaceTractionType::ABSOLUTE:
+          SAFENEWWITHCONSTRUCTOR(pElem,
+                                 SurfaceTractionAbs,
+                                 SurfaceTractionAbs(uLabel, rgNodes, std::move(oSurfLoadFromDrives), Rf, fOut));
+          break;
+     }
 
      out << '\n';
 
