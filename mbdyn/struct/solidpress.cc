@@ -424,7 +424,7 @@ SurfaceLoadElem::~SurfaceLoadElem()
 
 Elem::Type SurfaceLoadElem::GetElemType() const
 {
-     return Elem::PRESSURE_LOAD;
+     return Elem::SURFACE_LOAD;
 }
 
 void
@@ -1074,7 +1074,7 @@ ReadPressureLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
           throw ErrGeneric(MBDYN_EXCEPT_ARGS);
      }
 
-     const flag fOut = pDM->fReadOutput(HP, Elem::PRESSURE_LOAD);
+     const flag fOut = pDM->fReadOutput(HP, Elem::SURFACE_LOAD);
 
      std::ostream& out = pDM->GetLogFile();
 
@@ -1163,7 +1163,7 @@ ReadTractionLoad(DataManager* const pDM, MBDynParser& HP, const unsigned int uLa
           Rf_i = bReadOrientation ? HP.GetRotAbs(oGlobalRefFrame) : Eye3;
      }
 
-     const flag fOut = pDM->fReadOutput(HP, Elem::PRESSURE_LOAD);
+     const flag fOut = pDM->fReadOutput(HP, Elem::SURFACE_LOAD);
 
      std::ostream& out = pDM->GetLogFile();
 

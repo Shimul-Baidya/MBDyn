@@ -97,8 +97,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		psReadControlElems[Elem::BEAM],
 		psReadControlElems[Elem::PLATE],
                 psReadControlElems[Elem::SOLID],
-                psReadControlElems[Elem::PRESSURE_LOAD],
-                psReadControlElems[Elem::TRACTION_LOAD],
+                psReadControlElems[Elem::SURFACE_LOAD],
 		psReadControlElems[Elem::AIRPROPERTIES],
 		psReadControlElems[Elem::INDUCEDVELOCITY],
 		psReadControlElems[Elem::AEROMODAL],
@@ -195,8 +194,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		BEAMS,
 		PLATES,
                 SOLIDS,
-                PRESSURE_LOADS,
-                TRACTION_LOADS,
+                SURFACE_LOADS,
 		AIRPROPERTIES,
 		INDUCEDVELOCITYELEMENTS,
 		AEROMODALS,
@@ -420,16 +418,10 @@ DataManager::ReadControl(MBDynParser& HP,
 			// }
 		} break;
 
-                case PRESSURE_LOADS: {
+                case SURFACE_LOADS: {
                         integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
-                        ElemData[Elem::PRESSURE_LOAD].iExpectedNum = iDmy;
-                        DEBUGLCOUT(MYDEBUG_INPUT, "PressureLoads: " << iDmy << std::endl);
-                } break;
-
-                case TRACTION_LOADS: {
-                        integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
-                        ElemData[Elem::TRACTION_LOAD].iExpectedNum = iDmy;
-                        DEBUGLCOUT(MYDEBUG_INPUT, "TractionLoads: " << iDmy << std::endl);
+                        ElemData[Elem::SURFACE_LOAD].iExpectedNum = iDmy;
+                        DEBUGLCOUT(MYDEBUG_INPUT, "SurfaceLoads: " << iDmy << std::endl);
                 } break;
                      
 		/* Elementi aerodinamici: proprieta' dell'aria */
@@ -692,18 +684,10 @@ DataManager::ReadControl(MBDynParser& HP,
 						<< std::endl);
 					break;
                                         
-                                case PRESSURE_LOADS:
-                                        ElemData[Elem::PRESSURE_LOAD].ToBeUsedInAssembly(true);
+                                case SURFACE_LOADS:
+                                        ElemData[Elem::SURFACE_LOAD].ToBeUsedInAssembly(true);
                                         DEBUGLCOUT(MYDEBUG_INPUT,
-                                                "Pressure loads will be used "
-                                                "in initial joint assembly"
-                                                << std::endl);
-                                        break;
-
-                                case TRACTION_LOADS:
-                                        ElemData[Elem::TRACTION_LOAD].ToBeUsedInAssembly(true);
-                                        DEBUGLCOUT(MYDEBUG_INPUT,
-                                                "Traction loads will be used "
+                                                "Surface loads will be used "
                                                 "in initial joint assembly"
                                                 << std::endl);
                                         break;
@@ -1213,12 +1197,8 @@ EndOfUse:
                                         ElemData[Elem::SOLID].DefaultOut(true);
                                         break;
 
-                                case PRESSURE_LOADS:
-                                        ElemData[Elem::PRESSURE_LOAD].DefaultOut(true);
-                                        break;
-
-                                case TRACTION_LOADS:
-                                        ElemData[Elem::TRACTION_LOAD].DefaultOut(true);
+                                case SURFACE_LOADS:
+                                        ElemData[Elem::SURFACE_LOAD].DefaultOut(true);
                                         break;
 
 				case RIGIDBODIES:

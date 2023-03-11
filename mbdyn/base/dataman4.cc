@@ -402,18 +402,13 @@ DataManager::ReadElems(MBDynParser& HP)
                         case PRESSUREQ4:
                         case PRESSUREQ8:
                         case PRESSUREQ8R:
-                        case PRESSURET6: {
-                             DEBUGLCOUT(MYDEBUG_INPUT, "pressure loads\n");
-                             Typ = Elem::PRESSURE_LOAD;
-                             break;
-                        }
-
+                        case PRESSURET6:
                         case TRACTIONQ4:
                         case TRACTIONQ8:
                         case TRACTIONQ8R:
                         case TRACTIONT6: {
-                             DEBUGLCOUT(MYDEBUG_INPUT, "traction loads\n");
-                             Typ = Elem::TRACTION_LOAD;
+                             DEBUGLCOUT(MYDEBUG_INPUT, "surface loads\n");
+                             Typ = Elem::SURFACE_LOAD;
                              break;
                         }
 
@@ -617,14 +612,11 @@ DataManager::ReadElems(MBDynParser& HP)
                                 case PRESSUREQ8:
                                 case PRESSUREQ8R:
                                 case PRESSURET6:
-                                        t = Elem::PRESSURE_LOAD;
-                                        break;
-
                                 case TRACTIONQ4:
                                 case TRACTIONQ8:
                                 case TRACTIONQ8R:
-                                case TRACTIONT6:
-                                        t = Elem::TRACTION_LOAD;
+                                case TRACTIONT6:                                     
+                                        t = Elem::SURFACE_LOAD;
                                         break;
 
                                 case INDUCEDVELOCITY:
@@ -1056,14 +1048,11 @@ DataManager::ReadElems(MBDynParser& HP)
                                                 case PRESSUREQ8:
                                                 case PRESSUREQ8R:
                                                 case PRESSURET6:
-                                                        ppE = ppFindElem(Elem::PRESSURE_LOAD, uLabel);
-                                                        break;
-
                                                 case TRACTIONQ4:
                                                 case TRACTIONQ8:
                                                 case TRACTIONQ8R:
-                                                case TRACTIONT6:
-                                                        ppE = ppFindElem(Elem::TRACTION_LOAD, uLabel);
+                                                case TRACTIONT6:                                                     
+                                                        ppE = ppFindElem(Elem::SURFACE_LOAD, uLabel);
                                                         break;
 
 						case INDUCEDVELOCITY:
@@ -1797,12 +1786,20 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
         case PRESSUREQ4:
         case PRESSUREQ8:
         case PRESSUREQ8R:
-        case PRESSURET6: {
+        case PRESSURET6:
+        case TRACTIONQ4:
+        case TRACTIONQ8:
+        case TRACTIONQ8R:
+        case TRACTIONT6: {
                 static constexpr char sType[][12] = {
                         "pressureq4",
                         "pressureq8",
                         "pressureq8r",
-                        "pressuret6"
+                        "pressuret6",
+                        "tractionq4",
+                        "tractionq8",
+                        "tractionq8r",
+                        "tractiont6"                        
                 };
 
                 ASSERT(CurrType - PRESSUREQ4 < sizeof(sType) / sizeof(sType[0]));
@@ -1813,16 +1810,16 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                      throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                 }
 
-                if (iNumTypes[Elem::PRESSURE_LOAD]-- <= 0) {
+                if (iNumTypes[Elem::SURFACE_LOAD]-- <= 0) {
                         DEBUGCERR("");
                         silent_cerr("line " << HP.GetLineData() << ": "
                                 << sType[CurrType - PRESSUREQ4] << "(" << uLabel << ") "
-                                "exceeds pressure load elements number" << std::endl);
+                                "exceeds surface load elements number" << std::endl);
 
                         throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
                 }
 
-                if (pFindElem(Elem::PRESSURE_LOAD, uLabel) != nullptr) {
+                if (pFindElem(Elem::SURFACE_LOAD, uLabel) != nullptr) {
                         DEBUGCERR("");
                         silent_cerr("line " << HP.GetLineData() << ": "
                                 << sType[CurrType - PRESSUREQ4] << "(" << uLabel << ") "
@@ -1844,54 +1841,6 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                 case PRESSURET6:
                      pE = ReadPressureLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);
                      break;
-                default:
-                     ASSERT(0);
-                }
-
-                if (pE) {
-                        ppE = InsertElem(ElemData[Elem::PRESSURE_LOAD], uLabel, pE);
-                }
-
-                break;
-        }
-        case TRACTIONQ4:
-        case TRACTIONQ8:
-        case TRACTIONQ8R:
-        case TRACTIONT6: {
-                static constexpr char sType[][12] = {
-                        "tractionq4",
-                        "tractionq8",
-                        "tractionq8r",
-                        "tractiont6"
-                };
-
-                ASSERT(CurrType - TRACTIONQ4 < sizeof(sType) / sizeof(sType[0]));
-
-                if (!bUseAutoDiff()) {
-                     silent_cerr("element type " << sType[CurrType - TRACTIONQ4] << " requires support for automatic differentiation at line " << HP.GetLineData()
-                                 << "\nadd the statement \"use automatic differentiation;\" inside the control data section in order to enable it!\n");
-                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-                }
-
-                if (iNumTypes[Elem::TRACTION_LOAD]-- <= 0) {
-                        DEBUGCERR("");
-                        silent_cerr("line " << HP.GetLineData() << ": "
-                                << sType[CurrType - TRACTIONQ4] << "(" << uLabel << ") "
-                                "exceeds traction load elements number" << std::endl);
-
-                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
-                }
-
-                if (pFindElem(Elem::TRACTION_LOAD, uLabel) != nullptr) {
-                        DEBUGCERR("");
-                        silent_cerr("line " << HP.GetLineData() << ": "
-                                << sType[CurrType - TRACTIONQ4] << "(" << uLabel << ") "
-                                "already defined" << std::endl);
-
-                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
-                }
-
-                switch (CurrType) {
                 case TRACTIONQ4:
                      pE = ReadTractionLoad<Quadrangle4, Gauss2x2>(this, HP, uLabel);
                      break;
@@ -1903,17 +1852,15 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                      break;
                 case TRACTIONT6:
                      pE = ReadTractionLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);
-                     break;
+                     break;                     
                 default:
                      ASSERT(0);
                 }
 
                 if (pE) {
-                        ppE = InsertElem(ElemData[Elem::TRACTION_LOAD], uLabel, pE);
+                        ppE = InsertElem(ElemData[Elem::SURFACE_LOAD], uLabel, pE);
                 }
-
-                break;
-        }
+        } break;
 	/* Elementi aerodinamici: rotori */
 	case ROTOR:
 	case INDUCEDVELOCITY: {

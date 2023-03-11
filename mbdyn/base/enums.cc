@@ -49,7 +49,7 @@ const char* psElemNames[] = {
    "Beam",
    "Plate",
    "Solid",
-   "Pressure Load",
+   "Surface Load",
    
    "Force",
 
@@ -91,8 +91,7 @@ const char* psReadElemsElems[] = {
    "beam",
    "plate",
    "solid",
-   "pressure" "load",
-   "traction" "load",
+   "surface" "load",
 
    "force",
 
@@ -137,8 +136,7 @@ const char* psReadControlElems[] = {
    "beams",
    "plates",
    "solids",
-   "pressure" "loads",
-   "traction" "loads",
+   "surface" "loads",
 
    "forces",
 
