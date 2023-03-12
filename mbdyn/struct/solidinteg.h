@@ -49,7 +49,7 @@
 class Gauss2 {
 public:
      static constexpr sp_grad::index_type iGaussOrder = 2;
-     static constexpr doublereal ri[] = {0.577350269189626, -0.577350269189626};
+     static constexpr doublereal ri[] = {sqrt(1./3.), -sqrt(1./3.)};
      static constexpr doublereal alphai[] = {1.0, 1.0};
      static constexpr doublereal ri_lumped[] = {1., -1.};
      static constexpr doublereal alphai_lumped[] = {1.0, 1.0};
@@ -59,8 +59,8 @@ class Gauss3 {
 public:
      static constexpr sp_grad::index_type iGaussOrder = 3;
 
-     static constexpr doublereal ri[] = {0.774596669241483, 0., -0.774596669241483};
-     static constexpr doublereal alphai[] = {0.555555555555556, 0.888888888888889, 0.555555555555556};
+     static constexpr doublereal ri[] = {sqrt(3./5.), 0., -sqrt(3./5.)};
+     static constexpr doublereal alphai[] = {5./9., 8./9., 5./9.};
      static constexpr doublereal ri_lumped[] = {1., 0., -1.};
      static constexpr doublereal alphai_lumped[] = {2./3., 2./3., 2./3.};
 };
@@ -105,13 +105,14 @@ public:
      static inline doublereal
      dGetWeight(sp_grad::index_type i);
 
-private:
-     static constexpr double A = 0.470142064105115;
-     static constexpr double B = 0.101286507323456;
-     static constexpr double P1 = 0.066197076394253;
-     static constexpr double P2 = 0.062969590272413;
-     static constexpr doublereal zeta[7] =  {1./3., A, 1. - 2. * A, A, B, 1. - 2. * B, B};
-     static constexpr doublereal eta[7] = {1./3., A, A, 1. - 2. * A, B, B, 1. - 2. * B};
+     // https://zhilin.math.ncsu.edu/
+     // Chapter 24: Implementation of Iso-P Triangular Elements
+     static constexpr doublereal A = (sqrt(15.) + 6.) / 2.1E+1;
+     static constexpr doublereal B = (6. - sqrt(15.)) / 2.1E+1;
+     static constexpr doublereal P1 = (sqrt(15.) + 155.) / 2.4E+3;
+     static constexpr doublereal P2 = (155. - sqrt(15.)) / 2.4E+3;
+     static constexpr doublereal zeta[7] = {1./3., A, 1. - 2. * A, A, B, 1. - 2. * B, B};
+     static constexpr doublereal eta[7]  = {1./3., A, A, 1. - 2. * A, B, B, 1. - 2. * B};
      static constexpr doublereal w[7] = {9./80., P1, P1, P1, P2, P2, P2};
 };
 
@@ -289,7 +290,6 @@ public:
      static inline doublereal
      dGetWeightMassLumped(sp_grad::index_type i);
 
-private:
      static constexpr doublereal a1 = 0.25;
      static constexpr doublereal b1 = 1. / 6.;
      static constexpr doublereal c1 = 0.5;
