@@ -339,7 +339,16 @@ public:
 
      virtual void
      GetConnectedNodes(std::vector<const Node*>& connectedNodes) const override;
+
+     virtual doublereal dGetM() const override;
+     virtual Vec3 GetS_int() const override;
+     virtual Mat3x3 GetJ_int() const override;
 protected:
+     template <typename T>
+     inline void
+     GetNodalPositions(sp_grad::SpMatrix<T, 3, iNumNodes>& x,
+                       doublereal dCoef,
+                       sp_grad::SpFunctionCall func) const;
      template <typename T>
      inline void
      GetNodalDeformations(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
@@ -518,6 +527,9 @@ public:
             const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
+
+     virtual Vec3 GetB_int() const override;
+     virtual Vec3 GetG_int() const override;
 
 private:
      template <typename T>
@@ -1161,11 +1173,122 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Get
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
+doublereal
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::dGetM() const
+{
+     using namespace sp_grad;
+
+     doublereal dm = 0.;
+
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          CollocationType::GetPositionMass(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
+          const SpMatrix<doublereal, 3, 3> J = Transpose(x0 * hd);
+          const doublereal detJ = Det(J);
+
+          if (detJ <= 0.) {
+               silent_cerr("solid(" << GetLabel() << "): Jacobian is singular: det(J) = " << detJ << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal rho = Dot(h, rhon); // interpolate from nodes to collocation points
+          dm += rho * detJ * alpha;
+     }
+
+     return dm;
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
+Vec3
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetS_int() const
+{
+     using namespace sp_grad;
+
+     Vec3 dS(::Zero3);
+
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+     SpMatrixA<doublereal, 3, iNumNodes> x;
+
+     GetNodalPositions(x, 1., SpFunctionCall::REGULAR_RES);
+
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          CollocationType::GetPositionMass(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
+          const SpMatrix<doublereal, 3, 3> J = Transpose(x0 * hd);
+          const SpColVector<doublereal, 3> X = x * h;
+          const doublereal detJ = Det(J);
+
+          if (detJ <= 0.) {
+               silent_cerr("solid(" << GetLabel() << "): Jacobian is singular: det(J) = " << detJ << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal rho = Dot(h, rhon); // interpolate from nodes to collocation points
+
+          for (index_type j = 1; j <= 3; ++j) {
+               dS(j) += rho * detJ * alpha * X(j);
+          }
+     }
+
+     return dS;
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
+Mat3x3
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetJ_int() const
+{
+     using namespace sp_grad;
+
+     Mat3x3 dJ(::Zero3x3);
+
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+     SpMatrixA<doublereal, 3, iNumNodes> x;
+
+     GetNodalPositions(x, 1., SpFunctionCall::REGULAR_RES);
+
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          CollocationType::GetPositionMass(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
+          const SpMatrix<doublereal, 3, 3> J = Transpose(x0 * hd);
+          const SpColVector<doublereal, 3> X = x * h;
+          const doublereal detJ = Det(J);
+
+          if (detJ <= 0.) {
+               silent_cerr("solid(" << GetLabel() << "): Jacobian is singular: det(J) = " << detJ << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal rho = Dot(h, rhon); // interpolate from nodes to collocation points
+
+          dJ -= Mat3x3(MatCrossCross, Vec3(X.begin()), Vec3(X.begin()) * (rho * detJ * alpha));
+     }
+
+     return dJ;
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
 template <typename T>
 void
-SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetNodalDeformations(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
-                                                                                                  const doublereal dCoef,
-                                                                                                  const sp_grad::SpFunctionCall func) const
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetNodalPositions(sp_grad::SpMatrix<T, 3, iNumNodes>& x,
+                                                                                               const doublereal dCoef,
+                                                                                               const sp_grad::SpFunctionCall func) const
 {
      using namespace sp_grad;
 
@@ -1175,7 +1298,24 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Get
           rgNodes[j - 1]->GetXCurr(Xj, dCoef, func);
 
           for (index_type i = 1; i <= 3; ++i) {
-               u(i, j) = std::move(Xj(i));
+               x(i, j) = std::move(Xj(i));
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
+template <typename T>
+void
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::GetNodalDeformations(sp_grad::SpMatrix<T, 3, iNumNodes>& u,
+                                                                                                  const doublereal dCoef,
+                                                                                                  const sp_grad::SpFunctionCall func) const
+{
+     using namespace sp_grad;
+
+     GetNodalPositions(u, dCoef, func);
+
+     for (index_type j = 1; j <= iNumNodes; ++j) {
+          for (index_type i = 1; i <= 3; ++i) {
                u(i, j) -= x0(i, j);
           }
      }
@@ -1749,6 +1889,90 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssJac(VectorHandl
                                           XCurr,
                                           XPrimeCurr,
                                           SpFunctionCall::REGULAR_JAC);
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType>
+Vec3
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::GetB_int() const
+{
+     using namespace sp_grad;
+
+     Vec3 dBeta(::Zero3);
+
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+     SpMatrixA<doublereal, 3, iNumNodes> v;
+
+     this->GetNodalVelocities(v, 1., SpFunctionCall::REGULAR_RES);
+
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          CollocationType::GetPositionMass(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
+          const SpMatrix<doublereal, 3, 3> J = Transpose(this->x0 * hd);
+          const SpColVector<doublereal, 3> V = v * h;
+          const doublereal detJ = Det(J);
+
+          if (detJ <= 0.) {
+               silent_cerr("solid(" << this->GetLabel() << "): Jacobian is singular: det(J) = " << detJ << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal rho = Dot(h, this->rhon); // interpolate from nodes to collocation points
+
+          for (index_type j = 1; j <= 3; ++j) {
+               dBeta(j) += rho * detJ * alpha * V(j);
+          }
+     }
+
+     return dBeta;
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType>
+Vec3
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::GetG_int() const
+{
+     using namespace sp_grad;
+
+     Vec3 dGamma(::Zero3);
+
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+     SpMatrixA<doublereal, 3, iNumNodes> x, v;
+
+     this->GetNodalPositions(x, 1., SpFunctionCall::REGULAR_RES);
+     this->GetNodalVelocities(v, 1., SpFunctionCall::REGULAR_RES);
+
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          CollocationType::GetPositionMass(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
+          const SpMatrix<doublereal, 3, 3> J = Transpose(this->x0 * hd);
+          const SpColVector<doublereal, 3> X = x * h;
+          const SpColVector<doublereal, 3> V = v * h;
+          const doublereal detJ = Det(J);
+
+          if (detJ <= 0.) {
+               silent_cerr("solid(" << this->GetLabel() << "): Jacobian is singular: det(J) = " << detJ << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal rho = Dot(h, this->rhon); // interpolate from nodes to collocation points
+
+          const SpColVector<doublereal, 3> XtildeV = Cross(X, V);
+
+          for (index_type j = 1; j <= 3; ++j) {
+               dGamma(j) += rho * detJ * alpha * XtildeV(j);
+          }
+     }
+
+     return dGamma;
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType>
