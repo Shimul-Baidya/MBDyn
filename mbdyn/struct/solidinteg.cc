@@ -42,6 +42,73 @@
 
 #include "solidinteg.h"
 
+namespace {
+     constexpr doublereal dCollocationFunction1D(const doublereal x) {
+          return x + 3. * x * x + 2.;
+     }
+
+     constexpr doublereal dCollocationFunction1DRes() {
+          // maxima: integrate(1*x+3*x^2+2,x,-1,1);
+          return 6.;
+     }
+
+     constexpr doublereal dCollocationTest1DRec(const doublereal r[], const doublereal alpha[], const int N) {
+          return dCollocationFunction1D(r[0]) * alpha[0]
+               + ((N > 1) ? dCollocationTest1DRec(r + 1, alpha + 1, N - 1) : 0.); // allow use to use -std=c++11
+     }
+
+     static constexpr doublereal dTol1D = 0.;
+     
+     constexpr bool bCollocationTest1D(const doublereal r[], const doublereal alpha[], const int N) {
+          return std::fabs(dCollocationTest1DRec(r, alpha, N) / dCollocationFunction1DRes() - 1.) <= dTol1D;
+     }
+
+     constexpr doublereal dCollocationFunction2D(const doublereal x, const doublereal y) {
+          return 1. + x + y + x * y + x * x + y * y;
+     }
+
+     constexpr doublereal dCollocationFunction2DRes() {
+          // maxima: integrate(subst([yi=y], integrate(1 + x + y + x * y + x * x + y * y, x, 0, 1 - yi)), y, 0, 1);
+          return 25./24.;
+     }
+
+     constexpr doublereal dCollocationTest2DRec(const doublereal r[], const doublereal s[], const doublereal alpha[], const int N) {
+          return dCollocationFunction2D(r[0], s[0]) * alpha[0]
+               + ((N > 1) ? dCollocationTest2DRec(r + 1, s + 1, alpha + 1, N - 1) : 0.); // allow use to use -std=c++11
+     }
+
+     static constexpr doublereal dTol2D = 0.;
+     
+     constexpr bool bCollocationTest2D(const doublereal r[], const doublereal s[], const doublereal alpha[], const int N) {
+          return std::fabs(dCollocationTest2DRec(r, s, alpha, N) / dCollocationFunction2DRes() - 1.) <= dTol2D;
+     }
+
+     constexpr doublereal dCollocationFunction3D(const doublereal x, const doublereal y, const double z) {
+          return 1. + x + y + z + x * x + y * y + z * z;
+     }
+
+     constexpr doublereal dCollocationTest3DRec(const doublereal r[], const doublereal s[], const doublereal t[], const doublereal alpha[], const int N) {
+          return dCollocationFunction3D(r[0], s[0], t[0]) * alpha[0]
+               + ((N > 1) ? dCollocationTest3DRec(r + 1, s + 1, t + 1, alpha + 1, N - 1) : 0.); // allow use to use -std=c++11
+     }
+
+     constexpr doublereal dCollocationFunction3DRes() {
+          // maxima: integrate(subst([zi=z], integrate(subst([yi=y], integrate(1. + x + y + z + x * x + y * y + z * z, x, 0, 1 - yi - zi)), y, 0, 1 - zi)), z, 0, 1);
+          return 41. / 120.;
+     }
+
+     static constexpr doublereal dTol3D = 0.;
+     
+     constexpr bool bCollocationTest3D(const doublereal r[], const doublereal s[], const doublereal t[], const doublereal alpha[], const int N) {
+          return std::fabs(dCollocationTest3DRec(r, s, t, alpha, N) / dCollocationFunction3DRes() - 1.) <= dTol3D;
+     }
+     
+     static_assert(bCollocationTest1D(Gauss2::ri, Gauss2::alphai, 2));
+     static_assert(bCollocationTest1D(Gauss3::ri, Gauss3::alphai, 3));
+     static_assert(bCollocationTest2D(CollocTria6h::zeta, CollocTria6h::eta, CollocTria6h::w, 7));
+     static_assert(bCollocationTest3D(CollocTet10h::r1, CollocTet10h::s1, CollocTet10h::t1, CollocTet10h::w1, 5));     
+}
+
 constexpr sp_grad::index_type Gauss2::iGaussOrder;
 constexpr doublereal Gauss2::ri[];
 constexpr doublereal Gauss2::alphai[];
