@@ -2425,6 +2425,8 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 			} else if (HP.IsKeyWord("user" "defined") || HP.IsKeyWord("loadable")) {
 				Type = Elem::LOADABLE;
 
+                        } else if (HP.IsKeyWord("solid")) {
+				Type = Elem::SOLID;
 #if 0
 			} else if (HP.IsKeyWord("...")) {
 				/* other types with inertia */
