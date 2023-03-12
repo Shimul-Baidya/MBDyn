@@ -2290,7 +2290,6 @@ namespace {
 
      private:
           void UpdateCavitationState();
-          void ResolveCavitationState(VectorHandler& X, VectorHandler& XP);
           inline void UpdateTheta(const VectorHandler& XCurr, const VectorHandler& XPrimeCurr);
           inline void GetTheta(std::array<doublereal, iNumDofMax>& Theta, doublereal dCoef) const;
           inline void GetTheta(std::array<SpGradient, iNumDofMax>& Theta, doublereal dCoef) const;
@@ -11374,44 +11373,6 @@ namespace {
           }
 
           return iNumCols;
-     }
-
-     void HydroActiveComprNodeMCP::ResolveCavitationState(VectorHandler& X, VectorHandler& XP)
-     {
-          if (eCavitationState == HydroFluid::CAVITATION_REGION) {
-               Theta[0] = 0.;
-               dTheta_dt[0] = 0.;
-
-               const doublereal dCoef1 = pGetMesh()->pGetParent()->dGetStepIntegratorCoef(iGetFirstDofIndex(eCurrFunc) + 1);
-               const doublereal Theta1Prev = Theta[1];
-
-               Theta[1] = std::max(0., std::min(1., Theta[1]));
-               dTheta_dt[1] += (Theta[1] - Theta1Prev) / dCoef1;
-          } else {
-               Theta[1] = 1.;
-               dTheta_dt[1] = 0.;
-
-               const doublereal dCoef0 = pGetMesh()->pGetParent()->dGetStepIntegratorCoef(iGetFirstDofIndex(eCurrFunc));
-               const doublereal Theta0Prev = Theta[0];
-
-               Theta[0] = std::max(0., Theta[0]);
-               dTheta_dt[0] += (Theta[0] - Theta0Prev) / dCoef0;
-          }
-
-
-          for (index_type i = 0; i < iNumDofMax; ++i) {
-               const integer iIndex = iGetFirstDofIndex(eCurrFunc) + i;
-
-               HYDRO_ASSERT(iIndex > 0);
-               HYDRO_ASSERT(iIndex <= X.iGetSize());
-
-               X.PutCoef(iIndex, Theta[i] / s[i]);
-               XP.PutCoef(iIndex, dTheta_dt[i] / s[i]);
-          }
-
-          HYDRO_ASSERT(GetCavitationState() == HydroFluid::CAVITATION_REGION ? (Theta[0] == 0.) : (Theta[0] >= 0.));
-          HYDRO_ASSERT(GetCavitationState() == HydroFluid::CAVITATION_REGION ? (Theta[1] <= 1.) : (Theta[1] == 1.));
-          HYDRO_ASSERT(Theta[1] >= 0.);
      }
 
      void HydroActiveComprNodeMCP::UpdateCavitationState()
