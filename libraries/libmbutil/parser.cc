@@ -1264,15 +1264,23 @@ HighParser::GetStringWithDelims(enum Delims Del, bool escape)
 
         /* Se trova il delimitatore sinistro, legge la stringa */
         if (cIn == cLdelim) {
+		bool bEoS(false);
                 for (cIn = pIn->get(); cIn != cRdelim; cIn = pIn->get()) {
                         /* Attenzione! cosi' la legge tutta,
                          * ma ne tiene solo iBufSize-1 caratteri */
                         if (pIn->eof()) {
                                 /* FIXME: this should be an error ... */
+				silent_cerr("Warning, end-of-file encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters at line " << GetLineData() << std::endl);
                                 sTmp[0] = '\0';
                                 return s;
 
-                        } else if (sTmp < s + iDefaultBufSize - 1) {
+                        } else if (bEoS || (sTmp >= s + iDefaultBufSize - 1)) {
+				if (!bEoS) {
+					bEoS = true;
+					silent_cerr("Warning, end-of-buffer encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters; reading until end-of-string, but ignoring remaining characters at line " << GetLineData() << std::endl);
+				}
+
+			} else {
                                 if (cIn == ESCAPE_CHAR) {
                                         cIn = pIn->get();
                                         if (cIn == '\n') {
