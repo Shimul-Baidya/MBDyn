@@ -1264,21 +1264,18 @@ HighParser::GetStringWithDelims(enum Delims Del, bool escape)
 
         /* Se trova il delimitatore sinistro, legge la stringa */
         if (cIn == cLdelim) {
-		bool bEoS(false);
                 for (cIn = pIn->get(); cIn != cRdelim; cIn = pIn->get()) {
                         /* Attenzione! cosi' la legge tutta,
                          * ma ne tiene solo iBufSize-1 caratteri */
                         if (pIn->eof()) {
                                 /* FIXME: this should be an error ... */
-				silent_cerr("Warning, end-of-file encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters at line " << GetLineData() << std::endl);
+				silent_cerr("End-of-file encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters at line " << GetLineData() << std::endl);
                                 sTmp[0] = '\0';
-                                return s;
+                		throw EndOfFile(MBDYN_EXCEPT_ARGS);
 
-                        } else if (bEoS || (sTmp >= s + iDefaultBufSize - 1)) {
-				if (!bEoS) {
-					bEoS = true;
-					silent_cerr("Warning, end-of-buffer encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters; reading until end-of-string, but ignoring remaining characters at line " << GetLineData() << std::endl);
-				}
+                        } else if (sTmp >= s + iDefaultBufSize - 1) {
+				silent_cerr("End-of-buffer encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters at line " << GetLineData() << std::endl);
+                		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 
 			} else {
                                 if (cIn == ESCAPE_CHAR) {
