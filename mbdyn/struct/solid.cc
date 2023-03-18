@@ -265,6 +265,7 @@ public:
                      const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
                      const sp_grad::SpColVector<doublereal, iNumNodes>& rhon,
                      std::array<SolidMaterialData, iNumEvalPointsStiffness>&& rgMaterialData,
+                     const RigidBodyKinematics* pRBK,
                      flag fOut);
      virtual ~SolidElemStatic();
 
@@ -399,6 +400,12 @@ protected:
      GaussToNodal(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& taun,
                   const sp_grad::SpMatrix<doublereal, iNumEvalPointsStiffness, iNumComp>& taug) const;
 
+     template <typename T>
+     inline void
+     AssInertiaVecRBK(const sp_grad::SpMatrix<T, 3, iNumNodes>& u,
+                      sp_grad::SpColVector<T, iNumDof>& R,
+                      const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
+
      struct CollocData {
           static constexpr sp_grad::index_type iNumNodes = SolidElemStatic::iNumNodes;
           static constexpr sp_grad::index_type iNumDof = SolidElemStatic::iNumDof;
@@ -466,6 +473,7 @@ protected:
      std::array<const StructNodeType*, iNumNodes> rgNodes;
      const sp_grad::SpColVectorA<doublereal, iNumNodes> rhon;
      std::array<CollocData, iNumEvalPointsStiffness> rgCollocData;
+     const RigidBodyKinematics* const pRBK;
 };
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType>
@@ -538,16 +546,9 @@ private:
                    sp_grad::SpColVector<T, iNumDof>& R,
                    const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
 
-     template <typename T>
-     inline void
-     AssInertiaVecRBK(const sp_grad::SpMatrix<T, 3, iNumNodes>& u,
-                      sp_grad::SpColVector<T, iNumDof>& R,
-                      const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
-
      inline void
      AssMassMatrix();
 
-     const RigidBodyKinematics* const pRBK;
      sp_grad::SpMatrixA<doublereal, iNumDof, iNumDof> M;
 };
 
@@ -671,10 +672,12 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Sol
                                                                                              const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesDisp,
                                                                                              const sp_grad::SpColVector<doublereal, iNumNodes>& rhon,
                                                                                              std::array<SolidMaterialData, iNumEvalPointsStiffness>&& rgMaterialData,
+                                                                                             const RigidBodyKinematics* pRBK,
                                                                                              flag fOut)
 : Elem{uLabel, fOut},
   SolidElem{uLabel, fOut},
-  rhon{rhon}
+  rhon{rhon},
+  pRBK{pRBK}
 {
      using namespace sp_grad;
 
@@ -784,11 +787,16 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      oDofMap.InsertDof(u);
      oDofMap.InsertDone();
 
-     constexpr index_type iNumColsR = iNumDof * iNumEvalPointsStiffness;
+     const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (pRBK != nullptr));
 
-     SpColVectorA<T, iNumDof, iNumColsR> R;
+     SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
 
      AssStiffnessVecElastic(u, R, dCoef, func, oDofMap);
+
+     if (pRBK) {
+          AssInertiaVecRBK(u, R, oDofMap);
+          ASSERT(R.iGetMaxSize() <= iNumColsR);
+     }
 
      if (pGravity) {
           AssGravityLoadVec(R, dCoef, func);
@@ -820,13 +828,18 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
 
-     constexpr index_type iNumColsR = iNumDof * iNumEvalPointsStiffness;
+     const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (pRBK != nullptr));
 
-     SpColVectorA<T, iNumDof, iNumColsR> R;
+     SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
 
      AssStiffnessVecViscoElastic(u, uP, R, dCoef, func, oDofMap);
 
      ASSERT(R.iGetMaxSize() <= iNumColsR);
+
+     if (pRBK) {
+          AssInertiaVecRBK(u, R, oDofMap);
+          ASSERT(R.iGetMaxSize() <= iNumColsR);
+     }
 
      if (pGravity) {
           AssGravityLoadVec(R, dCoef, func);
@@ -1424,6 +1437,52 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Gau
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
+template <typename T>
+void
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::AssInertiaVecRBK(const sp_grad::SpMatrix<T, 3, iNumNodes>& u,
+                                                                                              sp_grad::SpColVector<T, iNumDof>& R,
+                                                                                              const sp_grad::SpGradExpDofMapHelper<T>& oDofMap)
+{
+     using namespace sp_grad;
+
+     ASSERT(pRBK != nullptr);
+
+     SpColVectorA<T, 3, iNumNodes> Xc;
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+     SpColVectorA<T, 3, iNumNodes> frbk;
+
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          CollocationType::GetPositionMass(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const SpMatrix<doublereal, 3, 3> J = Transpose(x0 * hd);
+
+          Xc = Zero3;
+
+          for (index_type j = 1; j <= iNumNodes; ++j) {
+               Xc += (u.GetCol(j) + x0.GetCol(j)) * h(j);
+          }
+
+          const doublereal rho = Dot(h, rhon);
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
+          const doublereal dm = rho * alpha * Det(J);
+
+          frbk.MapAssign((pRBK->GetXPP()
+                          + Cross(pRBK->GetWP(), Xc)
+                          + Cross(pRBK->GetW(), Cross(pRBK->GetW(), Xc))) * dm, oDofMap);
+
+          for (index_type i = 1; i <= iNumNodes; ++i) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    R((i - 1) * 3 + j) -= h(i) * frbk(j); // FIXME: Use oDofMap!
+               }
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
 void
 SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::ComputeStressStrain(sp_grad::SpMatrix<doublereal, iNumEvalPointsStiffness, 6>& epsilon,
                                                                                                  sp_grad::SpMatrix<doublereal, iNumEvalPointsStiffness, 6>& tau) const
@@ -1593,8 +1652,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::SolidElemDynamic(u
                                                                                const RigidBodyKinematics* const pRBK,
                                                                                flag fOut)
 :Elem{uLabel, fOut},
- SolidElemStaticType{uLabel, rgNodes, rhon, std::move(rgMaterialData), fOut},
- pRBK(pRBK)
+ SolidElemStaticType{uLabel, rgNodes, rhon, std::move(rgMaterialData), pRBK, fOut}
 {
      AssMassMatrix();
 }
@@ -1672,7 +1730,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResElastic(sp_g
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
 
-     const index_type iNumColsR = (1 + 3 * (pRBK != nullptr)) * iNumDof * iNumEvalPointsStiffness;
+     const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (this->pRBK != nullptr));
 
      SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
 
@@ -1685,8 +1743,8 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResElastic(sp_g
           ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
 
-     if (pRBK) {
-          AssInertiaVecRBK(u, R, oDofMap);
+     if (this->pRBK) {
+          this->AssInertiaVecRBK(u, R, oDofMap);
           ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
 
@@ -1725,7 +1783,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResViscoElastic
           ? CollocationType::iNumEvalPointsStiffness
           : CollocationType::iNumEvalPointsMass;
 
-     const index_type iNumColsR = (1 + 3 * (pRBK != nullptr)) * iNumDof * iNumEvalPointsR;
+     const index_type iNumColsR = iNumDof * (iNumEvalPointsR + 3 * CollocationType::iNumEvalPointsMass * (this->pRBK != nullptr));
 
      SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
 
@@ -1738,8 +1796,8 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResViscoElastic
           ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
 
-     if (pRBK) {
-          AssInertiaVecRBK(u, R, oDofMap);
+     if (this->pRBK) {
+          this->AssInertiaVecRBK(u, R, oDofMap);
           ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
 
@@ -1772,52 +1830,6 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssInertiaVec(cons
 
      R.MapAssign(M * UP, oDofMap);
      R *= -1.;
-}
-
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-template <typename T>
-void
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssInertiaVecRBK(const sp_grad::SpMatrix<T, 3, iNumNodes>& u,
-                                                                               sp_grad::SpColVector<T, iNumDof>& R,
-                                                                               const sp_grad::SpGradExpDofMapHelper<T>& oDofMap)
-{
-     using namespace sp_grad;
-
-     ASSERT(pRBK != nullptr);
-
-     SpColVectorA<T, 3, iNumNodes> Xc;
-     SpColVectorA<doublereal, 3> r;
-     SpColVectorA<doublereal, iNumNodes> h;
-     SpMatrixA<doublereal, iNumNodes, 3> hd;
-     SpColVectorA<T, 3, iNumNodes> frbk;
-
-     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
-          CollocationType::GetPositionMass(iColloc, r);
-          ElementType::ShapeFunction(r, h);
-          ElementType::ShapeFunctionDeriv(r, hd);
-
-          const SpMatrix<doublereal, 3, 3> J = Transpose(this->x0 * hd);
-
-          Xc = Zero3;
-
-          for (index_type j = 1; j <= iNumNodes; ++j) {
-               Xc += (u.GetCol(j) + this->x0.GetCol(j)) * h(j);
-          }
-
-          const doublereal rho = Dot(h, this->rhon);
-          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
-          const doublereal dm = rho * alpha * Det(J);
-
-          frbk.MapAssign((pRBK->GetXPP()
-                          + Cross(pRBK->GetWP(), Xc)
-                          + Cross(pRBK->GetW(), Cross(pRBK->GetW(), Xc))) * dm, oDofMap);
-
-          for (index_type i = 1; i <= iNumNodes; ++i) {
-               for (index_type j = 1; j <= 3; ++j) {
-                    R((i - 1) * 3 + j) -= h(i) * frbk(j); // FIXME: Use oDofMap!
-               }
-          }
-     }
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType>
@@ -2090,7 +2102,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
 
      std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
      SpColVectorA<doublereal, iNumNodes> rhon;
-     const bool bStaticModel = pDM->bIsStaticModel();
+     const bool bStaticModel = HP.IsKeyWord("static") ? true : pDM->bIsStaticModel();
 
      for (index_type i = 0; i < iNumNodes; ++i) {
           rgNodes[i] = bStaticModel
@@ -2220,6 +2232,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
      out << '\n';
 
      SolidElem* pEl = nullptr;
+     const RigidBodyKinematics* const pRBK = pDM->pGetRBK();
 
      if (bStaticModel) {
           switch (eConstLawType) {
@@ -2231,6 +2244,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                                rgNodes,
                                                                                rhon,
                                                                                std::move(rgMaterialData),
+                                                                               pRBK,
                                                                                fOut));
                } else {
                     SAFENEWWITHCONSTRUCTOR(pEl,
@@ -2239,6 +2253,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                       rgNodes,
                                                                       rhon,
                                                                       std::move(rgMaterialData),
+                                                                      pRBK,
                                                                       fOut));
                }
                break;
@@ -2250,6 +2265,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                                     rgNodes,
                                                                                     rhon,
                                                                                     std::move(rgMaterialData),
+                                                                                    pRBK,
                                                                                     fOut));
                } else {
                     SAFENEWWITHCONSTRUCTOR(pEl,
@@ -2258,6 +2274,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                            rgNodes,
                                                                            rhon,
                                                                            std::move(rgMaterialData),
+                                                                           pRBK,
                                                                            fOut));
                }
                break;
@@ -2274,7 +2291,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                                 rgNodes,
                                                                                 rhon,
                                                                                 std::move(rgMaterialData),
-                                                                                pDM->pGetRBK(),
+                                                                                pRBK,
                                                                                 fOut));
                } else {
                     SAFENEWWITHCONSTRUCTOR(pEl,
@@ -2283,7 +2300,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                        rgNodes,
                                                                        rhon,
                                                                        std::move(rgMaterialData),
-                                                                       pDM->pGetRBK(),
+                                                                       pRBK,
                                                                        fOut));
                }
                break;
@@ -2295,7 +2312,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                                      rgNodes,
                                                                                      rhon,
                                                                                      std::move(rgMaterialData),
-                                                                                     pDM->pGetRBK(),
+                                                                                     pRBK,
                                                                                      fOut));
                } else {
                     SAFENEWWITHCONSTRUCTOR(pEl,
@@ -2304,7 +2321,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
                                                                             rgNodes,
                                                                             rhon,
                                                                             std::move(rgMaterialData),
-                                                                            pDM->pGetRBK(),
+                                                                            pRBK,
                                                                             fOut));
                }
                break;
