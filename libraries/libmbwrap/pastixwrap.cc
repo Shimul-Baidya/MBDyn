@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2013
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -48,6 +48,7 @@
 #include "dgeequ.h"
 #include "linsol.h"
 #include "pastixwrap.h"
+#include "cscmhtpl.h"
 
 PastixSolver::SpMatrix::SpMatrix()
      :iNumNonZeros(-1) {
@@ -103,7 +104,7 @@ bool PastixSolver::SpMatrix::MakeCompactForm(const SparseMatrixHandler& mh)
      return bNewPattern;
 }
 
-PastixSolver::PastixSolver(SolutionManager* pSM, integer iDim, integer iNumIter, integer iNumThreads, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
+PastixSolver::PastixSolver(SolutionManager* pSM, integer iDim, integer iNumIter, doublereal dTolRefine, integer iNumThreads, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
     :LinearSolver(pSM),
      pastix_data(nullptr),
      bDoOrdering(true)
@@ -148,6 +149,8 @@ PastixSolver::PastixSolver(SolutionManager* pSM, integer iDim, integer iNumIter,
 	 dparm[DPARM_COMPRESS_MIN_RATIO] = dMinRatio;
     }
 
+    dparm[DPARM_EPSILON_REFINEMENT] = dTolRefine;
+    
     const Task2CPU& oCPUStateGlobal = Task2CPU::GetGlobalState();
 
     if (oCPUStateGlobal.iGetCount() >= iNumThreads) {
@@ -256,7 +259,7 @@ PastixSolver::SpMatrix& PastixSolver::MakeCompactForm(SparseMatrixHandler& mh)
 }
 
 template <typename MatrixHandlerType>
-PastixSolutionManager<MatrixHandlerType>::PastixSolutionManager(integer iDim, integer iNumThreads, integer iNumIter, const ScaleOpt& scale, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
+PastixSolutionManager<MatrixHandlerType>::PastixSolutionManager(integer iDim, integer iNumThreads, integer iNumIter, doublereal dTolRefine, const ScaleOpt& scale, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
     :x(iDim),
      b(iDim),
      xVH(iDim, &x[0]),
@@ -267,7 +270,7 @@ PastixSolutionManager<MatrixHandlerType>::PastixSolutionManager(integer iDim, in
 {
     SAFENEWWITHCONSTRUCTOR(pLS,
                            PastixSolver,
-                           PastixSolver(this, iDim, iNumIter, iNumThreads, uSolverFlags, dCompressTol, dMinRatio, iVerbose));
+                           PastixSolver(this, iDim, iNumIter, dTolRefine, iNumThreads, uSolverFlags, dCompressTol, dMinRatio, iVerbose));
 
     pLS->pdSetResVec(&b[0]);
     pLS->pdSetSolVec(&x[0]);
@@ -310,9 +313,11 @@ void PastixSolutionManager<MatrixHandlerType>::MatrInitialize(void)
 template <typename MatrixHandlerType>
 void PastixSolutionManager<MatrixHandlerType>::MakeCompressedColumnForm(void)
 {
-     ScaleMatrixAndRightHandSide(A);
+     auto& spm = pGetSolver()->MakeCompactForm(A);
      
-     pGetSolver()->MakeCompactForm(A);
+     CSCMatrixHandlerTpl<doublereal, pastix_int_t, 1> Acsc(spm.pAx(), spm.pAi(), spm.pAp(), A.iGetNumCols(), spm.Nz());
+     
+     ScaleMatrixAndRightHandSide(Acsc);
 }
 
 template <typename MatrixHandlerType>

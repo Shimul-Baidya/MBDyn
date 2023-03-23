@@ -4,7 +4,7 @@
  * 
  * Copyright (c) 2003
  * 
- * Author:         Pierangelo Masarati <masarati@aero.polimi.it>
+ * Author:         Pierangelo Masarati <pierangelo.masarati@polimi.it>
  * Affiliation:    Dipartimento di Ingegneria Aerospaziale
  *                 Politecnico di Milano
  *                 via La Masa 34, 20156 Milano (Italy)

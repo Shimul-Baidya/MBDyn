@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -2408,11 +2408,14 @@ The latter could be moved to a more specific class in future releases.
 
     \bnt{genel_arglist} ::=
         (\hty{NodeDof}) \bnt{clamped_node} ,
-        (\hty{DriveCaller}) \bnt{imposed_value}
+        \{ \kw{from node} | (\hty{DriveCaller}) \bnt{imposed_value} \}
 \end{Verbatim}
 %\end{verbatim}
 This element simply forces one arbitrary degree of freedom to assume a value
-depending on the drive.
+depending on the drive. If the keyword \kw{from node} is used, then the
+initial value of \bnt{clamped\_node} is used as an imposed value for that node.
+This is useful especially to clamp structural displacement nodes, if their position
+is defined in a non trivial reference frame.
 
 \paragraph{Output}
 The format is:
@@ -3597,6 +3600,10 @@ on a string of three-node beams, as discussed in \cite{SLIDER-AIDAA-2003}.
         [ , \kw{initial beam} , \bnt{initial_beam} ]
         [ , \kw{initial node} , \bnt{initial_node} ]
         [ , \kw{smearing} , \bnt{smearing_factor} ]
+    [ , \kw{friction} ,
+        [ \kw{preload} , \bnt{const_value} , ]
+        \bnt{friction_model} , 
+        \bnt{shape_function} ]
 \end{Verbatim}
 %\end{verbatim}
 There are three types of slider:
@@ -3658,6 +3665,18 @@ A simple example of two beam sliders goes as follows:
             initial node, 3,
             smearing, smr;
 \end{verbatim}
+In addition to the standard output the \kw{beam slider} joint outputs:
+\begin{itemize}
+\item column 14: the label of the current beam;
+\item column 15: the value of the current curvilinear abscissa;
+\item columns 16-18: the local direction vector;
+\end{itemize}
+If friction is present the additional output is:
+\begin{itemize}
+\item column 19: the friction force along the along the local direction vector;
+\item column 20: the friction coefficient;
+\item column 21: the relative sliding velocity along the local direction vector;
+\end{itemize}
 
 
 \subsection{Brake}
@@ -4656,7 +4675,7 @@ The joint is shown in Figure~\ref{fig:el:joint:INLINE} where the origin and orie
 \end{figure}
 \subsubsection{Output}
 The output occurs in the \texttt{.jnt} file, according to default joint output
-for the first 13 columns; and if friction is present:
+for the first 13 columns; if friction is present the additional output is:
 \begin{itemize}
 \item column 14: the friction force along the line of the joint (applied in negative and positive directions for nodes 1 and 2, respectively);
 \item column 15: the friction coefficient;
@@ -5553,9 +5572,9 @@ reference frame (always zero)
 \subsubsection{Private Data}
 The following data are available:
 \begin{enumerate}
-\item \kw{"F"} constraint force between the two nodes/connection points
-\item \kw{"L"} distance between the two nodes/connection points
-\item \kw{"LPrime"} distance rate between the two nodes/connection points
+\item \kw{"F"} force between the two nodes/connection points
+\item \kw{"l"} distance between the two nodes/connection points
+\item \kw{"lP"} distance rate between the two nodes/connection points
 \end{enumerate}
 The rod joint can also give access the private data provided 
 by the constitutive law.

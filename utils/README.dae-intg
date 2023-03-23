@@ -1,5 +1,5 @@
 $Header$
-Copyright 2003 Pierangelo Masarati <masarati@aero.polimi.it>
+Copyright 2003 Pierangelo Masarati <pierangelo.masarati@polimi.it>
 
 dae-intg is a test program that integrates initial value problems 
 provided by dynamically loaded modules by using different integration

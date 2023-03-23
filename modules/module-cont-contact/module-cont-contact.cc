@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -29,7 +29,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /*
- * Created by: Pierangelo Masarati <masarati@aero.polimi.it>
+ * Created by: Pierangelo Masarati <pierangelo.masarati@polimi.it>
  * Modified by: Matteo Fancello <matteo.fancello@gmail.com>
  */
 
@@ -74,6 +74,11 @@ protected:
 	mutable doublereal m_dInitialEpsPrime;	// initial contact velocity
 	mutable doublereal m_dDissCoef;		// actual dissipation coefficient
 
+#ifdef USE_NETCDF
+	MBDynNcVar Var_dInitialEpsPrime;
+	MBDynNcVar Var_dDissCoef;
+#endif // USE_NETCDF
+
 public:
 	ContContactCL(const TplDriveCaller<doublereal> *pTplDC,
 		doublereal dSign, ContContactCL::Type type, doublereal dRest,
@@ -82,7 +87,8 @@ public:
 	m_dSign(dSign), m_dInitialEpsPrimeTol(dInitialEpsPrimeTol),
 	m_dRest(dRest), m_type(type), m_dK(dK), m_dExp(dExp),
 	m_bActive(false), m_bToggling(false),
-	m_dInitialEpsPrime(0.)
+	m_dInitialEpsPrime(0.),
+	m_dDissCoef(0.) // to avoid pointless warnings
 	{
 		NO_OP;
 	};
@@ -138,6 +144,7 @@ public:
 		ConstitutiveLaw<doublereal, doublereal>::Epsilon = Eps - ElasticConstitutiveLaw<doublereal, doublereal>::Get();
 		ConstitutiveLaw<doublereal, doublereal>::EpsilonPrime = EpsPrime;
 
+		// x > 0: no contact
 		doublereal x = m_dSign*ConstitutiveLaw<doublereal, doublereal>::Epsilon;
 		if (x < 0.) {
 			if (m_bActive) {
@@ -197,6 +204,64 @@ public:
 		return out << " " << m_dInitialEpsPrime << " " << m_dDissCoef;
 	};
 	
+	virtual void NetCDFOutputAppend(OutputHandler& OH) const {
+#ifdef USE_NETCDF
+		OH.WriteNcVar(Var_dInitialEpsPrime, m_dInitialEpsPrime);
+		OH.WriteNcVar(Var_dDissCoef, m_dDissCoef);
+#endif // USE_NETCDF
+	};
+
+	virtual void OutputAppendPrepare(OutputHandler& OH, const std::string& name) {
+#ifdef USE_NETCDF
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+		Var_dInitialEpsPrime = OH.CreateVar<doublereal>(name + ".xPi", 
+				OutputHandler::Dimensions::Velocity, 
+				"Velocity at contact");
+		Var_dDissCoef = OH.CreateVar<doublereal>(name + ".dc", 
+				OutputHandler::Dimensions::Dimensionless, 
+				"Dissipation coefficient");
+#endif // USE_NETCDF
+	};
+
+	unsigned int
+	iGetNumPrivData(void) const
+	{
+		return 2;
+	}
+
+	unsigned int
+	iGetPrivDataIdx(const char *s) const
+	{
+		ASSERT(s != NULL);
+
+		if (strcmp(s, "xPi") == 0) {
+			return 1;
+		}
+
+		if (strcmp(s, "dc") == 0) {
+			return 2;
+		}
+
+		/* error; handled later */
+		return 0;
+	}
+
+	doublereal
+	dGetPrivData(unsigned int i) const
+	{
+		ASSERT(i > 0);
+
+		switch (i) {
+		case 1:
+			return m_dInitialEpsPrime;
+
+		case 2:
+			return m_dDissCoef;
+		}
+
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+	};
 
 	virtual void AfterConvergence(const doublereal& Eps, const doublereal& EpsPrime = 0.) {
 
@@ -253,6 +318,8 @@ struct ContContactCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 				"                exp , <exponent> , (>= 1)\n"
 				"                [ , EpsPrimeTol , <EpsPrimeTol> ]\n"
 				"                [ , prestrain , (DriveCaller) <prestrain> ]\n"
+				"\n"
+				"	appended output (txt): <initialEpsPrime> <dissCoef>\n"
 				<< std::endl);
 
 			if (!HP.IsArg()) {
@@ -447,6 +514,7 @@ public:
 		ConstitutiveLaw<Vec3, Mat3x3>::Epsilon = Eps - ElasticConstitutiveLaw<Vec3, Mat3x3>::Get();
 		ConstitutiveLaw<Vec3, Mat3x3>::EpsilonPrime = EpsPrime;
 
+		// x > 0: no contact
 		doublereal x = m_dSign*ConstitutiveLaw<Vec3, Mat3x3>::Epsilon(3);
 		if (x < 0.) {
 			if (m_bActive) {
@@ -562,6 +630,8 @@ struct ContContact3DCLR : public ConstitutiveLawRead<Vec3, Mat3x3> {
 				"                exp , <exponent> , (>= 1)\n"
 				"                [ , EpsPrimeTol , <EpsPrimeTol> ]\n"
 				"                [ , prestrain , (DriveCaller) <prestrain> ]\n"
+				"\n"
+				"	appended output (txt): <initialEpsPrime> <dissCoef>\n"
 				<< std::endl);
 
 			if (!HP.IsArg()) {

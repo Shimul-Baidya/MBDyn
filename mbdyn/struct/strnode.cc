@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -465,30 +465,29 @@ StructDispNode::OutputPrepare(OutputHandler &OH)
 			(void)OH.CreateVar(os.str(), type);
 
 			// node sub-data
-			os << '.';
-			std::string name = os.str();
+			m_sOutputNameBase = os.str();
 
-			Var_X = OH.CreateVar<Vec3>(name + "X",
+			Var_X = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "X",
 				OutputHandler::Dimensions::Length,
 				"global position vector (X, Y, Z)");
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, "global");
 
-			Var_XP = OH.CreateVar<Vec3>(name + "XP",
+			Var_XP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "XP",
 				OutputHandler::Dimensions::Velocity,
 				"global velocity vector (v_X, v_Y, v_Z)");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"global angular velocity vector (omega_X, omega_Y, omega_Z)");
 
 			// accelerations
 			if (bOutputAccels) {
-				Var_XPP = OH.CreateVar<Vec3>(name + "XPP",
+				Var_XPP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "XPP",
 					OutputHandler::Dimensions::Acceleration,
 					"global acceleration vector (a_X, a_Y, a_Z)");
 
-				Var_OmegaP = OH.CreateVar<Vec3>(name + "OmegaP",
+				Var_OmegaP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "OmegaP",
 					OutputHandler::Dimensions::AngularAcceleration,
 					"global angular acceleration vector (omegaP_X, omegaP_Y, omegaP_Z)");
 			}
@@ -1889,30 +1888,29 @@ StructNode::OutputPrepare(OutputHandler &OH)
 			(void)OH.CreateVar(os.str(), type);
 
 			// node sub-data
-			os << '.';
-			std::string name = os.str();
+			m_sOutputNameBase = os.str();
 
-			Var_X = OH.CreateVar<Vec3>(name + "X",
+			Var_X = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "X",
 				OutputHandler::Dimensions::Length,
 				glocal + " position vector (X, Y, Z)");
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, "global");
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, "global");
 
-			Var_XP = OH.CreateVar<Vec3>(name + "XP",
+			Var_XP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "XP",
 				OutputHandler::Dimensions::Velocity,
 				glocal + " velocity vector (v_X, v_Y, v_Z)");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				glocal + " angular velocity vector (omega_X, omega_Y, omega_Z)");
 
 			// accelerations
 			if (bOutputAccels) {
-				Var_XPP = OH.CreateVar<Vec3>(name + "XPP",
+				Var_XPP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "XPP",
 					OutputHandler::Dimensions::Acceleration,
 					glocal + " acceleration vector (a_X, a_Y, a_Z)");
 
-				Var_OmegaP = OH.CreateVar<Vec3>(name + "OmegaP",
+				Var_OmegaP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "OmegaP",
 					OutputHandler::Dimensions::AngularAcceleration,
 					glocal + " angular acceleration vector (omegaP_X, omegaP_Y, omegaP_Z)");
 			}

@@ -3,9 +3,9 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -28,7 +28,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /*
- * Authors:	Pierangelo Masarati <masarati@aero.polimi.it>
+ * Authors:	Pierangelo Masarati <pierangelo.masarati@polimi.it>
  * 		Giuseppe Quaranta <quaranta@aero.polimi.it>
  *
  * Based on:	Gandhi, F. and Chopra, I., "An analytical model for
@@ -240,7 +240,7 @@ m_pCL(0)
 		silent_cout(
 "\n"
 "Module:        damper Gandhi\n"
-"Author:        Pierangelo Masarati <masarati@aero.polimi.it>\n"
+"Author:        Pierangelo Masarati <pierangelo.masarati@polimi.it>\n"
 "		Giuseppe Quaranta <quaranta@aero.polimi.it>\n"
 "Organization:	Dipartimento di Ingegneria Aerospaziale\n"
 "               Politecnico di Milano\n"

@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -614,6 +614,7 @@ bool LinSol::SetTolerance(doublereal dToleranceRes)
 {
         switch (currSolver) {
         case LinSol::AZTECOO_SOLVER:
+        case LinSol::PASTIX_SOLVER:
                 dTolRes = dToleranceRes;
                 break;
         default:
@@ -941,12 +942,12 @@ LinSol::GetSolutionManager(integer iNLD,
 		    case LinSol::SOLVER_FLAGS_ALLOWS_GRAD: {
                         SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                                PastixSolutionManager<SpGradientSparseMatrixHandler>,
-                                               PastixSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                                               PastixSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, dTolRes, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
                     } break;
                     default:
 			SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                                PastixSolutionManager<SpMapMatrixHandler>,
-                                               PastixSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                                               PastixSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, dTolRes, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
                     }
 		} break;
 #else /* !USE_PASTIX */

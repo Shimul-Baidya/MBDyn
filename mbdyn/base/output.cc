@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -1072,7 +1072,7 @@ OutputHandler::CreateRotationVar(const std::string& name_prefix,
 {
 	NcDimVec dim;
 	AttrValVec attrs;
-	std::string name(name_prefix);
+	std::string name(name_prefix + ".");
 
 	switch (od) {
 	case ORIENTATION_MATRIX:
@@ -1208,6 +1208,12 @@ ToBeOutput::SetOutputFlag(flag f)
 	ASSERT(f ? f & flag(1) : 1);
 
   	fOutput = f;
+}
+
+const std::string&
+ToBeOutput::sGetOutputNameBase(void) const
+{
+	return m_sOutputNameBase;
 }
 
 Traceable::Traceable(flag fTrace)

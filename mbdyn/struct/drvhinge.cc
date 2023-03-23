@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -95,10 +95,9 @@ DriveHingeJoint::OutputPrepare(OutputHandler &OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Drive Hinge", OH, name);
+			OutputPrepare_int("Drive Hinge", OH);
 
-			Var_Phi = OH.CreateVar<Vec3>(name + "Theta",
+			Var_Phi = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Theta",
 				OutputHandler::Dimensions::rad,
 				"Relative orientation");
 		}

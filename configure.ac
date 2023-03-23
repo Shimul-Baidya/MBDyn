@@ -4,10 +4,10 @@ dnl
 dnl MBDyn (C) is a multibody analysis code.
 dnl http://www.mbdyn.org
 dnl
-dnl Copyright (C) 1996-2021
+dnl Copyright (C) 1996-2023
 dnl
-dnl Pierangelo Masarati     <masarati@aero.polimi.it>
-dnl Paolo Mantegazza        <mantegazza@aero.polimi.it>
+dnl Pierangelo Masarati     <pierangelo.masarati@polimi.it>
+dnl Paolo Mantegazza        <paolo.mantegazza@polimi.it>
 dnl
 dnl Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 dnl via La Masa, 34 - 20156 Milano, Italy
@@ -40,10 +40,10 @@ define([AC_INIT_BINSH],
 # MBDyn (C) is a multibody analysis code.
 # http://www.mbdyn.org
 #
-# Copyright (C) 1996-2017
+# Copyright (C) 1996-2023
 #
-# Pierangelo Masarati     <masarati@aero.polimi.it>
-# Paolo Mantegazza        <mantegazza@aero.polimi.it>
+# Pierangelo Masarati     <pierangelo.masarati@polimi.it>
+# Paolo Mantegazza        <paolo.mantegazza@polimi.it>
 #
 # Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 # via La Masa, 34 - 20156 Milano, Italy
@@ -57,10 +57,10 @@ define([AC_INIT_BINSH],
 #
 #
 echo ""
-echo "	Copyright (C) 1996-2017"
+echo "	Copyright (C) 1996-2023"
 echo "	"
-echo "	Pierangelo Masarati     <masarati@aero.polimi.it>"
-echo "	Paolo Mantegazza        <mantegazza@aero.polimi.it>"
+echo "	Pierangelo Masarati     <pierangelo.masarati@polimi.it>"
+echo "	Paolo Mantegazza        <paolo.mantegazza@polimi.it>"
 echo "	"
 echo "	Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano"
 echo "	via La Masa, 34 - 20156 Milano, Italy"
@@ -123,10 +123,10 @@ AH_TOP([
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
