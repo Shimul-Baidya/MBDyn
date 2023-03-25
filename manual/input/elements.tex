@@ -60,6 +60,8 @@ where \nt{elem\_type} is one of the following:
 \item \kw{joint}
 \item \kw{joint regularization}
 \item \kw{plate}
+\item \kw{solid}
+\item \kw{surface loads}
 \end{itemize}
 
 \item aerodynamic elements:
@@ -3006,6 +3008,7 @@ For details, see \cite{PETERS-TRIM90}.
 
 
 \section{Gravity Element}
+\label{sec:ELEMENTS:gravity}
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{elem_type} ::= \kw{gravity}
@@ -6324,6 +6327,9 @@ in the right hand-side of the above equation.
 
 \input{elemplate}
 
+\input{elemsolid}
+
+\input{elemsurfload}
 
 \section{User-Defined Elements}\label{sec:EL:BASE:USER_DEFINED}
 
