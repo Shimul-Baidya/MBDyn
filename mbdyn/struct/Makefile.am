@@ -201,6 +201,14 @@ endif
 libstruct_la_LIBADD = @LIBS@
 libstruct_la_LDFLAGS = -static
 
+noinst_PROGRAMS = solidshapetest
+
+solidshapetest_SOURCES = solidshapetest.cc
+solidshapetest_LDADD = \
+../../libraries/libmbutil/libmbutil.la \
+../../libraries/libmbmath/libmbmath.la \
+libstruct.la
+
 AM_CPPFLAGS = \
 -I../../include \
 -I$(srcdir)/../../include \
