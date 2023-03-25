@@ -150,34 +150,69 @@ can be used to compute accelerations for structural nodes as described in sectio
 
 \begin{table}[h!tp]
   \label{sec:EL:SOLID:elemtypes}
-\begin{tabular}[t]{|c|c|c|c|c|c|c|}
+\begin{tabular}[t]{|c|c|c|c|c|c|c|c|}
   \hline
-  element type & nodes & integration points & order & integration & accelerations & references \tabularnewline
+  element type & nodes & node order & integration points & order & integration & accelerations & references \tabularnewline
   \hline
-  \kw{hexahedron8} & 8 & 8 & 1 & full & yes & \cite{BATHE2016} \tabularnewline
+  \kw{hexahedron8} & 8 & \ref{fig:EL:SOLID:HEXAHEDRON8} & 8 & 1 & full & yes & \cite{BATHE2016} \tabularnewline
   \hline
-  \kw{hexahedron20} & 20 & 27 & 2 & full & no & \cite{BATHE2016} \tabularnewline
+  \kw{hexahedron20} & 20 & \ref{fig:EL:SOLID:HEXAHEDRON20} & 27 & 2 & full & no & \cite{BATHE2016} \tabularnewline
   \hline
-  \kw{hexahedron20r} & 20 & 8 & 2 & reduced & no & \cite{DHONDT2004} \tabularnewline
+  \kw{hexahedron20r} & 20 & \ref{fig:EL:SOLID:HEXAHEDRON20R} & 8 & 2 & reduced & no & \cite{DHONDT2004} \tabularnewline
   \hline
-  \kw{pentahedron15} & 15 & 21 & 2 & full & no & \cite{CODEASTERR30301} \tabularnewline
+  \kw{pentahedron15} & 15 & \ref{fig:EL:SOLID:PENTAHEDRON15} & 21 & 2 & full & no & \cite{CODEASTERR30301} \tabularnewline
   \hline
-  \kw{tetrahedron10} & 10 & 5 & 2 & full & no & \cite{CODEASTERR30301} \tabularnewline
+  \kw{tetrahedron10} & 10 & \ref{fig:EL:SOLID:TETRAHEDRON10H} & 5 & 2 & full & no & \cite{CODEASTERR30301} \tabularnewline
   \hline
 \end{tabular}
-\caption{Finite Element Types}
+\caption{Finite Element Types for solid elements}
 \end{table}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{hexahedron8}
+\caption{Node order: hexahedron8}
+\label{fig:EL:SOLID:HEXAHEDRON8}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{hexahedron20}
+\caption{Node order: hexahedron20}
+\label{fig:EL:SOLID:HEXAHEDRON20}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{hexahedron20r}
+\caption{Node order: hexahedron20r}
+\label{fig:EL:SOLID:HEXAHEDRON20R}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{pentahedron15}
+\caption{Node order: pentahedron15}
+\label{fig:EL:SOLID:PENTAHEDRON15}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{tetrahedron10h}
+\caption{Node order: tetrahedron10}
+\label{fig:EL:SOLID:TETRAHEDRON10H}
+\end{figure}
 
 \subsubsection{Example:}
 \begin{verbatim}
-    constitutive law: 1, name, "solid1", 6, 
-             linear viscoelastic generic, 
-             matr , 2.82e+11, 1.21e+11, 1.21e+11, 0.00e+00, 0.00e+00, 0.00e+00, 
-                    1.21e+11, 2.82e+11, 1.21e+11, 0.00e+00, 0.00e+00, 0.00e+00, 
-                    1.21e+11, 1.21e+11, 2.82e+11, 0.00e+00, 0.00e+00, 0.00e+00, 
-                    0.00e+00, 0.00e+00, 0.00e+00, 8.07e+10, 0.00e+00, 0.00e+00, 
+    constitutive law: 1, name, "solid1", 6,
+             linear viscoelastic generic,
+             matr , 2.82e+11, 1.21e+11, 1.21e+11, 0.00e+00, 0.00e+00, 0.00e+00,
+                    1.21e+11, 2.82e+11, 1.21e+11, 0.00e+00, 0.00e+00, 0.00e+00,
+                    1.21e+11, 1.21e+11, 2.82e+11, 0.00e+00, 0.00e+00, 0.00e+00,
+                    0.00e+00, 0.00e+00, 0.00e+00, 8.07e+10, 0.00e+00, 0.00e+00,
                     0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 8.07e+10, 0.00e+00,
-                    0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 8.07e+10, 
+                    0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 8.07e+10,
                     proportional, 1.0e-04;
 
     hexahedron8: 100, 1, 2, 3, 4, 5, 6, 7, 8,
@@ -198,7 +233,7 @@ See the following example on how to generate the input files and how to load the
 
 \begin{Verbatim}[commandchars=\\\{\}]
   \ty{## load the package}
-  pkg load mboct-fem-pkg; 
+  pkg load mboct-fem-pkg;
   \ty{## load the mesh file in Gmsh format}
   mesh = \nt{fem_pre_mesh_import}(\kw{"cooks_membrane.msh"}, \kw{"gmsh"});
   \ty{## assign material properties to material number 1}
@@ -252,7 +287,7 @@ See the following example on how to generate the input files and how to load the
   \nt{fem_post_sol_external}(mesh_sol, sol);
 \end{Verbatim}
 See also figure~\ref{fig:EL:SOLID:COOKS-MEMBRANE}.
-\begin{figure}
+\begin{figure}[htb]
 \centering
 \includegraphics[width=.25\textwidth]{elemsolid}
 \caption{Cook's membrane: deformed shape and Von Mises stress rendered using Gmsh}

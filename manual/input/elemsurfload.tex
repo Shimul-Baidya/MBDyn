@@ -74,10 +74,10 @@ when creating the mesh (e.g. use \emph{ReorientMesh} in \htmladdnormallink{\text
 
        pressureq4: 100, 1, 2, 3, 4, from nodes, 10, 11, 12, 13;
 
-       pressureq4: 101, 5, 6, 7, 8, from drives, 
-                    reference, 1, 
-                    reference, 2, 
-                    reference, 3, 
+       pressureq4: 101, 5, 6, 7, 8, from drives,
+                    reference, 1,
+                    reference, 2,
+                    reference, 3,
                     reference, 4;
 \end{verbatim}
 
@@ -116,7 +116,7 @@ to the global reference frame, but their direction is changed like pressure load
 
 \subsubsection{Example:}
 \begin{verbatim}
-       reference: 10, 
+       reference: 10,
                 position, reference, global, null,
                 orientation, reference, global, 1, 0., 1., 0.,
                                                 2, 1., 0., 0.,
@@ -125,26 +125,72 @@ to the global reference frame, but their direction is changed like pressure load
 
        ...
 
-       template drive caller: 1, 3, component, 
-                string, "1.5 * Time", 
+       template drive caller: 1, 3, component,
+                string, "1.5 * Time",
                 string, "2.5 * Time",
                 string, "3.5 * Time";
 
        ...
 
-       template drive caller: 4, 3, component, 
-                string, "4.5 * Time", 
+       template drive caller: 4, 3, component,
+                string, "4.5 * Time",
                 string, "5.5 * Time",
                 string, "6.5 * Time";
 
-       tractionq4: 100, 1, 2, 3, 4, from drives, 
-                    reference, 1, 
-                    reference, 2, 
-                    reference, 3, 
+       tractionq4: 100, 1, 2, 3, 4, from drives,
+                    reference, 1,
+                    reference, 2,
+                    reference, 3,
                     reference, 4,
-                    orientation, 
+                    orientation,
                        reference, 10, eye,
                        reference, 20, eye,
                        reference, 30, eye,
                        reference, 40, eye;
 \end{verbatim}
+
+\begin{table}[h!tp]
+  \label{sec:EL:SURFLOAD:elemtypes}
+\begin{tabular}[t]{|c|c|c|c|c|c|c|}
+  \hline
+  element type pressure & element type traction & nodes & node order & integration points & order & references \tabularnewline
+  \hline
+  \kw{pressureq4} & \kw{tractionq4} & 4 & \ref{fig:EL:SURFLOAD:QUADRANGLE4} & 4 & 1 & \cite{BATHE2016} \tabularnewline
+  \hline
+  \kw{pressureq8} & \kw{tractionq8} & 8 & \ref{fig:EL:SURFLOAD:QUADRANGLE8} & 9 & 2 & \cite{BATHE2016} \tabularnewline
+  \hline
+  \kw{pressureq8r} & \kw{tractionq8r} & 8 & \ref{fig:EL:SURFLOAD:QUADRANGLE8R} & 9 & 2 & \cite{DHONDT2004} \tabularnewline
+  \hline
+  \kw{pressuret6} & \kw{tractiont6} & 6 & \ref{fig:EL:SURFLOAD:TRIANGLE6H} & 7 & 2 & \cite{CODEASTERR30301} \tabularnewline
+  \hline
+\end{tabular}
+\caption{Finite Element Types for surface loads}
+\end{table}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{quadrangle4}
+\caption{Node order: \kw{pressureq4}, \kw{tractionq4}}
+\label{fig:EL:SURFLOAD:QUADRANGLE4}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{quadrangle8}
+\caption{Node order: \kw{pressureq8}, \kw{tractionq8}}
+\label{fig:EL:SURFLOAD:QUADRANGLE8}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{quadrangle8r}
+\caption{Node order: \kw{pressureq8r}, \kw{tractionq8r}}
+\label{fig:EL:SURFLOAD:QUADRANGLE8R}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=.25\textwidth]{triangle6h}
+\caption{Node order: \kw{pressuret6}, \kw{tractiont6}}
+\label{fig:EL:SURFLOAD:TRIANGLE6H}
+\end{figure}
