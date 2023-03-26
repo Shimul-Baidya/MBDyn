@@ -55,7 +55,7 @@ public:
      }
 
      virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
-          NeoHookean* pCL;
+          NeoHookean* pCL = nullptr;
 
           SAFENEWWITHCONSTRUCTOR(pCL,
                                  NeoHookean,
