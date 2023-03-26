@@ -35,6 +35,7 @@ However, they could be used also for shell and membrane elements. The value of t
 by means of a set of drive callers or by means of a set of abstract nodes. By convention, pressure loads are always applied
 in the opposite direction of the surface normal vector. So, it is important that the surfaces are oriented properly
 when creating the mesh (e.g. use \emph{ReorientMesh} in \htmladdnormallink{\texttt{Gmsh}}{https://gmsh.info/}).
+See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
 \begin{Verbatim}[commandchars=\\\{\}]
   \bnt{elem_type} ::= \{ \kw{pressureq4} | \kw{pressureq8} | \kw{pressureq8r} | \kw{pressuret6} \}
 
@@ -87,7 +88,8 @@ So, they can be used to impose a prescribed shear stress at the surface of a sol
 Actually there are absolute and relative surface tractions. Absolute surface tractions are applied with respect
 to the global reference frame and do not change the direction of the applied force vector if the surface is moved
 or deformed during the simulation. In contradiction to that, relative surface tractions are also applied with respect
-to the global reference frame, but their direction is changed like pressure loads if the surface is deformed or moved.
+to the global reference frame, but their direction and magnitude is changed like pressure loads if the surface is deformed or moved.
+See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
 \begin{Verbatim}[commandchars=\\\{\}]
   \bnt{elem_type} ::= \{ \kw{tractionq4} | \kw{tractionq8} | \kw{tractionq8r} | \kw{tractiont6} \}
 
@@ -150,7 +152,6 @@ to the global reference frame, but their direction is changed like pressure load
 \end{verbatim}
 
 \begin{table}[h!tp]
-  \label{sec:EL:SURFLOAD:elemtypes}
 \begin{tabular}[t]{|c|c|c|c|c|c|c|}
   \hline
   element type pressure & element type traction & nodes & node order & integration points & order & references \tabularnewline
@@ -164,7 +165,8 @@ to the global reference frame, but their direction is changed like pressure load
   \kw{pressuret6} & \kw{tractiont6} & 6 & \ref{fig:EL:SURFLOAD:TRIANGLE6H} & 7 & 2 & \cite{CODEASTERR30301} \tabularnewline
   \hline
 \end{tabular}
-\caption{Finite Element Types for surface loads}
+  \caption{Finite Element Types for surface loads}
+  \label{sec:EL:SURFLOAD:elemtypes}
 \end{table}
 
 \begin{figure}[htb]
@@ -194,3 +196,4 @@ to the global reference frame, but their direction is changed like pressure load
 \caption{Node order: \kw{pressuret6}, \kw{tractiont6}}
 \label{fig:EL:SURFLOAD:TRIANGLE6H}
 \end{figure}
+\clearpage
