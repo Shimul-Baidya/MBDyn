@@ -476,10 +476,74 @@ protected:
      const RigidBodyKinematics* const pRBK;
 };
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-class SolidElemDynamic: public SolidElemStatic<ElementType, CollocationType, SolidCSLType, DynamicStructDispNodeAd> {
+enum class MassMatrixType {
+     CONSISTENT,
+     LUMPED
+};
+
+template <MassMatrixType eMassMatrix>
+struct MassMatrixHelper;
+
+template <>
+struct MassMatrixHelper<MassMatrixType::CONSISTENT> {
+     template <sp_grad::index_type iNumDof, sp_grad::index_type iNumNodes>
+     struct MassMatrix {
+          typedef sp_grad::SpMatrixA<doublereal, iNumDof, iNumDof> Type;
+     };
+
+     template <typename ElemType>
+     static void AssMassMatrix(ElemType& oElem, sp_grad::SpMatrix<doublereal, ElemType::iNumDof, ElemType::iNumDof>& Mcon) {
+          oElem.AssMassMatrixConsistent(Mcon);
+     }
+
+     template <typename ElemType>
+     static void AddInertia(ElemType& oElem, const sp_grad::SpMatrix<doublereal, ElemType::iNumDof, ElemType::iNumDof>& Mcon) {
+          DEBUGCERR("warning: AddInertia() not implemented for consistent mass matrix\n");
+     }
+
+     template <typename ElemType, typename T>
+     static void
+     AssInertiaVec(ElemType& oElem,
+                   const sp_grad::SpMatrix<doublereal, ElemType::iNumDof, ElemType::iNumDof>& Mcon,
+                   const sp_grad::SpMatrix<T, 3, ElemType::iNumNodes>& uP,
+                   sp_grad::SpColVector<T, ElemType::iNumDof>& R,
+                   const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) {
+          oElem.AssInertiaVecConsistent(Mcon, uP, R, oDofMap);
+     }
+};
+
+template <>
+struct MassMatrixHelper<MassMatrixType::LUMPED> {
+     template <sp_grad::index_type iNumDof, sp_grad::index_type iNumNodes>
+     struct MassMatrix {
+          typedef sp_grad::SpColVectorA<doublereal, iNumNodes> Type;
+     };
+
+     template <typename ElemType>
+     static void AssMassMatrix(ElemType& oElem, sp_grad::SpColVector<doublereal, ElemType::iNumNodes>& diagM) {
+          oElem.AssMassMatrixLumped(diagM);
+     }
+
+     template <typename ElemType>
+     static void AddInertia(ElemType& oElem, sp_grad::SpColVector<doublereal, ElemType::iNumNodes>& diagM) {
+          oElem.AddInertia(diagM);
+     }
+
+     template <typename ElemType, typename T>
+     static void
+     AssInertiaVec(ElemType& oElem,
+                   const sp_grad::SpColVector<doublereal, ElemType::iNumNodes>& diagM,
+                   const sp_grad::SpMatrix<T, 3, ElemType::iNumNodes>& uP,
+                   sp_grad::SpColVector<T, ElemType::iNumDof>& R,
+                   const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) {
+          oElem.AssInertiaVecLumped(diagM, uP, R, oDofMap);
+     }
+};
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+class SolidElemDynamic: public SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructDispNodeAd> {
 public:
-     typedef SolidElemStatic<ElementType, CollocationType, SolidCSLType, DynamicStructDispNodeAd> SolidElemStaticType;
+     typedef SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructDispNodeAd> SolidElemStaticType;
      using SolidElemStaticType::eConstLawType;
      using SolidElemStaticType::iNumNodes;
      using SolidElemStaticType::iNumEvalPointsStiffness;
@@ -539,49 +603,30 @@ public:
      virtual Vec3 GetB_int() const override;
      virtual Vec3 GetG_int() const override;
 
-private:
      template <typename T>
      inline void
-     AssInertiaVec(const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
-                   sp_grad::SpColVector<T, iNumDof>& R,
-                   const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
+     AssInertiaVecConsistent(const sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon,
+                             const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
+                             sp_grad::SpColVector<T, iNumDof>& R,
+                             const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
+
+     template <typename T>
+     inline void
+     AssInertiaVecLumped(const sp_grad::SpColVector<doublereal, iNumNodes>& Mlumped,
+                         const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
+                         sp_grad::SpColVector<T, iNumDof>& R,
+                         const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
 
      inline void
-     AssMassMatrix();
+     AssMassMatrixConsistent(sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon);
 
-     sp_grad::SpMatrixA<doublereal, iNumDof, iNumDof> M;
-};
+     inline void
+     AssMassMatrixLumped(sp_grad::SpColVector<doublereal, iNumNodes>& Mlumped);
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-class SolidElemDynamicDiagMass: public SolidElemDynamic<ElementType, CollocationType, SolidCSLType> {
-public:
-     typedef SolidElemDynamic<ElementType, CollocationType, SolidCSLType> SolidElemDynamicType;
-     using SolidElemDynamicType::eConstLawType;
-     using SolidElemDynamicType::iNumNodes;
-     using SolidElemDynamicType::iNumEvalPointsStiffness;
-     using SolidElemDynamicType::iNumEvalPointsMassLumped;
-     using SolidElemDynamicType::iNumDof;
-
-     SolidElemDynamicDiagMass(unsigned uLabel,
-                              const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
-                              const sp_grad::SpColVector<doublereal, iNumNodes>& rhon,
-                              std::array<SolidMaterialData, iNumEvalPointsStiffness>&& rgMaterialData,
-                              const RigidBodyKinematics* pRBK,
-                              flag fOut);
-
-     virtual ~SolidElemDynamicDiagMass();
-
-     virtual SubVectorHandler&
-     AssRes(SubVectorHandler& WorkVec,
-            doublereal dCoef,
-            const VectorHandler& XCurr,
-            const VectorHandler& XPrimeCurr) override;
-
+     inline void
+     AddInertia(const sp_grad::SpColVector<doublereal, iNumNodes>& diagM);
 private:
-     inline void
-     AssDiagMassMatrix();
-
-     sp_grad::SpColVectorA<doublereal, iNumNodes> diagM;
+     typename MassMatrixHelper<eMassMatrix>::template MassMatrix<iNumDof, iNumNodes>::Type M;
 };
 
 SolidElem::SolidElem(unsigned uLabel,
@@ -682,7 +727,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Sol
      using namespace sp_grad;
 
      for (index_type i = 1; i <= iNumNodes; ++i) {
-          rgNodes[i - 1] = &dynamic_cast<const StructNodeType&>(*rgNodesDisp[i - 1]);
+          rgNodes[i - 1] = rgNodesDisp[i - 1];
 
           const Vec3& x0i = rgNodes[i - 1]->GetXCurr();
 
@@ -1644,26 +1689,26 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
      }
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::SolidElemDynamic(unsigned uLabel,
-                                                                               const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
-                                                                               const sp_grad::SpColVector<doublereal, iNumNodes>& rhon,
-                                                                               std::array<SolidMaterialData, iNumEvalPointsStiffness>&& rgMaterialData,
-                                                                               const RigidBodyKinematics* const pRBK,
-                                                                               flag fOut)
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::SolidElemDynamic(unsigned uLabel,
+                                                                                            const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
+                                                                                            const sp_grad::SpColVector<doublereal, iNumNodes>& rhon,
+                                                                                            std::array<SolidMaterialData, iNumEvalPointsStiffness>&& rgMaterialData,
+                                                                                            const RigidBodyKinematics* const pRBK,
+                                                                                            flag fOut)
 :Elem{uLabel, fOut},
  SolidElemStaticType{uLabel, rgNodes, rhon, std::move(rgMaterialData), pRBK, fOut}
 {
-     AssMassMatrix();
+     MassMatrixHelper<eMassMatrix>::AssMassMatrix(*this, M);
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::~SolidElemDynamic()
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::~SolidElemDynamic()
 {
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-void SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssMassMatrix()
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+void SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssMassMatrixConsistent(sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon)
 {
      using namespace sp_grad;
 
@@ -1693,26 +1738,66 @@ void SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssMassMatrix
                     const doublereal dmhjhk = dm * h(j) * h(k);
 
                     for (index_type i = 1; i <= 3; ++i) {
-                         M((j - 1) * 3 + i, (k - 1) * 3 + i) += dmhjhk;
+                         Mcon((j - 1) * 3 + i, (k - 1) * 3 + i) += dmhjhk;
                     }
                }
           }
      }
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-void SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+void
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssMassMatrixLumped(sp_grad::SpColVector<doublereal, iNumNodes>& Mlumped)
+{
+     using namespace sp_grad;
+
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+
+     for (index_type iColloc = 0; iColloc < iNumEvalPointsMassLumped; ++iColloc) {
+          const doublereal alpha = CollocationType::dGetWeightMassLumped(iColloc);
+
+          CollocationType::GetPositionMassLumped(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const SpMatrix<doublereal, 3, 3> J = Transpose(this->x0 * hd);
+          const doublereal rho = Dot(h, this->rhon); // interpolate from nodes to collocation points
+          const doublereal dm = rho * Det(J) * alpha;
+
+          for (index_type k = 1; k <= iNumNodes; ++k) {
+               Mlumped(k) += dm * std::pow(h(k), 2);
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+void
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AddInertia(const sp_grad::SpColVector<doublereal, iNumNodes>& diagM)
+{
+     using namespace sp_grad;
+
+     for (index_type i = 1; i <= iNumNodes; ++i) {
+          ASSERT(dynamic_cast<const DynamicStructDispNodeAd*>(this->rgNodes[i - 1]));
+
+          static_cast<const DynamicStructDispNodeAd*>(this->rgNodes[i - 1])->AddInertia(diagM(i));
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+void SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 {
      *piNumRows = 2 * iNumDof;
      *piNumCols = 0;
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 template <typename T>
 inline void
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResElastic(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                                            doublereal dCoef,
-                                                                            enum sp_grad::SpFunctionCall func)
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssResElastic(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                                         doublereal dCoef,
+                                                                                         enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
 
@@ -1750,18 +1835,19 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResElastic(sp_g
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstMomentumIndex);
 
-     AssInertiaVec(uP, R, oDofMap);
+     MassMatrixHelper<eMassMatrix>::AssInertiaVec(*this, M, uP, R, oDofMap);
+
      ASSERT(R.iGetMaxSize() <= iNumColsR);
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstPositionIndex);
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 template <typename T>
 inline void
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResViscoElastic(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                                                 doublereal dCoef,
-                                                                                 enum sp_grad::SpFunctionCall func)
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssResViscoElastic(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                                              doublereal dCoef,
+                                                                                              enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
 
@@ -1803,18 +1889,20 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssResViscoElastic
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstMomentumIndex);
 
-     AssInertiaVec(uP, R, oDofMap);
+     MassMatrixHelper<eMassMatrix>::AssInertiaVec(*this, M, uP, R, oDofMap);
+
      ASSERT(R.iGetMaxSize() <= iNumColsR);
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstPositionIndex);
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 template <typename T>
 void
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssInertiaVec(const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
-                                                                            sp_grad::SpColVector<T, iNumDof>& R,
-                                                                            const sp_grad::SpGradExpDofMapHelper<T>& oDofMap)
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssInertiaVecConsistent(const sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon,
+                                                                                                   const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
+                                                                                                   sp_grad::SpColVector<T, iNumDof>& R,
+                                                                                                   const sp_grad::SpGradExpDofMapHelper<T>& oDofMap)
 {
      using namespace sp_grad;
 
@@ -1828,28 +1916,45 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssInertiaVec(cons
           }
      }
 
-     R.MapAssign(M * UP, oDofMap);
+     R.MapAssign(Mcon * UP, oDofMap);
      R *= -1.;
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+template <typename T>
+void
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssInertiaVecLumped(const sp_grad::SpColVector<doublereal, iNumNodes>& Mlumped,
+                                                                                               const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
+                                                                                               sp_grad::SpColVector<T, iNumDof>& R,
+                                                                                               const sp_grad::SpGradExpDofMapHelper<T>& oDofMap)
+{
+     using namespace sp_grad;
+
+     for (index_type i = 1; i <= iNumNodes; ++i) {
+          for (index_type j = 1; j <= 3; ++j) {
+               oDofMap.MapAssign(R((i - 1) * 3 + j), -Mlumped(i) * uP(j, i));
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 template <typename T>
 inline void
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                                     doublereal dCoef,
-                                                                     const sp_grad::SpGradientVectorHandler<T>& XCurr,
-                                                                     const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
-                                                                     enum sp_grad::SpFunctionCall func)
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                                  doublereal dCoef,
+                                                                                  const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                                                                  const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+                                                                                  enum sp_grad::SpFunctionCall func)
 {
      SolidElemCSLHelper<eConstLawType>::AssRes(this, WorkVec, dCoef, func);
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 SubVectorHandler&
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssRes(SubVectorHandler& WorkVec,
-                                                                     doublereal dCoef,
-                                                                     const VectorHandler& XCurr,
-                                                                     const VectorHandler& XPrimeCurr)
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssRes(SubVectorHandler& WorkVec,
+                                                                                  doublereal dCoef,
+                                                                                  const VectorHandler& XCurr,
+                                                                                  const VectorHandler& XPrimeCurr)
 {
      DEBUGCOUTFNAME("SolidElemDynamic::AssRes");
 
@@ -1862,15 +1967,17 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssRes(SubVectorHa
                                           XPrimeCurr,
                                           SpFunctionCall::REGULAR_RES);
 
+     MassMatrixHelper<eMassMatrix>::AddInertia(*this, M);
+
      return WorkVec;
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 VariableSubMatrixHandler&
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssJac(VariableSubMatrixHandler& WorkMat,
-                                                                     doublereal dCoef,
-                                                                     const VectorHandler& XCurr,
-                                                                     const VectorHandler& XPrimeCurr)
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssJac(VariableSubMatrixHandler& WorkMat,
+                                                                                  doublereal dCoef,
+                                                                                  const VectorHandler& XCurr,
+                                                                                  const VectorHandler& XPrimeCurr)
 {
      DEBUGCOUTFNAME("SolidElemDynamic::AssJac");
 
@@ -1883,14 +1990,14 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssJac(VariableSub
      return WorkMat;
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 void
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssJac(VectorHandler& JacY,
-                                                                     const VectorHandler& Y,
-                                                                     doublereal dCoef,
-                                                                     const VectorHandler& XCurr,
-                                                                     const VectorHandler& XPrimeCurr,
-                                                                     VariableSubMatrixHandler& WorkMat)
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssJac(VectorHandler& JacY,
+                                                                                  const VectorHandler& Y,
+                                                                                  doublereal dCoef,
+                                                                                  const VectorHandler& XCurr,
+                                                                                  const VectorHandler& XPrimeCurr,
+                                                                                  VariableSubMatrixHandler& WorkMat)
 {
      using namespace sp_grad;
 
@@ -1903,9 +2010,9 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::AssJac(VectorHandl
                                           SpFunctionCall::REGULAR_JAC);
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 Vec3
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::GetB_int() const
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::GetB_int() const
 {
      using namespace sp_grad;
 
@@ -1943,9 +2050,9 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::GetB_int() const
      return dBeta;
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 Vec3
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::GetG_int() const
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::GetG_int() const
 {
      using namespace sp_grad;
 
@@ -1987,69 +2094,6 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType>::GetG_int() const
      return dGamma;
 }
 
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-SolidElemDynamicDiagMass<ElementType, CollocationType, SolidCSLType>::SolidElemDynamicDiagMass(unsigned uLabel,
-                                                                                               const std::array<const StructDispNodeAd*, iNumNodes>& rgNodes,
-                                                                                               const sp_grad::SpColVector<doublereal, iNumNodes>& rhon,
-                                                                                               std::array<SolidMaterialData, iNumEvalPointsStiffness>&& rgMaterialData,
-                                                                                               const RigidBodyKinematics* pRBK,
-                                                                                               flag fOut)
-:Elem{uLabel, fOut},
- SolidElemDynamicType{uLabel, rgNodes, rhon, std::move(rgMaterialData), pRBK, fOut}
-{
-     AssDiagMassMatrix();
-}
-
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-SolidElemDynamicDiagMass<ElementType, CollocationType, SolidCSLType>::~SolidElemDynamicDiagMass()
-{
-}
-
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-SubVectorHandler&
-SolidElemDynamicDiagMass<ElementType, CollocationType, SolidCSLType>::AssRes(SubVectorHandler& WorkVec,
-                                                                             doublereal dCoef,
-                                                                             const VectorHandler& XCurr,
-                                                                             const VectorHandler& XPrimeCurr)
-{
-     using namespace sp_grad;
-
-     SolidElemDynamicType::AssRes(WorkVec, dCoef, XCurr, XPrimeCurr);
-
-     for (index_type i = 1; i <= iNumNodes; ++i) {
-          this->rgNodes[i - 1]->AddInertia(diagM(i));
-     }
-
-     return WorkVec;
-}
-
-template <typename ElementType, typename CollocationType, typename SolidCSLType>
-void
-SolidElemDynamicDiagMass<ElementType, CollocationType, SolidCSLType>::AssDiagMassMatrix()
-{
-     using namespace sp_grad;
-
-     SpColVectorA<doublereal, 3> r;
-     SpColVectorA<doublereal, iNumNodes> h;
-     SpMatrixA<doublereal, iNumNodes, 3> hd;
-
-     for (index_type iColloc = 0; iColloc < iNumEvalPointsMassLumped; ++iColloc) {
-          const doublereal alpha = CollocationType::dGetWeightMassLumped(iColloc);
-
-          CollocationType::GetPositionMassLumped(iColloc, r);
-          ElementType::ShapeFunction(r, h);
-          ElementType::ShapeFunctionDeriv(r, hd);
-
-          const SpMatrix<doublereal, 3, 3> J = Transpose(this->x0 * hd);
-          const doublereal rho = Dot(h, this->rhon); // interpolate from nodes to collocation points
-          const doublereal dm = rho * Det(J) * alpha;
-
-          for (index_type k = 1; k <= iNumNodes; ++k) {
-               diagM(k) += dm * std::pow(h(k), 2);
-          }
-     }
-}
-
 template <typename ElementType, typename CollocationType>
 SolidElem*
 ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
@@ -2063,39 +2107,15 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
      typedef SolidElemStatic<ElementType, CollocationType, IsotropicLinearElastic>      SolidStaticElemTypeElasticIsotropic;
      typedef SolidElemStatic<ElementType, CollocationType, IsotropicLinearViscoElastic> SolidStaticElemTypeViscoElasticIsotropic;
 
-     typedef SolidElemDynamic<ElementType, CollocationType, SolidElasticConstLaw6D>      SolidDynamicElemTypeElasticNoDiagMass;
-     typedef SolidElemDynamic<ElementType, CollocationType, SolidViscoElasticConstLaw6D> SolidDynamicElemTypeViscoElasticNoDiagMass;
-     typedef SolidElemDynamic<ElementType, CollocationType, IsotropicLinearElastic>      SolidDynamicElemTypeElasticIsotropicNoDiagMass;
-     typedef SolidElemDynamic<ElementType, CollocationType, IsotropicLinearViscoElastic> SolidDynamicElemTypeViscoElasticIsotropicNoDiagMass;
+     typedef SolidElemDynamic<ElementType, CollocationType, SolidElasticConstLaw6D, MassMatrixType::CONSISTENT>      SolidDynamicElemTypeElasticConMass;
+     typedef SolidElemDynamic<ElementType, CollocationType, SolidViscoElasticConstLaw6D, MassMatrixType::CONSISTENT> SolidDynamicElemTypeViscoElasticConMass;
+     typedef SolidElemDynamic<ElementType, CollocationType, IsotropicLinearElastic, MassMatrixType::CONSISTENT>      SolidDynamicElemTypeElasticIsotropicConMass;
+     typedef SolidElemDynamic<ElementType, CollocationType, IsotropicLinearViscoElastic, MassMatrixType::CONSISTENT> SolidDynamicElemTypeViscoElasticIsotropicConMass;
 
-     typedef SolidElemDynamicDiagMass<ElementType, CollocationType, SolidElasticConstLaw6D>      SolidDynamicElemTypeElasticDiagMass;
-     typedef SolidElemDynamicDiagMass<ElementType, CollocationType, SolidViscoElasticConstLaw6D> SolidDynamicElemTypeViscoElasticDiagMass;
-     typedef SolidElemDynamicDiagMass<ElementType, CollocationType, IsotropicLinearElastic>      SolidDynamicElemTypeElasticIsotropicDiagMass;
-     typedef SolidElemDynamicDiagMass<ElementType, CollocationType, IsotropicLinearViscoElastic> SolidDynamicElemTypeViscoElasticIsotropicDiagMass;
-
-     typedef typename
-          std::conditional<ElementType::bHaveDiagMass,
-                           SolidDynamicElemTypeElasticNoDiagMass,
-                           SolidDynamicElemTypeElasticDiagMass>::type
-          SolidDynamicElemTypeElastic;
-
-     typedef typename
-          std::conditional<ElementType::bHaveDiagMass,
-                           SolidDynamicElemTypeViscoElasticNoDiagMass,
-                           SolidDynamicElemTypeViscoElasticDiagMass>::type
-          SolidDynamicElemTypeViscoElastic;
-
-     typedef typename
-          std::conditional<ElementType::bHaveDiagMass,
-                           SolidDynamicElemTypeElasticIsotropicNoDiagMass,
-                           SolidDynamicElemTypeElasticIsotropicDiagMass>::type
-          SolidDynamicElemTypeElasticIsotropic;
-
-     typedef typename
-          std::conditional<ElementType::bHaveDiagMass,
-                           SolidDynamicElemTypeViscoElasticIsotropicNoDiagMass,
-                           SolidDynamicElemTypeViscoElasticIsotropicDiagMass>::type
-          SolidDynamicElemTypeViscoElasticIsotropic;
+     typedef SolidElemDynamic<ElementType, CollocationType, SolidElasticConstLaw6D, MassMatrixType::LUMPED>      SolidDynamicElemTypeElasticLumpedMass;
+     typedef SolidElemDynamic<ElementType, CollocationType, SolidViscoElasticConstLaw6D, MassMatrixType::LUMPED> SolidDynamicElemTypeViscoElasticLumpedMass;
+     typedef SolidElemDynamic<ElementType, CollocationType, IsotropicLinearElastic, MassMatrixType::LUMPED>      SolidDynamicElemTypeElasticIsotropicLumpedMass;
+     typedef SolidElemDynamic<ElementType, CollocationType, IsotropicLinearViscoElastic, MassMatrixType::LUMPED> SolidDynamicElemTypeViscoElasticIsotropicLumpedMass;
 
      constexpr index_type iNumNodes = ElementType::iNumNodes;
      constexpr index_type iNumEvalPointsStiffness = CollocationType::iNumEvalPointsStiffness;
@@ -2103,6 +2123,7 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
      std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
      SpColVectorA<doublereal, iNumNodes> rhon;
      const bool bStaticModel = HP.IsKeyWord("static") ? true : pDM->bIsStaticModel();
+     const MassMatrixType eMassMatrixType = HP.IsKeyWord("lumped" "mass") ? MassMatrixType::LUMPED : MassMatrixType::CONSISTENT;
 
      for (index_type i = 0; i < iNumNodes; ++i) {
           rgNodes[i] = bStaticModel
@@ -2285,44 +2306,100 @@ ReadSolid(DataManager* const pDM, MBDynParser& HP, const unsigned int uLabel)
           switch (eConstLawType) {
           case ConstLawType::ELASTIC:
                if (bIsotropicMaterial) {
-                    SAFENEWWITHCONSTRUCTOR(pEl,
-                                           SolidDynamicElemTypeElasticIsotropic,
-                                           SolidDynamicElemTypeElasticIsotropic(uLabel,
-                                                                                rgNodes,
-                                                                                rhon,
-                                                                                std::move(rgMaterialData),
-                                                                                pRBK,
-                                                                                fOut));
+                    switch (eMassMatrixType) {
+                    case MassMatrixType::CONSISTENT:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeElasticIsotropicConMass,
+                                                SolidDynamicElemTypeElasticIsotropicConMass(uLabel,
+                                                                                            rgNodes,
+                                                                                            rhon,
+                                                                                            std::move(rgMaterialData),
+                                                                                            pRBK,
+                                                                                            fOut));
+                         break;
+                    case MassMatrixType::LUMPED:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeElasticIsotropicLumpedMass,
+                                                SolidDynamicElemTypeElasticIsotropicLumpedMass(uLabel,
+                                                                                               rgNodes,
+                                                                                               rhon,
+                                                                                               std::move(rgMaterialData),
+                                                                                               pRBK,
+                                                                                               fOut));
+                         break;
+                    }
                } else {
-                    SAFENEWWITHCONSTRUCTOR(pEl,
-                                           SolidDynamicElemTypeElastic,
-                                           SolidDynamicElemTypeElastic(uLabel,
-                                                                       rgNodes,
-                                                                       rhon,
-                                                                       std::move(rgMaterialData),
-                                                                       pRBK,
-                                                                       fOut));
+                    switch (eMassMatrixType) {
+                    case MassMatrixType::CONSISTENT:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeElasticConMass,
+                                                SolidDynamicElemTypeElasticConMass(uLabel,
+                                                                                   rgNodes,
+                                                                                   rhon,
+                                                                                   std::move(rgMaterialData),
+                                                                                   pRBK,
+                                                                                   fOut));
+                         break;
+                    case MassMatrixType::LUMPED:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeElasticLumpedMass,
+                                                SolidDynamicElemTypeElasticLumpedMass(uLabel,
+                                                                                      rgNodes,
+                                                                                      rhon,
+                                                                                      std::move(rgMaterialData),
+                                                                                      pRBK,
+                                                                                      fOut));
+                         break;
+                    }
                }
                break;
           case ConstLawType::VISCOELASTIC:
                if (bIsotropicMaterial) {
-                    SAFENEWWITHCONSTRUCTOR(pEl,
-                                           SolidDynamicElemTypeViscoElasticIsotropic,
-                                           SolidDynamicElemTypeViscoElasticIsotropic(uLabel,
-                                                                                     rgNodes,
-                                                                                     rhon,
-                                                                                     std::move(rgMaterialData),
-                                                                                     pRBK,
-                                                                                     fOut));
+                    switch (eMassMatrixType) {
+                    case MassMatrixType::CONSISTENT:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeViscoElasticIsotropicConMass,
+                                                SolidDynamicElemTypeViscoElasticIsotropicConMass(uLabel,
+                                                                                                 rgNodes,
+                                                                                                 rhon,
+                                                                                                 std::move(rgMaterialData),
+                                                                                                 pRBK,
+                                                                                                 fOut));
+                         break;
+                    case MassMatrixType::LUMPED:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeViscoElasticIsotropicLumpedMass,
+                                                SolidDynamicElemTypeViscoElasticIsotropicLumpedMass(uLabel,
+                                                                                                    rgNodes,
+                                                                                                    rhon,
+                                                                                                    std::move(rgMaterialData),
+                                                                                                    pRBK,
+                                                                                                    fOut));
+                         break;
+                    }
                } else {
-                    SAFENEWWITHCONSTRUCTOR(pEl,
-                                           SolidDynamicElemTypeViscoElastic,
-                                           SolidDynamicElemTypeViscoElastic(uLabel,
-                                                                            rgNodes,
-                                                                            rhon,
-                                                                            std::move(rgMaterialData),
-                                                                            pRBK,
-                                                                            fOut));
+                    switch (eMassMatrixType) {
+                    case MassMatrixType::CONSISTENT:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeViscoElasticConMass,
+                                                SolidDynamicElemTypeViscoElasticConMass(uLabel,
+                                                                                        rgNodes,
+                                                                                        rhon,
+                                                                                        std::move(rgMaterialData),
+                                                                                        pRBK,
+                                                                                        fOut));
+                         break;
+                    case MassMatrixType::LUMPED:
+                         SAFENEWWITHCONSTRUCTOR(pEl,
+                                                SolidDynamicElemTypeViscoElasticLumpedMass,
+                                                SolidDynamicElemTypeViscoElasticLumpedMass(uLabel,
+                                                                                           rgNodes,
+                                                                                           rhon,
+                                                                                           std::move(rgMaterialData),
+                                                                                           pRBK,
+                                                                                           fOut));
+                         break;
+                    }
                }
                break;
           default:
