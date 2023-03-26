@@ -1725,12 +1725,14 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                         "tetrahedron10"
                 };
 
-                static_assert(HEXAHEDRON20 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
-                static_assert(HEXAHEDRON20R - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
-                static_assert(PENTAHEDRON15 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
-                static_assert(TETRAHEDRON10 - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
+                constexpr integer iNumElemTypes = sizeof(sType) / sizeof(sType[0]);
 
-                ASSERT(CurrType - HEXAHEDRON8 < sizeof(sType) / sizeof(sType[0]));
+                static_assert(HEXAHEDRON20 - HEXAHEDRON8 < iNumElemTypes);
+                static_assert(HEXAHEDRON20R - HEXAHEDRON8 < iNumElemTypes);
+                static_assert(PENTAHEDRON15 - HEXAHEDRON8 < iNumElemTypes);
+                static_assert(TETRAHEDRON10 - HEXAHEDRON8 < iNumElemTypes);
+
+                ASSERT(CurrType - HEXAHEDRON8 < iNumElemTypes);
 
                 if (!bUseAutoDiff()) {
                      silent_cerr("element type " << sType[CurrType - HEXAHEDRON8] << " requires support for automatic differentiation at line " << HP.GetLineData()
@@ -1782,7 +1784,7 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 
                 break;
         }
-             
+
         case PRESSUREQ4:
         case PRESSUREQ8:
         case PRESSUREQ8R:
@@ -1799,10 +1801,12 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                         "tractionq4",
                         "tractionq8",
                         "tractionq8r",
-                        "tractiont6"                        
+                        "tractiont6"
                 };
 
-                ASSERT(CurrType - PRESSUREQ4 < sizeof(sType) / sizeof(sType[0]));
+                constexpr integer iNumElemTypes = sizeof(sType) / sizeof(sType[0]);
+
+                ASSERT(CurrType - PRESSUREQ4 < iNumElemTypes);
 
                 if (!bUseAutoDiff()) {
                      silent_cerr("element type " << sType[CurrType - PRESSUREQ4] << " requires support for automatic differentiation at line " << HP.GetLineData()
@@ -1852,7 +1856,7 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                      break;
                 case TRACTIONT6:
                      pE = ReadTractionLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);
-                     break;                     
+                     break;
                 default:
                      ASSERT(0);
                 }
