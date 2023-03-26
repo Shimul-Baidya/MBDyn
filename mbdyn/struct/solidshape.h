@@ -144,7 +144,6 @@ public:
 
      static constexpr sp_grad::index_type iNumNodes = 8;
      static constexpr sp_grad::index_type iNumNodesExtrap = iNumNodes;
-     static constexpr bool bHaveDiagMass = true;
 
      static inline void
      ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
@@ -180,7 +179,6 @@ public:
 
      static constexpr sp_grad::index_type iNumNodes = 20;
      static constexpr sp_grad::index_type iNumNodesExtrap = iNumNodes;
-     static constexpr bool bHaveDiagMass = false; // not applicable to incomplete high order elements
 
      static inline void
      ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
@@ -216,7 +214,6 @@ public:
 
      static constexpr sp_grad::index_type iNumNodes = 20;
      static constexpr sp_grad::index_type iNumNodesExtrap = 8;
-     static constexpr bool bHaveDiagMass = false; // not applicable to incomplete high order elements
 
      static inline void
      ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
@@ -252,7 +249,6 @@ public:
 
      static constexpr sp_grad::index_type iNumNodes = 15;
      static constexpr sp_grad::index_type iNumNodesExtrap = iNumNodes;
-     static constexpr bool bHaveDiagMass = false; // to be checked
 
      static inline void
      ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
@@ -288,7 +284,6 @@ public:
 
      static constexpr sp_grad::index_type iNumNodes = 10;
      static constexpr sp_grad::index_type iNumNodesExtrap = 4;
-     static constexpr bool bHaveDiagMass = false; // not supported by collocation rules
 
      static inline void
      ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
