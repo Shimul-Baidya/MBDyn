@@ -339,6 +339,7 @@ inline void StructDispNodeAd::GetXCurr(sp_grad::SpColVector<sp_grad::SpGradient,
      switch (func) {
      case sp_grad::SpFunctionCall::INITIAL_ASS_JAC:
           SP_GRAD_ASSERT(dCoef == 1.);
+          [[fallthrough]];
      case sp_grad::SpFunctionCall::INITIAL_DER_JAC:
      case sp_grad::SpFunctionCall::REGULAR_JAC:
           iFirstDofIndex = StructDispNode::iGetFirstIndex();
