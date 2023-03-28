@@ -216,13 +216,17 @@ public:
 	/* Moltiplica per uno scalare */
 	virtual VectorHandler&
 	ScalarMul(const VectorHandler& VH, const doublereal& d);
-
+	
+	/* Deal with name hiding */
+	using VectorHandler::operator+=;
 	/* Overload di += usato per la correzione della soluzione */
 	virtual VectorHandler& operator += (const VectorHandler& VH);
 
 	/* Overload di += usato per la correzione della soluzione */
 	virtual MyVectorHandler& operator += (const MyVectorHandler& VH);
 
+	/* Deal with name hiding */
+	using VectorHandler::operator-=;
 	/* Overload di -= */
 	virtual VectorHandler& operator -= (const VectorHandler& VH);
 

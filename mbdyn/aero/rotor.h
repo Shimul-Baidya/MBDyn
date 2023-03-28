@@ -222,6 +222,7 @@ public:
 
 class NoRotor : virtual public Elem, public Rotor {
 protected:
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -272,6 +273,7 @@ public:
 
 class UniformRotor : virtual public Elem, public Rotor {
 protected:
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 	   	const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -408,6 +410,7 @@ public:
 protected:
 	Type gtype;
 
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -478,6 +481,7 @@ public:
 
 class ManglerRotor : virtual public Elem, public Rotor {
 protected:
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -569,6 +573,7 @@ protected:
 	doublereal dL31;
 	doublereal dL33;
 
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -701,6 +706,7 @@ protected:
 	doublereal dL31;
 	doublereal dL33;
 
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,

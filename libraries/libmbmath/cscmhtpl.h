@@ -82,6 +82,8 @@ public:
 #endif
      }
 
+     using MatrixHandler::operator=;
+
      virtual integer iGetNumRows() const override { return NCols; }
      virtual integer iGetNumCols() const override { return NCols; }
 

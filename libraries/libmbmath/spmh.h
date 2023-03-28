@@ -197,6 +197,7 @@ public:
 	/* Estrae una colonna da una matrice */
 	virtual VectorHandler& GetCol(integer icol,
 				      VectorHandler& out) const = 0;
+	using MatrixHandler::operator=;
 };
 
 /* Sparse Matrix in compact form */
@@ -218,6 +219,8 @@ public:
 
 	/* used to sum CC matrices with identical indices */
         virtual void AddUnchecked(const CompactSparseMatrixHandler& m) = 0;
+
+	using MatrixHandler::operator=;
 };
 
 /* Sparse Matrix in compact form */
@@ -235,6 +238,7 @@ public:
 				       const std::vector<idx_type>& i,
 				       const std::vector<idx_type>& p);
 	virtual ~CompactSparseMatrixHandler_tpl(void);
+	using MatrixHandler::operator=;
 
 	class const_iterator {
 	private:
