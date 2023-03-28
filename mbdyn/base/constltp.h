@@ -79,27 +79,30 @@ public:
 template <class T, class Tder>
 class ConstitutiveLawBase : public WithLabel, public SimulationEntity {
 public:
-        class ErrNotAvailable : public MBDynErrBase {
-        public:
-                ErrNotAvailable(MBDYN_EXCEPT_ARGS_DECL)
-                : MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU)
-                {
-                        silent_cerr("Constitutive law not available "
-                                "for this dimensionality"
-                                << std::endl);
-                };
-                ErrNotAvailable(std::ostream& out, MBDYN_EXCEPT_ARGS_DECL)
-                : MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU)
-                {
-                        out << "Constitutive law not available "
-                                "for this dimensionality"
-                                << what()
-                                << std::endl;
-                };
-        };
+	using SimulationEntity::AfterConvergence;
+	using SimulationEntity::Update;
 
-        typedef typename ConstitutiveLawBase<T, Tder>::ErrNotAvailable Err;
+	class ErrNotAvailable : public MBDynErrBase {
+	public:
+		ErrNotAvailable(MBDYN_EXCEPT_ARGS_DECL)
+		: MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU)
+		{
+			silent_cerr("Constitutive law not available "
+				"for this dimensionality"
+				<< std::endl);
+		};
+		ErrNotAvailable(std::ostream& out, MBDYN_EXCEPT_ARGS_DECL)
+		: MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU)
+		{
+			out << "Constitutive law not available "
+				"for this dimensionality"
+				<< what()
+				<< std::endl;
+		};
+	};
 
+        typedef typename ConstitutiveLawBase<T, Tder>::ErrNotAvailable Err;   
+   
 protected:
         T Epsilon;		/* strain */
         T EpsilonPrime;		/* strain rate */

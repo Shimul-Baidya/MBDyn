@@ -81,6 +81,7 @@ public:
       */
      virtual ~SubMatrixHandler(void);
 
+     using MatrixHandler::operator=;
 
      /* Metodi di servizio */
 
@@ -228,6 +229,8 @@ public:
       * Nota: l'elemento non possiede memoria e quindi non ne dealloca.
       */
      virtual ~FullSubMatrixHandler(void);
+
+     using MatrixHandler::operator=;
 
      /* Metodi di servizio */
 
@@ -745,6 +748,7 @@ public:
                             integer iDoubleSize, doublereal* pdTmpMat,
                             integer iMaxCols, doublereal **ppdCols);
      FullSubMatrixHandlerAd(integer iNR, integer iNC);
+     using MatrixHandler::operator=;
 
      virtual MatrixHandler&
      AddTo(MatrixHandler& MH) const override final;
@@ -817,6 +821,8 @@ public:
       * non ne deve deallocare
       */
      virtual ~SparseSubMatrixHandler(void);
+
+     using MatrixHandler::operator=;
 
      /* Metodi di servizio */
 
@@ -1129,6 +1135,8 @@ public:
 
      explicit SparseSubMatrixHandlerAd(integer iNumItems);
 
+     using MatrixHandler::operator=;
+
      virtual MatrixHandler&
      AddTo(MatrixHandler& MH) const override final;
 };
@@ -1137,6 +1145,7 @@ class SpGradientSubMatrixHandler: public SubMatrixHandler {
 public:
      explicit SpGradientSubMatrixHandler(integer iNumItemsMax);
      virtual ~SpGradientSubMatrixHandler();
+     using MatrixHandler::operator=;
      virtual void Resize(integer, integer) override;
      virtual void Reset() override;
      virtual void ResizeReset(integer, integer) override;
@@ -1400,6 +1409,8 @@ public:
           NO_OP;
      };
 
+     using VectorHandler::operator=;
+
      /* Metodi di servizio */
 
 #ifdef DEBUG
@@ -1490,6 +1501,9 @@ public:
      virtual ~MySubVectorHandler(void) {
           Detach();
      };
+
+     using VectorHandler::operator=;
+     using MyVectorHandler::operator=;
 
      /*
       * Tutti questi metodi sono richiesti perche'
