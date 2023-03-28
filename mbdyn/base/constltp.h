@@ -79,6 +79,9 @@ public:
 template <class T, class Tder>
 class ConstitutiveLaw : public WithLabel, public SimulationEntity {
 public:
+	using SimulationEntity::AfterConvergence;
+	using SimulationEntity::Update;
+
 	class ErrNotAvailable : public MBDynErrBase {
 	public:
 		ErrNotAvailable(MBDYN_EXCEPT_ARGS_DECL)

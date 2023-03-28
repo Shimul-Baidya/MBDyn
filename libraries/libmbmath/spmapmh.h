@@ -143,6 +143,7 @@ public:
 	SpMapMatrixHandler(const integer &n = 0,const integer &nn = 0);
 
 	virtual ~SpMapMatrixHandler(void);
+	using MatrixHandler::operator=;
 
 	doublereal & operator()(integer i_row, integer i_col) {
 		ASSERTMSGBREAK(i_row > 0 && i_row <= NRows,

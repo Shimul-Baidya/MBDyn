@@ -67,6 +67,7 @@ public:
                 NO_OP;
         };
 #endif /* DEBUG */
+	using MatrixHandler::operator=;
         class const_iterator {
                 friend class NaiveMatrixHandler;
 
@@ -266,6 +267,8 @@ public:
                 const std::vector<integer>& invperm);
 
         virtual ~NaivePermMatrixHandler(void);
+
+	using MatrixHandler::operator=;
 
         const std::vector<integer>& GetPerm(void) const;
 

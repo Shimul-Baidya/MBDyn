@@ -87,6 +87,8 @@ public:
      SiconosVectorHandler(integer iSize = 0, doublereal* pdTmpVec = nullptr, const SiconosIndexMap* pIndexMap = nullptr);
      virtual ~SiconosVectorHandler();
 
+     using MyVectorHandler::operator=;
+
      virtual SiconosVectorHandler& operator=(const VectorHandler& VH) override final;
 
      virtual SiconosVectorHandler& ScalarAddMul(const VectorHandler& VH, const doublereal& d) override final;
@@ -123,6 +125,7 @@ private:
 public:
      SiconosMatrixHandler(NM_types eStorageType, integer iNumRows, integer iNumCols, integer iNumNz, const SiconosIndexMap* pIndexMap);
      virtual ~SiconosMatrixHandler();
+     using MatrixHandler::operator=;
 
 #ifdef DEBUG
      virtual void IsValid() const override final;
