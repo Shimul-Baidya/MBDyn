@@ -1754,22 +1754,45 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssMa
      SpColVectorA<doublereal, 3> r;
      SpColVectorA<doublereal, iNumNodes> h;
      SpMatrixA<doublereal, iNumNodes, 3> hd;
+     doublereal mtot = 0.;
 
-     for (index_type iColloc = 0; iColloc < iNumEvalPointsMassLumped; ++iColloc) {
-          const doublereal alpha = CollocationType::dGetWeightMassLumped(iColloc);
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
 
-          CollocationType::GetPositionMassLumped(iColloc, r);
+          CollocationType::GetPositionMass(iColloc, r);
           ElementType::ShapeFunction(r, h);
           ElementType::ShapeFunctionDeriv(r, hd);
 
           const SpMatrix<doublereal, 3, 3> J = Transpose(this->x0 * hd);
+          const doublereal detJ = Det(J);
           const doublereal rho = Dot(h, this->rhon); // interpolate from nodes to collocation points
-          const doublereal dm = rho * Det(J) * alpha;
+          const doublereal dm = rho * detJ * alpha;
+
+          if (detJ <= 0.) {
+               silent_cerr("solid(" << this->GetLabel() << "): Jacobian is singular: det(J) = " << detJ << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          mtot += dm;
 
           for (index_type k = 1; k <= iNumNodes; ++k) {
                Mlumped(k) += dm * std::pow(h(k), 2);
           }
      }
+
+     doublereal mdiag = 0.;
+
+     for (index_type k = 1; k <= iNumNodes; ++k) {
+          mdiag += Mlumped(k);
+     }
+
+     for (index_type k = 1; k <= iNumNodes; ++k) {
+          Mlumped(k) *= mtot / mdiag;
+     }
+
+     DEBUGCERR("Mlumped=" << Mlumped << "\n");
+     DEBUGCERR("mtot=" << mtot << "\n");
+     DEBUGCERR("mdiag=" << mdiag << "\n");
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
