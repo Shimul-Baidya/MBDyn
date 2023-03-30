@@ -60,6 +60,8 @@ public:
 
      virtual ~BeamAd();
 
+     using Beam::AddInternalForces;
+
      virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
 
      virtual SubVectorHandler&

@@ -57,6 +57,7 @@ class SpGradientSparseMatrixHandler: public SparseMatrixHandler {
 public:
      SpGradientSparseMatrixHandler(const integer& iNumRows, const integer& iNumCols);
      virtual ~SpGradientSparseMatrixHandler();
+     using MatrixHandler::operator=;
 
      class const_iterator {
      public:

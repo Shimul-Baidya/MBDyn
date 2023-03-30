@@ -80,6 +80,8 @@ public:
 
 	virtual ~SchurMatrixHandler(void);
 
+	using MatrixHandler::operator=;
+
 #ifdef DEBUG
 	/* Usata per il debug */
 	virtual void IsValid(void) const;
@@ -523,6 +525,8 @@ public:
    			integer* pGlobToLoc);
 	~SchurVectorHandler(void);
 
+	using VectorHandler::operator=;
+
 #ifdef DEBUG
 	/* Usata per il debug */
 	void IsValid(void) const;
@@ -786,6 +790,8 @@ public:
    			MatrixHandler* pBM,
    			integer* pGlobToLoc);
 	~SchurMatrixHandlerUm(void);
+
+	using MatrixHandler::operator=;
 
 	/* Resetta le matrici E F e C */
 	inline void MatEFCReset(void);
