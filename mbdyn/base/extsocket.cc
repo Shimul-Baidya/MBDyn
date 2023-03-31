@@ -515,7 +515,7 @@ ReadExtSocketHandler(DataManager* pDM,
 
 	if ((socket_type == SOCK_DGRAM) && !bCreate) {
 		silent_cerr("ExtSocketHandler(" << uLabel << "\"): "
-			"socket type=upd incompatible with create=no "
+			"socket type=udp incompatible with create=no "
 			"at line " << HP.GetLineData() << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
