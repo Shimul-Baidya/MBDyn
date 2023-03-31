@@ -69,6 +69,7 @@ public:
 
      ~TotalJointAd();
 
+     using TotalJoint::AssJac;
      virtual VariableSubMatrixHandler&
      AssJac(VariableSubMatrixHandler& WorkMat,
             doublereal dCoef,
@@ -154,6 +155,8 @@ public:
 
      ~TotalPinJointAd();
 
+     using TotalPinJoint::AssJac;
+     
      virtual VariableSubMatrixHandler&
      AssJac(VariableSubMatrixHandler& WorkMat,
             doublereal dCoef,

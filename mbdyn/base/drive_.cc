@@ -2782,6 +2782,7 @@ protected:
 	DriveCaller *
 	Read(const DataManager* pDM, MBDynParser& HP,
 		const SimulationEntity *pSE, const std::string& msg);
+	using DriveCallerRead::Read;
 };
 
 DriveCaller *

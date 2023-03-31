@@ -51,6 +51,7 @@ class FullMatrixHandler : public MatrixHandler {
 public:
 	// allow copy constructor!
 	FullMatrixHandler(const FullMatrixHandler&);
+	using MatrixHandler::operator=;
 	FullMatrixHandler& operator = (const FullMatrixHandler&);
 
 private:

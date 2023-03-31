@@ -63,6 +63,8 @@ public:
 
 	virtual ~DirCColMatrixHandler();
 
+	using MatrixHandler::operator=;
+
 	/* used by MultiThreadDataManager to duplicate the storage array
 	 * while preserving the CC indices */
         virtual CompactSparseMatrixHandler *Copy(void) const override;
