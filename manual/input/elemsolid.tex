@@ -91,7 +91,9 @@ In addition to linear elastic isotropic and linear viscoelastic isotropic consti
 any linear or nonlinear elastic or viscoelastic 6D constitutive law can be used if it fullfills the following requirements:
 A consitutive law must expect the components of the Green-Lagrange strain tensor $\boldsymbol{G}$
 and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input and return the components of the Second Piola-Kirchoff
-stress tensor $\boldsymbol{S}$ as output. Right now a hyperelastic- and an elasto-plastic constitutive law are implemented. %% See section ...
+stress tensor $\boldsymbol{S}$ as output. In addition to generic linear elastic and linear viscoelastic constitutive laws,
+also hyperelastic- and elasto-plastic constitutive laws are implemented.
+See also section~\ref{sec:CL:neo-hookean} and section~\ref{sec:CL:bilinear-isotropic-hardening}.
 In case of viscoelastic constitutive laws, the strain rates $\dot{\boldsymbol{\varepsilon}}$ are scaled in order to make
 the effect of structural damping independent on the deformation \cite{KUEBLER2005}.
 
@@ -107,6 +109,7 @@ the effect of structural damping independent on the deformation \cite{KUEBLER200
   \boldsymbol{F} & = & \nabla \boldsymbol{u} + \boldsymbol{I}
 \end{eqnarray}
 \begin{description}
+\item[$\boldsymbol{f}$] Constitutive law
 \item[$\boldsymbol{G}$] Green-Lagrange strain tensor
 \item[$\boldsymbol{S}$] Second Piola-Kirchoff stress tensor
 \item[$\boldsymbol{C}$] Right Cauchy-Green strain tensor
