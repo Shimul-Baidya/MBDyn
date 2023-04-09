@@ -1804,10 +1804,11 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                         "tractiont6"
                 };
 
+#ifdef DEBUG
                 constexpr integer iNumElemTypes = sizeof(sType) / sizeof(sType[0]);
 
                 ASSERT(CurrType - PRESSUREQ4 < iNumElemTypes);
-
+#endif
                 if (!bUseAutoDiff()) {
                      silent_cerr("element type " << sType[CurrType - PRESSUREQ4] << " requires support for automatic differentiation at line " << HP.GetLineData()
                                  << "\nadd the statement \"use automatic differentiation;\" inside the control data section in order to enable it!\n");

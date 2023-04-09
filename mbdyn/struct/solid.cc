@@ -625,6 +625,14 @@ public:
 
      inline void
      AddInertia(const sp_grad::SpColVector<doublereal, iNumNodes>& diagM);
+
+     virtual void
+     SetValue(DataManager *pDM,
+              VectorHandler& X, VectorHandler& XP,
+              SimulationEntity::Hints *ph) override;
+
+     virtual doublereal dGetE() const override;
+
 private:
      typename MassMatrixHelper<eMassMatrix>::template MassMatrix<iNumDof, iNumNodes>::Type M;
 };
@@ -669,6 +677,36 @@ bool SolidElem::bIsDeformable() const
 unsigned int SolidElem::iGetInitialNumDof() const
 {
      return 0u;
+}
+
+unsigned int SolidElem::iGetNumPrivData() const
+{
+     return 1;
+}
+
+unsigned int SolidElem::iGetPrivDataIdx(const char *s) const
+{
+     if (strcmp(s, "E") == 0) {
+          return 1u;
+     }
+
+     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+}
+
+doublereal SolidElem::dGetPrivData(unsigned int i) const
+{
+     switch (i) {
+     case 1u:
+          return dGetE();
+
+     default:
+          throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
+}
+
+doublereal SolidElem::dGetE() const
+{
+     return 0.; // Used for all static elements
 }
 
 template <ConstLawType::Type SolidCSLType>
@@ -1809,6 +1847,34 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AddIn
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+void
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::SetValue(DataManager *pDM,
+                                                                                    VectorHandler& X, VectorHandler& XP,
+                                                                                    SimulationEntity::Hints *ph)
+{
+     using namespace sp_grad;
+
+     SpMatrix<doublereal, 3, iNumNodes> uP(3, iNumNodes, 1);
+
+     this->GetNodalVelocities(uP, 1., SpFunctionCall::REGULAR_RES);
+
+     SpGradExpDofMapHelper<doublereal> oDofMap;
+     SpColVectorA<doublereal, iNumDof> beta;
+
+     MassMatrixHelper<eMassMatrix>::AssInertiaVec(*this, M, uP, beta, oDofMap);
+
+     for (index_type i = 1; i <= iNumNodes; ++i) {
+          ASSERT(dynamic_cast<const DynamicStructDispNodeAd*>(this->rgNodes[i - 1]));
+
+          const index_type iFirstIndex = this->rgNodes[i - 1]->iGetFirstMomentumIndex();
+
+          for (index_type j = 1; j <= 3; ++j) {
+               X.DecCoef(iFirstIndex + j, beta((i - 1) * 3 + j));
+          }
+     }
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 void SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 {
      *piNumRows = 2 * iNumDof;
@@ -2071,6 +2137,45 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::GetB_
      }
 
      return dBeta;
+}
+
+template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
+doublereal
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::dGetE() const
+{
+     using namespace sp_grad;
+
+     doublereal dE = 0.;
+
+     SpColVectorA<doublereal, 3> r;
+     SpColVectorA<doublereal, iNumNodes> h;
+     SpMatrixA<doublereal, iNumNodes, 3> hd;
+     SpMatrixA<doublereal, 3, iNumNodes> v;
+
+     this->GetNodalVelocities(v, 1., SpFunctionCall::REGULAR_RES);
+
+     for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
+          CollocationType::GetPositionMass(iColloc, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
+          const SpMatrix<doublereal, 3, 3> J = Transpose(this->x0 * hd);
+          const SpColVector<doublereal, 3> V = v * h;
+          const doublereal detJ = Det(J);
+
+          if (detJ <= 0.) {
+               silent_cerr("solid(" << this->GetLabel() << "): Jacobian is singular: det(J) = " << detJ << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal rho = Dot(h, this->rhon); // interpolate from nodes to collocation points
+          const doublereal dm = rho * detJ * alpha;
+
+          dE += 0.5 * dm * Dot(V, V);
+     }
+
+     return dE;
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>

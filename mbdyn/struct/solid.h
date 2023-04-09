@@ -78,6 +78,14 @@ public:
      virtual unsigned int iGetInitialNumDof() const override;
 
      virtual bool bIsDeformable() const override;
+
+     virtual unsigned int iGetNumPrivData() const override;
+
+     virtual unsigned int iGetPrivDataIdx(const char *s) const override;
+
+     virtual doublereal dGetPrivData(unsigned int i) const override;
+
+     virtual doublereal dGetE() const;
 };
 
 template <typename ElementType, typename CollocationType>
