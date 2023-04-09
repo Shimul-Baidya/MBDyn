@@ -45,9 +45,18 @@
 #include "solidcsl.h"
 
 class NeoHookean: public ConstitutiveLaw<Vec6, Mat6x6> {
-public:
+protected:
      NeoHookean(const doublereal mu, const doublereal lambda)
           :mu(mu), lambda(lambda) {
+     }
+
+     const doublereal mu, lambda;
+};
+
+class NeoHookeanElastic: public NeoHookean {
+public:
+     NeoHookeanElastic(const doublereal mu, const doublereal lambda)
+          :NeoHookean(mu, lambda) {
      }
 
      virtual ConstLawType::Type GetConstLawType() const override {
@@ -55,11 +64,11 @@ public:
      }
 
      virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
-          NeoHookean* pCL = nullptr;
+          NeoHookeanElastic* pCL = nullptr;
 
           SAFENEWWITHCONSTRUCTOR(pCL,
-                                 NeoHookean,
-                                 NeoHookean(mu, lambda));
+                                 NeoHookeanElastic,
+                                 NeoHookeanElastic(mu, lambda));
           return pCL;
      }
 
@@ -129,8 +138,100 @@ public:
                oDofMap.MapAssign(sigma(i), mu * (j == k) + (CC(j, k) - C(j, k) * IC + IIC * (j == k)) * gamma);
           }
      }
+};
+
+class NeoHookeanViscoElastic: public NeoHookeanElastic {
+public:
+     NeoHookeanViscoElastic(const doublereal mu, const doublereal lambda, const doublereal eta)
+          :NeoHookeanElastic(mu, lambda), eta(eta) {
+     }
+
+     virtual ConstLawType::Type GetConstLawType() const override {
+          return ConstLawType::VISCOELASTIC;
+     }
+
+     virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
+          NeoHookeanViscoElastic* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 NeoHookeanViscoElastic,
+                                 NeoHookeanViscoElastic(mu, lambda, eta));
+          return pCL;
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+            const sp_grad::SpColVector<doublereal, iDim>& EpsPrime,
+            sp_grad::SpColVector<doublereal, iDim>& FTmp) override {
+          UpdateViscoelasticTpl(Eps, EpsPrime, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+            const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& EpsPrime,
+            sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp) override {
+          UpdateViscoelasticTpl(Eps, EpsPrime, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+            const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& EpsPrime,
+            sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp) override {
+          UpdateViscoelasticTpl(Eps, EpsPrime, FTmp);
+     }
+
+     virtual void
+     Update(const Vec6& Eps, const Vec6& EpsPrime) override {
+          ConstitutiveLaw<Vec6, Mat6x6>::UpdateViscoelasticSparse(this, Eps, EpsPrime);
+     }
+
+     template <typename VectorType>
+     void UpdateViscoelasticTpl(const VectorType& epsilon, const VectorType& epsilonP, VectorType& sigma) {
+
+          typedef typename VectorType::ValueType T;
+          using namespace sp_grad;
+
+          SpGradExpDofMapHelper<typename VectorType::ValueType> oDofMap;
+
+          oDofMap.GetDofStat(epsilon);
+          oDofMap.GetDofStat(epsilonP);
+          oDofMap.Reset();
+          oDofMap.InsertDof(epsilon);
+          oDofMap.InsertDof(epsilonP);
+          oDofMap.InsertDone();
+
+          // Based on Lars Kuebler 2005, chapter 2.2.1.3, page 25-26
+
+          const SpMatrix<T, 3, 3> C{T{2. * epsilon(1) + 1.},        epsilon(4),           epsilon(6),
+                                    epsilon(4), T{2. * epsilon(2) + 1.},          epsilon(5),
+                                    epsilon(6),          epsilon(5), T{2. * epsilon(3) + 1.}};
+
+          const SpMatrix<T, 3, 3> CC(C * C, oDofMap);
+
+          T IC, IIC, IIIC;
+
+          oDofMap.MapAssign(IC, C(1, 1) + C(2, 2) + C(3, 3));
+          oDofMap.MapAssign(IIC, 0.5 * (IC * IC - (CC(1, 1) + CC(2, 2) + CC(3, 3))));
+
+          Det(C, IIIC, oDofMap);
+
+          T gamma;
+
+          oDofMap.MapAssign(gamma, (lambda * (IIIC - sqrt(IIIC)) - mu) / IIIC);
+
+          static constexpr index_type i1[] = {1, 2, 3, 1, 2, 3};
+          static constexpr index_type i2[] = {1, 2, 3, 2, 3, 1};
+
+          for (index_type i = 1; i <= 6; ++i) {
+               const index_type j = i1[i - 1];
+               const index_type k = i2[i - 1];
+
+               oDofMap.MapAssign(sigma(i), mu * (j == k) + (CC(j, k) - C(j, k) * IC + IIC * (j == k)) * gamma
+                                 + ((j == k) ? 1. : 0.5) * eta * epsilonP(i)); // chapter 2.2.3.2, page 38, equation 2.92
+          }
+     }
 private:
-     const doublereal mu, lambda;
+     const doublereal eta;
 };
 
 struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
@@ -160,16 +261,29 @@ struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
 
+          const doublereal eta = HP.IsKeyWord("eta") ? HP.GetReal() : 0.;
+
+          if (eta < 0.) {
+               silent_cerr("eta must be greater than zero at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
           NeoHookean* pCL = nullptr;
 
           const doublereal mu = (E / (2. * (1. + nu))); // Lame parameters
           const doublereal lambda = (E * nu / ((1. + nu) * (1. - 2. * nu)));
 
-          SAFENEWWITHCONSTRUCTOR(pCL,
-                                 NeoHookean,
-                                 NeoHookean(mu, lambda));
+          if (eta == 0.) {
+               SAFENEWWITHCONSTRUCTOR(pCL,
+                                      NeoHookeanElastic,
+                                      NeoHookeanElastic(mu, lambda));
+          } else {
+               SAFENEWWITHCONSTRUCTOR(pCL,
+                                      NeoHookeanViscoElastic,
+                                      NeoHookeanViscoElastic(mu, lambda, eta));
+          }
 
-          CLType = ConstLawType::ELASTIC;
+          CLType = pCL->GetConstLawType();
 
           return pCL;
      }
