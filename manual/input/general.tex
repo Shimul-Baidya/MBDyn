@@ -3896,7 +3896,8 @@ in Section~\ref{sec:CONSTITUTIVE-LAW}.
 	\kw{nlp elastic}							& $\surd$ & $\surd$ & $\surd$ \\
 	\kw{nlp viscous}							& $\surd$ & $\surd$ & $\surd$ \\
 	\kw{nlp viscoelastic}							& $\surd$ & $\surd$ & $\surd$ \\
-        \kw{neo hookean}                                                        &         &         & $\surd$ \\
+        \kw{neo hookean elastic}                                                &         &         & $\surd$ \\
+        \kw{neo hookean viscoelastic}                                           &         &         & $\surd$ \\
         \kw{bilinear isotropic hardening}                                       &         &         & $\surd$ \\
         \hline
 	\multicolumn{4}{c}{} \\
@@ -4818,17 +4819,30 @@ as indicated by Equations~(\ref{eq:nlsf-cl}) and~(\ref{eq:nlp-cl}).
 \emph{Author: Reinhard Resch}
 Neo-Hookean isotropic hyperelastic constitutive laws can be used only for solid elements. See also section~\ref{sec:EL:SOLID}.
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{specific_const_law} ::= \kw{neo hookean} , 
+    \bnt{specific_const_law} ::= \kw{neo hookean elastic} ,
       \kw{E} , (\ty{real}) \bnt{E} ,
       \kw{nu} , (\ty{real}) \bnt{nu}
 \end{Verbatim}
 
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{specific_const_law} ::= \kw{neo hookean viscoelastic} ,
+      \kw{E} , (\ty{real}) \bnt{E} ,
+      \kw{nu} , (\ty{real}) \bnt{nu} ,
+      \kw{beta} , (\ty{real}) \bnt{beta}
+\end{Verbatim}
+
 The implementation is based on \cite{KUEBLER2005}. Input parameters for Neo-Hookean materials are Young's modulus \nt{E} and Poisson's ratio \nt{nu}.
+For the viscoelastic variant, there is an additional input parameter \nt{beta} which is a damping coefficient.
+In contradiction to \cite{KUEBLER2005}, damping effects are always considered proportional to initial stiffness in MBDyn.
 Since fully incompressible constitutive laws are not yet supported, the condition $0 \le \nt{nu} < \frac{1}{2}$ must hold.
-This constitutive law is describing the relation between Second Piola Kirchhoff stress tensor $\boldsymbol{S}$ and Right Cauchy Green tensor $\boldsymbol{C}$.
+The Neo-Hookean constitutive law is describing the relation between
+Second Piola Kirchhoff stress tensor $\boldsymbol{S}$ and Right Cauchy Green tensor $\boldsymbol{C}$.
+In the elastic case $\nt{beta}=0$, whereas in the viscoelastic case $\nt{beta}>0$ and the scaled time derivative of the Right Cauchy Green tensor
+$\dot{\boldsymbol{C}}^{\star}=\frac{1}{2}\dot{\boldsymbol{G}}^{\star}$ is considered. See also equation~\ref{sec:EL:SOLID:constlaw}.
 
 \begin{eqnarray}
-  S_{ij} & = & \mu \, \delta_{ij} + \left[\lambda \, \left(III_C - \sqrt{III_C} \right) - \mu\right] \, \left[ \boldsymbol{C}^{-1} \right]_{ij} \\
+  S_{ij} & = & \mu \, \delta_{ij} + \left[\lambda \, \left(III_C - \sqrt{III_C} \right) - \mu\right] \, \left[ \boldsymbol{C}^{-1} \right]_{ij}
+  + \nt{beta} \, \left[\mu \, \dot{\boldsymbol{C}}_{ij}^{\star} + \frac{1}{2} \, \delta_{ij} \, \lambda \, \trace\left(\dot{\boldsymbol{C}}^{\star}\right)\right]\\
   \boldsymbol{C}^{-1} & = & \frac{1}{III_C} \, \left(\boldsymbol{C} \, \boldsymbol{C} - I_C \, \boldsymbol{C} + II_C \, \boldsymbol{I} \right) \\
   I_C & = & \trace\left(\boldsymbol{C}\right) \\
   II_C & = & \frac{1}{2} \,\left(\trace\left(\boldsymbol{C}\right)^2 - \trace\left(\boldsymbol{C} \, \boldsymbol{C}\right)\right) \\
@@ -4839,10 +4853,16 @@ This constitutive law is describing the relation between Second Piola Kirchhoff 
 
 \paragraph{Example.} \
 \begin{verbatim}
-    constitutive law: 1000, name, "rubber", 6, 
-                 neo hookean, 
-                     E, 5e6, 
+    constitutive law: 1000, name, "elastic rubber", 6,
+                 neo hookean elastic,
+                     E, 5e6,
                      nu, 0.49;
+
+    constitutive law: 1001, name, "viscoelastic rubber", 6,
+                 neo hookean viscoelastic,
+                     E, 5e6,
+                     nu, 0.49,
+                     beta, 1e-3;
 \end{verbatim}
 
 \subsection{Bilinear isotropic hardening}
@@ -4852,7 +4872,7 @@ Also bilinear isotropic hardening constitutive laws can be used only for solid e
 This constitutive law is based on the classical incremental theory of plasticity of VON MISES \cite{BATHE2016}.
 It is applicable for large deformations but only for small strains.
 In addition to Young's modulus \nt{E} and Poisson's ratio \nt{nu}, the plastic tangent modulus \nt{ET}
-and the equivalent initial yield stress \nt{sigmayv} are required input parameters. 
+and the equivalent initial yield stress \nt{sigmayv} are required input parameters.
 In case of yielding, the relationship between equivalent plastic strain increment $\Delta \bar{e}^P$ and equivalent stress
 ${}^{t + \Delta t}\bar{\sigma}$ is defined as \cite{BATHE2016}:
 
@@ -4863,7 +4883,7 @@ E_P & = & \frac{\nt{E} \, \nt{ET}}{\nt{E} - \nt{ET}}
 $\nt{ET}=0$ gives an ideal plastic material without any hardening effect.
 
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{specific_const_law} ::= \kw{bilinear isotropic hardening} , 
+    \bnt{specific_const_law} ::= \kw{bilinear isotropic hardening} ,
       \kw{E} , (\ty{real}) \bnt{E} ,
       \kw{nu} , (\ty{real}) \bnt{nu} ,
       \kw{ET} , (\ty{real}) \bnt{ET} ,
@@ -4872,11 +4892,11 @@ $\nt{ET}=0$ gives an ideal plastic material without any hardening effect.
 
 \paragraph{Example.} \
 \begin{verbatim}
-    constitutive law: 1000, name, "steel", 6, 
-                 bilinear isotropic hardening, 
+    constitutive law: 1000, name, "steel", 6,
+                 bilinear isotropic hardening,
                           E, 210000e6,
-                          nu, 0.3, 
-                          ET, 2000e6, 
+                          nu, 0.3,
+                          ET, 2000e6,
                           sigmayv, 235e6;
 \end{verbatim}
 

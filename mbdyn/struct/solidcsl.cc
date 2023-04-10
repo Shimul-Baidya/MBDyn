@@ -134,16 +134,18 @@ public:
           for (index_type i = 1; i <= 6; ++i) {
                const index_type j = i1[i - 1];
                const index_type k = i2[i - 1];
+               const bool deltajk = (j == k);
 
-               oDofMap.MapAssign(sigma(i), mu * (j == k) + (CC(j, k) - C(j, k) * IC + IIC * (j == k)) * gamma);
+               oDofMap.MapAssign(sigma(i), mu * deltajk + (CC(j, k) - C(j, k) * IC + IIC * deltajk) * gamma);
           }
      }
 };
 
-class NeoHookeanViscoElastic: public NeoHookeanElastic {
+class NeoHookeanViscoelastic: public NeoHookeanElastic {
 public:
-     NeoHookeanViscoElastic(const doublereal mu, const doublereal lambda, const doublereal eta)
-          :NeoHookeanElastic(mu, lambda), eta(eta) {
+     NeoHookeanViscoelastic(const doublereal mu, const doublereal lambda, const doublereal beta)
+          :NeoHookeanElastic(mu, lambda), beta(beta) {
+          ASSERT(beta > 0.);
      }
 
      virtual ConstLawType::Type GetConstLawType() const override {
@@ -151,11 +153,11 @@ public:
      }
 
      virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
-          NeoHookeanViscoElastic* pCL = nullptr;
+          NeoHookeanViscoelastic* pCL = nullptr;
 
           SAFENEWWITHCONSTRUCTOR(pCL,
-                                 NeoHookeanViscoElastic,
-                                 NeoHookeanViscoElastic(mu, lambda, eta));
+                                 NeoHookeanViscoelastic,
+                                 NeoHookeanViscoelastic(mu, lambda, beta));
           return pCL;
      }
 
@@ -201,6 +203,8 @@ public:
           oDofMap.InsertDone();
 
           // Based on Lars Kuebler 2005, chapter 2.2.1.3, page 25-26
+          // In contradiction to the reference, the effect of damping
+          // is assumed proportional to initial stiffness
 
           const SpMatrix<T, 3, 3> C{T{2. * epsilon(1) + 1.},        epsilon(4),           epsilon(6),
                                     epsilon(4), T{2. * epsilon(2) + 1.},          epsilon(5),
@@ -219,29 +223,36 @@ public:
 
           oDofMap.MapAssign(gamma, (lambda * (IIIC - sqrt(IIIC)) - mu) / IIIC);
 
+          T traceGP;
+
+          oDofMap.MapAssign(traceGP, epsilonP(1) + epsilonP(2) + epsilonP(3));
+
           static constexpr index_type i1[] = {1, 2, 3, 1, 2, 3};
           static constexpr index_type i2[] = {1, 2, 3, 2, 3, 1};
 
           for (index_type i = 1; i <= 6; ++i) {
                const index_type j = i1[i - 1];
                const index_type k = i2[i - 1];
+               const bool deltajk = (j == k);
 
-               oDofMap.MapAssign(sigma(i), mu * (j == k) + (CC(j, k) - C(j, k) * IC + IIC * (j == k)) * gamma
-                                 + ((j == k) ? 1. : 0.5) * eta * epsilonP(i)); // chapter 2.2.3.2, page 38, equation 2.92
+               oDofMap.MapAssign(sigma(i), mu * deltajk + (CC(j, k) - C(j, k) * IC + IIC * deltajk) * gamma
+                                 + (deltajk ? 2. : 1.) * mu * beta * epsilonP(i)
+                                 + deltajk * beta * lambda * traceGP);
           }
      }
 private:
-     const doublereal eta;
+     const doublereal beta;
 };
 
 struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
-     virtual ConstitutiveLaw<Vec6, Mat6x6>*
-     Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+     static void
+     ReadLameParameters(const DataManager* pDM, MBDynParser& HP, doublereal& mu, doublereal& lambda) {
           if (!HP.IsKeyWord("E")) {
                silent_cerr("keyword \"E\" expected at line " << HP.GetLineData() << "\n");
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
-          const doublereal E = HP.GetReal();
+
+          const doublereal E = HP.GetReal(); // Young's modulus
 
           if (E <= 0.) {
                silent_cerr("E must be greater than zero at line " << HP.GetLineData() << "\n");
@@ -253,7 +264,7 @@ struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
 
-          const doublereal nu = HP.GetReal();
+          const doublereal nu = HP.GetReal(); // Poisson's ratio
 
           if (nu < 0. || nu >= 0.5) {
                // FIXME: incompressible case not implemented yet
@@ -261,27 +272,71 @@ struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
 
-          const doublereal eta = HP.IsKeyWord("eta") ? HP.GetReal() : 0.;
+          mu = (E / (2. * (1. + nu))); // Lame parameters
+          lambda = (E * nu / ((1. + nu) * (1. - 2. * nu)));
+     }
 
-          if (eta < 0.) {
-               silent_cerr("eta must be greater than zero at line " << HP.GetLineData() << "\n");
+     static NeoHookeanElastic*
+     pCreateElastic(const doublereal mu, const doublereal lambda) {
+          NeoHookeanElastic* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 NeoHookeanElastic,
+                                 NeoHookeanElastic(mu, lambda));
+
+          return pCL;
+     }
+
+     static NeoHookeanViscoelastic*
+     pCreateViscoelastic(const doublereal mu, const doublereal lambda, const doublereal beta) {
+          NeoHookeanViscoelastic* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 NeoHookeanViscoelastic,
+                                 NeoHookeanViscoelastic(mu, lambda, beta));
+
+          return pCL;
+     }
+};
+
+struct NeoHookeanReadElastic: NeoHookeanRead {
+     virtual ConstitutiveLaw<Vec6, Mat6x6>*
+     Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+          doublereal mu, lambda;
+
+          ReadLameParameters(pDM, HP, mu, lambda);
+
+          NeoHookeanElastic* pCL = pCreateElastic(mu, lambda);
+
+          CLType = pCL->GetConstLawType();
+
+          return pCL;
+     }
+};
+
+struct NeoHookeanReadViscoelastic: NeoHookeanRead {
+     virtual ConstitutiveLaw<Vec6, Mat6x6>*
+     Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+          doublereal mu, lambda;
+
+          ReadLameParameters(pDM, HP, mu, lambda);
+
+          if (!HP.IsKeyWord("beta")) {
+               silent_cerr("keyword \"beta\" expected at line " << HP.GetLineData() << "\n");
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
 
-          NeoHookean* pCL = nullptr;
+          const doublereal beta = HP.GetReal(); // damping coefficient
 
-          const doublereal mu = (E / (2. * (1. + nu))); // Lame parameters
-          const doublereal lambda = (E * nu / ((1. + nu) * (1. - 2. * nu)));
-
-          if (eta == 0.) {
-               SAFENEWWITHCONSTRUCTOR(pCL,
-                                      NeoHookeanElastic,
-                                      NeoHookeanElastic(mu, lambda));
-          } else {
-               SAFENEWWITHCONSTRUCTOR(pCL,
-                                      NeoHookeanViscoElastic,
-                                      NeoHookeanViscoElastic(mu, lambda, eta));
+          if (beta < 0.) {
+               silent_cerr("beta must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
+
+          NeoHookean* pCL = (beta == 0.)
+               ? pCreateElastic(mu, lambda)
+               : pCreateViscoelastic(mu, lambda, beta);
+
 
           CLType = pCL->GetConstLawType();
 
@@ -451,7 +506,7 @@ struct BilinearIsotropicHardeningRead: ConstitutiveLawRead<Vec6, Mat6x6> {
                silent_cerr("keyword \"E\" expected at line " << HP.GetLineData() << "\n");
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
-          const doublereal E = HP.GetReal();
+          const doublereal E = HP.GetReal(); // Young's modulus
 
           if (E <= 0.) {
                silent_cerr("E must be greater than zero at line " << HP.GetLineData() << "\n");
@@ -463,7 +518,7 @@ struct BilinearIsotropicHardeningRead: ConstitutiveLawRead<Vec6, Mat6x6> {
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
 
-          const doublereal nu = HP.GetReal();
+          const doublereal nu = HP.GetReal(); // Poisson's ratio
 
           if (nu < 0. || nu >= 0.5) {
                // FIXME: incompressible case not implemented yet
@@ -476,7 +531,7 @@ struct BilinearIsotropicHardeningRead: ConstitutiveLawRead<Vec6, Mat6x6> {
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
 
-          const doublereal ET = HP.GetReal();
+          const doublereal ET = HP.GetReal(); // Plastic tangent modulus
 
           if (ET < 0. || ET >= E) {
                silent_cerr("ET must be between zero and E at line " << HP.GetLineData() << "\n");
@@ -488,7 +543,7 @@ struct BilinearIsotropicHardeningRead: ConstitutiveLawRead<Vec6, Mat6x6> {
                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
           }
 
-          const doublereal sigmayv = HP.GetReal();
+          const doublereal sigmayv = HP.GetReal(); // Equivalent initial yield stress
 
           if (sigmayv <= 0.) {
                silent_cerr("sigmayv must be greater than zero at line " << HP.GetLineData() << "\n");
@@ -509,6 +564,7 @@ struct BilinearIsotropicHardeningRead: ConstitutiveLawRead<Vec6, Mat6x6> {
 
 void InitSolidCSL()
 {
-     SetCL6D("neo" "hookean", new NeoHookeanRead);
+     SetCL6D("neo" "hookean" "elastic", new NeoHookeanReadElastic);
+     SetCL6D("neo" "hookean" "viscoelastic", new NeoHookeanReadViscoelastic);
      SetCL6D("bilinear" "isotropic" "hardening", new BilinearIsotropicHardeningRead);
 }
