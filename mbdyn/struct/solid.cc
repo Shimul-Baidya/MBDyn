@@ -872,7 +872,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
      const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (pRBK != nullptr));
 
-     SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
+     SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      AssStiffnessVecElastic(u, R, dCoef, func, oDofMap);
 
@@ -913,7 +913,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
      const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (pRBK != nullptr));
 
-     SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
+     SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      AssStiffnessVecViscoElastic(u, uP, R, dCoef, func, oDofMap);
 
@@ -966,7 +966,6 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      SpMatrixA<T, 6, iNumDof, 2 * iNumDof> BL;
      SpMatrixA<T, 3, 3, iNumDof> F, G;
      SpColVectorA<T, 6, iNumDof> sigma;
-     SpColVectorA<T, iNumDof, iNumDof> dR;
 
      for (index_type iColloc = 0; iColloc < iNumEvalPointsStiffness; ++iColloc) {
           const doublereal alpha = CollocationType::dGetWeightStiffness(iColloc);
@@ -991,9 +990,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
           rgCollocData[iColloc].StrainMatrix(F, BL, oDofMap);
 
-          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
-
-          R -= dR;
+          R.Sub(Transpose(BL) * sigma, oDofMap);
      }
 }
 
@@ -1013,7 +1010,6 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      SpColVectorA<T, 6, iNumDof> sigma;
      SpMatrixA<T, 3, 3, iNumDof> F, FP, C, invC, G, FP_Tr_F;
      SpMatrixA<T, 3, 3, 2 * iNumDof> GP_detF, GP_scaled;
-     SpColVectorA<T, iNumDof, iNumDof> dR;
 
      T detC;
 
@@ -1070,9 +1066,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
           ASSERT(sigma.iGetMaxSize() <= iNumDof);
 
-          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
-
-          R -= dR;
+          R.Sub(Transpose(BL) * sigma, oDofMap);
      }
 }
 
@@ -1110,7 +1104,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
                }
           }
 
-          bGetGravity(X, fg);
+          bGetGravity(X, fg); // FIXME: no contribution to the Jacobian but it would be required only for the CentralGravity
 
           const doublereal rho = Dot(h, rhon);
 
@@ -1559,7 +1553,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
           for (index_type i = 1; i <= iNumNodes; ++i) {
                for (index_type j = 1; j <= 3; ++j) {
-                    R((i - 1) * 3 + j) -= h(i) * frbk(j); // FIXME: Use oDofMap!
+                    oDofMap.Sub(R((i - 1) * 3 + j), h(i) * frbk(j));
                }
           }
      }
@@ -1906,7 +1900,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssRe
 
      const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (this->pRBK != nullptr));
 
-     SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
+     SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      this->AssStiffnessVecElastic(u, R, dCoef, func, oDofMap);
 
@@ -1960,7 +1954,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssRe
 
      const index_type iNumColsR = iNumDof * (iNumEvalPointsR + 3 * CollocationType::iNumEvalPointsMass * (this->pRBK != nullptr));
 
-     SpColVector<T, iNumDof> R(iNumDof, iNumColsR);
+     SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      this->AssStiffnessVecViscoElastic(u, uP, R, dCoef, func, oDofMap);
 

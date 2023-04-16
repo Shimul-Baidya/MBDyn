@@ -53,6 +53,21 @@
 #include "sp_matrix_base.h"
 
 namespace sp_grad {
+     template <typename Func, typename Expr>
+     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::MapAssignOper(GpGradProd& g, const GpGradProdBase<Expr>& expr) {
+          return g.template AssignOper<Func>(expr);
+     }
+
+     template <typename Expr>
+     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Add(GpGradProd& g, const GpGradProdBase<Expr>& expr) {
+          return MapAssignOper<SpGradBinPlus>(g, expr);
+     }
+
+     template <typename Expr>
+     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Sub(GpGradProd& g, const GpGradProdBase<Expr>& expr) {
+          return MapAssignOper<SpGradBinMinus>(g, expr);
+     }
+
      inline void SpGradExpDofMapHelper<SpGradient>::ResetDofStat() {
           oDofStat = SpGradDofStat{};
      }
@@ -71,6 +86,14 @@ namespace sp_grad {
 
      inline void SpGradExpDofMapHelper<SpGradient>::InsertDof(const SpGradient& g) {
           g.InsertDof(oDofMap);
+     }
+
+     inline void SpGradExpDofMapHelper<SpGradient>::InitDofMap(SpGradient& g) const {
+          g.InitDofMap(oDofMap);
+     }
+
+     index_type SpGradExpDofMapHelper<SpGradient>::iGetLocalSize() const {
+          return oDofMap.iGetLocalSize();
      }
 
      inline void SpGradExpDofMapHelper<SpGradient>::GetDofStat(const SpGradient* pFirst, const SpGradient* const pLast) {
@@ -98,14 +121,23 @@ namespace sp_grad {
      }
 
      template <typename Expr>
-     inline void SpGradExpDofMapHelper<SpGradient>::MapAssign(SpGradient& g, const SpGradBase<Expr>& expr) const {
-          g.MapAssign(expr, oDofMap);
+     inline SpGradient& SpGradExpDofMapHelper<SpGradient>::MapAssign(SpGradient& g, const SpGradBase<Expr>& expr) const {
+          return g.MapAssign(expr, oDofMap);
      }
 
      template <typename Func, typename Expr>
-     inline void SpGradExpDofMapHelper<SpGradient>::MapAssignOper(SpGradient& g, const SpGradBase<Expr>& expr) const
-     {
-          g.template MapAssignOper<Func>(expr, oDofMap);
+     inline SpGradient& SpGradExpDofMapHelper<SpGradient>::MapAssignOper(SpGradient& g, const SpGradBase<Expr>& expr) const {
+          return g.template MapAssignOper<Func>(expr, oDofMap);
+     }
+
+     template <typename Expr>
+     inline SpGradient& SpGradExpDofMapHelper<SpGradient>::Add(SpGradient& g, const SpGradBase<Expr>& expr) const {
+          return MapAssignOper<SpGradBinPlus>(g, expr);
+     }
+
+     template <typename Expr>
+     inline SpGradient& SpGradExpDofMapHelper<SpGradient>::Sub(SpGradient& g, const SpGradBase<Expr>& expr) const {
+          return MapAssignOper<SpGradBinMinus>(g, expr);
      }
 
      void SpGradientTraits<doublereal>::ResizeReset(doublereal& g, doublereal dVal, index_type)
@@ -311,6 +343,16 @@ namespace sp_grad {
           :SpGradient() {
 
           oDofMap.MapAssign(this, g);
+     }
+
+     SpGradient::SpGradient(const SpGradExpDofMap& oDofMap)
+          :SpGradient(pGetNullData()) {
+
+          SP_GRAD_ASSERT(bValid());
+
+          InitDofMap(oDofMap);
+
+          SP_GRAD_ASSERT(bValid());
      }
 
      SpGradient::~SpGradient() {
@@ -899,7 +941,7 @@ namespace sp_grad {
      }
 
      template <typename Expr>
-     void SpGradient::MapAssign(const SpGradBase<Expr>& g) {
+     SpGradient& SpGradient::MapAssign(const SpGradBase<Expr>& g) {
           SP_GRAD_ASSERT(bValid());
 
           SpGradient f;
@@ -931,10 +973,12 @@ namespace sp_grad {
           SP_GRAD_ASSERT(!bIsSorted());
           SP_GRAD_ASSERT(bIsUnique());
           SP_GRAD_ASSERT(bValid());
+
+          return *this;
      }
 
      template <typename Expr>
-     void SpGradient::MapAssign(const SpGradBase<Expr>& g, const SpGradExpDofMap& oDofMap) {
+     SpGradient& SpGradient::MapAssign(const SpGradBase<Expr>& g, const SpGradExpDofMap& oDofMap) {
           SP_GRAD_ASSERT(bValid());
 
           SpGradient f;
@@ -956,6 +1000,8 @@ namespace sp_grad {
           SP_GRAD_ASSERT(!bIsSorted());
           SP_GRAD_ASSERT(bIsUnique());
           SP_GRAD_ASSERT(bValid());
+
+          return *this;
      }
 
      void SpGradient::InitDeriv(const SpGradExpDofMap& oExpDofMap) {
@@ -971,8 +1017,17 @@ namespace sp_grad {
           SP_GRAD_ASSERT(bValid());
      }
 
+     void SpGradient::InitDofMap(const SpGradExpDofMap& oExpDofMap) {
+          SP_GRAD_ASSERT(bValid());
+
+          Allocate(oExpDofMap.iGetLocalSize(), 0, SpDerivData::DER_UNIQUE);
+          InitDeriv(oExpDofMap);
+
+          SP_GRAD_ASSERT(bValid());
+     }
+
      template <typename Func, typename Expr>
-     void SpGradient::AssignOper(const SpGradBase<Expr>& g) {
+     SpGradient& SpGradient::AssignOper(const SpGradBase<Expr>& g) {
           SP_GRAD_ASSERT(bValid());
 
           const doublereal u = dGetValue();
@@ -1003,10 +1058,12 @@ namespace sp_grad {
           *this = std::move(r);
 
           SP_GRAD_ASSERT(bValid());
+
+          return *this;
      }
 
      template <typename Func, typename Expr>
-     void SpGradient::MapAssignOper(const SpGradBase<Expr>& g) {
+     SpGradient& SpGradient::MapAssignOper(const SpGradBase<Expr>& g) {
           SP_GRAD_ASSERT(bValid());
 
           const doublereal u = dGetValue();
@@ -1046,10 +1103,12 @@ namespace sp_grad {
           *this = std::move(r);
 
           SP_GRAD_ASSERT(bValid());
+
+          return *this;
      }
 
      template <typename Func, typename Expr>
-     void SpGradient::MapAssignOper(const SpGradBase<Expr>& g, const SpGradExpDofMap& oDofMap) {
+     SpGradient& SpGradient::MapAssignOper(const SpGradBase<Expr>& g, const SpGradExpDofMap& oDofMap) {
           SP_GRAD_ASSERT(bValid());
 
           const doublereal u = dGetValue();
@@ -1077,8 +1136,10 @@ namespace sp_grad {
           *this = std::move(r);
 
           SP_GRAD_ASSERT(bValid());
+
+          return *this;
      }
-     
+
      template <typename Func>
      void SpGradient::InitDerivAssign(const doublereal f, const doublereal df_du, const SpGradExpDofMap& oDofMap) {
           SP_GRAD_ASSERT(bValid());
