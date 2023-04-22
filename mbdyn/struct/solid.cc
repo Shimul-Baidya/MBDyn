@@ -870,20 +870,23 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      oDofMap.InsertDof(u);
      oDofMap.InsertDone();
 
-     const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (pRBK != nullptr));
-
      SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      AssStiffnessVecElastic(u, R, dCoef, func, oDofMap);
 
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
+
      if (pRBK) {
           AssInertiaVecRBK(u, R, oDofMap);
-          ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
+
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      if (pGravity) {
           AssGravityLoadVec(R, dCoef, func);
      }
+
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      AssVector(WorkVec, R, &StructDispNode::iGetFirstMomentumIndex);
 }
@@ -911,24 +914,23 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
 
-     const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (pRBK != nullptr));
-
      SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      AssStiffnessVecViscoElastic(u, uP, R, dCoef, func, oDofMap);
 
-     ASSERT(R.iGetMaxSize() <= iNumColsR);
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      if (pRBK) {
           AssInertiaVecRBK(u, R, oDofMap);
-          ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
+
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      if (pGravity) {
           AssGravityLoadVec(R, dCoef, func);
      }
 
-     ASSERT(R.iGetMaxSize() <= iNumColsR);
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      AssVector(WorkVec, R, &StructDispNode::iGetFirstMomentumIndex);
 }
@@ -963,9 +965,10 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 {
      using namespace sp_grad;
 
-     SpMatrixA<T, 6, iNumDof, 2 * iNumDof> BL;
-     SpMatrixA<T, 3, 3, iNumDof> F, G;
-     SpColVectorA<T, 6, iNumDof> sigma;
+     SpMatrix<T, 6, iNumDof> BL(6, iNumDof, oDofMap);
+     SpMatrix<T, 3, 3> F(3, 3, oDofMap), G(3, 3, oDofMap);
+     SpColVector<T, 6> sigma(6, oDofMap);
+     SpColVector<T, iNumDof> dR(iNumDof, oDofMap);
 
      for (index_type iColloc = 0; iColloc < iNumEvalPointsStiffness; ++iColloc) {
           const doublereal alpha = CollocationType::dGetWeightStiffness(iColloc);
@@ -984,13 +987,16 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
           ASSERT(G.iGetMaxSize() <= iNumDof);
 
           rgCollocData[iColloc].ComputeStressElastic(G, F, sigma, oDofMap, this);
+
           sigma *= alpha * rgCollocData[iColloc].detJ;
 
           ASSERT(sigma.iGetMaxSize() <= iNumDof);
 
           rgCollocData[iColloc].StrainMatrix(F, BL, oDofMap);
 
-          R.Sub(Transpose(BL) * sigma, oDofMap);
+          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
+
+          R.Sub(dR, oDofMap);
      }
 }
 
@@ -1006,10 +1012,11 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 {
      using namespace sp_grad;
 
-     SpMatrixA<T, 6, iNumDof, 2 * iNumDof> BL;
-     SpColVectorA<T, 6, iNumDof> sigma;
-     SpMatrixA<T, 3, 3, iNumDof> F, FP, C, invC, G, FP_Tr_F;
-     SpMatrixA<T, 3, 3, 2 * iNumDof> GP_detF, GP_scaled;
+     SpMatrix<T, 6, iNumDof> BL(6, iNumDof, oDofMap);
+     SpColVector<T, 6> sigma(6, oDofMap);
+     SpMatrix<T, 3, 3> F(3, 3, oDofMap), FP(3, 3, oDofMap), C(3, 3, oDofMap), invC(3, 3, oDofMap), G(3, 3, oDofMap), FP_Tr_F(3, 3, oDofMap);
+     SpMatrix<T, 3, 3> GP_detF(3, 3, oDofMap), GP_scaled(3, 3, oDofMap);
+     SpColVector<T, iNumDof> dR(iNumDof, oDofMap);
 
      T detC;
 
@@ -1022,51 +1029,57 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
                F(i, i) += 1.;
           }
 
-          ASSERT(F.iGetMaxSize() <= iNumDof);
+          ASSERT(F.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           FP.MapAssign(uP * h0d, oDofMap);
 
-          ASSERT(FP.iGetMaxSize() <= iNumDof);
+          ASSERT(FP.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           C.MapAssign(Transpose(F) * F, oDofMap);
 
-          ASSERT(C.iGetMaxSize() <= iNumDof);
+          ASSERT(C.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           InvSymm(C, invC, detC, oDofMap);
 
-          ASSERT(invC.iGetMaxSize() <= iNumDof);
+          ASSERT(invC.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           G.MapAssign(0.5 * (C - Eye3), oDofMap);
 
-          ASSERT(G.iGetMaxSize() <= iNumDof);
+          ASSERT(G.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           FP_Tr_F.MapAssign(Transpose(FP) * F, oDofMap);
 
-          ASSERT(FP_Tr_F.iGetMaxSize() <= iNumDof);
+          ASSERT(FP_Tr_F.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           GP_detF.MapAssign((0.5 * (FP_Tr_F + Transpose(FP_Tr_F)) * Det(F)), oDofMap);
 
-          ASSERT(GP_detF.iGetMaxSize() <= iNumDof);
+          ASSERT(GP_detF.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           GP_scaled.MapAssign(invC * GP_detF * invC, oDofMap); // Lars Kuebler 2005, equation 2.92, page 38
 
-          ASSERT(GP_scaled.iGetMaxSize() <= iNumDof);
+          ASSERT(GP_scaled.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           rgCollocData[iColloc].ComputeStressViscoElastic(G, GP_scaled, F, sigma, oDofMap, this);
 
-          ASSERT(sigma.iGetMaxSize() <= iNumDof);
+          ASSERT(sigma.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           const doublereal alpha = CollocationType::dGetWeightStiffness(iColloc);
 
           rgCollocData[iColloc].StrainMatrix(F, BL, oDofMap);
 
-          ASSERT(BL.iGetMaxSize() <= 2 * iNumDof);
+          ASSERT(BL.iGetMaxSize() == oDofMap.iGetLocalSize());
 
           sigma *= alpha * rgCollocData[iColloc].detJ;
 
-          ASSERT(sigma.iGetMaxSize() <= iNumDof);
+          ASSERT(sigma.iGetMaxSize() == oDofMap.iGetLocalSize());
 
-          R.Sub(Transpose(BL) * sigma, oDofMap);
+          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
+
+          ASSERT(dR.iGetMaxSize() == oDofMap.iGetLocalSize());
+
+          R.Sub(dR, oDofMap);
+
+          ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
      }
 }
 
@@ -1898,29 +1911,29 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssRe
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
 
-     const index_type iNumColsR = iNumDof * (iNumEvalPointsStiffness + 3 * CollocationType::iNumEvalPointsMass * (this->pRBK != nullptr));
-
      SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      this->AssStiffnessVecElastic(u, R, dCoef, func, oDofMap);
 
-     ASSERT(R.iGetMaxSize() <= iNumColsR);
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      if (this->pGravity) {
           this->AssGravityLoadVec(R, dCoef, func);
-          ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
+
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      if (this->pRBK) {
           this->AssInertiaVecRBK(u, R, oDofMap);
-          ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
+
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstMomentumIndex);
 
      MassMatrixHelper<eMassMatrix>::AssInertiaVec(*this, M, uP, R, oDofMap);
 
-     ASSERT(R.iGetMaxSize() <= iNumColsR);
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstPositionIndex);
 }
@@ -1948,33 +1961,31 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssRe
      oDofMap.InsertDof(uP);
      oDofMap.InsertDone();
 
-     constexpr index_type iNumEvalPointsR = CollocationType::iNumEvalPointsStiffness > CollocationType::iNumEvalPointsMass
-          ? CollocationType::iNumEvalPointsStiffness
-          : CollocationType::iNumEvalPointsMass;
-
-     const index_type iNumColsR = iNumDof * (iNumEvalPointsR + 3 * CollocationType::iNumEvalPointsMass * (this->pRBK != nullptr));
-
      SpColVector<T, iNumDof> R(iNumDof, oDofMap);
 
      this->AssStiffnessVecViscoElastic(u, uP, R, dCoef, func, oDofMap);
 
-     ASSERT(R.iGetMaxSize() <= iNumColsR);
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      if (this->pGravity) {
           this->AssGravityLoadVec(R, dCoef, func);
-          ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
+
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      if (this->pRBK) {
           this->AssInertiaVecRBK(u, R, oDofMap);
-          ASSERT(R.iGetMaxSize() <= iNumColsR);
      }
+
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstMomentumIndex);
 
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
+
      MassMatrixHelper<eMassMatrix>::AssInertiaVec(*this, M, uP, R, oDofMap);
 
-     ASSERT(R.iGetMaxSize() <= iNumColsR);
+     ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
 
      this->AssVector(WorkVec, R, &StructDispNode::iGetFirstPositionIndex);
 }

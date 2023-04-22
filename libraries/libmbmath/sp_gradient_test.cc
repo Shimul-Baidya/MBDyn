@@ -253,17 +253,34 @@ namespace sp_grad_test {
                SpMatrix<SpGradient> A6x7g_sum(6, 7, oDofMap);
                SpMatrix<SpGradient> A6x7g_sum_neg(6, 7, oDofMap);
 
+               SpMatrix<SpGradient> A7x7g_sum(7, 7, oDofMap);
+               SpMatrix<SpGradient> A7x7g_sum_neg(7, 7, oDofMap);
+               SpMatrix<SpGradient> A7x7g = Transpose(A6x7g) * A6x7g;
+
+               SpMatrix<SpGradient, 7, 7> A7x7gf_sum(7, 7, oDofMap);
+               SpMatrix<SpGradient, 7, 7> A7x7gf_sum_neg(7, 7, oDofMap);
+               SpMatrix<SpGradient, 7, 7> A7x7gf = Transpose(A6x7gf) * A6x7gf;
+
                for (index_type i = 1; i <= 20; ++i) {
                     A6x7gf_sum.Add(A6x7gf_oDofMap * 0.5, oDofMap);
                     A6x7gf_sum_neg.Sub(A6x7gf_oDofMap * 0.5, oDofMap);
                     A6x7g_sum.Add(A6x7g_oDofMap * 0.5, oDofMap);
                     A6x7g_sum_neg.Sub(A6x7g_oDofMap * 0.5, oDofMap);
+
+                    A7x7g_sum.Add(Transpose(A6x7g) * A6x7g, oDofMap);
+                    A7x7g_sum_neg.Sub(Transpose(A6x7g) * A6x7g, oDofMap);
+                    A7x7gf_sum.Add(Transpose(A6x7gf) * A6x7gf, oDofMap);
+                    A7x7gf_sum_neg.Sub(Transpose(A6x7gf) * A6x7gf, oDofMap);
                }
 
                A6x7gf_sum /= 10.;
                A6x7gf_sum_neg /= -10.;
                A6x7g_sum /= 10.;
                A6x7g_sum_neg /= -10.;
+               A7x7g_sum /= 20.;
+               A7x7g_sum_neg /= -20.;
+               A7x7gf_sum /= 20.;
+               A7x7gf_sum_neg /= -20.;
 
                const doublereal dTol = std::pow(std::numeric_limits<doublereal>::epsilon(), 0.9);
 
@@ -273,6 +290,10 @@ namespace sp_grad_test {
                          sp_grad_assert_equal(A6x7gf_sum_neg(i, j), A6x7gf(i, j), dTol);
                          sp_grad_assert_equal(A6x7g_sum(i, j), A6x7g(i, j), dTol);
                          sp_grad_assert_equal(A6x7g_sum_neg(i, j), A6x7g(i, j), dTol);
+                         sp_grad_assert_equal(A7x7g_sum(i, j), A7x7g(i, j), dTol);
+                         sp_grad_assert_equal(A7x7g_sum_neg(i, j), A7x7g(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gf_sum(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gf_sum_neg(i, j), A7x7gf(i, j), dTol);
                     }
                }
 
