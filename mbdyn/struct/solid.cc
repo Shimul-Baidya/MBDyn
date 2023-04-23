@@ -418,9 +418,11 @@ protected:
 
           template <typename T>
           inline void
-          StrainMatrix(const sp_grad::SpMatrix<T, 3, 3>& F,
-                       sp_grad::SpMatrix<T, 6, iNumDof>& BL,
-                       const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
+          AddInternalForceVector(const sp_grad::SpMatrix<T, 3, 3>& F,
+                                 const sp_grad::SpColVector<T, 6>& sigma,
+                                 const doublereal alpha,
+                                 sp_grad::SpColVector<T, iNumDof>& R,
+                                 const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
 
           template <typename T>
           inline void
@@ -965,10 +967,8 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 {
      using namespace sp_grad;
 
-     SpMatrix<T, 6, iNumDof> BL(6, iNumDof, oDofMap);
      SpMatrix<T, 3, 3> F(3, 3, oDofMap), G(3, 3, oDofMap);
      SpColVector<T, 6> sigma(6, oDofMap);
-     SpColVector<T, iNumDof> dR(iNumDof, oDofMap);
 
      for (index_type iColloc = 0; iColloc < iNumEvalPointsStiffness; ++iColloc) {
           const doublereal alpha = CollocationType::dGetWeightStiffness(iColloc);
@@ -988,15 +988,9 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
           rgCollocData[iColloc].ComputeStressElastic(G, F, sigma, oDofMap, this);
 
-          sigma *= alpha * rgCollocData[iColloc].detJ;
+          rgCollocData[iColloc].AddInternalForceVector(F, sigma, alpha, R, oDofMap);
 
-          ASSERT(sigma.iGetMaxSize() <= iNumDof);
-
-          rgCollocData[iColloc].StrainMatrix(F, BL, oDofMap);
-
-          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
-
-          R.Sub(dR, oDofMap);
+          ASSERT(R.iGetMaxSize() <= iNumDof);
      }
 }
 
@@ -1012,11 +1006,9 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 {
      using namespace sp_grad;
 
-     SpMatrix<T, 6, iNumDof> BL(6, iNumDof, oDofMap);
      SpColVector<T, 6> sigma(6, oDofMap);
      SpMatrix<T, 3, 3> F(3, 3, oDofMap), FP(3, 3, oDofMap), C(3, 3, oDofMap), invC(3, 3, oDofMap), G(3, 3, oDofMap), FP_Tr_F(3, 3, oDofMap);
      SpMatrix<T, 3, 3> GP_detF(3, 3, oDofMap), GP_scaled(3, 3, oDofMap);
-     SpColVector<T, iNumDof> dR(iNumDof, oDofMap);
 
      T detC;
 
@@ -1065,19 +1057,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
 
           const doublereal alpha = CollocationType::dGetWeightStiffness(iColloc);
 
-          rgCollocData[iColloc].StrainMatrix(F, BL, oDofMap);
-
-          ASSERT(BL.iGetMaxSize() == oDofMap.iGetLocalSize());
-
-          sigma *= alpha * rgCollocData[iColloc].detJ;
-
-          ASSERT(sigma.iGetMaxSize() == oDofMap.iGetLocalSize());
-
-          dR.MapAssign(Transpose(BL) * sigma, oDofMap);
-
-          ASSERT(dR.iGetMaxSize() == oDofMap.iGetLocalSize());
-
-          R.Sub(dR, oDofMap);
+          rgCollocData[iColloc].AddInternalForceVector(F, sigma, alpha, R, oDofMap);
 
           ASSERT(R.iGetMaxSize() == oDofMap.iGetLocalSize());
      }
@@ -1710,16 +1690,18 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
 template <typename T>
 void
-SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::CollocData::StrainMatrix(const sp_grad::SpMatrix<T, 3, 3>& F,
-                                                                                                      sp_grad::SpMatrix<T, 6, iNumDof>& BL,
-                                                                                                      const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const
+SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::CollocData::AddInternalForceVector(const sp_grad::SpMatrix<T, 3, 3>& F,
+                                                                                                                const sp_grad::SpColVector<T, 6>& sigma,
+                                                                                                                const doublereal alpha,
+                                                                                                                sp_grad::SpColVector<T, iNumDof>& R,
+                                                                                                                const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const
 {
      using namespace sp_grad;
 
      for (index_type k = 1; k <= iNumNodes; ++k) {
           for (index_type i = 1; i <= 3; ++i) {
                for (index_type j = 1; j <= 3; ++j) {
-                    oDofMap.MapAssign(BL(i, (k - 1) * 3 + j), (F(j , i) - Eye3(j, i)) * h0d(k, i) + BL0(i, (k - 1) * 3 + j));
+                    oDofMap.Sub(R((k - 1) * 3 + j), ((F(j , i) - Eye3(j, i)) * h0d(k, i) + BL0(i, (k - 1) * 3 + j)) * sigma(i) * (alpha * detJ));
                }
           }
 
@@ -1728,7 +1710,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
 
           for (index_type i = 1; i <= 3; ++i) {
                for (index_type j = 1; j <= 3; ++j) {
-                    oDofMap.MapAssign(BL(i + 3, (k - 1) * 3 + j), (F(j, idx2[i - 1]) - Eye3(j, idx2[i - 1])) * h0d(k, idx1[i - 1]) + (F(j, idx1[i - 1]) - Eye3(j, idx1[i - 1])) * h0d(k, idx2[i - 1]) + BL0(i + 3, (k - 1) * 3 + j));
+                    oDofMap.Sub(R((k - 1) * 3 + j), ((F(j, idx2[i - 1]) - Eye3(j, idx2[i - 1])) * h0d(k, idx1[i - 1]) + (F(j, idx1[i - 1]) - Eye3(j, idx1[i - 1])) * h0d(k, idx2[i - 1]) + BL0(i + 3, (k - 1) * 3 + j)) * sigma(i + 3) * (alpha * detJ));
                }
           }
      }
