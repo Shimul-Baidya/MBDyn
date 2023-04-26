@@ -95,7 +95,7 @@ bool PastixSolver::SpMatrix::MakeCompactForm(const SparseMatrixHandler& mh)
 
      nnz = mh.Nz();
      n = mh.iGetNumCols();
-     mh.MakeCompressedColumnForm(pAx(), pAi(), pAp(), 1);
+     mh.MakeCompressedColumnForm(pAx(), pAi(), pAp(), 0);
 
      spmUpdateComputedFields(this);
 
@@ -210,6 +210,7 @@ void PastixSolver::Solve(void) const
     std::copy(pdRhs, pdRhs + spm.n, pdSol);
 
     rc = pastix_task_solve(pastix_data,
+                           spm.n,
                            1,
                            pdSol,
                            spm.n);
@@ -316,7 +317,7 @@ void PastixSolutionManager<MatrixHandlerType>::MakeCompressedColumnForm(void)
      auto& spm = pGetSolver()->MakeCompactForm(A);
 
      // Attention: Do not use spm.Nz() because we are calling spmSymmetrize!
-     CSCMatrixHandlerTpl<doublereal, pastix_int_t, 1> Acsc(spm.pAx(), spm.pAi(), spm.pAp(), A.iGetNumCols(), spm.nnz);
+     CSCMatrixHandlerTpl<doublereal, pastix_int_t, 0> Acsc(spm.pAx(), spm.pAi(), spm.pAp(), A.iGetNumCols(), spm.nnz);
 
      ScaleMatrixAndRightHandSide(Acsc);
 }
