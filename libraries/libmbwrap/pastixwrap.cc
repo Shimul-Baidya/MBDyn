@@ -50,6 +50,12 @@
 #include "pastixwrap.h"
 #include "cscmhtpl.h"
 
+#if PASTIX_VERSION_MAJOR >= 6 && PASTIX_VERSION_MINOR >= 3 || PASTIX_VERSION_MAJOR > 6
+constexpr int PastixArrayBase = 0;
+#else
+constexpr int PastixArrayBase = 1;
+#endif
+
 PastixSolver::SpMatrix::SpMatrix()
      :iNumNonZeros(-1) {
      spmInit(this);
@@ -95,7 +101,7 @@ bool PastixSolver::SpMatrix::MakeCompactForm(const SparseMatrixHandler& mh)
 
      nnz = mh.Nz();
      n = mh.iGetNumCols();
-     mh.MakeCompressedColumnForm(pAx(), pAi(), pAp(), 0);
+     mh.MakeCompressedColumnForm(pAx(), pAi(), pAp(), PastixArrayBase);
 
      spmUpdateComputedFields(this);
 
@@ -209,11 +215,18 @@ void PastixSolver::Solve(void) const
     // Right hand side will be overwritten by the solution by pastix
     std::copy(pdRhs, pdRhs + spm.n, pdSol);
 
+#if PASTIX_VERSION_MAJOR >= 6 && PASTIX_VERSION_MINOR >= 3 || PASTIX_VERSION_MAJOR > 6
     rc = pastix_task_solve(pastix_data,
                            spm.n,
                            1,
                            pdSol,
                            spm.n);
+#else
+    rc = pastix_task_solve(pastix_data,
+                           1,
+                           pdSol,
+                           spm.n);
+#endif
 
     if (PASTIX_SUCCESS != rc) {
          throw ErrGeneric(MBDYN_EXCEPT_ARGS);
@@ -317,7 +330,7 @@ void PastixSolutionManager<MatrixHandlerType>::MakeCompressedColumnForm(void)
      auto& spm = pGetSolver()->MakeCompactForm(A);
 
      // Attention: Do not use spm.Nz() because we are calling spmSymmetrize!
-     CSCMatrixHandlerTpl<doublereal, pastix_int_t, 0> Acsc(spm.pAx(), spm.pAi(), spm.pAp(), A.iGetNumCols(), spm.nnz);
+     CSCMatrixHandlerTpl<doublereal, pastix_int_t, PastixArrayBase> Acsc(spm.pAx(), spm.pAi(), spm.pAp(), A.iGetNumCols(), spm.nnz);
 
      ScaleMatrixAndRightHandSide(Acsc);
 }
