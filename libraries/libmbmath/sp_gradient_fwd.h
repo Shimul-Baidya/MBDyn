@@ -133,6 +133,8 @@ namespace sp_grad {
           using SpGradExpDofMapHelper<doublereal>::InsertDof;
           using SpGradExpDofMapHelper<doublereal>::MapAssign;
 
+          static inline index_type iGetLocalSize() { return 1; }
+
           static inline void GetDofStat(const GpGradProd& g) {}
 
           static inline void InsertDof(const GpGradProd& g) {}

@@ -244,6 +244,102 @@ private:
      const doublereal beta;
 };
 
+class MooneyRivlinElastic: public ConstitutiveLaw<Vec6, Mat6x6> {
+public:
+     MooneyRivlinElastic(const doublereal C1, const doublereal C2, const doublereal kappa)
+          :C1(C1), C2(C2), kappa(kappa) {
+     }
+
+     virtual ConstLawType::Type GetConstLawType() const override {
+          return ConstLawType::ELASTIC;
+     }
+
+     virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
+          MooneyRivlinElastic* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 MooneyRivlinElastic,
+                                 MooneyRivlinElastic(C1, C2, kappa));
+          return pCL;
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+            sp_grad::SpColVector<doublereal, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+            sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+            sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp) override {
+          UpdateElasticTpl(Eps, FTmp);
+     }
+
+     virtual void
+     Update(const Vec6& Eps, const Vec6& EpsPrime) override {
+          ConstitutiveLaw<Vec6, Mat6x6>::UpdateElasticSparse(this, Eps);
+     }
+
+     template <typename VectorType>
+     void UpdateElasticTpl(const VectorType& epsilon, VectorType& sigma) {
+
+          typedef typename VectorType::ValueType T;
+          using std::pow;
+          using namespace sp_grad;
+
+          SpGradExpDofMapHelper<typename VectorType::ValueType> oDofMap;
+
+          oDofMap.GetDofStat(epsilon);
+          oDofMap.Reset();
+          oDofMap.InsertDof(epsilon);
+          oDofMap.InsertDone();
+
+          // Based on K.J. Bathe
+          // Finite Element Procedures
+          // 2nd Edition
+          // Chapter 6.6.2, pages 592-594
+
+          const SpMatrix<T, 3, 3> C{T{2. * epsilon(1) + 1.},        epsilon(4),           epsilon(6),
+                                    epsilon(4), T{2. * epsilon(2) + 1.},          epsilon(5),
+                                    epsilon(6),          epsilon(5), T{2. * epsilon(3) + 1.}};
+
+          const SpMatrix<T, 3, 3> CC(C * C, oDofMap);
+
+          T IC, IIC, IIIC;
+
+          oDofMap.MapAssign(IC, C(1, 1) + C(2, 2) + C(3, 3));
+          oDofMap.MapAssign(IIC, 0.5 * (IC * IC - (CC(1, 1) + CC(2, 2) + CC(3, 3))));
+
+          Det(C, IIIC, oDofMap);
+
+          T a1, a2, a3, a4;
+
+          oDofMap.MapAssign(a1, 2. * C1 * pow(IIIC, -1./3.));
+          oDofMap.MapAssign(a2, 2. * C2 * pow(IIIC, -2./3.));
+          oDofMap.MapAssign(a3, a1 + a2 * IC);
+          oDofMap.MapAssign(a4, (kappa * (IIIC - sqrt(IIIC)) - 2./3. * C1 * IC * pow(IIIC, -1./3.) - 4./3. * C2 * IIC * pow(IIIC, -2./3.)) / IIIC);
+
+          static constexpr index_type i1[] = {1, 2, 3, 1, 2, 3};
+          static constexpr index_type i2[] = {1, 2, 3, 2, 3, 1};
+
+          for (index_type i = 1; i <= 6; ++i) {
+               const index_type j = i1[i - 1];
+               const index_type k = i2[i - 1];
+               const bool deltajk = (j == k);
+
+               oDofMap.MapAssign(sigma(i), a3 * deltajk - a2 * C(j, k) + a4 * (CC(j, k) - C(j, k) * IC + IIC * deltajk));
+          }
+     }
+private:
+     const doublereal C1, C2, kappa;
+};
+
 struct NeoHookeanRead: ConstitutiveLawRead<Vec6, Mat6x6> {
      static void
      ReadLameParameters(const DataManager* pDM, MBDynParser& HP, doublereal& mu, doublereal& lambda) {
@@ -337,6 +433,57 @@ struct NeoHookeanReadViscoelastic: NeoHookeanRead {
                ? pCreateElastic(mu, lambda)
                : pCreateViscoelastic(mu, lambda, beta);
 
+
+          CLType = pCL->GetConstLawType();
+
+          return pCL;
+     }
+};
+
+struct MooneyRivlinReadElastic: ConstitutiveLawRead<Vec6, Mat6x6> {
+     virtual ConstitutiveLaw<Vec6, Mat6x6>*
+     Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+          if (!HP.IsKeyWord("C1")) {
+               silent_cerr("keyword \"C1\" expected at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal C1 = HP.GetReal();
+
+          if (C1 <= 0.) {
+               silent_cerr("C1 must be greater than zero at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          if (!HP.IsKeyWord("C2")) {
+               silent_cerr("keyword \"C2\" expected at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal C2 = HP.GetReal();
+
+          if (C2 < 0.) {
+               silent_cerr("C2 must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          if (!HP.IsKeyWord("kappa")) {
+               silent_cerr("keyword \"kappa\" expected at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal kappa = HP.GetReal();
+
+          if (kappa <= 0. || kappa >= std::numeric_limits<doublereal>::max()) {
+               silent_cerr("kappa must be between zero and realmax at line " << HP.GetLineData() << std::endl);
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          MooneyRivlinElastic* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 MooneyRivlinElastic,
+                                 MooneyRivlinElastic(C1, C2, kappa));
 
           CLType = pCL->GetConstLawType();
 
@@ -566,5 +713,6 @@ void InitSolidCSL()
 {
      SetCL6D("neo" "hookean" "elastic", new NeoHookeanReadElastic);
      SetCL6D("neo" "hookean" "viscoelastic", new NeoHookeanReadViscoelastic);
+     SetCL6D("mooney" "rivlin" "elastic", new MooneyRivlinReadElastic);
      SetCL6D("bilinear" "isotropic" "hardening", new BilinearIsotropicHardeningRead);
 }
