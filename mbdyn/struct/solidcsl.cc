@@ -465,17 +465,17 @@ struct MooneyRivlinReadElastic: ConstitutiveLawRead<Vec6, Mat6x6> {
                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                }
 
-               const doublereal alpha = HP.IsKeyWord("alpha") ? HP.GetReal() : 0.;
+               const doublereal delta = HP.IsKeyWord("delta") ? HP.GetReal() : 0.;
 
-               if (alpha < 0.) {
-                    silent_cerr("alpha must be greater than zero at line " << HP.GetLineData() << "\n");
+               if (delta < 0.) {
+                    silent_cerr("delta must be greater than zero at line " << HP.GetLineData() << "\n");
                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                }
 
                const doublereal G = E / (2. * (1. + nu));
 
-               C1 = G / (2. * (1. + alpha));
-               C2 = alpha * C1;
+               C1 = G / (2. * (1. + delta));
+               C2 = delta * C1;
                kappa = E / (3. * (1. - 2. * nu));
           } else {
                if (!HP.IsKeyWord("C1")) {
