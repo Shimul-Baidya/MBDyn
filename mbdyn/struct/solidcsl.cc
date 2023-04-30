@@ -443,40 +443,76 @@ struct NeoHookeanReadViscoelastic: NeoHookeanRead {
 struct MooneyRivlinReadElastic: ConstitutiveLawRead<Vec6, Mat6x6> {
      virtual ConstitutiveLaw<Vec6, Mat6x6>*
      Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
-          if (!HP.IsKeyWord("C1")) {
-               silent_cerr("keyword \"C1\" expected at line " << HP.GetLineData() << "\n");
-               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-          }
+          doublereal C1, C2, kappa;
 
-          const doublereal C1 = HP.GetReal();
+          if (HP.IsKeyWord("E")) {
+               const doublereal E = HP.GetReal();
 
-          if (C1 <= 0.) {
-               silent_cerr("C1 must be greater than zero at line " << HP.GetLineData() << "\n");
-               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-          }
+               if (E <= 0.) {
+                    silent_cerr("E must be greater than zero at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
 
-          if (!HP.IsKeyWord("C2")) {
-               silent_cerr("keyword \"C2\" expected at line " << HP.GetLineData() << "\n");
-               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-          }
+               if (!HP.IsKeyWord("nu")) {
+                    silent_cerr("keyword \"nu\" expected at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
 
-          const doublereal C2 = HP.GetReal();
+               const doublereal nu = HP.GetReal();
 
-          if (C2 < 0.) {
-               silent_cerr("C2 must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
-               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-          }
+               if (nu < 0. || nu >= 0.5) {
+                    silent_cerr("nu must be between zero and 0.5 at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
 
-          if (!HP.IsKeyWord("kappa")) {
-               silent_cerr("keyword \"kappa\" expected at line " << HP.GetLineData() << "\n");
-               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-          }
+               const doublereal alpha = HP.IsKeyWord("alpha") ? HP.GetReal() : 0.;
 
-          const doublereal kappa = HP.GetReal();
+               if (alpha < 0.) {
+                    silent_cerr("alpha must be greater than zero at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
 
-          if (kappa <= 0. || kappa >= std::numeric_limits<doublereal>::max()) {
-               silent_cerr("kappa must be between zero and realmax at line " << HP.GetLineData() << std::endl);
-               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               const doublereal G = E / (2. * (1. + nu));
+
+               C1 = G / (2. * (1. + alpha));
+               C2 = alpha * C1;
+               kappa = E / (3. * (1. - 2. * nu));
+          } else {
+               if (!HP.IsKeyWord("C1")) {
+                    silent_cerr("keyword \"C1\" expected at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+
+               C1 = HP.GetReal();
+
+               if (C1 <= 0.) {
+                    silent_cerr("C1 must be greater than zero at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+
+               if (!HP.IsKeyWord("C2")) {
+                    silent_cerr("keyword \"C2\" expected at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+
+               C2 = HP.GetReal();
+
+               if (C2 < 0.) {
+                    silent_cerr("C2 must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+
+               if (!HP.IsKeyWord("kappa")) {
+                    silent_cerr("keyword \"kappa\" expected at line " << HP.GetLineData() << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+
+               kappa = HP.GetReal();
+
+               if (kappa <= 0.) {
+                    silent_cerr("kappa must be greater than zero at line " << HP.GetLineData() << std::endl);
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
           }
 
           MooneyRivlinElastic* pCL = nullptr;

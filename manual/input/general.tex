@@ -3898,6 +3898,7 @@ in Section~\ref{sec:CONSTITUTIVE-LAW}.
 	\kw{nlp viscoelastic}							& $\surd$ & $\surd$ & $\surd$ \\
         \kw{neo hookean elastic}                                                &         &         & $\surd$ \\
         \kw{neo hookean viscoelastic}                                           &         &         & $\surd$ \\
+        \kw{mooney rivlin elastic}                                              &         &         & $\surd$ \\        
         \kw{bilinear isotropic hardening}                                       &         &         & $\surd$ \\
         \hline
 	\multicolumn{4}{c}{} \\
@@ -4817,7 +4818,8 @@ as indicated by Equations~(\ref{eq:nlsf-cl}) and~(\ref{eq:nlp-cl}).
 \subsection{Neo-Hookean}
 \label{sec:CL:neo-hookean}
 \emph{Author: Reinhard Resch}
-Neo-Hookean isotropic hyperelastic constitutive laws can be used only for solid elements. See also section~\ref{sec:EL:SOLID}.
+Neo-Hookean isotropic hyperelastic constitutive laws can be used to model rubber~like materials with solid elements.
+See also section~\ref{sec:EL:SOLID}.
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{specific_const_law} ::= \kw{neo hookean elastic} ,
       \kw{E} , (\ty{real}) \bnt{E} ,
@@ -4836,8 +4838,8 @@ For the viscoelastic variant, there is an additional input parameter \nt{beta} w
 In contradiction to \cite{KUEBLER2005}, damping effects are always considered proportional to initial stiffness in MBDyn.
 Since fully incompressible constitutive laws are not yet supported, the condition $0 \le \nt{nu} < \frac{1}{2}$ must hold.
 The Neo-Hookean constitutive law is describing the relation between
-Second Piola Kirchhoff stress tensor $\boldsymbol{S}$ and Right Cauchy Green tensor $\boldsymbol{C}$.
-In the elastic case $\nt{beta}=0$, whereas in the viscoelastic case $\nt{beta}>0$ and the scaled time derivative of the Right Cauchy Green tensor
+Second Piola Kirchhoff stress tensor $\boldsymbol{S}$ and Right Cauchy Green strain tensor $\boldsymbol{C}$.
+In the elastic case $\nt{beta}=0$, whereas in the viscoelastic case $\nt{beta}>0$ and the scaled time derivative of the Right Cauchy Green strain tensor
 $\dot{\boldsymbol{C}}^{\star}=\frac{1}{2}\dot{\boldsymbol{G}}^{\star}$ is considered. See also equation~\ref{sec:EL:SOLID:constlaw}.
 
 \begin{eqnarray}
@@ -4863,6 +4865,61 @@ $\dot{\boldsymbol{C}}^{\star}=\frac{1}{2}\dot{\boldsymbol{G}}^{\star}$ is consid
                      E, 5e6,
                      nu, 0.49,
                      beta, 1e-3;
+\end{verbatim}
+
+\subsection{Mooney-Rivlin}
+\label{sec:CL:mooney-rivlin}
+\emph{Author: Reinhard Resch}
+Mooney-Rivlin constitutive laws are similar to Neo-Hookean constitutive laws, but they have an additional parameter.
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{specific_const_law} ::= \kw{mooney rivlin elastic} ,
+      \{ \kw{C1} , (\ty{real}) \bnt{C1} ,
+         \kw{C2} , (\ty{real}) \bnt{C2} ,
+         \kw{kappa}, (\ty{real}) \bnt{kappa} |
+         \kw{E} , (\ty{real}) \bnt{E} ,
+         \kw{nu} , (\ty{real}) \bnt{nu}
+         [ , \kw{alpha} , (\ty{real}) \bnt{alpha} ]
+       \}
+\end{Verbatim}
+
+There are two alternative sets of input parameters.
+Either Young's modulus \nt{E}, Poisson's ratio \nt{nu} and the optional ration \nt{alpha} or
+Mooney-Rivlin parameters \nt{C1}, \nt{C2} and the bulk modulus \nt{kappa} may be provided.
+If $\nt{alpha}=0$ or $\nt{C2}=0$, a classical Neo-Hookean constitutive law is obtained.
+Equation~\ref{eq:CL:mooney-rivlin:param} shows the relations between those parameters.
+Currently fully incompressible constitutive laws are not yet supported by MBDyn.
+
+\begin{eqnarray}
+  G & = & \frac{\nt{E}}{2\,\left(1 + \nt{nu}\right)} \\
+  \nt{C1} & = & \frac{G}{2\,\left(1 + \nt{alpha}\right)} \\
+  \nt{C2} & = & \nt{alpha}\,\nt{C1} \\
+  \nt{kappa} & = & \frac{\nt{E}}{3\,\left(1 - 2\,\nt{nu}\right)}
+  \label{eq:CL:mooney-rivlin:param}
+\end{eqnarray}
+
+Equation~\ref{eq:CL:mooney-rivlin:stress} is based on \cite{BATHE2016} and shows the relationship between the Right Cauchy Green tensor $\boldsymbol{C}$ and the Second Piola Kirchhoff stress tensor $\boldsymbol{S}$.
+\begin{eqnarray}
+  \boldsymbol{S} & = & 2\,\left\{ \nt{C1} \, III_C^{-\frac{1}{3}} \, \boldsymbol{I} + \nt{C2} \, III_C^{-\frac{2}{3}} \, \left(I_C \, \boldsymbol{I} - \boldsymbol{C} \right)\right. \nonumber \\ 
+  & &  \left.+\left[ \frac{1}{2} \, \nt{kappa} \,\left(III_C - \sqrt{III_C}\right) - \frac{1}{3} \, \nt{C1} \, I_C \, III_C^{-\frac{1}{3}} - \frac{2}{3} \, \nt{C2} \, II_C \, III_C^{-\frac{2}{3}} \right]\, \boldsymbol{C}^{-1}\right\}
+    \label{eq:CL:mooney-rivlin:stress} \\
+  I_C & = & \trace\left(\boldsymbol{C}\right) \\
+  II_C & = & \frac{1}{2} \,\left(\trace\left(\boldsymbol{C}\right)^2 - \trace\left(\boldsymbol{C} \, \boldsymbol{C}\right)\right) \\
+  III_C & = & \det\left(\boldsymbol{C}\right)
+\end{eqnarray}
+
+\paragraph{Example.} \
+\begin{verbatim}
+    constitutive law: 1000, name, "rubber 1", 6,
+                 mooney rivlin elastic,
+                     C1, 5e6,
+                     C2, 1.25e6,
+                     kappa, 1200e6;
+
+    constitutive law: 1001, name, "rubber 2", 6,
+                 mooney rivlin elastic,
+                     E, 37.5e6,
+                     nu, 0.4948,
+                     alpha, 0.25;
 \end{verbatim}
 
 \subsection{Bilinear isotropic hardening}
