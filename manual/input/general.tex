@@ -4878,21 +4878,21 @@ Mooney-Rivlin constitutive laws are similar to Neo-Hookean constitutive laws, bu
          \kw{kappa}, (\ty{real}) \bnt{kappa} |
          \kw{E} , (\ty{real}) \bnt{E} ,
          \kw{nu} , (\ty{real}) \bnt{nu}
-         [ , \kw{alpha} , (\ty{real}) \bnt{alpha} ]
+         [ , \kw{delta} , (\ty{real}) \bnt{delta} ]
        \}
 \end{Verbatim}
 
 There are two alternative sets of input parameters.
-Either Young's modulus \nt{E}, Poisson's ratio \nt{nu} and the optional ration \nt{alpha} or
+Either Young's modulus \nt{E}, Poisson's ratio \nt{nu} and the optional ration \nt{delta} or
 Mooney-Rivlin parameters \nt{C1}, \nt{C2} and the bulk modulus \nt{kappa} may be provided.
-If $\nt{alpha}=0$ or $\nt{C2}=0$, a classical Neo-Hookean constitutive law is obtained.
+If $\nt{delta}=0$ or $\nt{C2}=0$, a classical Neo-Hookean constitutive law is obtained.
 Equation~\ref{eq:CL:mooney-rivlin:param} shows the relations between those parameters.
 Currently fully incompressible constitutive laws are not yet supported by MBDyn.
 
 \begin{eqnarray}
   G & = & \frac{\nt{E}}{2\,\left(1 + \nt{nu}\right)} \\
-  \nt{C1} & = & \frac{G}{2\,\left(1 + \nt{alpha}\right)} \\
-  \nt{C2} & = & \nt{alpha}\,\nt{C1} \\
+  \nt{C1} & = & \frac{G}{2\,\left(1 + \nt{delta}\right)} \\
+  \nt{C2} & = & \nt{delta}\,\nt{C1} \\
   \nt{kappa} & = & \frac{\nt{E}}{3\,\left(1 - 2\,\nt{nu}\right)}
   \label{eq:CL:mooney-rivlin:param}
 \end{eqnarray}
@@ -4919,7 +4919,7 @@ Equation~\ref{eq:CL:mooney-rivlin:stress} is based on \cite{BATHE2016} and shows
                  mooney rivlin elastic,
                      E, 37.5e6,
                      nu, 0.4948,
-                     alpha, 0.25;
+                     delta, 0.25;
 \end{verbatim}
 
 \subsection{Bilinear isotropic hardening}
