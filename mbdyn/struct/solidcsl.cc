@@ -43,6 +43,7 @@
 #include "constltp.h"
 #include "dataman.h"
 #include "solidcsl.h"
+#include <ac/lapack.h>
 
 class NeoHookean: public ConstitutiveLaw<Vec6, Mat6x6> {
 protected:
@@ -745,10 +746,179 @@ struct BilinearIsotropicHardeningRead: ConstitutiveLawRead<Vec6, Mat6x6> {
      }
 };
 
+#if defined(HAVE_DGETRF)
+class LinearViscoelasticMaxwell1: public ConstitutiveLaw<Vec6, Mat6x6> {
+public:
+     LinearViscoelasticMaxwell1(doublereal E0, doublereal E1, doublereal eta1, const sp_grad::SpMatrix<doublereal, 6, 6>& C, const DataManager* pDM)
+          :E0(E0), E1(E1), eta1(eta1), C(C), pDM(pDM), tCurr(pDM->dGetTime()), tPrev(pDM->dGetTime()), EpsVPrev(Zero6), EpsVCurr(Zero6) {
+          FDE = C * (E0 + E1);
+     }
+
+     virtual ConstLawType::Type GetConstLawType() const override {
+          return ConstLawType::ELASTIC; // Because EpsPrime is not used at all!
+     }
+
+     virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy() const override {
+          LinearViscoelasticMaxwell1* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 LinearViscoelasticMaxwell1,
+                                 LinearViscoelasticMaxwell1(E0, E1, eta1, C, pDM));
+          return pCL;
+     }
+
+     virtual void
+     Update(const Vec6& EpsCurr, const Vec6&) override {
+          using namespace sp_grad;
+
+          tCurr = pDM->dGetTime();
+
+          const doublereal dt = tCurr - tPrev;
+
+          if (dt != 0.) {
+               ASSERT(dt > 0.);
+
+               SpMatrix<doublereal, 6, 6> A = C * (E1 / eta1);
+
+               for (index_type i = 1; i <= 6; ++i) {
+                    A(i, i) += 1. / dt;
+               }
+
+               EpsVCurr = C * EpsCurr * (E1 / eta1) + EpsVPrev / dt; // right hand side
+
+               integer INFO;
+               std::array<integer, 6> IPIV;
+
+               const integer M = A.iGetNumCols();
+               const integer N = A.iGetNumRows();
+
+               __FC_DECL__(dgetrf)(&M, &N, &A(1, 1), &M, &IPIV[0], &INFO);
+
+               if (INFO != 0) {
+                    silent_cerr("numeric factorization of constitutive law matrix failed with status " << INFO << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+
+               const integer NRHS = 1;
+
+               __FC_DECL__(dgetrs)("N", &N, &NRHS, &A(1, 1), &M, &IPIV[0], &EpsVCurr(1), &N, &INFO);
+
+               if (INFO != 0) {
+                    silent_cerr("numeric solution of constitutive law matrix failed with status " << INFO << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+
+               std::array<doublereal, 6> WORK;
+               const integer LWORK = WORK.size();
+
+               __FC_DECL__(dgetri)(&N, &A(1, 1), &N, &IPIV[0], &WORK[0], &LWORK, &INFO);
+
+               if (INFO != 0) {
+                    silent_cerr("numeric solution of constitutive law matrix failed with status " << INFO << "\n");
+                    throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+               }
+#ifdef DEBUG
+               const SpMatrix<doublereal, 6, 6> Ftmp = A * (C * (E1 / eta1) + Eye6 / dt) - Eye6;
+               constexpr doublereal dTolInv = 1e-10;
+               for (index_type i = 1; i <= 6; ++i) {
+                    ASSERT(Norm(Ftmp.GetCol(i)) < dTolInv);
+               }
+#endif
+               const SpMatrix<doublereal, 6, 6> C_invA_C = C * A * C;
+
+               for (index_type j = 1; j <= 6; ++j) {
+                    for (index_type i = 1; i <= 6; ++i) {
+                         FDE(i, j) = C(i, j) * (E0 + E1) - C_invA_C(i, j) * (E1 * E1 / eta1);
+                    }
+               }
+          } else {
+               EpsVCurr = EpsVPrev;
+               FDE = C * (E0 + E1);
+          }
+
+          F = SpColVector<doublereal, 6>(C * (EpsCurr * E0 + (EpsCurr - EpsVCurr) * E1));
+     }
+
+     virtual void AfterConvergence(const Vec6& Eps, const Vec6& EpsPrime) override {
+          tPrev = tCurr;
+          EpsVPrev = EpsVCurr;
+     }
+
+private:
+     const doublereal E0, E1, eta1;
+     const sp_grad::SpMatrix<doublereal, 6, 6> C;
+     const DataManager* const pDM;
+     doublereal tCurr, tPrev;
+     sp_grad::SpColVector<doublereal, 6> EpsVPrev, EpsVCurr;
+};
+
+struct LinearViscoelasticMaxwell1Read: ConstitutiveLawRead<Vec6, Mat6x6> {
+     virtual ConstitutiveLaw<Vec6, Mat6x6>*
+     Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+          if (!HP.IsKeyWord("E0")) {
+               silent_cerr("keyword \"E0\" expected at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal E0 = HP.GetReal();
+
+          if (E0 <= 0.) {
+               silent_cerr("E0 must be greater than zero at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          if (!HP.IsKeyWord("E1")) {
+               silent_cerr("keyword \"E1\" expected at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal E1 = HP.GetReal();
+
+          if (E1 < 0.) {
+               silent_cerr("E1 must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          if (!HP.IsKeyWord("eta1")) {
+               silent_cerr("keyword \"eta1\" expected at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const doublereal eta1 = HP.GetReal();
+
+          if (eta1 <= 0.) {
+               silent_cerr("eta1 must be greater than zero at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          if (!HP.IsKeyWord("C")) {
+               silent_cerr("keyword \"C\" expected at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+
+          const Mat6x6 C = HP.GetMat6x6();
+
+          LinearViscoelasticMaxwell1* pCL = nullptr;
+
+          SAFENEWWITHCONSTRUCTOR(pCL,
+                                 LinearViscoelasticMaxwell1,
+                                 LinearViscoelasticMaxwell1(E0, E1, eta1, C, pDM));
+
+          CLType = pCL->GetConstLawType();
+
+          return pCL;
+     }
+};
+#endif
+
 void InitSolidCSL()
 {
      SetCL6D("neo" "hookean" "elastic", new NeoHookeanReadElastic);
      SetCL6D("neo" "hookean" "viscoelastic", new NeoHookeanReadViscoelastic);
      SetCL6D("mooney" "rivlin" "elastic", new MooneyRivlinReadElastic);
      SetCL6D("bilinear" "isotropic" "hardening", new BilinearIsotropicHardeningRead);
+
+#if defined(HAVE_DGETRF)
+     SetCL6D("linear" "viscoelastic" "maxwell1", new LinearViscoelasticMaxwell1Read);
+#endif
 }
