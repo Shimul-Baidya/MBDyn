@@ -3900,6 +3900,7 @@ in Section~\ref{sec:CONSTITUTIVE-LAW}.
         \kw{neo hookean viscoelastic}                                           &         &         & $\surd$ \\
         \kw{mooney rivlin elastic}                                              &         &         & $\surd$ \\        
         \kw{bilinear isotropic hardening}                                       &         &         & $\surd$ \\
+        \kw{linear viscoelastic maxwell n}                                      &         & $\surd$ & $\surd$ \\
         \hline
 	\multicolumn{4}{c}{} \\
 	\hline
@@ -4955,6 +4956,76 @@ $\nt{ET}=0$ gives an ideal plastic material without any hardening effect.
                           nu, 0.3,
                           ET, 2000e6,
                           sigmayv, 235e6;
+\end{verbatim}
+
+\subsection{Linear viscoelastic Maxwell}
+\label{sec:CL:linear-viscoelastic-maxwell}
+\emph{Author: Reinhard Resch}
+This viscoelastic constitutive law is also called ``Generalized Maxwell model'' or ``Wiechert'' model.
+
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{specific_const_law} ::= \kw{linear viscoelastic maxwell n} ,
+        \kw{E0} , (\ty{real}) \bnt{E0} ,
+            (\ty{integer}) \bnt{num_elem} ,
+            \bnt{maxwell_element} [ , ... ] ,
+        \kw{C}, (\ty{DerivativeOfEntity}) \bnt{C}
+\end{Verbatim}
+
+
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{maxwell_element} ::= \kw{E1} , \bnt{E1} , \kw{eta1} , \bnt{eta1}
+\end{Verbatim}
+
+There is also a simplified variant which uses only a single Maxwell element. It is also called ``Zener'' model.
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{specific_const_law} ::= \kw{linear viscoelastic maxwell 1} ,
+        \kw{E0} , (\ty{real}) \bnt{E0} ,
+        \bnt{maxwell_element} ,
+        \kw{C}, (\ty{DerivativeOfEntity}) \bnt{C}
+\end{Verbatim}
+
+The linear viscoelastic Maxwell constitutive law can be used to consider creep and relaxation effects of polymeric materials with beam- and solid-elements.
+For that purpose it is required to fit the constants $\nt{E0}$, $\nt{E1}_1$, \ldots $\,\nt{E1}_{\nt{num\_elem}}$ to experimental data.
+\begin{eqnarray}
+  \boldsymbol{\sigma} &=& \nt{E0} \, \nt{C} \, \boldsymbol{\varepsilon} + \sum_{i=1}^{\nt{num\_elem}} \nt{E1}_i \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right) \\
+  \dot{\boldsymbol{\varepsilon}}_i^v &=& \frac{\nt{E1}_i}{\nt{eta1}_i} \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right)
+\end{eqnarray}
+
+If the constitutive law is isotropic and it is used for solid elements, then the following expression, which is equivalent to Hooke's law, can be used for \nt{C}.
+\begin{eqnarray}
+  \nt{C} &=& \frac{1}{\left(1 + \nu\right)\left(1 - 2 \, \nu\right)} \, \begin{pmatrix}
+    1 - \nu & \nu & \nu & 0 & 0 & 0 \\
+    \nu & 1 - \nu & \nu & 0 & 0 & 0 \\
+    \nu & \nu & 1 - \nu & 0 & 0 & 0 \\
+    0 & 0 & 0 & \frac{1}{2} \, \left(1 - 2 \, \nu\right) & 0 & 0 \\
+    0 & 0 & 0 & 0 & \frac{1}{2} \, \left(1 - 2 \, \nu\right) & 0 \\
+    0 & 0 & 0 & 0 & 0 & \frac{1}{2} \, \left(1 - 2 \, \nu\right)
+  \end{pmatrix}
+\end{eqnarray}
+In this case $\nu$ is Poisson's ratio and \nt{E0} is equivalent to Young's modulus for low strain rates.
+\paragraph{Eigenanalysis}
+It should be emphasized, that the linear viscoelastic Maxwell constitutive law is using internal states
+to represent the viscous strains $\boldsymbol{\varepsilon}_i^v$.
+For that reason it behaves like a pure elastic material without any damping
+during an Eigenanalysis according section~\ref{sec:IVP:eigenanalysis}.
+\paragraph{Example.} \
+\begin{verbatim}
+    constitutive law: 1000, name, "Wiechert", 6,
+                 linear viscoelastic maxwell n,
+                 E0, 2.1000000000000000e+05,
+                 2,
+                    E1, 1.8900000000000000e+05,
+                    eta1, 3.7800000000000000e+05,
+                    E1, 2.1000000000000000e+04,
+                    eta1, 4.2000000000000000e+04,
+                 C, eye;
+
+    constitutive law: 1001, name, "Zener", 6,
+                 linear viscoelastic maxwell 1,
+                 E0, 2.1000000000000000e+05,
+                 E1, 1.8900000000000000e+05,
+                 eta1, 3.7800000000000000e+05,
+                 C, eye;
 \end{verbatim}
 
 \subsection{array}
