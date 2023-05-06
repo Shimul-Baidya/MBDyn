@@ -179,6 +179,8 @@ namespace sp_grad_test {
           SpGradExpDofMapHelper<SpGradient> oDofMap;
 
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
+               const doublereal dTol = std::pow(std::numeric_limits<doublereal>::epsilon(), 0.9);
+
                Mat3x3 A, C;
                Mat3xN A3n(3), C3n(3);
                MatNx3 An3(3), Cn3(3);
@@ -260,6 +262,41 @@ namespace sp_grad_test {
                SpMatrix<SpGradient, 7, 7> A7x7gf_sum(7, 7, oDofMap);
                SpMatrix<SpGradient, 7, 7> A7x7gf_sum_neg(7, 7, oDofMap);
                SpMatrix<SpGradient, 7, 7> A7x7gf = Transpose(A6x7gf) * A6x7gf;
+               SpMatrix<SpGradient, 7, 7> A7x7gfT = Transpose(Transpose(Transpose(A6x7gf) * A6x7gf));
+               SpMatrix<SpGradient, 7, 7> A7x7gfTT = Transpose(Transpose(Transpose(Transpose(A6x7gf) * A6x7gf)));
+               SpMatrix<SpGradient, 7, 7> A7x7gfTTT = Transpose(Transpose(Transpose(Transpose(Transpose(A6x7gf) * A6x7gf))));
+               SpMatrix<SpGradient, 7, 7> A7x7gfTTTT = Transpose(Transpose(Transpose(Transpose(Transpose(Transpose(A6x7gf) * A6x7gf)))));
+               SpMatrix<SpGradient, 7, 7> A7x7gfT2 = Transpose(A6x7gf) * Transpose(Transpose(A6x7gf));
+               SpMatrix<SpGradient, 7, 7> A7x7gfTT2 = Transpose(Transpose(Transpose(A6x7gf))) * Transpose(Transpose(A6x7gf));
+               SpMatrix<SpGradient, 7, 7> A7x7gfTTT2 = Transpose(Transpose(Transpose(A6x7gf))) * Transpose(Transpose(Transpose(Transpose(A6x7gf))));
+               SpMatrix<SpGradient, 7, 7> A7x7gfT3 = Transpose(Transpose(A6x7gf) * Transpose(Transpose(A6x7gf)));
+               SpMatrix<SpGradient, 7, 7> A7x7gfTT3 = Transpose(Transpose(Transpose(A6x7gf) * Transpose(Transpose(A6x7gf))));
+               SpMatrix<SpGradient, 7, 7> A7x7gfTTT3 = Transpose(Transpose(Transpose(Transpose(A6x7gf) * Transpose(Transpose(A6x7gf)))));
+               Mat6x6 A6x6, B6x6;
+
+               for (index_type i = 1; i <= 6; ++i) {
+                    for (index_type j = 1; j <= 6; ++j) {
+                         A6x6(i, j) = 10 * i + j;
+                         B6x6(j, i) = 10 * i + j;
+                    }
+               }
+
+               Mat6x6 C6x6 = A6x6 * B6x6;
+
+               static constexpr doublereal C6x6ref[6][6] = {
+                    {1111,1921,2731,3541,4351,5161},
+                    {1921,3331,4741,6151,7561,8971},
+                    {2731,4741,6751,8761,10771,12781},
+                    {3541,6151,8761,11371,13981,16591},
+                    {4351,7561,10771,13981,17191,20401},
+                    {5161,8971,12781,16591,20401,24211}
+               };
+
+               for (index_type i = 1; i <= 6; ++i) {
+                    for (index_type j = 1; j <= 6; ++j) {
+                         sp_grad_assert_equal(C6x6(i, j), C6x6ref[i - 1][j - 1], dTol);
+                    }
+               }
 
                for (index_type i = 1; i <= 20; ++i) {
                     A6x7gf_sum.Add(A6x7gf_oDofMap * 0.5, oDofMap);
@@ -282,8 +319,6 @@ namespace sp_grad_test {
                A7x7gf_sum /= 20.;
                A7x7gf_sum_neg /= -20.;
 
-               const doublereal dTol = std::pow(std::numeric_limits<doublereal>::epsilon(), 0.9);
-
                for (index_type i = 1; i <= A6x7gf.iGetNumRows(); ++i) {
                     for (index_type j = 1; j <= A6x7gf.iGetNumCols(); ++j) {
                          sp_grad_assert_equal(A6x7gf_sum(i, j), A6x7gf(i, j), dTol);
@@ -294,6 +329,16 @@ namespace sp_grad_test {
                          sp_grad_assert_equal(A7x7g_sum_neg(i, j), A7x7g(i, j), dTol);
                          sp_grad_assert_equal(A7x7gf_sum(i, j), A7x7gf(i, j), dTol);
                          sp_grad_assert_equal(A7x7gf_sum_neg(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfT(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfTT(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfTTT(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfTTTT(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfT2(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfTT2(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfTTT2(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfT3(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfTT3(i, j), A7x7gf(i, j), dTol);
+                         sp_grad_assert_equal(A7x7gfTTT3(i, j), A7x7gf(i, j), dTol);
                     }
                }
 
@@ -868,6 +913,7 @@ namespace sp_grad_test {
                     SpGradient X3a09 = std::move(X3e(1, 1));
                     {
                          SpGradient X3e10 = std::move(X3a09);
+                         X3a09 = std::move(X3e10);
                     }
                     X3e(1,1) = std::move(X3a09);
                     X3e(2,2) = std::move(X3a05);
