@@ -178,6 +178,7 @@ protected:
 
 	/* raw output stuff */
 	DriveCaller *pOutputMeter;
+        mutable bool bOutputNextStep; // Save the last positive result from pOutputMeter->dGet()
 	mutable integer iOutputCount;
 
 protected:
