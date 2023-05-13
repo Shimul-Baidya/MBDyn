@@ -1619,7 +1619,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
      Inv(J, invJ, detJ);
 
      if (detJ <= 0.) {
-          silent_cerr("solid(" << pElem << "): Jacobian is singular: det(J)=" << detJ << "\n");
+          silent_cerr("solid(" << pElem->GetLabel() << "): Jacobian is singular: det(J)=" << detJ << "\n");
           throw ErrGeneric(MBDYN_EXCEPT_ARGS);
      }
 
