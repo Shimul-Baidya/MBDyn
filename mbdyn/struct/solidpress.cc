@@ -668,13 +668,13 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssRes(sp_grad::SpGr
      using namespace sp_grad;
 
      constexpr index_type iCapacity = iNumDof + PressureSource::GetNumConnectedNodes();
-     
+
      SpColVector<T, iNumNodes * 3> R(iNumDof, iCapacity);
 
      AssPressureLoad(R, dCoef, func);
 
      ASSERT(R.iGetMaxSize() <= iCapacity);
-     
+
      this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstMomentumIndex);
 }
 
@@ -704,6 +704,10 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssPressureLoad(sp_g
      oDofMap.InsertDof(x);
      oDofMap.InsertDof(p);
      oDofMap.InsertDone();
+
+     for (auto& g: R) {
+          oDofMap.InitDofMap(g);
+     }
 
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
           const doublereal alpha = CollocationType::dGetWeight(i);
@@ -938,8 +942,8 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssRes(sp_
 {
      using namespace sp_grad;
 
-     constexpr index_type iCapacity = iNumDof;
-     
+     constexpr index_type iCapacity = iNumDof * (eType == SurfaceTractionType::RELATIVE);
+
      SpColVector<T, iNumNodes * 3> R(iNumDof, iCapacity);
 
      SurfaceTractionHelper<eType>::AssSurfaceTraction(*this, R, dCoef, func);
@@ -975,6 +979,10 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurface
      oDofMap.InsertDof(x);
      oDofMap.InsertDone();
 
+     for (auto& g: R) {
+          oDofMap.InitDofMap(g);
+     }
+
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
           const doublereal alpha = CollocationType::dGetWeight(i);
 
@@ -1009,7 +1017,7 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurface
 
           for (index_type k = 1; k <= iNumDof; ++k) {
                for (index_type j = 1; j <= 3; ++j) {
-                    oDofMap.Add(R(k), rgCollocData[i].Hf(k, j) * Fg_i(j));
+                    oDofMap.Add(R(k), rgCollocData[i].Hf(j, k) * Fg_i(j));
                }
           }
      }
@@ -1041,7 +1049,7 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurface
 
           for (index_type k = 1; k <= iNumDof; ++k) {
                for (index_type j = 1; j <= 3; ++j) {
-                    R(k) += rgCollocData[i].Hf(k, j) * Fg_i(j);
+                    R(k) += rgCollocData[i].Hf(j, k) * Fg_i(j);
                }
           }
      }
