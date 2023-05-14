@@ -667,10 +667,14 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssRes(sp_grad::SpGr
 {
      using namespace sp_grad;
 
-     SpColVector<T, iNumNodes * 3> R(iNumDof, (iNumDof + iNumNodes) * iNumEvalPoints);
+     constexpr index_type iCapacity = iNumDof + PressureSource::GetNumConnectedNodes();
+     
+     SpColVector<T, iNumNodes * 3> R(iNumDof, iCapacity);
 
      AssPressureLoad(R, dCoef, func);
 
+     ASSERT(R.iGetMaxSize() <= iCapacity);
+     
      this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstMomentumIndex);
 }
 
@@ -688,7 +692,6 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssPressureLoad(sp_g
      SpColVector<T, 3 * iNumNodes> x(3 * iNumNodes, 1);
      SpColVector<T, iNumNodes> p(iNumNodes, 1);
      SpColVector<T, 3> n1(3, iNumDof), n2(3, iNumDof), n(3, iNumDof), F_i(3, iNumDof + iNumNodes);
-     SpColVector<T, iNumDof> HfT_F_i(iNumDof, iNumDof + iNumNodes);
 
      this->GetNodalPosition(x, dCoef, func);
      this->oPressure.GetNodalPressure(p, dCoef, func);
@@ -710,8 +713,12 @@ PressureLoad<ElementType, CollocationType, PressureSource>::AssPressureLoad(sp_g
           n2.MapAssign(rgCollocData[i].dHf_ds * x, oDofMap);
           n.MapAssign(Cross(n1, n2), oDofMap);
           F_i.MapAssign(n * (-alpha * p_i), oDofMap);
-          HfT_F_i.MapAssign(Transpose(rgCollocData[i].Hf) * F_i, oDofMap);
-          R += HfT_F_i;
+
+          for (index_type k = 1; k <= iNumDof; ++k) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    oDofMap.Add(R(k), rgCollocData[i].Hf(j, k) * F_i(j));
+               }
+          }
      }
 }
 
@@ -905,7 +912,7 @@ void SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitC
 
           rgCollocData[i].dA = Norm_e3;
           rgCollocData[i].Rrel = Rf[i];
-     }     
+     }
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource, SurfaceTractionType eType>
@@ -931,9 +938,13 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssRes(sp_
 {
      using namespace sp_grad;
 
-     SpColVector<T, iNumNodes * 3> R(iNumDof, (iNumDof + iNumNodes) * iNumEvalPoints);
+     constexpr index_type iCapacity = iNumDof;
+     
+     SpColVector<T, iNumNodes * 3> R(iNumDof, iCapacity);
 
      SurfaceTractionHelper<eType>::AssSurfaceTraction(*this, R, dCoef, func);
+
+     ASSERT(R.iGetMaxSize() <= iCapacity);
 
      this->AssVector(WorkVec, R, &StructDispNodeAd::iGetFirstMomentumIndex);
 }
@@ -953,7 +964,6 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurface
      SpColVector<T, 3 * iNumNodes> x(3 * iNumNodes, 1);
      SpMatrix<doublereal, 3, iNumNodes> fl_n(3, iNumNodes, 0);
      SpColVector<T, 3> e1(3, iNumDof), e2(3, iNumDof), e3(3, iNumDof), Fg_i(3, iNumDof + iNumNodes);
-     SpColVector<T, iNumDof> HfT_Fg_i(iNumDof, iNumDof + iNumNodes);
 
      this->GetNodalPosition(x, dCoef, func);
      this->oPressure.GetNodalLoad(fl_n, dCoef, func);
@@ -996,8 +1006,12 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurface
           }
 
           Fg_i.MapAssign(Relem_i * frel_i, oDofMap);
-          HfT_Fg_i.MapAssign(Transpose(rgCollocData[i].Hf) * Fg_i, oDofMap);
-          R += HfT_Fg_i;
+
+          for (index_type k = 1; k <= iNumDof; ++k) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    oDofMap.Add(R(k), rgCollocData[i].Hf(k, j) * Fg_i(j));
+               }
+          }
      }
 }
 
@@ -1013,7 +1027,6 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurface
      SpColVector<doublereal, 3> fl_i(3, 0);
      SpMatrix<doublereal, 3, iNumNodes> fl_n(3, iNumNodes, 0);
      SpColVector<doublereal, 3> Fg_i(3, iNumDof + iNumNodes);
-     SpColVector<doublereal, iNumDof> HfT_Fg_i(iNumDof, iNumDof + iNumNodes);
 
      this->oPressure.GetNodalLoad(fl_n, dCoef, func);
 
@@ -1025,8 +1038,12 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::AssSurface
           }
 
           Fg_i = (rgCollocData[i].Rrel * fl_i) * rgCollocData[i].dA;
-          HfT_Fg_i = Transpose(rgCollocData[i].Hf) * Fg_i;
-          R += HfT_Fg_i;
+
+          for (index_type k = 1; k <= iNumDof; ++k) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    R(k) += rgCollocData[i].Hf(k, j) * Fg_i(j);
+               }
+          }
      }
 }
 
