@@ -465,7 +465,6 @@ protected:
           sp_grad::SpColVectorA<doublereal, iNumNodes> h;
           sp_grad::SpMatrixA<doublereal, iNumNodes, 3> h0d;
           doublereal detJ;
-          sp_grad::SpMatrixA<doublereal, 6, iNumDof> BL0;
           sp_grad::SpMatrixA<doublereal, 3, 3> G;
           sp_grad::SpMatrixA<doublereal, 3, 3> F;
           sp_grad::SpColVectorA<doublereal, 6> sigma;
@@ -1624,19 +1623,6 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
      }
 
      h0d = hd * Transpose(invJ);
-
-     for (index_type k = 1; k <= iNumNodes; ++k) {
-          for (index_type i = 1; i <= 3; ++i) {
-               BL0(i, (k - 1) * 3 + i) = h0d(k, i);
-          }
-
-          BL0(4, (k - 1) * 3 + 1) = h0d(k, 2);
-          BL0(4, (k - 1) * 3 + 2) = h0d(k, 1);
-          BL0(5, (k - 1) * 3 + 2) = h0d(k, 3);
-          BL0(5, (k - 1) * 3 + 3) = h0d(k, 2);
-          BL0(6, (k - 1) * 3 + 1) = h0d(k, 3);
-          BL0(6, (k - 1) * 3 + 3) = h0d(k, 1);
-     }
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
@@ -1698,19 +1684,28 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
 {
      using namespace sp_grad;
 
-     for (index_type k = 1; k <= iNumNodes; ++k) {
-          for (index_type i = 1; i <= 3; ++i) {
-               for (index_type j = 1; j <= 3; ++j) {
-                    oDofMap.Sub(R((k - 1) * 3 + j), ((F(j , i) - Eye3(j, i)) * h0d(k, i) + BL0(i, (k - 1) * 3 + j)) * sigma(i) * (alpha * detJ));
-               }
-          }
+     const doublereal c1 = 0.5 * alpha * detJ;
 
-          static constexpr index_type idx1[] = {2, 3, 3};
-          static constexpr index_type idx2[] = {1, 2, 1};
+     static constexpr index_type idxS[3][3] = {
+          {1, 4, 6},
+          {4, 2, 5},
+          {6, 5, 3}
+     };
 
-          for (index_type i = 1; i <= 3; ++i) {
-               for (index_type j = 1; j <= 3; ++j) {
-                    oDofMap.Sub(R((k - 1) * 3 + j), ((F(j, idx2[i - 1]) - Eye3(j, idx2[i - 1])) * h0d(k, idx1[i - 1]) + (F(j, idx1[i - 1]) - Eye3(j, idx1[i - 1])) * h0d(k, idx2[i - 1]) + BL0(i + 3, (k - 1) * 3 + j)) * sigma(i + 3) * (alpha * detJ));
+     T a4, a5;
+
+     for (index_type i = 1; i <= 3; ++i) {
+          for (index_type j = i; j <= 3; ++j) { // exploit symmetry of stress and strain tensor
+               const T& Sij = sigma(idxS[i - 1][j - 1]);
+               const doublereal c2 = (i == j) ? c1 : 2. * c1; // because we are exploiting symmetry
+
+               for (index_type k = 1; k <= 3; ++k) {
+                    oDofMap.MapAssign(a4, c2 * F(k, j) * Sij);
+                    oDofMap.MapAssign(a5, c2 * F(k, i) * Sij);
+
+                    for (index_type l = 1; l <= iNumNodes; ++l) {
+                         oDofMap.Sub(R((l - 1) * 3 + k), a4 * h0d(l, i) + a5 * h0d(l, j));
+                    }
                }
           }
      }

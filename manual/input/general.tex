@@ -3900,6 +3900,7 @@ in Section~\ref{sec:CONSTITUTIVE-LAW}.
         \kw{neo hookean viscoelastic}                                           &         &         & $\surd$ \\
         \kw{mooney rivlin elastic}                                              &         &         & $\surd$ \\        
         \kw{bilinear isotropic hardening}                                       &         &         & $\surd$ \\
+        \kw{linear viscoelastic maxwell 1}                                      &         & $\surd$ & $\surd$ \\
         \kw{linear viscoelastic maxwell n}                                      &         & $\surd$ & $\surd$ \\
         \hline
 	\multicolumn{4}{c}{} \\
@@ -4986,9 +4987,10 @@ There is also a simplified variant which uses only a single Maxwell element. It 
 
 The linear viscoelastic Maxwell constitutive law can be used to consider creep and relaxation effects of polymeric materials with beam- and solid-elements.
 For that purpose it is required to fit the constants $\nt{E0}$, $\nt{E1}_1$, \ldots $\,\nt{E1}_{\nt{num\_elem}}$ to experimental data.
+The stress and strain rates of the Maxwell constitutive law are described by equation~\ref{sec:CSL:Maxwell:stress} and equation~\ref{sec:CSL:Maxwell:strain_rate} respectively.
 \begin{eqnarray}
-  \boldsymbol{\sigma} &=& \nt{E0} \, \nt{C} \, \boldsymbol{\varepsilon} + \sum_{i=1}^{\nt{num\_elem}} \nt{E1}_i \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right) \\
-  \dot{\boldsymbol{\varepsilon}}_i^v &=& \frac{\nt{E1}_i}{\nt{eta1}_i} \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right)
+  \boldsymbol{\sigma} &=& \nt{E0} \, \nt{C} \, \boldsymbol{\varepsilon} + \sum_{i=1}^{\nt{num\_elem}} \nt{E1}_i \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right) \label{sec:CSL:Maxwell:stress} \\
+  \dot{\boldsymbol{\varepsilon}}_i^v &=& \frac{\nt{E1}_i}{\nt{eta1}_i} \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right) \label{sec:CSL:Maxwell:strain_rate}
 \end{eqnarray}
 
 If the constitutive law is isotropic and it is used for solid elements, then the following expression, which is equivalent to Hooke's law, can be used for \nt{C}.
