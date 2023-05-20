@@ -1,0 +1,127 @@
+% MBDyn (C) is a multibody analysis code.
+% http://www.mbdyn.org
+%
+% Copyright (C) 1996-2023
+%
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+%
+% Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+% via La Masa, 34 - 20156 Milano, Italy
+% http://www.aero.polimi.it
+%
+% Changing this copyright notice is forbidden.
+%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation (version 2 of the License).
+% 
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with this program; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+\emph{Author: Reinhard Resch}
+\subsection{Kinematics}
+\subsubsection{Displacements}
+MBDyn's solid elements are based on the classical displacement based isoparametric Finite Element formulation according~\cite{BATHE2016}.
+The three dimensional global cartesian coordinates $\T{x}$ and the displacement $\T{u}=\T{x}-\T{x}_0$, of a particle inside an element,
+are interpolated between coordinates $\hat{\T{x}}$ and displacements $\hat{\T{u}}$ at element nodes by means of shape functions $\T{h}=\mathit{f}\left(\T{r}\right)$.
+\begin{eqnarray}
+  \T{u}_{ij} &=& \sum_{k=1}^N\hat{\T{u}}_{ik} \,\T{h}_{k} \\
+  \T{x}_{ij} &=& \sum_{k=1}^N\hat{\T{x}}_{ik} \,\T{h}_{k} \\
+  \T{u} &=& \begin{pmatrix} \T{u}_1 & \T{u}_2 & \T{u}_3 \end{pmatrix}^T \\
+  \T{x} &=& \begin{pmatrix} \T{x}_1 & \T{x}_2 & \T{x}_3 \end{pmatrix}^T \\
+  \T{r} &=& \begin{pmatrix} \T{r}_1 & \T{r}_2 & \T{r}_3 \end{pmatrix}^T \\
+  \hat{\T{u}} &=& \begin{pmatrix}
+    \hat{\T{u}}_{1,1} & \hat{\T{u}}_{1,2} & \ldots{} & \hat{\T{u}}_{1,N} \\
+    \hat{\T{u}}_{2,1} & \hat{\T{u}}_{2,2} & \ldots{} & \hat{\T{u}}_{2,N} \\
+    \hat{\T{u}}_{3,1} & \hat{\T{u}}_{2,2} & \ldots{} & \hat{\T{u}}_{3,N}
+  \end{pmatrix} \\
+  \T{h} & = & \begin{pmatrix}
+    h_1 & h_2 & \ldots{} & h_N
+  \end{pmatrix}^T
+\end{eqnarray}
+
+\begin{description}
+\item[$\T{x}=\mathit{f}\left(\T{r}\right)$] global cartesian coordinates of a particle within the deformed body
+\item[$\T{x}_0=\mathit{f}\left(\T{r}\right)$] global cartesian coordinates of a particle within the undeformed body
+\item[$\T{u}=\T{x}-\T{x}_0$] deformation of a particle within the body
+\item[$\T{r}$] curvilinear natural coordinates of a particle within the body
+\item[$\T{h}=\mathit{f}\left(\T{r}\right)$] shape functions of a particular Finite Element type
+\end{description}
+
+\paragraph{Shape functions}
+All solid elements in MBDyn are based on templates and are using standard shape functions based on \cite{BATHE2016}, \cite{DHONDT2004} and \cite{CODEASTERR30301}.
+In order to implement a new solid~element type in MBDyn, it is sufficient to implement a C++ class which defines it's shape functions $\T{h}$
+and derivatives versus the natural coordinates $\T{h}_d=\frac{\partial \T{h}}{\partial \T{r}}$.
+
+\subsubsection{Deformation gradient}
+Because MBDyn's solid elements are based on a Total Lagrangian formulation, the deformation gradient $\T{F}$ is evaluated with respect to the undeformed configuration $\T{x}_0$.
+As a consequence, the Jacobian matrix $\T{J}$ is constant.
+\begin{eqnarray}
+  \T{F}_{ij} & = & \frac{\partial \T{x}_{i}}{\partial \T{x}_{0_j}} = \delta_{ij} + \frac{\partial \T{u}_i}{\partial \T{x}_{0_j}} = \delta_{ij} + \sum_{k=1}^N\hat{\T{u}}_{ik} \, \underbrace{\frac{\partial \T{h}_k}{\partial \T{x}_{0_j}}}_{\T{h}_{{0d}_{kj}}} \\
+  % \T{F} & = & \hat{\T{u}} \, \T{h}_{0d} + \T{I} \\
+  \T{h}_{0d_{ij}} & = & \frac{\partial \T{h}_i}{\partial \T{x}_{0_j}} = \left\{\T{h}_{d}\,\T{J}^{-T}\right\}_{ij} \\
+  \T{J} & = & \left(\T{x}_0 \, \T{h}_d\right)^T \\
+  \T{h}_{d_{ij}} & = & \frac{\partial \T{h}_i}{\partial \T{r}_j}
+\end{eqnarray}
+\begin{description}
+\item[$\T{F}$] deformation gradient
+\item[$\T{J}$] Jacobian matrix $\det{\left(\T{J}\right)}>0$
+\item[$\T{h}_{0d}=\frac{\partial \T{h}}{\partial \T{x}_0}$] derivative of shape functions versus global cartesian coordinates
+\item[$\T{h}_d=\frac{\partial \T{h}}{\partial \T{r}}$] derivative of shape functions versus natural coordinates
+\end{description}
+\paragraph{If elements become excessively distorted}
+It is required that the deformation gradient $\T{F}$ and the Jacobian matrix $\T{J}$ are always invertible \cite{BATHE2016}, \cite{KUEBLER2005}.
+For that reason $\det{\left(\T{F}\right)}>0$ will be checked by the solver at every iteration, and $\det{\left(\T{J}\right)}>0$ will be checked
+when the mesh is loaded. An exception will be thrown by the solver if any elements become excessively distorted and those conditions do not hold.
+
+\subsubsection{Strain tensor}
+\begin{eqnarray}
+\T{G}_{ij} & = & \frac{1}{2} \, \left(\sum_{k=1}^3\T{F}_{ki}\,\T{F}_{kj} - \delta_{ij}\right)
+\end{eqnarray}
+
+\subsubsection{Stress tensor}
+\begin{eqnarray}
+\T{S} & = & \T{f}^{\mathit{CSL}}\left(\T{G}, \, \dot{\T{G}}^{\star}\right)
+\end{eqnarray}
+
+\subsubsection{Virtual strain energy}
+\begin{eqnarray}
+\delta W^{(i)} & = & \int_{V_0} \left(\sum_{i=1}^3\sum_{j=1}^3 \delta \T{G}_{ij} \, \T{S}_{ij} \right) \, dV
+\end{eqnarray}
+
+\subsubsection{Virtual perturbation of the strain tensor}
+\begin{eqnarray}
+\delta \T{G}_{ij} & = & \frac{1}{2} \sum_{k=1}^3\left(\delta \T{F}_{ki} \, \T{F}_{kj} + \T{F}_{ki} \, \delta \T{F}_{kj}\right)
+\end{eqnarray}
+
+\subsubsection{Virtual perturbation of the deformation gradient}
+\begin{eqnarray}
+\delta \T{F}_{ij} & = & \sum_{k=1}^N \delta \hat{\T{u}}_{ik} \, \T{h}_{0d_{kj}}
+\end{eqnarray}
+
+\subsubsection{Virtual perturbation of the strain tensor expressed by virtual displacements $\delta{\hat{\T{u}}}$}
+\begin{eqnarray}
+\delta \T{G}_{ij} & = & \frac{1}{2} \, \sum_{k=1}^3 \sum_{l=1}^N \delta \hat{\T{u}}_{kl} \, \left( \T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki} \right)
+\end{eqnarray}
+
+\subsubsection{Virtual strain energy expressed by virtual displacements $\delta{\hat{\T{u}}}$}
+\begin{eqnarray}
+%\delta W^{(i)} & = & \frac{1}{2} \, \int_{V_0} \left\{ \sum_{i=1}^3 \sum_{j=1}^3 \sum_{k=1}^3 \sum_{l=1}^N \left[\delta \hat{\T{u}}_{kl} \, \T{h}_{0d_{li}} \, \T{F}_{kj} + \delta \hat{\T{u}}_{kl} \, \T{h}_{0d_{lj}} \, \T{F}_{ki}\right] \, \T{S}_{ij} \right\} \, dV
+\delta W^{(i)} & = & \frac{1}{2} \, \int_{V_0} \left[ \sum_{i=1}^3 \sum_{j=1}^3 \sum_{k=1}^3 \sum_{l=1}^N \delta \hat{\T{u}}_{kl}\left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij} \right] \, dV
+\end{eqnarray}
+
+\subsubsection{Virtual strain energy expressed by nodal reactions $\hat{\T{f}}^{(i)}$}
+\begin{eqnarray}
+\delta W^{(i)} & = & \sum_{k=1}^{3} \sum_{l=1}^N \delta \hat{\T{u}}_{kl} \, \hat{\T{f}}_{kl}^{(i)}
+\end{eqnarray}
+
+\subsubsection{Internal elastic reactions due to internal stress}
+\begin{eqnarray}
+\hat{\T{f}}_{kl}^{(i)} & = & \frac{1}{2} \, \int_{V_0} \left[ \sum_{i=1}^3 \sum_{j=1}^3 \sum_{k=1}^3 \sum_{l=1}^N \left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij} \right] \, dV
+\end{eqnarray}
