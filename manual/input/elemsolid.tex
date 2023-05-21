@@ -89,8 +89,8 @@ Solid elements may have variable density within a single element.
 Also in case of constant density, density values must be provided for each node, and it will be interpolated between nodes.
 In addition to linear elastic isotropic and linear viscoelastic isotropic constitutive laws,
 any linear or nonlinear elastic or viscoelastic 6D constitutive law can be used if it fullfills the following requirements:
-A consitutive law must expect the components of the Green-Lagrange strain tensor $\boldsymbol{G}$
-and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input and return the components of the Second Piola-Kirchoff
+A constitutive law must expect the components of the Green-Lagrange strain tensor $\boldsymbol{G}$
+and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input and return the components of the Second Piola-Kirchhoff
 stress tensor $\boldsymbol{S}$ as output. In addition to generic linear elastic and linear viscoelastic constitutive laws,
 also hyperelastic- and elasto-plastic constitutive laws are implemented.
 See also section~\ref{sec:CL:neo-hookean}, section~\ref{sec:CL:mooney-rivlin} and section~\ref{sec:CL:bilinear-isotropic-hardening}.
@@ -111,7 +111,7 @@ the effect of structural damping independent on the deformation \cite{KUEBLER200
 \begin{description}
 \item[$\boldsymbol{f}$] Constitutive law
 \item[$\boldsymbol{G}$] Green-Lagrange strain tensor
-\item[$\boldsymbol{S}$] Second Piola-Kirchoff stress tensor
+\item[$\boldsymbol{S}$] Second Piola-Kirchhoff stress tensor
 \item[$\boldsymbol{C}$] Right Cauchy-Green strain tensor
 \item[$\boldsymbol{F}$] Deformation gradient
 \item[$\boldsymbol{u}$] Deformation field
@@ -121,7 +121,7 @@ As a consequence it is possible to build elements with varying elastic propertie
 The actual number of integration points is shown in table~\ref{sec:EL:SOLID:elemtypes}.
 \subsubsection{Output}
 \paragraph{Output of stress and strain}
-By default six components of the Chauchy stress tensor $\boldsymbol{\tau}$ and six strains $\bar{\boldsymbol{\varepsilon}}$ at element nodes are written to the output file.
+By default six components of the Cauchy stress tensor $\boldsymbol{\tau}$ and six strains $\bar{\boldsymbol{\varepsilon}}$ at element nodes are written to the output file.
 Since stress and strain are evaluated at integration points instead of nodes, it is required to extrapolate $\bar{\boldsymbol{\tau}}$ and $\bar{\boldsymbol{\varepsilon}}$
 from integration points to nodes using Lapack's DGELSD function.
 \begin{eqnarray}
@@ -237,8 +237,8 @@ Kinetic energy is always zero if the keyword \kw{static} was used.
                   linear elastic isotropic, 210000e6, 0.3, same, same, same, same, same, same, same;
 \end{verbatim}
 
-\subsubsection{Pre- and postprocessing}
-Since it would become tedious to create the mesh manually, pre- and postprocessing of solid models
+\subsubsection{Pre- and post-processing}
+Since it would become tedious to create the mesh manually, pre- and post-processing of solid models
 can be performed by means of \htmladdnormallink{\texttt{GNU Octave}}{https://octave.org/},
 \htmladdnormallink{\texttt{mboct-fem-pkg}}{https://github.com/octave-user/mboct-fem-pkg}
 and \htmladdnormallink{\texttt{Gmsh}}{https://gmsh.info/}.
