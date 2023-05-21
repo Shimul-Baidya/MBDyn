@@ -249,6 +249,8 @@ See also the following example and figure~\ref{fig:EL:SOLID:COOKS-MEMBRANE} on h
   pkg load mboct-fem-pkg;
   \ty{## load the mesh file in Gmsh format}
   mesh = \nt{fem_pre_mesh_import}(\kw{"cooks_membrane.msh"}, \kw{"gmsh"});
+  \ty{## Apply a fill in reducing ordering based on METIS}
+  mesh = \nt{fem_pre_mesh_reorder}(mesh);
   \ty{## assign material properties to material number 1}
   mesh.material_data(\kw{1}).E = \kw{240000}; \ty{## Young's modulus [Pa]}
   mesh.material_data(\kw{1}).nu = \kw{0.49}; \ty{## Poisson's ratio [1]}
