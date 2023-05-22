@@ -40,7 +40,7 @@
 ##
 ##################################################################
 
-function [Jac, ridx, cidx, bSparse] = AssJac(elem, dCoef, XCurr, XPrimeCurr)
+function [Jac, ridx, cidx, bSparse, elem] = AssJac(elem, dCoef, XCurr, XPrimeCurr)
     iFirstIndex = elem.pMbElem.iGetFirstIndex() + int32(1);
 
     % set bSparse to false to use a full jacobian matrix

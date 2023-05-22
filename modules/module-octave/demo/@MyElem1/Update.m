@@ -41,5 +41,5 @@
 ##################################################################
 
 function [elem] = Update(elemin, XCurr, XPrimeCurr)
-    elem = elemin;
+  elem = elemin;
 endfunction
