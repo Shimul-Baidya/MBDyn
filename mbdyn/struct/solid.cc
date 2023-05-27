@@ -489,23 +489,23 @@ template <>
 struct MassMatrixHelper<MassMatrixType::CONSISTENT> {
      template <sp_grad::index_type iNumDof, sp_grad::index_type iNumNodes>
      struct MassMatrix {
-          typedef sp_grad::SpMatrixA<doublereal, iNumDof, iNumDof> Type;
+          typedef sp_grad::SpMatrixA<doublereal, iNumNodes, iNumNodes> Type;
      };
 
      template <typename ElemType>
-     static void AssMassMatrix(ElemType& oElem, sp_grad::SpMatrix<doublereal, ElemType::iNumDof, ElemType::iNumDof>& Mcon) {
+     static void AssMassMatrix(ElemType& oElem, sp_grad::SpMatrix<doublereal, ElemType::iNumNodes, ElemType::iNumNodes>& Mcon) {
           oElem.AssMassMatrixConsistent(Mcon);
      }
 
      template <typename ElemType>
-     static void AddInertia(ElemType& oElem, const sp_grad::SpMatrix<doublereal, ElemType::iNumDof, ElemType::iNumDof>& Mcon) {
+     static void AddInertia(ElemType& oElem, const sp_grad::SpMatrix<doublereal, ElemType::iNumNodes, ElemType::iNumNodes>& Mcon) {
           DEBUGCERR("warning: AddInertia() not implemented for consistent mass matrix\n");
      }
 
      template <typename ElemType, typename T>
      static void
      AssInertiaVec(ElemType& oElem,
-                   const sp_grad::SpMatrix<doublereal, ElemType::iNumDof, ElemType::iNumDof>& Mcon,
+                   const sp_grad::SpMatrix<doublereal, ElemType::iNumNodes, ElemType::iNumNodes>& Mcon,
                    const sp_grad::SpMatrix<T, 3, ElemType::iNumNodes>& uP,
                    sp_grad::SpColVector<T, ElemType::iNumDof>& R,
                    const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) {
@@ -606,7 +606,7 @@ public:
 
      template <typename T>
      inline void
-     AssInertiaVecConsistent(const sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon,
+     AssInertiaVecConsistent(const sp_grad::SpMatrix<doublereal, iNumNodes, iNumNodes>& Mcon,
                              const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
                              sp_grad::SpColVector<T, iNumDof>& R,
                              const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
@@ -619,7 +619,7 @@ public:
                          const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
 
      inline void
-     AssMassMatrixConsistent(sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon);
+     AssMassMatrixConsistent(sp_grad::SpMatrix<doublereal, iNumNodes, iNumNodes>& Mcon);
 
      inline void
      AssMassMatrixLumped(sp_grad::SpColVector<doublereal, iNumNodes>& Mlumped);
@@ -1730,7 +1730,7 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::~Soli
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
-void SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssMassMatrixConsistent(sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon)
+void SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssMassMatrixConsistent(sp_grad::SpMatrix<doublereal, iNumNodes, iNumNodes>& Mcon)
 {
      using namespace sp_grad;
 
@@ -1757,11 +1757,7 @@ void SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::
 
           for (index_type k = 1; k <= iNumNodes; ++k) {
                for (index_type j = 1; j <= iNumNodes; ++j) {
-                    const doublereal dmhjhk = dm * h(j) * h(k);
-
-                    for (index_type i = 1; i <= 3; ++i) {
-                         Mcon((j - 1) * 3 + i, (k - 1) * 3 + i) += dmhjhk;
-                    }
+                    Mcon(j, k) += dm * h(j) * h(k);
                }
           }
      }
@@ -1970,25 +1966,26 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssRe
 template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
 template <typename T>
 void
-SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssInertiaVecConsistent(const sp_grad::SpMatrix<doublereal, iNumDof, iNumDof>& Mcon,
+SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssInertiaVecConsistent(const sp_grad::SpMatrix<doublereal, iNumNodes, iNumNodes>& Mcon,
                                                                                                    const sp_grad::SpMatrix<T, 3, iNumNodes>& uP,
                                                                                                    sp_grad::SpColVector<T, iNumDof>& R,
                                                                                                    const sp_grad::SpGradExpDofMapHelper<T>& oDofMap)
 {
      using namespace sp_grad;
 
-     SpColVector<T, iNumDof> UP(iNumDof, 0);
-
-     static_assert(iNumDof == iNumNodes * 3);
-
-     for (index_type j = 1; j <= iNumNodes; ++j) {
-          for (index_type i = 1; i <= 3; ++i) {
-               UP((j - 1) * 3 + i) = uP(i, j);
+     for (index_type i = 1; i <= iNumDof; ++i) {
+          SpGradientTraits<T>::ResizeReset(R(i), 0., oDofMap.iGetLocalSize());
+               
+          oDofMap.InitDofMap(R(i));
+     }
+     
+     for (index_type k = 1; k <= iNumNodes; ++k) {
+          for (index_type l = 1; l <= iNumNodes; ++l) {
+               for (index_type i = 1; i <= 3; ++i) {                    
+                    oDofMap.Sub(R((k - 1) * 3 + i), Mcon(k, l) * uP(i, l));
+               }
           }
      }
-
-     R.MapAssign(Mcon * UP, oDofMap);
-     R *= -1.;
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, MassMatrixType eMassMatrix>
