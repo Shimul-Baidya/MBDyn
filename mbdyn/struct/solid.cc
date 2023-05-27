@@ -1979,8 +1979,8 @@ SolidElemDynamic<ElementType, CollocationType, SolidCSLType, eMassMatrix>::AssIn
           oDofMap.InitDofMap(R(i));
      }
 
-     for (index_type k = 1; k <= iNumNodes; ++k) {
-          for (index_type l = 1; l <= iNumNodes; ++l) {
+     for (index_type l = 1; l <= iNumNodes; ++l) {
+          for (index_type k = 1; k <= iNumNodes; ++k) {
                for (index_type i = 1; i <= 3; ++i) {
                     oDofMap.Sub(R((k - 1) * 3 + i), Mcon(k, l) * uP(i, l));
                }
