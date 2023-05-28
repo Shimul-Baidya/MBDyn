@@ -559,37 +559,31 @@ OutputHandler::Open(const OutputHandler::OutFiles out)
 		// FIXME: we should use the default format, or any selected by the user;
 		// but wait a minute: can this actually happen?
 		// return NetCDFOpen(out, netCDF::NcFile::nc4);
-		return NetCDFOpen(out, netCDF::NcFile::classic);
+		NetCDFOpen(out, netCDF::NcFile::classic);
 
-	} else
+	}
 #endif /* USE_NETCDF */
-	{
-		if (!IsOpen(out)) {
-			const char *fname = _sPutExt(psExt[out]);
+	if (UseText(out) && !IsOpen(out)) {
+		const char *fname = _sPutExt(psExt[out]);
 
-			// Apre lo stream
-			OutData[out].pof->open(fname);
+		// Open stream
+		OutData[out].pof->open(fname);
 
-			if (!(*OutData[out].pof)) {
-				silent_cerr("Unable to open file "
-					"\"" << fname << "\"" << std::endl);
-				throw ErrFile(MBDYN_EXCEPT_ARGS);
-			}
-
-			if (UseText(out)) {
-				// Setta la formattazione dei campi
-				if (UseDefaultPrecision(out)) {
-					OutData[out].pof->precision(iCurrPrecision);
-				}
-
-				// Setta la notazione
-				if (UseScientific(out)) {
-					OutData[out].pof->setf(std::ios::scientific);
-				}
-			}
+		if (!(*OutData[out].pof)) {
+			silent_cerr("Unable to open file "
+				"\"" << fname << "\"" << std::endl);
+			throw ErrFile(MBDYN_EXCEPT_ARGS);
 		}
 
-		return;
+		// Set precision
+		if (UseDefaultPrecision(out)) {
+			OutData[out].pof->precision(iCurrPrecision);
+		}
+
+		// Set notation
+		if (UseScientific(out)) {
+			OutData[out].pof->setf(std::ios::scientific);
+		}
 	}
 
 	return;

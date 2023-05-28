@@ -1976,7 +1976,7 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 				continue;
 			}
 
-			iNodeIndex = pSN->iGetFirstIndex();
+			iNodeIndex = pN->iGetFirstIndex();
 			OutHdl.WriteNcVar(Var_Eig_Idx, iNodeIndex, start, count); 
 			start[1]++;
 		}
