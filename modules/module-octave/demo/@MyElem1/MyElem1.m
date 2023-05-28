@@ -40,7 +40,7 @@
 ##
 ##################################################################
 
-function elem = MyElem1(pMbElem, pDM, HP)
+function elem = MyElem1(pMbElem, pDM, HP, os)
     if ( ~HP.IsKeyWord("node1") )
         error("mboct: keyword node1 expected at line %s", HP.GetLineData());
     endif
