@@ -1520,8 +1520,11 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      SpColVectorA<doublereal, 3> r;
      SpColVectorA<doublereal, iNumNodes> h;
      SpMatrixA<doublereal, iNumNodes, 3> hd;
-     SpColVectorA<T, 3, iNumNodes> frbk;
-
+     SpColVectorA<T, 3, iNumDof> frbk;
+     
+     const Mat3x3 WxWx_WPx = Mat3x3(MatCrossCross, pRBK->GetW(), pRBK->GetW()) + Mat3x3(MatCross, pRBK->GetWP());
+     const Vec3 XPP = pRBK->GetXPP();
+     
      for (index_type iColloc = 0; iColloc < CollocationType::iNumEvalPointsMass; ++iColloc) {
           CollocationType::GetPositionMass(iColloc, r);
           ElementType::ShapeFunction(r, h);
@@ -1535,13 +1538,17 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
                Xc += (u.GetCol(j) + x0.GetCol(j)) * h(j);
           }
 
+          ASSERT(Xc.iGetMaxSize() <= iNumNodes);
+
           const doublereal rho = Dot(h, rhon);
           const doublereal alpha = CollocationType::dGetWeightMass(iColloc);
           const doublereal dm = rho * alpha * Det(J);
 
-          frbk.MapAssign((pRBK->GetXPP()
-                          + Cross(pRBK->GetWP(), Xc)
-                          + Cross(pRBK->GetW(), Cross(pRBK->GetW(), Xc))) * dm, oDofMap);
+          frbk.MapAssign(WxWx_WPx * Xc, oDofMap);
+          frbk += XPP;
+          frbk *= dm;
+
+          ASSERT(frbk.iGetMaxSize() <= iNumDof);
 
           for (index_type i = 1; i <= iNumNodes; ++i) {
                for (index_type j = 1; j <= 3; ++j) {
