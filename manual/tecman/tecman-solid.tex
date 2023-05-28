@@ -65,7 +65,7 @@ As a consequence, the Jacobian matrix ${^0}\T{J}$ and the gradient operator $\T{
 \begin{IEEEeqnarray}{rCl}
   {^0}\T{J}_{ij} & = & \frac{\partial{^0}\T{x}_j}{\partial \T{r}_i} = \sum_{k=1}^{N_n} {^0}\hat{\T{x}}_{jk} \, \underbrace{\frac{\partial \T{h}_{k}}{\partial \T{r}_i}}_{\T{h}_{d_{ki}}} = \left({^0}\T{x}\,\T{h}_d\right)^T\\
   \left\{{^0}\T{J}^{-1}\right\}_{ij} & = & \frac{\partial\T{r}_j}{\partial {^0}\T{x}_i} \\
-  %\T{h}_{d_{ij}} & = & \frac{\partial \T{h}_i}{\partial \T{r}_j} \\            
+  %\T{h}_{d_{ij}} & = & \frac{\partial \T{h}_i}{\partial \T{r}_j} \\
   \T{F}_{ij} & = & \frac{\partial \T{x}_{i}}{\partial {^0}\T{x}_{j}} = \delta_{ij} + \frac{\partial \T{u}_i}{\partial ^0\T{x}_{j}} = \delta_{ij} + \sum_{k=1}^{N_n}\hat{\T{u}}_{ik} \, \underbrace{\frac{\partial \T{h}_k}{\partial ^0\T{x}_{j}}}_{\T{h}_{{0d}_{kj}}} \label{eq:solid:F} \\
   \dot{\T{F}}_{ij} & = & \sum_{k=1}^{N_n}\dot{\hat{\T{u}}}_{ik} \, \T{h}_{{0d}_{kj}} \label{eq:solid:Fdot} \\
   \T{h}_{0d_{ij}} & = & \frac{\partial \T{h}_i}{\partial {^0}\T{x}_{j}} = \sum_{k=1}^3 \frac{\partial \T{h}_i}{\partial \T{r}_{k}} \, \frac{\partial \T{r}_k}{\partial {^0}\T{x}_j} = \left\{\T{h}_{d}\,{^0}\T{J}^{-T}\right\}_{ij} \\
@@ -201,29 +201,48 @@ Also accelerations $\ddot{\hat{\T{u}}}$ and virtual displacements $\delta\hat{\T
 \ddot{\T{u}}_i & = & \sum_{k=1}^{N_n} \ddot{\hat{\T{u}}}_{ik} \, \T{h}_k \label{eq:solid:delta_ddotu}
 \end{eqnarray}
 
+\paragraph{Body loads}
+In MBDyn, body loads due to gravity $\T{g}$ and rigid body kinematics are considered. See section~\ref{sec:nodes:structural nodes:relative frame dynamics}.
+As a consequence, solid elements may be used also for typical rotor-dynamic analysis.
+\begin{eqnarray}
+\T{b} & = & \T{g} - \ddot{\overline{\T{x}}}_0 - \overline{\T{\omega}}_0 \times \left(\overline{\T{\omega}}_0 \times \T{x} \right) - \dot{\overline{\T{\omega}}}_0 \times \T{x} - 2 \, \overline{\T{\omega}}_0 \dot{\T{u}}
+\end{eqnarray}
+
+\begin{description}
+\item[$\T{g}$] Gravity.
+\item[$\ddot{\overline{\T{x}}}_0$] Acceleration of the global reference frame. See section~\ref{sec:nodes:structural nodes:relative frame dynamics}.
+\item[$\overline{\T{\omega}}_0$]  Angular velocity of the global reference frame. See section~\ref{sec:nodes:structural nodes:relative frame dynamics}.
+\item[$\dot{\overline{\T{\omega}}}_0$]  Angular acceleration of the global reference frame. See section~\ref{sec:nodes:structural nodes:relative frame dynamics}.
+\end{description}
+
 \paragraph{Mass matrix and body load vector}
 When equation~\ref{eq:solid:delta_u} and equation~\ref{eq:solid:delta_ddotu} are substituted into equation~\ref{eq:solid:delta_Wm},
 the virtual work $\delta^mW$ can be written in terms of the consistent mass matrix $\T{M}$ and body load vector $^b\hat{\T{f}}$.
 Because of the isoparametric approach, the consistent mass matrix $\T{M}$ is constant and needs to be evaluated only once \cite{BATHE2016}, \cite{KUEBLER2005}.
 In contradiction to that, the actual magnitudes of $\T{b}$ and $^b\hat{\T{f}}$ may be time dependent.
 \begin{eqnarray}
-\hat{\T{M}}_{iikl} & = & \int_{^0V} {^0}\rho \, \T{h}_k \, \T{h}_l \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k \, \T{h}_l \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
+\hat{\T{M}}_{kl} & = & \int_{^0V} {^0}\rho \, \T{h}_k \, \T{h}_l \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k \, \T{h}_l \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
 {^b}\hat{\T{f}}_{ik} & = & \int_{^0V} {^0}\rho \, \T{h}_k \, \T{b}_i \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k \, \T{b}_i \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
-\delta^{m}W & = & \bigcup_{e=1}^{N_e}\left(\sum_{i=1}^3\sum_{k=1}^{N_n}\sum_{l=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \ddot{\hat{\T{u}}}_{il} \, \T{M}_{iikl}
- - \sum_{i=1}^3\sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, {^b}\hat{\T{f}}_{ik}\right)
+\delta^{m}W & = & \bigcup_{e=1}^{N_e}\left(\sum_{i=1}^3\sum_{k=1}^{N_n}\sum_{l=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \ddot{\hat{\T{u}}}_{il} \, \hat{\T{M}}_{kl}
+ - \sum_{i=1}^3\sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, {^b}\hat{\T{f}}_{ik}\right) = \bigcup_{e=1}^{N_e} \delta\hat{\T{u}}^T \, \left(\T{M} \, \ddot{\hat{\T{u}}} - {^b}\hat{\T{f}} \right)
 \end{eqnarray}
+\begin{description}
+\item[$\hat{\T{M}}$] $N_n\times N_n$ element mass matrix in compact storage
+\item[$\T{M}$] $3 N_n \times 3 N_n$ element mass matrix in redundant storage (e.g. $\T{M}_{iijk} = \hat{\T{M}}_{jk}$)
+\item[${^b}\hat{\T{f}}$] Element body load vector
+\end{description}
 
 \paragraph{Lumped mass matrix}
 In addition to a consistent mass matrix, also a lumped mass matrix can be used in MBDyn.
 For that purpose, the diagonal of the consistent mass matrix is scaled, so that the overall mass is conserved.
 \begin{eqnarray}
-\hat{\T{M}}_{iikk}^{\star} & = & \int_{^0V} {^0}\rho \, \T{h}_k^2 \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k^2 \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
-\hat{\T{M}}_{iikk}&=&\hat{\T{M}}_{iikk}^{\star} \, \frac{3\,m}{\sum_{i=1}^3\sum_{k=1}^{N_n}\T{M}_{iikk}} \\
+\hat{\T{M}}_{kk}^{\star} & = & \int_{^0V} {^0}\rho \, \T{h}_k^2 \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k^2 \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
+\hat{\T{M}}_{kk}&=&\hat{\T{M}}_{kk}^{\star} \, \frac{\,m}{\sum_{k=1}^{N_n}\hat{\T{M}}_{kk}^{\star}} \\
 m&=&\int_{^0V}{^0}\rho\,d{^0V} \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \alpha \, \det{\left(^0\T{J}\right)}\right]\right\vert_{g}
 \end{eqnarray}
 If a lumped mass matrix is used, the virtual work of the inertia terms becomes:
 \begin{eqnarray}
-\delta^{m}W & = & \bigcup_{e=1}^{N_e}\left(\sum_{i=1}^3\sum_{k=1}^{N_n}\delta\hat{\T{u}}_{ik} \, \ddot{\hat{\T{u}}}_{ik} \, \T{M}_{iikk}
+\delta^{m}W & = & \bigcup_{e=1}^{N_e}\left(\sum_{i=1}^3\sum_{k=1}^{N_n}\delta\hat{\T{u}}_{ik} \, \ddot{\hat{\T{u}}}_{ik} \, \hat{\T{M}}_{kk}
  - \sum_{i=1}^3\sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, {^b}\hat{\T{f}}_{ik}\right)
 \end{eqnarray}
 
@@ -233,26 +252,26 @@ It is required also because rigid bodies might be present in the same model, and
 The principle of virtual displacements leads to the following expression, which is using accelerations $\ddot{\hat{\T{u}}}$.
 So, it cannot be implemented directly.
 \begin{eqnarray}
-\bigcup_{e=1}^{N_e} \left(\hat{\T{M}} \, \ddot{\hat{\T{u}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}}\right) = \T{0} \label{eq:solid:global_eq1}
+\bigcup_{e=1}^{N_e} \left(\T{M} \, \ddot{\hat{\T{u}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}}\right) = \T{0} \label{eq:solid:global_eq1}
 \end{eqnarray}
 
 \paragraph{Introducing the momentum}
-Since the mass matrix $\hat{\T{M}}$ is constant,
+Since the mass matrix $\T{M}$ is constant,
 equation~\ref{eq:solid:global_eq1} can be easily reformulated as a system of two first order ODE's
 using the momentum $\hat{\T{\beta}}$ as a new unknown.
 This approach is strictly consistent with MBDyn's conventions for rigid bodies.
 \begin{eqnarray}
-\hat{\T{\beta}}=\hat{\T{M}}\,\dot{\hat{\T{u}}} \label{eq:solid:beta} \\
-\dot{\hat{\T{\beta}}}=\hat{\T{M}}\,\ddot{\hat{\T{u}}} \label{eq:solid:betadot}
+\hat{\T{\beta}}=\T{M}\,\dot{\hat{\T{u}}} \label{eq:solid:beta} \\
+\dot{\hat{\T{\beta}}}=\T{M}\,\ddot{\hat{\T{u}}} \label{eq:solid:betadot}
 \end{eqnarray}
 
 \begin{description}
 \item[$\hat{\T{\beta}}$] Momentum at element nodes
 \end{description}
 
-With equation~\ref{eq:solid:beta} and equation~\ref{eq:solid:betadot} the global system of equations are formulated as:
+With equation~\ref{eq:solid:beta} and equation~\ref{eq:solid:betadot} the global system of equations is formulated as:
 \begin{eqnarray}
-\bigcup_{e=1}^{N_e} \left(\hat{\T{\beta}} - \hat{\T{M}} \, \dot{\hat{\T{u}}}\right) = \T{0} \\
+\bigcup_{e=1}^{N_e} \left(\hat{\T{\beta}} - \T{M} \, \dot{\hat{\T{u}}}\right) = \T{0} \\
 -\bigcup_{e=1}^{N_e} \left(\dot{\hat{\T{\beta}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} \right) = \T{0}
 \end{eqnarray}
 
