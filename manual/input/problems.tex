@@ -1189,8 +1189,9 @@ usually output.
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{card} ::= \kw{linear solver} :
             \{ \kw{naive} | \kw{umfpack} | \kw{klu} | \kw{y12} | \kw{lapack} | \kw{superlu} | \kw{taucs} 
-                    | \kw{pardiso} | \kw{watson} | \kw{pastix} | \kw{qr} | \kw{spqr} | \kw{aztecoo} | \kw{amesos} \}
-        [ , \{ \kw{map} | \kw{cc} | \kw{dir} \} ]
+            | \kw{pardiso} | \kw{pardiso\_64} | \kw{watson} | \kw{pastix} | \kw{qr} | \kw{spqr}
+            | \kw{aztecoo} | \kw{amesos} | \kw{siconos dense} | \kw{siconos sparse} \}
+        [ , \{ \kw{map} | \kw{cc} | \kw{dir} | \kw{grad} \} ]
         [ , \{ \kw{colamd} | \kw{mmdata} | \kw{amd} | \kw{given} | \kw{metis} \} ]
         [ , \{ \kw{mt} | \kw{multithread} \} , \bnt{threads} ]
         [ , \kw{workspace size} , \bnt{workspace_size} ] 
@@ -1313,9 +1314,22 @@ the keyword \kw{mt} allows to enforce the desired number of \nt{threads}.
 See also the \kw{threads} keyword for more details on multi-threaded
 solution.
 
+\paragraph{PARDISO}
+PARDISO is a multi-threaded sparse direct solver developed at the University of Basel \cite{SCHENK2004475}.
+MBDyn's \kw{pardiso} and \kw{pardiso\_64} solvers provide interfaces to the PARDISO variant included in Intel's MKL library.
+See also \href{https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2023-1/onemkl-pardiso-parallel-direct-sparse-solver-iface.html}{MKL-PARDISO-website}.
+\kw{pardiso\_64} uses 64-bit integers for array indices whereas \kw{pardiso} uses 32-bit integers.
+By default, automatic scaling and non-symmetric weighted matching are activated for this solver.
+Nevertheless, \kw{pardiso} and \kw{pardiso\_64} should not be used without iterative refinement enabled, because they are using static pivoting.
+
+\paragraph{Watson}
+Watson Sparse Matrix Package (WSMP) is a parallel linear solver for large sparse system of equations developed by IBM \cite{10.1145/569147.569149}.
+See also \href{https://researcher.watson.ibm.com/researcher/view_group.php?id=1426}{IBM-WSMP-website}.
+
 \paragraph{PaStiX}
 The \kw{pastix} linear solver from the Institut~National~de~Recherche~en~informatique~et~Automatique
-is a high performance parallel solver for very large sparse linear systems based on direct methods.
+is a high performance parallel solver for very large sparse linear systems based on direct methods \cite{henon:inria-00346017}.
+See also \href{https://gitlab.inria.fr/solverstack/pastix}{PaStiX-gitlab}.
 It is recommended to enable iterative refinement for this solver because it uses static pivoting.
 
 \paragraph{QR}
@@ -1344,6 +1358,11 @@ a maximum number of iterations $\bnt{refine\_max\_iter}$.
 \paragraph{Amesos}
 Amesos is also based on Sandia's Trilinos library~\cite{TRILINOS-WEBSITE}.
 It provides interfaces to several direct linear solvers.
+
+\paragraph{Siconos dense, Siconos sparse}
+Siconos is a library for the solution of nonsmooth systems \cite{SICONOS-WEBSITE}.
+In order to use the \kw{siconos mcp newton fb} or \kw{siconos mcp newton min fb} nonlinear solver,
+it is required to choose the \kw{siconos dense} linear solver.
 
 \begin{comment}
 Another linear solver, that is available mostly for historical reasons, 
@@ -1392,6 +1411,8 @@ become unacceptable; if the problem is quite small, the access time
 of \kw{cc} is quite limited ($\log_2\plbr{\bnt{nz}}$, where
 \nt{nz} is the number of non-zeroes in a column) so it is definitely
 comparable to that of \kw{cc}.
+\item \kw{grad} uses a compressed sparse vector representation for each row of the matrix.
+  It is available only if \kw{use automatic differentiation} was enabled according section~\ref{sec:CONTROLDATA:AD}.
 \end{itemize}
 Only \kw{umfpack}, \kw{klu}, \kw{y12}, \kw{superlu} and \kw{pastix}
 linear solvers allow these settings.
@@ -1447,36 +1468,41 @@ summarizes how each linear solver deals with pivoting policies.
 \begin{table}
 \centering
 \caption{Linear solvers properties}\label{tab:linear-solvers-props}
-\begin{tabular}{lccccccc}
+\begin{tabular}{lcccccccc}
 \hline
 	\multicolumn{1}{c}{\textbf{\emph{Solver}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Map}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Column}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Dir}}} &
+        \multicolumn{1}{c}{\textbf{\emph{Grad}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Multi-}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Worksp.}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Pivot}}} &
 	\multicolumn{1}{c}{\textbf{\emph{Block}}} \\
-	& & \multicolumn{1}{c}{\textbf{\emph{Compr.}}} &
+	& & \multicolumn{1}{c}{\textbf{\emph{Compr.}}} & &
 	& \multicolumn{1}{c}{\textbf{\emph{Thread}}}
 	& \multicolumn{1}{c}{\textbf{\emph{Size}}}
 	& \multicolumn{1}{c}{\textbf{\emph{Factor}}}
-	& \multicolumn{1}{c}{\textbf{\emph{Size}}} \\
+	  & \multicolumn{1}{c}{\textbf{\emph{Size}}} \\
 \hline\hline
-	Naive		&         &         &         & ($\surd$) &         & $\surd$ &	        \\
-	Umfpack		& $\surd$ & $\surd$ & $\surd$ &           &         & $\surd$ & $\surd$ \\
-	KLU		& $\surd$ & $\surd$ & $\surd$ &           &         & $\surd$ &	        \\
-	Y12m		& $\surd$ & $\surd$ & $\surd$ &	          & $\surd$ & $\surd$ &	        \\
-	Lapack		&         &         &         &           &         & $\surd$ &         \\
-%	Harwell		&         &         &         &           &         & $\surd$ &         \\
-%	Meschach	&         &         &         &           &         & $\surd$ &         \\
-	SuperLU		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &         & $\surd$ &	        \\
-	TAUCS		& ?       & ?       & ?       & ?         & ?       & ?       & $\surd$ \\
-	Pardiso		& $\surd$ &         &         & $\surd$   &         &         &	        \\
-	Watson		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &         & $\surd$ &	        \\
-	Pastix		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &         &         &	        \\
-	QR		&         &         &         &           &         &         &	        \\
-	SpQR		& $\surd$ &         &         &           &         &         &	        \\
+	Naive		&         &         &         &           & ($\surd$) &         & $\surd$ &	    \\ 
+	Umfpack		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &           &         & $\surd$ & $\surd$ \\ 
+	KLU		& $\surd$ & $\surd$ & $\surd$ & $\surd$   &           &         & $\surd$ &	    \\ 
+	Y12m		& $\surd$ & $\surd$ & $\surd$ &           &	      & $\surd$ & $\surd$ &	    \\ 
+	Lapack		&         &         &         &           &           &         & $\surd$ &         \\ 
+%	Harwell		&         &         &         &           &           &         & $\surd$ &         \\ 
+%	Meschach	&         &         &         &           &           &         & $\surd$ &         \\ 
+	SuperLU		& $\surd$ & $\surd$ & $\surd$ &           & $\surd$   &         & $\surd$ &	    \\ 
+	TAUCS		& ?       & ?       & ?       &           & ?         & ?       & ?       & $\surd$ \\ 
+	Pardiso		& $\surd$ &         &         & $\surd$   & $\surd$   &         &         &	    \\ 
+	Watson		& $\surd$ & $\surd$ & $\surd$ & $\surd$   & $\surd$   &         & $\surd$ &	    \\ 
+	Pastix		& $\surd$ & $\surd$ & $\surd$ & $\surd$   & $\surd$   &         &         &	    \\ 
+	QR		&         &         &         &           &           &         &         &	    \\ 
+	SpQR		& $\surd$ &         &         & $\surd$   &           &         &         &	    \\ 
+%        AztecOO         &         &         &         &           &           &         &         &         \\ 
+%        Amesos          &         &         &         &           &           &         &         &         \\ 
+%        Siconos dense   &         &         &         &           &           &         &         &         \\ 
+        Siconos sparse  &         &         &         &           &           & $\surd$ &         &         \\ 
 \hline
 \end{tabular}
 \end{table}
@@ -1554,7 +1580,7 @@ Deprecated; see
 By default, if enabled at compile time, the assembly is performed
 in a multi-threaded environment if more than one CPU is available 
 and the selected solver allows it (e.g.\ if it supports any form 
-of compressed matrix handling, \kw{cc} or \kw{dir}).
+of compressed matrix handling, \kw{cc} or \kw{grad}).
 However, this behavior can be influenced by the \kw{threads} directive.
 The value \kw{auto} is the default; the value \kw{disable} reverts
 to the usual scalar behavior; otherwise \nt{threads}, the desired 

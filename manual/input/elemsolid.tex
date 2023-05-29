@@ -63,7 +63,7 @@ See also table~\ref{sec:EL:SOLID:elemtypes} for a list of supported element type
         ... ,
         \{ (\ty{real}) \bnt{E_M} , (\ty{real}) \bnt{nu_M} | \kw{same} \}
 
-      \bnt{linear_visocelastic_isotropic_data} :: =
+      \bnt{linear_viscoelastic_isotropic_data} :: =
         (\ty{real}) \bnt{E_1} , (\ty{real}) \bnt{nu_1} , (\ty{real} \bnt{beta_1} ,
         \{ (\ty{real}) \bnt{E_2} , (\ty{real}) \bnt{nu_2} , (\ty{real} \bnt{beta_2} | \kw{same} \} ,
         ... ,
@@ -88,7 +88,7 @@ For that reason, the density of the material must be provided also for static so
 Solid elements may have variable density within a single element.
 Also in case of constant density, density values must be provided for each node, and it will be interpolated between nodes.
 In addition to linear elastic isotropic and linear viscoelastic isotropic constitutive laws,
-any linear or nonlinear elastic or viscoelastic 6D constitutive law can be used if it fullfills the following requirements:
+any linear or nonlinear elastic or viscoelastic 6D constitutive law can be used if it fulfills the following requirements:
 A constitutive law must expect the components of the Green-Lagrange strain tensor $\boldsymbol{G}$
 and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input and return the components of the Second Piola-Kirchhoff
 stress tensor $\boldsymbol{S}$ as output. In addition to generic linear elastic and linear viscoelastic constitutive laws,
