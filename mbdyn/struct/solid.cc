@@ -1519,7 +1519,8 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
      SpColVectorA<doublereal, 3> r;
      SpColVectorA<doublereal, iNumNodes> h;
      SpMatrixA<doublereal, iNumNodes, 3> hd;
-     SpColVectorA<T, 3, iNumDof> frbk;
+     SpColVector<T, 3> frbk(3, oDofMap.iGetLocalSize());
+     SpColVector<T, 3> s(3, iNumNodes);
 
      const Mat3x3 WxWx_WPx = Mat3x3(MatCrossCross, pRBK->GetW(), pRBK->GetW()) + Mat3x3(MatCross, pRBK->GetWP());
      const Vec3 XPP = pRBK->GetXPP();
@@ -1536,17 +1537,23 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Ass
           const doublereal dm = rho * alpha * Det(J);
 
           for (index_type i = 1; i <= 3; ++i) {
-               SpGradientTraits<T>::ResizeReset(frbk(i), XPP(i) * dm, oDofMap.iGetLocalSize());
-               oDofMap.InitDofMap(frbk(i));
+               SpGradientTraits<T>::ResizeReset(s(i), 0., iNumNodes);
           }
 
           for (index_type j = 1; j <= iNumNodes; ++j) {
-               for (index_type k = 1; k <= 3; ++k) {
-                    const T skj = (u(k, j) + x0(k, j)) * (h(j) * dm);
+               const doublereal hjdm = h(j) * dm;
 
-                    for (index_type i = 1; i <= 3; ++i) {
-                         oDofMap.Add(frbk(i), WxWx_WPx(i, k) * skj);
-                    }
+               for (index_type i = 1; i <= 3; ++i) {
+                    s(i) += (u(i, j) + x0(i, j)) * hjdm;
+               }
+          }
+
+          for (index_type i = 1; i <= 3; ++i) {
+               SpGradientTraits<T>::ResizeReset(frbk(i), XPP(i) * dm, oDofMap.iGetLocalSize());
+               oDofMap.InitDofMap(frbk(i));
+
+               for (index_type k = 1; k <= 3; ++k) {
+                    oDofMap.Add(frbk(i), WxWx_WPx(i, k) * s(k));
                }
           }
 
