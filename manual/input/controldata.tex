@@ -38,6 +38,53 @@ size. This is going to change, giving raise to a ``free'' and resizeable
 structure. But this practice is to be considered reliable since it allows a
 sort of double-check on the entities that are inserted.
 
+\section{Enable support for automatic differentiation}
+\emph{Author: Reinhard Resch}
+\label{sec:CONTROLDATA:AD}
+\begin{Verbatim}[commandchars=\\\{\}]
+  \bnt{card} :: = \kw{use automatic differentiation} ;
+\end{Verbatim}
+This keyword must be used in order to enable support for automatic differentiation in MBDyn.
+All the elements listed in table~\ref{sec:CONTROLDATA:AD:elements} can use automatic differentiation.
+Also elements without support for automatic differentiation may be used in a model with
+\kw{use automatic differentiation} enabled.
+\begin{table}
+\centering
+\caption{Elements with support for automatic differentiation (AD)}
+\label{sec:CONTROLDATA:AD:elements}
+\begin{tabular}{|l|c|c|}
+  \hline
+  element & supported with AD disabled & supported with AD enabled \\
+  \hline
+  \kw{beam3} & $\surd$ & $\surd$ \\
+  \kw{modal} & $\surd$ & $\surd$ \\
+  \kw{total joint} & $\surd$ & $\surd$ \\
+  \kw{total pin joint} & $\surd$ & $\surd$ \\
+  \kw{body} & $\surd$  & $\surd$ \\
+  \kw{automatic structural} & $\surd$ & $\surd$ \\
+  \kw{hexahedron8} & & $\surd$ \\
+  \kw{hexahedron20} & & $\surd$ \\
+  \kw{hexahedron20r} & & $\surd$ \\
+  \kw{pentahedron15} & & $\surd$ \\
+  \kw{tetrahedron10} & & $\surd$ \\
+  \kw{pressureq4} & & $\surd$ \\
+  \kw{pressureq8} & & $\surd$ \\
+  \kw{pressureq8r} & & $\surd$ \\
+  \kw{pressuret6} & & $\surd$ \\
+  \kw{tractionq4} & & $\surd$ \\
+  \kw{tractionq8} & & $\surd$ \\
+  \kw{tractionq8r} & & $\surd$ \\
+  \kw{tractiont6} & & $\surd$ \\
+  \kw{hydrodynamic plain bearing} & & $\surd$ \\  
+  \kw{hydrodynamic plain bearing2} & & $\surd$ \\
+  \kw{journal bearing} & & $\surd$ \\
+  \kw{triangular contact} & & $\surd$ \\
+  \kw{ball bearing contact} & & $\surd$ \\
+  \kw{unilateral in plane} & & $\surd$ \\
+  \hline
+\end{tabular}
+\end{table}
+
 \section{Assembly-Related Cards}
 The initial assembly related cards are: 
 

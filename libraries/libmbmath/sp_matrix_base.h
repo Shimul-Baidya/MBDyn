@@ -3515,14 +3515,14 @@ namespace sp_grad {
                for (index_type i = 1; i <= iNumRows; ++i) {
                     ValueTypeA& Ai = MatEvalType::GetElem(A, i, j);
 
-                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::iGetSize(Ai) == 0);
-                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::dGetValue(Ai) == 0.);
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueTypeA>::iGetSize(Ai) == 0);
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueTypeA>::dGetValue(Ai) == 0.);
 
                     Ai.ResizeReset(dGetValue(i, j), oDofStat.iNumNz);
                     Ai.InitDeriv(oDofMap);
                     AddDeriv(Ai, 1., oDofMap, i, j);
 
-                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::bIsUnique(Ai));
+                    SP_GRAD_ASSERT(SpGradientTraits<ValueTypeA>::bIsUnique(Ai));
                }
           }
      }
@@ -3550,14 +3550,14 @@ namespace sp_grad {
                for (index_type i = 1; i <= iNumRows; ++i) {
                     SpGradient& Ai = MatEvalType::GetElem(A, i, j);
 
-                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::iGetSize(Ai) == 0);
-                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::dGetValue(Ai) == 0.);
+                    SP_GRAD_ASSERT(SpGradientTraits<SpGradient>::iGetSize(Ai) == 0);
+                    SP_GRAD_ASSERT(SpGradientTraits<SpGradient>::dGetValue(Ai) == 0.);
 
                     Ai.ResizeReset(dGetValue(i, j), oDofMap.GetDofStat().iNumNz);
                     Ai.InitDeriv(oDofMap.GetDofMap());
                     AddDeriv(Ai, 1., oDofMap.GetDofMap(), i, j);
 
-                    SP_GRAD_ASSERT(SpGradientTraits<ValueType>::bIsUnique(Ai));
+                    SP_GRAD_ASSERT(SpGradientTraits<SpGradient>::bIsUnique(Ai));
                }
           }
      }

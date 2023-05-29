@@ -63,7 +63,7 @@ See also table~\ref{sec:EL:SOLID:elemtypes} for a list of supported element type
         ... ,
         \{ (\ty{real}) \bnt{E_M} , (\ty{real}) \bnt{nu_M} | \kw{same} \}
 
-      \bnt{linear_visocelastic_isotropic_data} :: =
+      \bnt{linear_viscoelastic_isotropic_data} :: =
         (\ty{real}) \bnt{E_1} , (\ty{real}) \bnt{nu_1} , (\ty{real} \bnt{beta_1} ,
         \{ (\ty{real}) \bnt{E_2} , (\ty{real}) \bnt{nu_2} , (\ty{real} \bnt{beta_2} | \kw{same} \} ,
         ... ,
@@ -88,14 +88,14 @@ For that reason, the density of the material must be provided also for static so
 Solid elements may have variable density within a single element.
 Also in case of constant density, density values must be provided for each node, and it will be interpolated between nodes.
 In addition to linear elastic isotropic and linear viscoelastic isotropic constitutive laws,
-any linear or nonlinear elastic or viscoelastic 6D constitutive law can be used if it fullfills the following requirements:
-A consitutive law must expect the components of the Green-Lagrange strain tensor $\boldsymbol{G}$
-and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input and return the components of the Second Piola-Kirchoff
+any linear or nonlinear elastic or viscoelastic 6D constitutive law can be used if it fulfills the following requirements:
+A constitutive law must expect the components of the Green-Lagrange strain tensor $\boldsymbol{G}$
+and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input and return the components of the Second Piola-Kirchhoff
 stress tensor $\boldsymbol{S}$ as output. In addition to generic linear elastic and linear viscoelastic constitutive laws,
 also hyperelastic- and elasto-plastic constitutive laws are implemented.
 See also section~\ref{sec:CL:neo-hookean}, section~\ref{sec:CL:mooney-rivlin} and section~\ref{sec:CL:bilinear-isotropic-hardening}.
 In case of viscoelastic constitutive laws, the strain rates $\dot{\boldsymbol{\varepsilon}}$ are scaled in order to make
-the effect of structural damping independent on the deformation \cite{KUEBLER2005}.
+the effect of structural damping independent on the strain \cite{KUEBLER2005}.
 
 \begin{eqnarray}
   \label{sec:EL:SOLID:constlaw}
@@ -111,7 +111,7 @@ the effect of structural damping independent on the deformation \cite{KUEBLER200
 \begin{description}
 \item[$\boldsymbol{f}$] Constitutive law
 \item[$\boldsymbol{G}$] Green-Lagrange strain tensor
-\item[$\boldsymbol{S}$] Second Piola-Kirchoff stress tensor
+\item[$\boldsymbol{S}$] Second Piola-Kirchhoff stress tensor
 \item[$\boldsymbol{C}$] Right Cauchy-Green strain tensor
 \item[$\boldsymbol{F}$] Deformation gradient
 \item[$\boldsymbol{u}$] Deformation field
@@ -121,7 +121,7 @@ As a consequence it is possible to build elements with varying elastic propertie
 The actual number of integration points is shown in table~\ref{sec:EL:SOLID:elemtypes}.
 \subsubsection{Output}
 \paragraph{Output of stress and strain}
-By default six components of the Chauchy stress tensor $\boldsymbol{\tau}$ and six strains $\bar{\boldsymbol{\varepsilon}}$ at element nodes are written to the output file.
+By default six components of the Cauchy stress tensor $\boldsymbol{\tau}$ and six strains $\bar{\boldsymbol{\varepsilon}}$ at element nodes are written to the output file.
 Since stress and strain are evaluated at integration points instead of nodes, it is required to extrapolate $\bar{\boldsymbol{\tau}}$ and $\bar{\boldsymbol{\varepsilon}}$
 from integration points to nodes using Lapack's DGELSD function.
 \begin{eqnarray}
@@ -237,8 +237,8 @@ Kinetic energy is always zero if the keyword \kw{static} was used.
                   linear elastic isotropic, 210000e6, 0.3, same, same, same, same, same, same, same;
 \end{verbatim}
 
-\subsubsection{Pre- and postprocessing}
-Since it would become tedious to create the mesh manually, pre- and postprocessing of solid models
+\subsubsection{Pre- and post-processing}
+Since it would become tedious to create the mesh manually, pre- and post-processing of solid models
 can be performed by means of \htmladdnormallink{\texttt{GNU Octave}}{https://octave.org/},
 \htmladdnormallink{\texttt{mboct-fem-pkg}}{https://github.com/octave-user/mboct-fem-pkg}
 and \htmladdnormallink{\texttt{Gmsh}}{https://gmsh.info/}.
@@ -249,6 +249,8 @@ See also the following example and figure~\ref{fig:EL:SOLID:COOKS-MEMBRANE} on h
   pkg load mboct-fem-pkg;
   \ty{## load the mesh file in Gmsh format}
   mesh = \nt{fem_pre_mesh_import}(\kw{"cooks_membrane.msh"}, \kw{"gmsh"});
+  \ty{## Apply a fill in reducing ordering based on METIS}
+  mesh = \nt{fem_pre_mesh_reorder}(mesh);
   \ty{## assign material properties to material number 1}
   mesh.material_data(\kw{1}).E = \kw{240000}; \ty{## Young's modulus [Pa]}
   mesh.material_data(\kw{1}).nu = \kw{0.49}; \ty{## Poisson's ratio [1]}

@@ -4885,8 +4885,8 @@ Mooney-Rivlin constitutive laws are similar to Neo-Hookean constitutive laws, bu
 \end{Verbatim}
 
 There are two alternative sets of input parameters.
-Either Young's modulus \nt{E}, Poisson's ratio \nt{nu} and the optional ration \nt{delta} or
-Mooney-Rivlin parameters \nt{C1}, \nt{C2} and the bulk modulus \nt{kappa} may be provided.
+Either Young's modulus \nt{E}, Poisson's ratio \nt{nu} and the optional ratio \nt{delta},
+or Mooney-Rivlin parameters \nt{C1}, \nt{C2} and the bulk modulus \nt{kappa} may be provided.
 If $\nt{delta}=0$ or $\nt{C2}=0$, a classical Neo-Hookean constitutive law is obtained.
 Equation~\ref{eq:CL:mooney-rivlin:param} shows the relations between those parameters.
 Currently fully incompressible constitutive laws are not yet supported by MBDyn.
@@ -4929,7 +4929,7 @@ Equation~\ref{eq:CL:mooney-rivlin:stress} is based on \cite{BATHE2016} and shows
 \emph{Author: Reinhard Resch}
 Also bilinear isotropic hardening constitutive laws can be used only for solid elements.
 This constitutive law is based on the classical incremental theory of plasticity of VON MISES \cite{BATHE2016}.
-It is applicable for large deformations but only for small strains.
+It is applicable for large deformations, but only for small strains.
 In addition to Young's modulus \nt{E} and Poisson's ratio \nt{nu}, the plastic tangent modulus \nt{ET}
 and the equivalent initial yield stress \nt{sigmayv} are required input parameters.
 In case of yielding, the relationship between equivalent plastic strain increment $\Delta \bar{e}^P$ and equivalent stress
@@ -4963,6 +4963,7 @@ $\nt{ET}=0$ gives an ideal plastic material without any hardening effect.
 \label{sec:CL:linear-viscoelastic-maxwell}
 \emph{Author: Reinhard Resch}
 This viscoelastic constitutive law is also called ``Generalized Maxwell model'' or ``Wiechert'' model.
+It is based on \cite{bleyer2018numericaltours}.
 
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{specific_const_law} ::= \kw{linear viscoelastic maxwell n} ,
