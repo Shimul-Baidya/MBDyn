@@ -80,27 +80,27 @@
 
 namespace sp_grad {
      typedef integer index_type;
-     
+
      enum SpFunctionCall: index_type {
-	  // FIXME: There should be a flag for the initial derivatives phase
-	  // 		  However this information is not available for elements at the moment
-	  //		  The prototype for Element::AssRes and Element::AssJac should be changed like
-	  //		  AssRes(..., SpFunctionCall func);
-	  //		  AssJac(..., SpFunctionCall func);
-	  STATE_MASK 			= 0x0F,
-	  FUNCTION_MASK 		= 0xF0,
-	  INITIAL_ASS_FLAG 	= 0x01,
-	  INITIAL_DER_FLAG 	= 0x02,
-	  REGULAR_FLAG 		= 0x04,
-	  RESIDUAL_FLAG 		= 0x10,
-	  JACOBIAN_FLAG 		= 0x20,
-	  UNKNOWN_FUNC 	= 0x0,
-	  INITIAL_ASS_RES = INITIAL_ASS_FLAG | RESIDUAL_FLAG,
-	  INITIAL_ASS_JAC = INITIAL_ASS_FLAG | JACOBIAN_FLAG,
-	  INITIAL_DER_RES = INITIAL_DER_FLAG | RESIDUAL_FLAG,
-	  INITIAL_DER_JAC = INITIAL_DER_FLAG | JACOBIAN_FLAG,
-	  REGULAR_RES 	= REGULAR_FLAG 	   | RESIDUAL_FLAG,
-	  REGULAR_JAC 	= REGULAR_FLAG	   | JACOBIAN_FLAG
+          // FIXME: There should be a flag for the initial derivatives phase
+          //              However this information is not available for elements at the moment
+          //		  The prototype for Element::AssRes and Element::AssJac should be changed like
+          //		  AssRes(..., SpFunctionCall func);
+          //		  AssJac(..., SpFunctionCall func);
+          STATE_MASK                    = 0x0F,
+          FUNCTION_MASK                 = 0xF0,
+          INITIAL_ASS_FLAG      = 0x01,
+          INITIAL_DER_FLAG      = 0x02,
+          REGULAR_FLAG          = 0x04,
+          RESIDUAL_FLAG                 = 0x10,
+          JACOBIAN_FLAG                 = 0x20,
+          UNKNOWN_FUNC  = 0x0,
+          INITIAL_ASS_RES = INITIAL_ASS_FLAG | RESIDUAL_FLAG,
+          INITIAL_ASS_JAC = INITIAL_ASS_FLAG | JACOBIAN_FLAG,
+          INITIAL_DER_RES = INITIAL_DER_FLAG | RESIDUAL_FLAG,
+          INITIAL_DER_JAC = INITIAL_DER_FLAG | JACOBIAN_FLAG,
+          REGULAR_RES   = REGULAR_FLAG     | RESIDUAL_FLAG,
+          REGULAR_JAC   = REGULAR_FLAG	   | JACOBIAN_FLAG
      };
 
      class SpDerivData;
@@ -113,31 +113,31 @@ namespace sp_grad {
 
      template <typename ValueType>
      class SpGradExpDofMapHelper;
-     
+
      namespace util {
-	  template <typename T1, typename T2>
-	  struct ResultType;
+          template <typename T1, typename T2>
+          struct ResultType;
 
-	  template <>
-	  struct ResultType<doublereal, doublereal> {
-	       typedef doublereal Type;
-	  };
+          template <>
+          struct ResultType<doublereal, doublereal> {
+               typedef doublereal Type;
+          };
 
-	  template <>
-	  struct ResultType<SpGradient, SpGradient> {
-	       typedef SpGradient Type;
-	  };
+          template <>
+          struct ResultType<SpGradient, SpGradient> {
+               typedef SpGradient Type;
+          };
 
-	  template <>
-	  struct ResultType<GpGradProd, GpGradProd> {
-	       typedef GpGradProd Type;
-	  };
-          
-	  template <>
-	  struct ResultType<SpGradient, doublereal>: ResultType<SpGradient, SpGradient> {};
+          template <>
+          struct ResultType<GpGradProd, GpGradProd> {
+               typedef GpGradProd Type;
+          };
 
-	  template <>
-	  struct ResultType<doublereal, SpGradient>: ResultType<SpGradient, SpGradient> {};
+          template <>
+          struct ResultType<SpGradient, doublereal>: ResultType<SpGradient, SpGradient> {};
+
+          template <>
+          struct ResultType<doublereal, SpGradient>: ResultType<SpGradient, SpGradient> {};
 
           template <>
           struct ResultType<GpGradProd, doublereal>: ResultType<GpGradProd, GpGradProd> {};
@@ -147,208 +147,208 @@ namespace sp_grad {
      }
 
      struct SpDerivRec {
-	  SpDerivRec(index_type iDof, doublereal dDer) noexcept
-	       :iDof(iDof), dDer(dDer) {
-	  }
+          SpDerivRec(index_type iDof, doublereal dDer) noexcept
+               :iDof(iDof), dDer(dDer) {
+          }
 
-	  bool operator<(const SpDerivRec& oRec) const {
-	       return iDof < oRec.iDof;
-	  }
-	  
-	  index_type iDof;
-	  doublereal dDer;
+          bool operator<(const SpDerivRec& oRec) const {
+               return iDof < oRec.iDof;
+          }
+
+          index_type iDof;
+          doublereal dDer;
      } SP_GRAD_ALIGNMENT(16);
 
      class SpDerivData {
      public:
-	  friend class SpGradient;
-	  SpDerivData(doublereal dVal,
-		      index_type iSizeRes,
-		      index_type iSizeCurr,
-		      unsigned uFlags,
-		      index_type iRefCnt,
-		      SpMatrixData<SpGradient>* pOwner) noexcept
-	       :dVal(dVal),
-		iSizeRes(iSizeRes),
-		iSizeCurr(iSizeCurr),
-		uFlags(uFlags),
-		iRefCnt(iRefCnt),
-		pOwner(pOwner) {
-	  }
+          friend class SpGradient;
+          SpDerivData(doublereal dVal,
+                      index_type iSizeRes,
+                      index_type iSizeCurr,
+                      unsigned uFlags,
+                      index_type iRefCnt,
+                      SpMatrixData<SpGradient>* pOwner) noexcept
+               :dVal(dVal),
+                iSizeRes(iSizeRes),
+                iSizeCurr(iSizeCurr),
+                uFlags(uFlags),
+                iRefCnt(iRefCnt),
+                pOwner(pOwner) {
+          }
 
-	  bool bHaveRefTo(const SpMatrixData<SpGradient>* pMatData) const {
-	       return pOwner == pMatData;
-	  }
+          bool bHaveRefTo(const SpMatrixData<SpGradient>* pMatData) const {
+               return pOwner == pMatData;
+          }
 
-	  enum Flags: unsigned {
-	       DER_GENERAL = 0x0u,
-	       DER_SORTED = 0x1u,
-	       DER_UNIQUE = 0x2u
-	  };
+          enum Flags: unsigned {
+               DER_GENERAL = 0x0u,
+               DER_SORTED = 0x1u,
+               DER_UNIQUE = 0x2u
+          };
      private:
-	  doublereal dVal;
-	  index_type iSizeRes;
-	  index_type iSizeCurr;
-	  unsigned uFlags;
+          doublereal dVal;
+          index_type iSizeRes;
+          index_type iSizeCurr;
+          unsigned uFlags;
 #ifdef USE_MULTITHREAD
-	  std::atomic<index_type> iRefCnt;
+          std::atomic<index_type> iRefCnt;
 #else
-	  index_type iRefCnt;
+          index_type iRefCnt;
 #endif
-	  SpMatrixData<SpGradient>* pOwner;
-	  SpDerivRec rgDer[];
+          SpMatrixData<SpGradient>* pOwner;
+          SpDerivRec rgDer[];
      } SP_GRAD_ALIGNMENT(alignof(SpDerivRec));
 
      struct SpGradDofStat {
-	  SpGradDofStat() noexcept
-	  :iMinDof(std::numeric_limits<index_type>::max()),
-	       iMaxDof(std::numeric_limits<index_type>::min()),
-	       iNumNz(0) {
-	  }
+          SpGradDofStat() noexcept
+          :iMinDof(std::numeric_limits<index_type>::max()),
+               iMaxDof(std::numeric_limits<index_type>::min()),
+               iNumNz(0) {
+          }
 
-	  index_type iMinDof;
-	  index_type iMaxDof;
-	  index_type iNumNz;
+          index_type iMinDof;
+          index_type iMaxDof;
+          index_type iNumNz;
      };
 
      struct SpGradCommon {
-	  enum SpecialDofs: index_type {
-	       iInvalidDof = -1,
-	       iDeletedDof = -2
-	  };
+          enum SpecialDofs: index_type {
+               iInvalidDof = -1,
+               iDeletedDof = -2
+          };
 
-	  enum ExprEvalFlags {
-	       ExprEvalUnique,
-	       ExprEvalDuplicate
-	  };
+          enum ExprEvalFlags {
+               ExprEvalUnique,
+               ExprEvalDuplicate
+          };
      };
 
 
      template <typename DERIVED>
      class SpGradBase: public SpGradCommon {
      protected:
-	  constexpr SpGradBase() noexcept {}
-	  ~SpGradBase() noexcept {}
+          constexpr SpGradBase() noexcept {}
+          ~SpGradBase() noexcept {}
 
      public:
-	  static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = std::remove_reference<DERIVED>::type::eExprEvalFlags;
+          static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = std::remove_reference<DERIVED>::type::eExprEvalFlags;
 
-	  constexpr doublereal dGetValue() const {
-	       return pGetRep()->dGetValue();
-	  }
+          constexpr doublereal dGetValue() const {
+               return pGetRep()->dGetValue();
+          }
 
-	  constexpr index_type iGetSize() const {
-	       return pGetRep()->iGetSize();
-	  }
+          constexpr index_type iGetSize() const {
+               return pGetRep()->iGetSize();
+          }
 
-	  void InsertDeriv(SpGradient& g, doublereal dCoef) const {
-	       pGetRep()->InsertDeriv(g, dCoef);
-	  }
+          void InsertDeriv(SpGradient& g, doublereal dCoef) const {
+               pGetRep()->InsertDeriv(g, dCoef);
+          }
 
-	  void GetDofStat(SpGradDofStat& s) const {
-	       pGetRep()->GetDofStat(s);
-	  }
+          void GetDofStat(SpGradDofStat& s) const {
+               pGetRep()->GetDofStat(s);
+          }
 
-	  template <typename Expr>
-	  constexpr bool bHaveRefTo(const SpGradBase<Expr>& g) const {
-	       return pGetRep()->bHaveRefTo(g);
-	  }
+          template <typename Expr>
+          constexpr bool bHaveRefTo(const SpGradBase<Expr>& g) const {
+               return pGetRep()->bHaveRefTo(g);
+          }
 
-	  void InsertDof(SpGradExpDofMap& oExpDofMap) const {
-	       pGetRep()->InsertDof(oExpDofMap);
-	  }
+          void InsertDof(SpGradExpDofMap& oExpDofMap) const {
+               pGetRep()->InsertDof(oExpDofMap);
+          }
 
-	  void AddDeriv(SpGradient& g, doublereal dCoef, const SpGradExpDofMap& oExpDofMap) const {
-	       pGetRep()->AddDeriv(g, dCoef, oExpDofMap);
-	  }
+          void AddDeriv(SpGradient& g, doublereal dCoef, const SpGradExpDofMap& oExpDofMap) const {
+               pGetRep()->AddDeriv(g, dCoef, oExpDofMap);
+          }
 
-	  constexpr const DERIVED* pGetRep() const {
-	       return static_cast<const DERIVED*>(this);
-	  }
+          constexpr const DERIVED* pGetRep() const {
+               return static_cast<const DERIVED*>(this);
+          }
 
 #ifdef SP_GRAD_DEBUG
-	  void PrintValue(std::ostream& os) const {
-	       pGetRep()->PrintValue(os);
-	  }
+          void PrintValue(std::ostream& os) const {
+               pGetRep()->PrintValue(os);
+          }
 
-	  void PrintDeriv(std::ostream& os, doublereal dCoef) const {
-	       pGetRep()->PrintDeriv(os, dCoef);
-	  }
+          void PrintDeriv(std::ostream& os, doublereal dCoef) const {
+               pGetRep()->PrintDeriv(os, dCoef);
+          }
 #endif
      };
 
      namespace util {
-	  template <SpGradCommon::ExprEvalFlags EXPR_EVAL_FLAGS_A, SpGradCommon::ExprEvalFlags EXPR_EVAL_FLAGS_B>
-	  struct ExprEvalFlagsHelper {
-	  };
+          template <SpGradCommon::ExprEvalFlags EXPR_EVAL_FLAGS_A, SpGradCommon::ExprEvalFlags EXPR_EVAL_FLAGS_B>
+          struct ExprEvalFlagsHelper {
+          };
 
-	  template <>
-	  struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalUnique, SpGradCommon::ExprEvalUnique> {
-	       static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalUnique;
-	  };
+          template <>
+          struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalUnique, SpGradCommon::ExprEvalUnique> {
+               static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalUnique;
+          };
 
-	  template <>
-	  struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalDuplicate, SpGradCommon::ExprEvalUnique> {
-	       static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalUnique;
-	  };
+          template <>
+          struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalDuplicate, SpGradCommon::ExprEvalUnique> {
+               static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalUnique;
+          };
 
-	  template <>
-	  struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalUnique, SpGradCommon::ExprEvalDuplicate> {
-	       static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalUnique;
-	  };
+          template <>
+          struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalUnique, SpGradCommon::ExprEvalDuplicate> {
+               static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalUnique;
+          };
 
-	  template <>
-	  struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalDuplicate, SpGradCommon::ExprEvalDuplicate> {
-	       static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalDuplicate;;
-	  };
+          template <>
+          struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalDuplicate, SpGradCommon::ExprEvalDuplicate> {
+               static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalDuplicate;;
+          };
 
-	  template <SpGradCommon::ExprEvalFlags EXPR_EVAL_FLAGS>
-	  struct ExprEvalHelper;
+          template <SpGradCommon::ExprEvalFlags EXPR_EVAL_FLAGS>
+          struct ExprEvalHelper;
 
-	  template <>
-	  struct ExprEvalHelper<SpGradCommon::ExprEvalDuplicate> {
-	       template <typename Expr>
-	       static inline void Eval(SpGradient& g, const SpGradBase<Expr>& f);
-	       template <typename Func, typename Expr>
-	       static inline void AssignOper(SpGradient& g, const SpGradBase<Expr>& f);
-	       template <typename Expr>
-	       static inline void Eval(SpGradient& g,
+          template <>
+          struct ExprEvalHelper<SpGradCommon::ExprEvalDuplicate> {
+               template <typename Expr>
+               static inline void Eval(SpGradient& g, const SpGradBase<Expr>& f);
+               template <typename Func, typename Expr>
+               static inline void AssignOper(SpGradient& g, const SpGradBase<Expr>& f);
+               template <typename Expr>
+               static inline void Eval(SpGradient& g,
                                        const SpGradBase<Expr>& f,
                                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
-	       template <typename Func, typename Expr>
-	       static inline void AssignOper(SpGradient& g,
+               template <typename Func, typename Expr>
+               static inline void AssignOper(SpGradient& g,
                                              const SpGradBase<Expr>& f,
                                              const SpGradExpDofMapHelper<SpGradient>& oDofMap);
-	  };
+          };
 
-	  template <>
-	  struct ExprEvalHelper<SpGradCommon::ExprEvalUnique> {
-	       template <typename Expr>
-	       static inline void Eval(SpGradient& g, const SpGradBase<Expr>& f);
-	       template <typename Func, typename Expr>
-	       static inline void AssignOper(SpGradient& g, const SpGradBase<Expr>& f);
-	       template <typename Expr>
-	       static inline void Eval(SpGradient& g,
+          template <>
+          struct ExprEvalHelper<SpGradCommon::ExprEvalUnique> {
+               template <typename Expr>
+               static inline void Eval(SpGradient& g, const SpGradBase<Expr>& f);
+               template <typename Func, typename Expr>
+               static inline void AssignOper(SpGradient& g, const SpGradBase<Expr>& f);
+               template <typename Expr>
+               static inline void Eval(SpGradient& g,
                                        const SpGradBase<Expr>& f,
                                        const SpGradExpDofMapHelper<SpGradient>& oDofMap);
-	       template <typename Func, typename Expr>
-	       static inline void AssignOper(SpGradient& g,
+               template <typename Func, typename Expr>
+               static inline void AssignOper(SpGradient& g,
                                              const SpGradBase<Expr>& f,
-                                             const SpGradExpDofMapHelper<SpGradient>& oDofMap);               
-	  };
+                                             const SpGradExpDofMapHelper<SpGradient>& oDofMap);
+          };
      }
 
      class GpGradProd;
-     
+
      template <typename DERIVED>
      class GpGradProdBase: public SpGradCommon {
      protected:
           constexpr GpGradProdBase() noexcept {}
           ~GpGradProdBase() noexcept {}
-          
+
      public:
-	  static constexpr ExprEvalFlags eExprEvalFlags = ExprEvalDuplicate;
-          
+          static constexpr ExprEvalFlags eExprEvalFlags = ExprEvalDuplicate;
+
           constexpr doublereal dGetValue() const {
                return pGetRep()->dGetValue();
           }
@@ -358,7 +358,7 @@ namespace sp_grad {
           }
 
           static constexpr bool bIsScalarConst = DERIVED::bIsScalarConst;
-          
+
      private:
           constexpr const DERIVED* pGetRep() const {
                return static_cast<const DERIVED*>(this);

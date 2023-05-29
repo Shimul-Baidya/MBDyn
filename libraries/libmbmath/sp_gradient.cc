@@ -56,143 +56,143 @@ namespace sp_grad {
      SpDerivData SpGradient::oNullData{0., 0, 0, SpDerivData::DER_UNIQUE | SpDerivData::DER_SORTED, 1, nullptr};
 
      SpDerivData* SpGradient::pAllocMem(SpDerivData* ptr, index_type iSize) {
-	  ptr = reinterpret_cast<SpDerivData*>(std::realloc(ptr, uGetAllocSize(iSize)));
+          ptr = reinterpret_cast<SpDerivData*>(std::realloc(ptr, uGetAllocSize(iSize)));
 
-	  if (!ptr) {
-	       throw std::bad_alloc();
-	  }
+          if (!ptr) {
+               throw std::bad_alloc();
+          }
 
-	  return ptr;
+          return ptr;
      }
 
      void SpGradient::Allocate(index_type iSizeRes, index_type iSizeInit, unsigned uFlags) {
-	  SP_GRAD_ASSERT(iSizeRes >= 0);
-	  SP_GRAD_ASSERT(iSizeInit >= 0);
-	  SP_GRAD_ASSERT(iSizeRes >= iSizeInit);
-	  SP_GRAD_ASSERT(pData->iRefCnt >= 1);
-	  
-	  const doublereal dVal = pData->dVal;
+          SP_GRAD_ASSERT(iSizeRes >= 0);
+          SP_GRAD_ASSERT(iSizeInit >= 0);
+          SP_GRAD_ASSERT(iSizeRes >= iSizeInit);
+          SP_GRAD_ASSERT(pData->iRefCnt >= 1);
 
-	  SpDerivData* pMem;
+          const doublereal dVal = pData->dVal;
 
-	  const bool bNeedToGrow = iSizeRes > pData->iSizeRes;
-	  const bool bCannotReuse = pData->iRefCnt > 1 || (pData->pOwner && (bNeedToGrow || !pData->pOwner->bIsOwnerOf(this)));	  
+          SpDerivData* pMem;
 
-	  if (bCannotReuse) {
-	       pMem = pAllocMem(nullptr, iSizeRes);
-	       index_type iSizeCopy = std::min(pData->iSizeCurr, iSizeInit);
-	       std::uninitialized_copy(pData->rgDer,
-				       pData->rgDer + iSizeCopy,
-				       pMem->rgDer);
-	       Cleanup();
-	  } else if (bNeedToGrow) {
-	       SP_GRAD_ASSERT(!pData->pOwner);
-	       SP_GRAD_ASSERT(pData != pGetNullData());
-	       
-	       pMem = pAllocMem(pData, iSizeRes);
-	  } else {
-	       SP_GRAD_ASSERT(((pData->pOwner && pData->pOwner->bIsOwnerOf(this))) ? (pData->iSizeRes == 0 || pData->iSizeRes >= iSizeRes) : true);
-	       SP_GRAD_ASSERT(pData != pGetNullData());
-	       pData->iSizeCurr = iSizeInit;
-	       pData->uFlags = uFlags;
-	       return;
-	  }
-	  
-	  pData = new(pMem) SpDerivData(dVal, iSizeRes, iSizeInit, uFlags, 1, nullptr);
+          const bool bNeedToGrow = iSizeRes > pData->iSizeRes;
+          const bool bCannotReuse = pData->iRefCnt > 1 || (pData->pOwner && (bNeedToGrow || !pData->pOwner->bIsOwnerOf(this)));
+
+          if (bCannotReuse) {
+               pMem = pAllocMem(nullptr, iSizeRes);
+               index_type iSizeCopy = std::min(pData->iSizeCurr, iSizeInit);
+               std::uninitialized_copy(pData->rgDer,
+                                       pData->rgDer + iSizeCopy,
+                                       pMem->rgDer);
+               Cleanup();
+          } else if (bNeedToGrow) {
+               SP_GRAD_ASSERT(!pData->pOwner);
+               SP_GRAD_ASSERT(pData != pGetNullData());
+
+               pMem = pAllocMem(pData, iSizeRes);
+          } else {
+               SP_GRAD_ASSERT(((pData->pOwner && pData->pOwner->bIsOwnerOf(this))) ? (pData->iSizeRes == 0 || pData->iSizeRes >= iSizeRes) : true);
+               SP_GRAD_ASSERT(pData != pGetNullData());
+               pData->iSizeCurr = iSizeInit;
+               pData->uFlags = uFlags;
+               return;
+          }
+
+          pData = new(pMem) SpDerivData(dVal, iSizeRes, iSizeInit, uFlags, 1, nullptr);
      }
 
      void SpGradient::Sort() {
-	  if (!(pData->uFlags & SpDerivData::DER_UNIQUE)) {
-	       MakeUnique();
-	  }
+          if (!(pData->uFlags & SpDerivData::DER_UNIQUE)) {
+               MakeUnique();
+          }
 
-	  if (!(pData->uFlags & SpDerivData::DER_SORTED)) {
-	       std::sort(pData->rgDer, pData->rgDer + pData->iSizeCurr);
+          if (!(pData->uFlags & SpDerivData::DER_SORTED)) {
+               std::sort(pData->rgDer, pData->rgDer + pData->iSizeCurr);
 
-	       pData->uFlags |= SpDerivData::DER_SORTED;
-	  }
+               pData->uFlags |= SpDerivData::DER_SORTED;
+          }
      }
 
      void SpGradient::MakeUnique() {
-	  *this = EvalUnique(*this);
+          *this = EvalUnique(*this);
      }
-     
+
 #ifdef SP_GRAD_DEBUG
      bool SpGradient::bValid() const {
-	  SP_GRAD_ASSERT(pData != nullptr);
+          SP_GRAD_ASSERT(pData != nullptr);
 
-	  if (pData == pGetNullData()) {
-	       SP_GRAD_ASSERT(pData->dVal == 0.);
-	       SP_GRAD_ASSERT(pData->iSizeCurr == 0);
-	       SP_GRAD_ASSERT(pData->iSizeRes == 0);
-	       SP_GRAD_ASSERT(pData->iRefCnt >= 1);
-	       SP_GRAD_ASSERT(pData->uFlags & SpDerivData::DER_SORTED);
-	       SP_GRAD_ASSERT(pData->uFlags & SpDerivData::DER_UNIQUE);
-	  }
+          if (pData == pGetNullData()) {
+               SP_GRAD_ASSERT(pData->dVal == 0.);
+               SP_GRAD_ASSERT(pData->iSizeCurr == 0);
+               SP_GRAD_ASSERT(pData->iSizeRes == 0);
+               SP_GRAD_ASSERT(pData->iRefCnt >= 1);
+               SP_GRAD_ASSERT(pData->uFlags & SpDerivData::DER_SORTED);
+               SP_GRAD_ASSERT(pData->uFlags & SpDerivData::DER_UNIQUE);
+          }
 
-	  SP_GRAD_ASSERT(std::isfinite(pData->dVal));
-	  SP_GRAD_ASSERT(pData->iSizeRes >= 0);
-	  SP_GRAD_ASSERT(pData->iSizeCurr <= pData->iSizeRes);
-	  SP_GRAD_ASSERT(pData->iRefCnt > 0);
-	  SP_GRAD_ASSERT(!bIsUnique() || bCheckUnique());
-	  
-	  for (index_type i = 0; i < pData->iSizeCurr; ++i) {
-	       SP_GRAD_ASSERT(std::isfinite(pData->rgDer[i].dDer));
-	       SP_GRAD_ASSERT(pData->rgDer[i].iDof > 0);
-	       
-	       if (i > 0 && bIsSorted()) {
-	       	    SP_GRAD_ASSERT(pData->rgDer[i].iDof > pData->rgDer[i - 1].iDof);
-	       }
-	  }
+          SP_GRAD_ASSERT(std::isfinite(pData->dVal));
+          SP_GRAD_ASSERT(pData->iSizeRes >= 0);
+          SP_GRAD_ASSERT(pData->iSizeCurr <= pData->iSizeRes);
+          SP_GRAD_ASSERT(pData->iRefCnt > 0);
+          SP_GRAD_ASSERT(!bIsUnique() || bCheckUnique());
 
-	  return true;
+          for (index_type i = 0; i < pData->iSizeCurr; ++i) {
+               SP_GRAD_ASSERT(std::isfinite(pData->rgDer[i].dDer));
+               SP_GRAD_ASSERT(pData->rgDer[i].iDof > 0);
+
+               if (i > 0 && bIsSorted()) {
+                    SP_GRAD_ASSERT(pData->rgDer[i].iDof > pData->rgDer[i - 1].iDof);
+               }
+          }
+
+          return true;
      }
 
      bool SpGradient::bCheckUnique() const {
-	  SpGradDofStat s;
-	  
-	  GetDofStat(s);
-	  
-	  std::vector<bool> v(s.iMaxDof - s.iMinDof + 1, false);
+          SpGradDofStat s;
 
-	  for (const auto&r: *this) {
-	       size_t i = r.iDof - s.iMinDof;
+          GetDofStat(s);
 
-	       SP_GRAD_ASSERT(i < v.size());
-	       
-	       if (v[i]) {
-		    return false;
-	       }
-	       
-	       v[i] = true;
-	  }
+          std::vector<bool> v(s.iMaxDof - s.iMinDof + 1, false);
 
-	  return true;
+          for (const auto&r: *this) {
+               size_t i = r.iDof - s.iMinDof;
+
+               SP_GRAD_ASSERT(i < v.size());
+
+               if (v[i]) {
+                    return false;
+               }
+
+               v[i] = true;
+          }
+
+          return true;
      }
-     
+
      void SpGradient::PrintValue(std::ostream& os) const {
-	  os << dGetValue() << ' ';
+          os << dGetValue() << ' ';
      }
 
      void SpGradient::PrintDeriv(std::ostream& os, doublereal dCoef) const {
-	  for (const auto& d: *this) {
+          for (const auto& d: *this) {
                const doublereal dDer = d.dDer * dCoef;
 
                if (dDer) {
                     os << d.iDof << ':' << dDer << ' ';
                }
-	  }
+          }
      }
 
      std::ostream& operator<<(std::ostream& os, const SpGradient& g) {
           SpGradient gTmp{g};
-          
+
           gTmp.Sort();
-          
-	  os << "f=(";
-	  gTmp.PrintValue(os);
+
+          os << "f=(";
+          gTmp.PrintValue(os);
           os << ")";
-          
+
           bool bPrintDer = false;
 
           for (const auto& d: gTmp) {
@@ -207,8 +207,8 @@ namespace sp_grad {
                gTmp.PrintDeriv(os, 1.);
                os << ")";
           }
-          
-	  return os;
+
+          return os;
      }
 
      std::ostream& operator<<(std::ostream& os, const GpGradProd& g)

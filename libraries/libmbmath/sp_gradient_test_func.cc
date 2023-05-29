@@ -2361,7 +2361,7 @@ namespace sp_grad_test {
 
           C.MapAssign(A * B, oDofMap);
      }
-     
+
      template
      void func_mat_mul10(const SpMatrixBase<SpGradient>&,
                          const SpMatrixBase<SpGradient>&,
@@ -2406,7 +2406,7 @@ namespace sp_grad_test {
                          const SpMatrixBase<SpGradient>&,
                          SpMatrixBase<SpGradient>&,
                          const SpGradExpDofMapHelper<SpGradient>&);
-     
+
 
      template <typename TA, typename TB>
      void func_mat_mul10_trans(const SpMatrixBase<TA>& A,
@@ -2426,7 +2426,7 @@ namespace sp_grad_test {
 
           C.MapAssign(Transpose(Transpose(B) * Transpose(A)), oDofMap);
      }
-     
+
      template
      void func_mat_mul10_trans(const SpMatrixBase<SpGradient>&,
                                const SpMatrixBase<SpGradient>&,
@@ -2470,7 +2470,7 @@ namespace sp_grad_test {
                                const SpMatrixBase<SpGradient>&,
                                SpMatrixBase<SpGradient>&,
                                const SpGradExpDofMapHelper<SpGradient>&);
-     
+
      template <typename TA, typename TB>
      void func_mat_mul10_trans_add(const SpMatrixBase<TA>& A,
                                    const SpMatrixBase<TB>& B,
@@ -2488,7 +2488,7 @@ namespace sp_grad_test {
           SP_GRAD_ASSERT(A.iGetNumCols() == B.iGetNumRows());
 
           C.MapAssign(Transpose((Transpose(A * B) + Transpose(B) * Transpose(A)) * 0.5), oDofMap);
-     }     
+     }
 
      template
      void func_mat_mul10_trans_add(const SpMatrixBase<SpGradient>&,
@@ -2534,7 +2534,7 @@ namespace sp_grad_test {
                                    const SpMatrixBase<SpGradient>&,
                                    SpMatrixBase<SpGradient>&,
                                    const SpGradExpDofMapHelper<SpGradient>&);
-     
+
      void func_mat_mul10(index_type nra,
                          index_type nca,
                          index_type ncb,
@@ -2599,7 +2599,7 @@ namespace sp_grad_test {
 
           D.MapAssign(Transpose(A * 3. - B / 2.) * (B / 4. + C * 5.), oDofMap);
      }
-     
+
      void func_mat_mul11(index_type n,
                          index_type nbdirs,
                          const doublereal A[],
@@ -2750,7 +2750,7 @@ namespace sp_grad_test {
                          const SpMatrixBase<SpGradient>&,
                          SpMatrixBase<SpGradient>&,
                          const SpGradExpDofMapHelper<SpGradient>&);
-     
+
      template <typename TA, typename TB, typename TC>
      void func_mat_mul11_trans(const SpMatrixBase<TA>& A,
                                const SpMatrixBase<TB>& B,
@@ -2777,7 +2777,7 @@ namespace sp_grad_test {
 
           D.MapAssign(Transpose(Transpose(B / 4. + C * 5.) * (A * 3. - B / 2.)), oDofMap);
      }
-     
+
      template
      void func_mat_mul11_trans(const SpMatrixBase<SpGradient>&,
                                const SpMatrixBase<SpGradient>&,
@@ -2883,7 +2883,7 @@ namespace sp_grad_test {
                                const SpMatrixBase<SpGradient>&,
                                SpMatrixBase<SpGradient>&,
                                const SpGradExpDofMapHelper<SpGradient>&);
-     
+
      template <typename TA, typename TB, typename TC>
      void func_mat_mul12a(const SpMatrixBase<TA>& A,
                           const SpMatrixBase<TB>& B,
@@ -2900,7 +2900,7 @@ namespace sp_grad_test {
                           const SpGradExpDofMapHelper<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& oDofMap) {
           D.MapAssign(Transpose(A * B * C), oDofMap);
      }
-     
+
      void func_mat_mul12(index_type nra,
                          index_type nca,
                          index_type ncb,
@@ -3024,7 +3024,7 @@ namespace sp_grad_test {
                           const SpMatrixBase<SpGradient>&,
                           SpMatrixBase<SpGradient>&,
                           const SpGradExpDofMapHelper<SpGradient>&);
-     
+
      template <typename TA, typename TB, typename TC>
      void func_mat_mul12b(const SpMatrixBase<TA>& A,
                           const SpMatrixBase<TB>& B,
