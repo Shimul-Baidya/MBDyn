@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -81,7 +81,7 @@ class VecN {
  private:
    
    /* not defined */
-   const VecN& operator = (const VecN&);
+   const VecN& operator = (const VecN&) = delete;
    
  protected:
    integer iMaxRows;
@@ -101,12 +101,13 @@ class VecN {
 
    /* costruttore copia */
    VecN(const VecN&);
- 
+   VecN(VecN&& v);
    /* costruttore da VectorHandler (Aggiunta) */
    VecN(const VectorHandler& vh, integer ns, integer iFirstIndex);
 
    ~VecN(void);
-   
+
+   VecN& operator=(VecN&& v);
    inline integer iGetNumRows(void) const;
    
    void Resize(integer ns);   
@@ -228,8 +229,8 @@ class Mat3xN: public sp_grad::SpConstMatElemAdapter<Mat3xN>
  private:
    
    /* not defined */
-   Mat3xN(const Mat3xN&);
-   const Mat3xN& operator = (const Mat3xN&);
+   Mat3xN(const Mat3xN&) = delete;
+   const Mat3xN& operator = (const Mat3xN&) = delete;
    
  protected:
    integer iMaxCols;
@@ -246,8 +247,11 @@ class Mat3xN: public sp_grad::SpConstMatElemAdapter<Mat3xN>
    Mat3xN(void); /* to allow arrays of Mat3xN */
    explicit Mat3xN(integer nc); /* Attention: Mat3xN could be constructed from a doublereal if this is not explicit! */
    Mat3xN(integer nc, const doublereal& d);
+   Mat3xN(Mat3xN&& A);
    ~Mat3xN(void);
-   
+
+   Mat3xN& operator=(Mat3xN&& A);
+      
    void Resize(integer ns);
    void Reset(const doublereal& d = 0.);
    
@@ -390,8 +394,8 @@ class MatNx3: public sp_grad::SpConstMatElemAdapter<MatNx3>
  private:
    
    /* not defined */
-   MatNx3(const MatNx3&);
-   const MatNx3& operator = (const MatNx3&);
+   MatNx3(const MatNx3&) = delete;
+   const MatNx3& operator = (const MatNx3&) = delete;
    
  protected:
    integer iMaxRows;
@@ -545,8 +549,8 @@ class MatNxN: public sp_grad::SpConstMatElemAdapter<MatNxN>
  private:
    
    /* not defined */
-   MatNxN(const MatNxN&);
-   const MatNxN& operator = (const MatNxN&);
+   MatNxN(const MatNxN&) = delete;
+   const MatNxN& operator = (const MatNxN&) = delete;
    
  protected:
    integer iMaxRows;
@@ -563,8 +567,10 @@ class MatNxN: public sp_grad::SpConstMatElemAdapter<MatNxN>
  public:
    MatNxN(void);
    MatNxN(integer ns);
-   MatNxN(integer ns, const doublereal& d);   
+   MatNxN(integer ns, const doublereal& d);
+   MatNxN(MatNxN&& A);
    ~MatNxN(void);
+   MatNxN& operator=(MatNxN&& A);
    
    void Resize(integer ns) {Create_(ns);};
    inline integer iGetNumRows(void) const;

@@ -2,12 +2,12 @@ diff -uNr meschach.orig/CHANGELOG meschach/CHANGELOG
 --- meschach.orig/CHANGELOG	Thu Jan  1 01:00:00 1970
 +++ meschach/CHANGELOG	Wed Oct 24 10:46:01 2001
 @@ -0,0 +1,11 @@
-+* 2000-04-13 Pierangelo Masarati <masarati@aero.polimi.it>
++* 2000-04-13 Pierangelo Masarati <pierangelo.masarati@polimi.it>
 + - fixed HUGE_VAL configure
 + - prefixed REAL, DOUBLE and FLOAT with MESCHACH_ to avoid conflicts
 + - moved makefile to Makefile
 +
-+* 2000-??-?? Pierangelo Masarati <masarati@aero.polimi.it>
++* 2000-??-?? Pierangelo Masarati <pierangelo.masarati@polimi.it>
 + - changed the struct pair in sparse.h to avoid conflicts with C++ stl
 + - added some helpers for adding and subtracting coefs from sparse matrices
 + - WARNING: in C++ the macro `catch' conflicts with the exception handling
@@ -6280,8 +6280,8 @@ diff -uNr meschach.orig/copyright meschach/copyright
  
 +/**************************************************************************
 +**
-+** Copyright (C) 2001 Paolo Mantegazza          <mantegazza@aero.polimi.it>
-+**                    Pierangelo Masarati       <masarati@aero.polimi.it>
++** Copyright (C) 2001 Paolo Mantegazza          <paolo.mantegazza@polimi.it>
++**                    Pierangelo Masarati       <pierangelo.masarati@polimi.it>
 +**
 +** all rights reserved.
 +**

@@ -4,10 +4,10 @@ dnl
 dnl MBDyn (C) is a multibody analysis code.
 dnl http://www.mbdyn.org
 dnl
-dnl Copyright (C) 1996-2021
+dnl Copyright (C) 1996-2023
 dnl
-dnl Pierangelo Masarati     <masarati@aero.polimi.it>
-dnl Paolo Mantegazza        <mantegazza@aero.polimi.it>
+dnl Pierangelo Masarati     <pierangelo.masarati@polimi.it>
+dnl Paolo Mantegazza        <paolo.mantegazza@polimi.it>
 dnl
 dnl Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 dnl via La Masa, 34 - 20156 Milano, Italy
@@ -40,10 +40,10 @@ define([AC_INIT_BINSH],
 # MBDyn (C) is a multibody analysis code.
 # http://www.mbdyn.org
 #
-# Copyright (C) 1996-2017
+# Copyright (C) 1996-2023
 #
-# Pierangelo Masarati     <masarati@aero.polimi.it>
-# Paolo Mantegazza        <mantegazza@aero.polimi.it>
+# Pierangelo Masarati     <pierangelo.masarati@polimi.it>
+# Paolo Mantegazza        <paolo.mantegazza@polimi.it>
 #
 # Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 # via La Masa, 34 - 20156 Milano, Italy
@@ -57,10 +57,10 @@ define([AC_INIT_BINSH],
 #
 #
 echo ""
-echo "	Copyright (C) 1996-2017"
+echo "	Copyright (C) 1996-2023"
 echo "	"
-echo "	Pierangelo Masarati     <masarati@aero.polimi.it>"
-echo "	Paolo Mantegazza        <mantegazza@aero.polimi.it>"
+echo "	Pierangelo Masarati     <pierangelo.masarati@polimi.it>"
+echo "	Paolo Mantegazza        <paolo.mantegazza@polimi.it>"
 echo "	"
 echo "	Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano"
 echo "	via La Masa, 34 - 20156 Milano, Italy"
@@ -123,10 +123,10 @@ AH_TOP([
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -258,6 +258,7 @@ OL_ARG_WITH(qrupdate,[  --with-qrupdate         with QRUPDATE library],$with_sui
 OL_ARG_WITH(suitesparseqr,[  --with-suitesparseqr    with SuiteSparseQR library],$with_suitesparseqr_default,[auto yes no])
 OL_ARG_WITH(strumpack,[  --with-strumpack        with STRUMPACK library],auto,[auto yes no])
 OL_ARG_WITH(trilinos,[  --with-trilinos          with Trilinos library],auto,[auto yes no])
+OL_ARG_WITH(siconos,[  --with-siconos            with Siconos library],auto,[auto yes no])
 dnl temporarily disabled until we find out how to make it work...
 dnl OL_ARG_WITH(taucs,[  --with-taucs            with TAUCS math library - eXperimental],auto,[auto yes no])
 ol_with_taucs=no
@@ -409,6 +410,7 @@ QRUPDATE_LIBS=
 SUITESPARSEQR_LIBS=
 STRUMPACK_LIBS=
 TRILINOS_LIBS=
+SICONOS_LIBS=
 ARPACK_LIBS=
 JDQZ_LIBS=
 SECURITY_LIBS=
@@ -2832,6 +2834,100 @@ fi
 
 dnl ----------------------------------------------------------------
 dnl
+dnl Check for Siconos
+dnl
+ol_link_siconos=no
+if test $ol_with_siconos != no ; then
+        have_siconos=no
+
+        AC_LANG_CPLUSPLUS
+        AC_CHECK_HEADERS([numerics/NumericsMatrix.h numerics/SolverOptions.h numerics/MCP_cst.h numerics/NumericsVerbose.h numerics/NonSmoothDrivers.h numerics/MixedComplementarityProblem.h numerics/Newton_methods.h],[have_siconos_h=yes],[have_siconos_h=no])
+
+        AC_MSG_CHECKING([for Siconos library])
+        if test "$have_siconos_h" = "yes" ; then
+                have_siconos="no"
+                try_siconos_LIBS="-lsiconos_numerics"
+                save_LIBS="$LIBS"
+                LIBS="$try_siconos_LIBS $save_LIBS"
+                AC_TRY_LINK([
+                             #include <math.h>
+                             #include <numerics/SolverOptions.h>
+                             #include <numerics/MCP_cst.h>
+                             #include <numerics/NumericsVerbose.h>
+                             #include <numerics/NumericsMatrix.h>
+                             #include <numerics/NonSmoothDrivers.h>
+                             #include <numerics/MixedComplementarityProblem.h>
+                             #include <numerics/Newton_methods.h>
+
+                             const double A[4][4] = {{0.6463, 0.5290, 0.9212, 0.7460},
+                                                     {0.5290, 0.5324, 0.7520, 0.8531},
+                                                     {0.9212, 0.7520, 1.6135, 1.2677},
+                                                     {0.7460, 0.8531, 1.2677, 2.2271}};
+
+                             const double b[4] = {1., 2., 1., 2.};
+
+                             void compute_Fmcp(void *env, int n, double *z, double *F)
+                             {
+                                for (int i = 0; i < 4; ++i) {
+                                    F[i] = -b[i] + sin(z[i]);
+
+                                    for (int j = 0; j < 4; ++j) {
+                                        F[i] += A[i][j] * z[j];
+                                    }
+                                }
+                             }
+
+                             void compute_nabla_Fmcp(void *env, int n, double *z, NumericsMatrix *F)
+                             {
+
+                             for (int i = 0; i < 4; ++i) {
+                                 for (int j = 0; j < 4; ++j) {
+                                          NM_entry(F, i, j, A[i][j] + (i == j) * cos(z[i]));
+                                     }
+                                 }
+                             }
+                        ],[
+                             MixedComplementarityProblem* pMCP = mixedComplementarityProblem_new();
+                             SolverOptions* pOptions = solver_options_create(SICONOS_MCP_NEWTON_MIN_FBLSA);
+
+                             numerics_set_verbose(1);
+                             pMCP->n1 = 2;
+                             pMCP->n2 = 2;
+                             pMCP->compute_Fmcp = &compute_Fmcp;
+                             pMCP->compute_nabla_Fmcp = &compute_nabla_Fmcp;
+                             pMCP->nabla_Fmcp = NM_create(NM_DENSE, pMCP->n1 + pMCP->n2, pMCP->n1 + pMCP->n2);
+
+                             pOptions->iparam[SICONOS_IPARAM_MAX_ITER] = 10000;
+                             pOptions->dparam[SICONOS_DPARAM_TOL] = 1e-6;
+
+                             double w[4] = {0.}, z[4];
+
+                             mcp_driver(pMCP, z, w, pOptions);
+
+                             mixedComplementarityProblem_free(pMCP);
+                             solver_options_delete(pOptions);
+                             free(pOptions);
+                       ],[have_siconos="yes"])
+
+                       LIBS="$save_LIBS"
+        fi
+
+        if test "$have_siconos" = "yes"; then
+           AC_MSG_RESULT([yes])
+           ol_link_siconos=yes
+           SICONOS_LIBS="$try_siconos_LIBS"
+           AC_DEFINE(USE_SICONOS,1,[define if you want to use Siconos])
+        else
+           if test "$ol_with_siconos" = "yes" ; then
+               AC_MSG_ERROR([Could not locate Siconos])
+           fi
+           AC_MSG_RESULT([no])
+        fi
+        AC_LANG_C
+fi
+
+dnl ----------------------------------------------------------------
+dnl
 dnl Check for ARPACK
 dnl
 ol_link_arpack=no
@@ -3446,6 +3542,7 @@ AC_SUBST(QRUPDATE_LIBS)
 AC_SUBST(SUITESPARSEQR_LIBS)
 AC_SUBST(STRUMPACK_LIBS)
 AC_SUBST(TRILINOS_LIBS)
+AC_SUBST(SICONOS_LIBS)
 AC_SUBST(LAPACK_LIBS)
 AC_SUBST(BLAS_LIBS)
 AC_SUBST(TAUCS_LIBS)

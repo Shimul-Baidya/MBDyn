@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -56,6 +56,9 @@
 #include "wsmpwrap.h"
 #ifdef USE_TRILINOS
 #include "aztecoowrap.h"
+#endif
+#ifdef USE_SICONOS
+#include "siconoswrap.h"
 #endif
 #include "linsol.h"
 
@@ -213,6 +216,16 @@ const LinSol::solver_t solver[] = {
          LinSol::SOLVER_FLAGS_PRECOND_MASK,
          LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_UMFPACK,
          -1, -1},
+        {"Siconos" "sparse", NULL,
+         LinSol::SICONOS_SPARSE_SOLVER,
+         0u,
+         0u,
+         -1, -1},
+        {"Siconos" "dense", NULL,
+         LinSol::SICONOS_DENSE_SOLVER,
+         0u,
+         0u,
+         -1, -1},
 	{ NULL, NULL, 
 		LinSol::EMPTY_SOLVER,
 		LinSol::SOLVER_FLAGS_NONE,
@@ -353,6 +366,15 @@ LinSol::SetSolver(LinSol::SolverType t, unsigned f)
              currSolver = t;
              return true;
 #endif
+#ifdef USE_SICONOS
+        case LinSol::SICONOS_SPARSE_SOLVER:
+             currSolver = t;
+             return true;
+
+        case LinSol::SICONOS_DENSE_SOLVER:
+             currSolver = t;
+             return true;
+#endif
 	case LinSol::NAIVE_SOLVER:
 		currSolver = t;
 		return true;
@@ -463,6 +485,7 @@ LinSol::SetWorkSpaceSize(integer i)
 {
 	switch (currSolver) {
 	case LinSol::Y12_SOLVER:
+        case LinSol::SICONOS_SPARSE_SOLVER:
 		iWorkSpaceSize = i;
 		break;
 
@@ -591,6 +614,7 @@ bool LinSol::SetTolerance(doublereal dToleranceRes)
 {
         switch (currSolver) {
         case LinSol::AZTECOO_SOLVER:
+        case LinSol::PASTIX_SOLVER:
                 dTolRes = dToleranceRes;
                 break;
         default:
@@ -918,12 +942,12 @@ LinSol::GetSolutionManager(integer iNLD,
 		    case LinSol::SOLVER_FLAGS_ALLOWS_GRAD: {
                         SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                                PastixSolutionManager<SpGradientSparseMatrixHandler>,
-                                               PastixSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                                               PastixSolutionManager<SpGradientSparseMatrixHandler>(iNLD, nThreads, iMaxIter, dTolRes, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
                     } break;
                     default:
 			SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                                PastixSolutionManager<SpMapMatrixHandler>,
-                                               PastixSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
+                                               PastixSolutionManager<SpMapMatrixHandler>(iNLD, nThreads, iMaxIter, dTolRes, scale, solverFlags, dLowRankCompressTol, dLowRankCompressMinRatio, iVerbose));
                     }
 		} break;
 #else /* !USE_PASTIX */
@@ -1013,6 +1037,19 @@ LinSol::GetSolutionManager(integer iNLD,
                   iNLD,
                   iVerbose,
                   solverFlags);
+             break;
+#endif
+#ifdef USE_SICONOS
+        case LinSol::SICONOS_SPARSE_SOLVER:
+             SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                    SiconosSparseSolutionManager,
+                                    SiconosSparseSolutionManager(iNLD, iLWS));
+             break;
+
+        case LinSol::SICONOS_DENSE_SOLVER:
+             SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                    SiconosDenseSolutionManager,
+                                    SiconosDenseSolutionManager(iNLD));
              break;
 #endif
 	case LinSol::NAIVE_SOLVER:

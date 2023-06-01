@@ -3,9 +3,9 @@
  * This library comes with MBDyn (C), a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -836,11 +836,11 @@ main(int argc, char *argv[])
                         if (gradmh) {
                                 SAFENEWWITHCONSTRUCTOR(pSM,
                                                        PastixSolutionManager<SpGradientSparseMatrixHandler>,
-                                                       PastixSolutionManager<SpGradientSparseMatrixHandler>(size, nt, 0));
+                                                       PastixSolutionManager<SpGradientSparseMatrixHandler>(size, nt, 0, -1.));
                         } else {
                                 SAFENEWWITHCONSTRUCTOR(pSM,
                                                        PastixSolutionManager<SpMapMatrixHandler>,
-                                                       PastixSolutionManager<SpMapMatrixHandler>(size, nt, 0));
+                                                       PastixSolutionManager<SpMapMatrixHandler>(size, nt, 0, -1.));
                         }
                         std::cerr << std::endl;
 #else /* !USE_PASTIX */

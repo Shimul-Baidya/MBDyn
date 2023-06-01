@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -32,12 +32,12 @@
 /* Elemento modale */
 
 /* 
- * Copyright 1999-2017 Felice Felippone <ffelipp@tin.it>
+ * Copyright 1999-2023 Felice Felippone <ffelipp@tin.it>
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  */
 
 /* 
- * Copyright 1999-2017 Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Copyright 1999-2023 Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  *
  * Modified by Pierangelo Masarati
@@ -46,6 +46,7 @@
 #ifndef MODAL_H
 #define MODAL_H
 
+#include <array>
 #include <fstream>
 #include <joint.h>
 
@@ -79,33 +80,32 @@ protected:
 
 	const unsigned int NFEMNodes; // number of FEM nodes, common
 	const std::vector<std::string> IdFEMNodes; // ID of FEM nodes, common
-	const Mat3xN *pXYZFEMNodes; // local position of FEM nodes, common
+	const Mat3xN oXYZFEMNodes; // local position of FEM nodes, common
 	const doublereal dMass; // mass, common
 	const Vec3 Inv2; // undeformed static moment, common
 	const Mat3x3 Inv7; // undeformed inertia moment, common
 
 	const std::vector<unsigned int> uModeNumber;
-	const MatNxN *pModalMass;
-	const MatNxN *pModalStiff;
-	const MatNxN *pModalDamp;
-
-	const Mat3xN *pPHIt;
-	const Mat3xN *pPHIr;
+	const MatNxN oModalMass;
+	const MatNxN oModalStiff;
+	const MatNxN oModalDamp;
+	const Mat3xN oPHIt;
+	const Mat3xN oPHIr;
    
-	const Mat3xN *pModeShapest;
-	const Mat3xN *pModeShapesr;
+	const Mat3xN oModeShapest;
+	const Mat3xN oModeShapesr;
 
-	Mat3xN *pCurrXYZ;
-	Mat3xN *pCurrXYZVel;
+	Mat3xN oCurrXYZ;
+	Mat3xN oCurrXYZVel;
 
-	const Mat3xN *pInv3;
-	const Mat3xN *pInv4;
-	const Mat3xN *pInv5;
-	const Mat3xN *pInv8;
-	const Mat3xN *pInv9;
+	const Mat3xN oInv3;
+	const Mat3xN oInv4;
+	const Mat3xN oInv5;
+	const Mat3xN oInv8;
+	const Mat3xN oInv9;
 
-	const Mat3xN *pInv10;
-	const Mat3xN *pInv11;
+	const Mat3xN oInv10;
+	const Mat3xN oInv11;
 
 	Vec3   Inv3jaj;
 	Vec3   Inv3jaPj;
@@ -124,9 +124,70 @@ protected:
 	VecN bPrime;
 
 public:
+        template <unsigned N>
+        class StressStiffIndex {
+        public:
+             static_assert(N > 0);
+
+             StressStiffIndex()
+                  :uSize(0u) {
+#ifdef DEBUG
+                  std::fill(std::begin(rgIndexMat), std::end(rgIndexMat), SS_UNUSED);
+                  std::fill(std::begin(rgIndexVec), std::end(rgIndexVec), SS_UNUSED);
+#endif
+             }
+
+             void Insert(unsigned uIndexMat, unsigned uIndexVec) {
+                  ASSERT(uSize >= 0);
+                  ASSERT(uSize < N);
+
+                  ASSERT(rgIndexMat[uSize] == SS_UNUSED);
+                  ASSERT(rgIndexVec[uSize] == SS_UNUSED);
+
+                  rgIndexMat[uSize] = uIndexMat;
+                  rgIndexVec[uSize] = uIndexVec;
+
+                  ++uSize;
+
+                  ASSERT(uSize <= N);
+             }
+
+             unsigned uGetSize() const {
+                  ASSERT(uSize >= 0);
+                  ASSERT(uSize <= N);
+
+                  return uSize;
+             }
+
+             unsigned uGetIndexMat(unsigned iIndex) const {
+                  ASSERT(iIndex >= 0);
+                  ASSERT(iIndex < uSize);
+                  ASSERT(uSize <= N);
+                  ASSERT(rgIndexMat[iIndex] != SS_UNUSED);
+                  return rgIndexMat[iIndex];
+             }
+
+             unsigned uGetIndexVec(unsigned iIndex) const {
+                  ASSERT(iIndex >= 0);
+                  ASSERT(iIndex < uSize);
+                  ASSERT(uSize <= N);
+                  ASSERT(rgIndexVec[iIndex] != SS_UNUSED);
+
+                  return rgIndexVec[iIndex];
+             }
+
+        private:
+             enum: unsigned { SS_UNUSED = ~0u };
+             unsigned uSize;
+             std::array<unsigned, N> rgIndexMat;
+             std::array<unsigned, N> rgIndexVec;
+        };
+     
 	struct StrNodeData {
+                StrNodeData();
 		// constant, defined once for all at input
 		const StructNode *pNode;
+                const class StructNodeAd *pNodeAd;
 		std::string FEMNode;
 		Vec3 OffsetFEM;
 		Vec3 OffsetMB;
@@ -140,9 +201,10 @@ public:
 		// variable, constructed during analysis
 		Vec3 F;
 		Vec3 M;
-
-		bool bOut;
-	};
+                StressStiffIndex<3> oStressStiffIndexF;
+                StressStiffIndex<3> oStressStiffIndexM;
+                bool bOut;
+        };
 
 protected:
 	std::vector<StrNodeData> SND;
@@ -170,26 +232,26 @@ public:
 			doublereal dMass,
 			const Vec3& STmp,
 			const Mat3x3& JTmp,
-			const std::vector<unsigned int>& uModeNumber,
-			MatNxN *pGenMass,
-			MatNxN *pGenStiff,
-			MatNxN *pGenDamp,
-			const std::vector<std::string>& IdFEMNodes,
-			Mat3xN *pN,
-			const std::vector<Modal::StrNodeData>& snd,
-			Mat3xN *pPHIt,
-			Mat3xN *pPHIr,
-			Mat3xN *pModeShapest,
-			Mat3xN *pModeShapesr,
-			Mat3xN *pInv3,
-			Mat3xN *pInv4,
-			Mat3xN *pInv5,
-			Mat3xN *pInv8,
-			Mat3xN *pInv9,
-			Mat3xN *pInv10,
-			Mat3xN *pInv11,
-			VecN *a,
-			VecN *aP,
+			std::vector<unsigned int>&& uModeNumber,
+			MatNxN&& oGenMass,
+			MatNxN&& oGenStiff,
+			MatNxN&& oGenDamp,
+			std::vector<std::string>&& IdFEMNodes,
+			Mat3xN&& oN,
+			std::vector<Modal::StrNodeData>&& snd,
+			Mat3xN&& oPHIt,
+			Mat3xN&& oPHIr,
+			Mat3xN&& oModeShapest,
+			Mat3xN&& oModeShapesr,
+			Mat3xN&& oInv3,
+			Mat3xN&& oInv4,
+			Mat3xN&& oInv5,
+			Mat3xN&& oInv8,
+			Mat3xN&& oInv9,
+			Mat3xN&& oInv10,
+			Mat3xN&& oInv11,
+			VecN&& a,
+			VecN&& aP,
 			flag fOut);
 
 	/* Distruttore */
@@ -272,11 +334,11 @@ public:
 	 */
 
 	const Mat3xN& pGetPHIt(void) const {
-		return *pModeShapest;
+		return oModeShapest;
 	};
 
 	const Mat3xN& pGetPHIr(void) const {
-		return *pModeShapesr;
+		return oModeShapesr;
 	};
 
 	// NOTE: not 'const' because modify internal storage

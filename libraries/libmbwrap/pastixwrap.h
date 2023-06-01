@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2013
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -74,7 +74,7 @@ private:
 	  doublereal* pAx() const { return reinterpret_cast<doublereal*>(values); }
 	  pastix_int_t* pAi() const { return rowptr; }
 	  pastix_int_t* pAp() const { return colptr; }
-	  
+	  integer Nz() const { return iNumNonZeros; }
      private:
 	  template <typename T>
 	  static inline T* pAllocate(T* pMem, size_t nSize);
@@ -92,6 +92,7 @@ public:
      explicit PastixSolver(SolutionManager* pSM,
 			   integer iDim,
 			   integer iNumIter,
+                           doublereal dTolRefine,
 			   integer iNumThreads,
 			   unsigned uSolverFlags,
 			   doublereal dCompressTol,
@@ -134,6 +135,7 @@ public:
     PastixSolutionManager(integer iDim,
 			  integer iNumThreads,
 			  integer iNumIter,
+                          doublereal dTolRefine,
 			  const ScaleOpt& scale = ScaleOpt(),
 			  unsigned uSolverFlags = 0u,
 			  doublereal dCompressTol = 0.,

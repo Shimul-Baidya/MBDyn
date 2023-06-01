@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -31,6 +31,7 @@
 
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
+#include <utility>
 #include <matvec3n.h>
 
 /* VecN - begin */
@@ -95,6 +96,12 @@ VecN::VecN(const VecN& v)
    }
 }
 
+VecN::VecN(VecN&& v)
+: VecN{}
+{
+     *this = std::move(v);
+}
+
 /*
   Costruttore da VectorHandler. Prende i valori da iFirstIndex 
   a iFirstIndex+ns. Nota: gli indici del VectorHandler partono da 1, 
@@ -129,6 +136,14 @@ VecN::~VecN(void)
    Destroy_();
 }
 
+VecN& VecN::operator=(VecN&& v)
+{
+     std::swap(iMaxRows, v.iMaxRows);
+     std::swap(iNumRows, v.iNumRows);
+     std::swap(pdVec, v.pdVec);
+
+     return *this;
+}
 
 void VecN::Resize(integer ns)
 {
@@ -242,9 +257,9 @@ VecN::Mult(const MatNxN& m, const ArrayView& vm,
 #ifdef DEBUG
 void Mat3xN::IsValid(void) const
 {
-   ASSERT(iNumCols > 0);
-   ASSERT(iMaxCols > 0);
-   ASSERT(pdRows[0] != NULL);
+   ASSERT(iNumCols >= 0);
+   ASSERT(iMaxCols >= 0);
+   ASSERT(pdRows[0] != nullptr || iNumCols == 0);
 }
 #endif /* DEBUG */
 
@@ -308,12 +323,28 @@ Mat3xN::Mat3xN(integer nc, const doublereal& d)
    Reset(d);
 }
 
+Mat3xN::Mat3xN(Mat3xN&& A)
+: Mat3xN{}
+{
+   *this = std::move(A);
+}
 
 Mat3xN::~Mat3xN(void)
 {
    Destroy_();
 }
 
+Mat3xN& Mat3xN::operator=(Mat3xN&& A)
+{
+   std::swap(iMaxCols, A.iMaxCols);
+   std::swap(iNumCols, A.iNumCols);
+
+   for (integer i = 0; i < 3; ++i) {
+      std::swap(pdRows[i], A.pdRows[i]);
+   }
+   
+   return *this;
+}
 
 void Mat3xN::Resize(integer ns)
 {
@@ -1029,10 +1060,25 @@ MatNxN::MatNxN(integer ns, const doublereal& d)
    Reset(d);
 }
 
+MatNxN::MatNxN(MatNxN&& A)
+: MatNxN{}
+{
+   *this = std::move(A);
+}
 
 MatNxN::~MatNxN(void)
 {
    Destroy_();
+}
+
+MatNxN& MatNxN::operator=(MatNxN&& A)
+{
+   std::swap(iMaxRows, A.iMaxRows);
+   std::swap(iNumRows, A.iNumRows);
+   std::swap(pdVec, A.pdVec);
+   std::swap(pdMat, A.pdMat);
+   
+   return *this;
 }
 
 void MatNxN::Reset(const doublereal d)

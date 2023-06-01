@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -1269,10 +1269,15 @@ HighParser::GetStringWithDelims(enum Delims Del, bool escape)
                          * ma ne tiene solo iBufSize-1 caratteri */
                         if (pIn->eof()) {
                                 /* FIXME: this should be an error ... */
+				silent_cerr("End-of-file encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters at line " << GetLineData() << std::endl);
                                 sTmp[0] = '\0';
-                                return s;
+                		throw EndOfFile(MBDYN_EXCEPT_ARGS);
 
-                        } else if (sTmp < s + iDefaultBufSize - 1) {
+                        } else if (sTmp >= s + iDefaultBufSize - 1) {
+				silent_cerr("End-of-buffer encountered in " << sFuncName << " while looking for right string delimiter '" << cRdelim << "' after " << unsigned(sTmp - s) << " characters at line " << GetLineData() << std::endl);
+                		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+
+			} else {
                                 if (cIn == ESCAPE_CHAR) {
                                         cIn = pIn->get();
                                         if (cIn == '\n') {

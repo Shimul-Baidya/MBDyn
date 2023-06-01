@@ -10,6 +10,8 @@ auth.cc \
 auth.h \
 bicg.cc \
 bicg.h \
+bistopdrive.cc \
+bistopdrive.h \
 bufferstream_out_elem.cc \
 bufferstream_out_elem.h \
 bufferstreamdrive.cc \
@@ -99,8 +101,13 @@ modelns.cc \
 modelns.h \
 modules.cc \
 modules.h \
+ms34stepsol.cc \
+ms34stepsol.h \
 mtdataman.cc \
 mtdataman.h \
+multistagestepsol_impl.cc \
+multistagestepsol_impl.h \
+multistagestepsol_tpl.h \
 nestedelem.cc \
 nestedelem.h \
 node.cc \
@@ -148,8 +155,13 @@ shape_impl.h \
 shdrive.cc \
 shdrive.h \
 shockabsorber.h \
+siconosmcp.h \
+siconosmcp.cc \
 simentity.cc \
 simentity.h \
+singlestepsol_impl.cc \
+singlestepsol_impl.h \
+singlestepsol_tpl.h \
 sockdrv.cc \
 sockdrv.h \
 socketstreamdrive.cc \
@@ -168,6 +180,9 @@ solverdiagnostics.h \
 stepsol.cc \
 stepsol.h \
 stepsol.hc \
+stepsol_impl.cc \
+stepsol_impl.h \
+stepsol_tpl.h \
 symcltp.h \
 tpldrive.cc \
 tpldrive.h \
@@ -209,6 +224,8 @@ endif
 
 if USE_GINAC
 libbase_la_SOURCES += \
+ginacmbd.h \
+ginacmbd.cc \
 ginaccltp.h \
 ginacdrive.cc \
 ginacdrive.h

@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -94,7 +94,30 @@ and assignment (variable names and values are kept in memory throughout
 the input phase and the simulation) and simple math functions.
 Limited math on strings is also supported.
 Named variables and non-named constants are strongly typed.
+
 Four types are currently available: \kw{bool}, \kw{integer}, \kw{real}, and \kw{string}.
+They are listed in Table~\ref{tab:MATHP-TYPES}.
+
+\begin{table}
+	\begin{center}
+	\caption{Built-in types in math parser}\label{tab:MATHP-TYPES}
+	\begin{tabular}{ll}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Description}} \\
+		\hline
+		\kw{bool} & Boolean number (promoted to \kw{integer}, \kw{real},
+			or \kw{string} (0 or 1), whenever required) \\
+		\kw{integer} & Integer number (promoted to \kw{real}, or \kw{string},
+			whenever required) \\
+		\kw{real} & Real number (promoted to \kw{string}
+			whenever required) \\
+		\kw{string} & Text string \\
+		\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+
 
 \subsubsection{Bool}
 \label{sec:bool}
@@ -183,13 +206,66 @@ a value later.
 Examples:
 \begin{verbatim}
     set: integer N;
+    set: integer W = 10;
+    set: ifndef integer W = 11; # ignored, as W already exists
     set: const integer M = 100;
     set: string welcome_message = "hello";
     set: const real x = -1.e-3;
     set: real y;
     set: bool B;
-    set: const real z; # error!
+    set: const real z; # error: const'ants must be initialized!
 \end{verbatim}
+
+Table~\ref{tab:MATHP-VARS} lists the predefined variables; notice
+that those not defined as \kw{const} are treated exactly as user-defined variables, so they 
+can be reassigned.
+
+\begin{table}
+	\begin{center}
+	\caption{Predefined variables and constants in math parser}\label{tab:MATHP-VARS}
+	\begin{tabular}{lll}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Type}} &
+		\multicolumn{1}{c}{\textbf{Value}} \\
+		\hline
+		\kw{Time} & Real & Current simulation time \\
+		\kw{TimeStep} & Real & Current simulation time step \\
+		\kw{Step} & Integer & Current simulation step \\
+		\kw{Var} & Real & \multicolumn{1}{p{.5\textwidth}}{Set
+			by \kw{dof}, \kw{node}, or \kw{element}
+			drive callers with degree of freedom value,
+			node or element private data value, respectively} \\
+		\\
+		\kw{e} & Real & Neper's number \\
+		\kw{pi} & Real & $\pi$ \\
+		\\
+		\kw{FALSE} & Bool & `false' \\
+		\kw{TRUE} & Bool & `true' \\
+		\\
+		\kw{INT\_MAX} & Integer & Largest integer \\
+		\kw{INT\_MIN} & Integer & Smallest integer \\
+		\kw{RAND\_MAX} & Integer & Largest random integer \\
+		\kw{REAL\_MAX} & Real & Largest real \\
+		\kw{REAL\_MIN} & Real & Smallest real \\
+		\\
+		\kw{in2m} & Real & Inch to meter ratio (0.0254) \\
+		\kw{m2in} & Real & Meter to inch ratio (1.0/0.0254) \\
+		\kw{in2mm} & Real & Inch to meter ratio (25.4) \\
+		\kw{mm2in} & Real & Meter to inch ratio (1.0/25.4) \\
+		\kw{ft2m} & Real & Foot to meter ratio (0.3048) \\
+		\kw{m2ft} & Real & Meter to foot ratio (1.0/0.3048) \\
+		\kw{lb2kg} & Real & Pound to kilogram ratio (0.45359237) \\
+		\kw{kg2lb} & Real & Kilogram to pound ratio (1.0/0.45359237) \\
+		\kw{deg2rad} & Real & Degree to radian ratio ($\pi$/180) \\
+		\kw{rad2deg} & Real & Radian to degree ratio (180/$\pi$) \\
+		\kw{slug2kg} & Real & Slug to kilogram ratio (14.5939) \\
+		\kw{kg2slug} & Real & Kilogram to slug ratio (1.0/14.5939) \\
+		\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+
 
 Operations are strongly typed and perform implicit cast when allowed.
 For instance \texttt{1+2.5} returns a \kw{real} whose value 
@@ -240,7 +316,7 @@ user@host:~> mbdyn -H
 MBDyn - MultiBody Dynamics 1.X-Devel
 configured on Sep  3 2012 at 12:16:44
 
-Copyright 1996-2017 (C) Paolo Mantegazza and Pierangelo Masarati,
+Copyright 1996-2023 (C) Paolo Mantegazza and Pierangelo Masarati,
 Dipartimento di Ingegneria Aerospaziale <http://www.aero.polimi.it/>
 Politecnico di Milano                   <http://www.polimi.it/>
 
@@ -287,44 +363,56 @@ The variable \kw{Time} is declared, defined and initialized\footnote{
 phase it is assigned the value of the current time. 
 
 Table~\ref{tab:MATHP-OPERATORS} shows the supported mathematical 
-operators, while Table~\ref{tab:MATHP-FUNCTIONS} shows the built-in
+operators, their precedence and associativity.
+Notice that precedence may produce unexpected behavior; for example,
+\begin{verbatim}
+    -2^2 == (-2)^2 = 4
+\end{verbatim}
+
+Table~\ref{tab:MATHP-FUNCTIONS} shows the built-in
 mathematical functions.
 In addition, type names used as functions provide explicit type casting
-according to built-in casting rules.
-
-The supported types are listed in Table~\ref{tab:MATHP-TYPES}.
-Table~\ref{tab:MATHP-VARS} lists the predefined variables; notice
-that they're treated exactly as user-defined variables, so they 
-can be reassigned.
+according to built-in casting rules (Table~\ref{tab:MATHP-CAST-FUNCTIONS}).
+The \bnt{type}\kw{\_eval} variants evaluate the argument during parsing, rather than run-time.
+This is useful when parsing strings that will be evaluated later, for example in \kw{string} drive callers
+or hints, if one wants a particular variable or expression to be evaluated at parsing time.
 
 \begin{table}
 	\begin{center}
 	\caption{Built-in mathematical operators in math parser
 	(from higher to lower precedence)}\label{tab:MATHP-OPERATORS}
-	\begin{tabular}{lll}
+	\begin{tabular}{cccl}
 		\hline
-		\multicolumn{1}{c}{\textbf{Operator}} & 
-		\multicolumn{1}{c}{\textbf{Type}} &
-		\multicolumn{1}{c}{\textbf{Description}} \\
+		\textbf{Operator} & 
+		\textbf{Type} &
+		\textbf{Associativity} &
+		\textbf{Description} \\
 		\hline
-		\texttt{\^} & Binary, right & Power \\
-		\texttt{+} & Unary, left & Plus sign \\
-		\texttt{-} & Unary, left & Minus sign \\
-		\texttt{*} & Binary, left & Multiplication \\
-		\texttt{/} & Binary, left & Division \\
-		\texttt{+} & Binary, left & Addition \\
-		\texttt{-} & Binary, left & Subtraction \\
-		\texttt{>} & Binary, left & Greater than \\
-		\texttt{>=} & Binary, left & Greater than or equal to \\
-		\texttt{==} & Binary, left & Equal to \\
-		\texttt{<=} & Binary, left & Less than or equal to \\
-		\texttt{<} & Binary, left & Less than \\
-		\texttt{!=} & Binary, left & Not equal \\
-		\texttt{!} & Unary, right & NOT \\
-		\texttt{\&\&} & Binary, left & AND \\
-		\texttt{||} & Binary, left & OR \\
-		\texttt{\~{}|} & Binary, left & XOR (exclusive OR) \\
-		\texttt{=} & Binary, right & Assignment \\
+		\texttt{+} & Unary & --- & Plus sign \\
+		\texttt{-} & Unary & --- & Minus sign \\
+		\texttt{!} & Unary & --- & NOT \\
+		\hline
+		\texttt{\^} & Binary & Right & Power \\
+		\hline
+		\texttt{*} & Binary & Left & Multiplication \\
+		\texttt{/} & Binary & Left & Division \\
+		\texttt{\%} & Binary & Left & Integer division remainder \\
+		\hline
+		\texttt{+} & Binary & Left & Addition \\
+		\texttt{-} & Binary & Left & Subtraction \\
+		\hline
+		\texttt{>} & Binary & Left & Greater than \\
+		\texttt{>=} & Binary & Left & Greater than or equal to \\
+		\texttt{==} & Binary & Left & Equal to \\
+		\texttt{<=} & Binary & Left & Less than or equal to \\
+		\texttt{<} & Binary & Left & Less than \\
+		\texttt{!=} & Binary & Left & Not equal \\
+		\hline
+		\texttt{\&\&} & Binary & Left & AND \\
+		\texttt{||} & Binary & Left & OR \\
+		\texttt{\~{}|} & Binary & Left & XOR (exclusive OR) \\
+		\hline
+		\texttt{=} & Binary & Right & Assignment \\
 		\hline
 	\end{tabular}
 	\end{center}
@@ -332,72 +420,6 @@ can be reassigned.
 	Note: ``left'' and ``right'' refer to the associativity
 	of the operators. \\
 	Note: the \kw{string} type only supports the binary ``+'' operator.
-\end{table}
-
-\begin{table}
-	\begin{center}
-	\caption{Built-in types in math parser}\label{tab:MATHP-TYPES}
-	\begin{tabular}{ll}
-		\hline
-		\multicolumn{1}{c}{\textbf{Name}} &
-		\multicolumn{1}{c}{\textbf{Description}} \\
-		\hline
-		\kw{bool} & Boolean number (promoted to \kw{integer}, \kw{real},
-			or \kw{string} (0 or 1), whenever required) \\
-		\kw{integer} & Integer number (promoted to \kw{real}, or \kw{string},
-			whenever required) \\
-		\kw{real} & Real number (promoted to \kw{string}
-			whenever required) \\
-		\kw{string} & Text string \\
-		\hline
-	\end{tabular}
-	\end{center}
-\end{table}
-
-\begin{table}
-	\begin{center}
-	\caption{Predefined variables and constants in math parser}\label{tab:MATHP-VARS}
-	\begin{tabular}{lll}
-		\hline
-		\multicolumn{1}{c}{\textbf{Name}} &
-		\multicolumn{1}{c}{\textbf{Type}} &
-		\multicolumn{1}{c}{\textbf{Value}} \\
-		\hline
-		\kw{Time} & Real & Current simulation time \\
-		\kw{TimeStep} & Real & Current simulation time step \\
-		\kw{Step} & Integer & Current simulation step \\
-		\kw{Var} & Real & \multicolumn{1}{p{.5\textwidth}}{Set
-			by \kw{dof}, \kw{node}, or \kw{element}
-			drive callers with degree of freedom value,
-			node or element private data value, respectively} \\
-		\\
-		\kw{e} & Real & Neper's number \\
-		\kw{pi} & Real & $\pi$ \\
-		\\
-		\kw{FALSE} & Bool & `false' \\
-		\kw{TRUE} & Bool & `true' \\
-		\\
-		\kw{INT\_MAX} & Integer & Largest integer \\
-		\kw{INT\_MIN} & Integer & Smallest integer \\
-		\kw{RAND\_MAX} & Integer & Largest random integer \\
-		\kw{REAL\_MAX} & Real & Largest real \\
-		\kw{REAL\_MIN} & Real & Smallest real \\
-		\\
-		\kw{in2m} & Real & Inch to meter ratio (0.0254) \\
-		\kw{m2in} & Real & Meter to inch ratio (1.0/0.0254) \\
-		\kw{in2mm} & Real & Inch to meter ratio (25.4) \\
-		\kw{mm2in} & Real & Meter to inch ratio (1.0/25.4) \\
-		\kw{ft2m} & Real & Foot to meter ratio (0.3048) \\
-		\kw{m2ft} & Real & Meter to foot ratio (1.0/0.3048) \\
-		\kw{lb2kg} & Real & Pound to kilogram ratio (0.45359237) \\
-		\kw{kg2lb} & Real & Kilogram to pound ratio (1.0/0.45359237) \\
-		\kw{deg2rad} & Real & Degree to radian ratio ($\pi$/180) \\
-		\kw{rad2deg} & Real & Radian to degree ratio (180/$\pi$) \\
-		\kw{slug2kg} & Real & Slug to kilogram ratio (14.5939) \\
-		\kw{kg2slug} & Real & Kilogram to slug ratio (1.0/14.5939) \\
-		\hline
-	\end{tabular}
-	\end{center}
 \end{table}
 
 \begin{table}
@@ -461,6 +483,31 @@ can be reassigned.
 	\end{center}
 \end{table}
 
+\begin{table}
+	\begin{center}
+	\caption{Built-in cast and evaluation functions
+		in math parser}\label{tab:MATHP-CAST-FUNCTIONS}
+	\begin{tabular}{llll}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Returns}} &
+		\multicolumn{1}{c}{\textbf{Arg[s]}} &
+		\multicolumn{1}{c}{\textbf{Description}} \\
+		\hline
+		\kw{bool}		& bool 		& (any)		& cast to bool \\
+		\kw{integer}		& integer	& (any)		& cast to integer \\
+		\kw{real}		& real 		& (any)		& cast to real \\
+		\kw{string}		& string 	& (any)		& cast to string \\
+		\hline
+		\kw{bool\_eval}		& bool 		& (any)		& evaluate arg, casting result to bool \\
+		\kw{integer\_eval}	& integer	& (any)		& evaluate arg, casting to integer \\
+		\kw{real\_eval}		& real 		& (any)		& evaluate arg, casting to real \\
+		\kw{string\_eval}	& string 	& (any)		& evaluate arg, casting to string \\
+		\hline
+	\end{tabular}
+	\end{center}
+\end{table}
+
 \paragraph{Example.} 
 \begin{itemize}
 \item
@@ -500,21 +547,27 @@ yields
 
 \subsection{Namespaces}
 \label{sec:GENERAL:NAMESPACE}
-The math parser uses the notion of \emph{namespace} to separate
-functions.
+The math parser uses the notion of \emph{namespace} to group and uniquely identify functions.
+
+\subsubsection{Default Namespace}
 The functions listed in Table~\ref{tab:MATHP-FUNCTIONS}
 are implicitly defined in the \kw{default} namespace, 
 i.e.\ they should be referenced by writing
 \begin{verbatim}
     default::sqrt(2.)
 \end{verbatim}
+but the \kw{default::} portion is optional, as the \kw{default} namespace is implicitly assumed.
+
+\subsubsection{Other Namespaces}
 Other namespaces may be defined by the user, and loaded by means
 of the \kw{module load} card described
-in Section~\ref{sec:GENERAL:MODULE-LOAD}.
+in Section~\ref{sec:GENERAL:MODULE-LOAD}
+(see for example the \kw{units} namespace in Section~\ref{sec:modules:udunits} and the related code).
 
+\subsubsection{Model Namespaces}
 The namespace that refers to the current model is loaded by default.
 Its name is \kw{model}, and contains the functions 
-defined in Table~\ref{tab:MODEL-NS-FUNCS}.
+defined in Tables~\ref{tab:MODEL-NS-FUNCS} and \ref{tab:MODEL-NS-FUNCS-2}.
 With the exception of the \kw{drive} and \kw{sf} functions,
 all functions in the \kw{model} namespace
 with the suffix \kw{\_prev} (e.g.\ \kw{position\_prev})
@@ -526,17 +579,25 @@ but often needs to refer to the configuration
 at the previous, just completed time step.
 
 \paragraph{Example 1.} \
-This string returns the $y$ component of the relative angular velocity between structural nodes ``\verb;NODENAME_1;'' and ``\verb;NODENAME_2;'' at the current timestep:
+This string returns the $y$ component of the relative angular velocity between structural nodes ``\verb;NODELABEL_1;'' and ``\verb;NODELABEL_2;'' at the current timestep:
 \begin{verbatim}
-    string, "model::yangvrel(NODENAME_1,NODENAME_2)", ...
+    string, "model::yangvrel(NODELABEL_1,NODELABEL_2)", ...
 \end{verbatim}
 
 \paragraph{Example 2.} \
-This string returns the absolute $x$ component of the position of node ``\verb;NODENAME;'' at the previous timestep, plus the value of ``\verb;DRIVE_1 * DRIVE_2;'' when time is greater than 5 seconds:
+This string returns the absolute $x$ component of the position of node ``\verb;NODELABEL;'' at the previous timestep, plus the value of ``\verb;DRIVELABEL_1 * DRIVELABEL_2;'' when time is greater than 5 seconds:
 \begin{verbatim}
-    drive, string, "model::xposition_prev(NODENAME) + \
-        model::drive(DRIVE_1, Time) * model::drive(DRIVE_2, Time) * (Time > 5.)",
+    string, "model::xposition_prev(NODELABEL) + \
+        model::drive(DRIVELABEL_1, Time) * model::drive(DRIVELABEL_2, Time) * (Time > 5.)",
 \end{verbatim}
+
+\paragraph{Example 3.} \
+To extract the current from an electric circuit where a resistor $R$ is defined between electric nodes 1 and 2:
+\begin{verbatim}
+    string, "(model::node::electric(1, \"x\") - model::node::electric(2, \"x\"))/R"
+\end{verbatim}
+
+
 
 \begin{table}
 	\begin{center}
@@ -556,9 +617,10 @@ This string returns the absolute $x$ component of the position of node ``\verb;N
 		\kw{zposition}	& Real	& Integer		& $Z$ component of structural node position \\
 		\kw{distance}	& Real	& Integer, Integer	& distance between structural nodes \\
 		\kw{distance2}	& Real	& Integer, Integer	& square distance between structural nodes \\
-		\kw{xdistance}	& Real	& Integer, Integer	& $X$ component of distance between structural nodes \\
-		\kw{ydistance}	& Real	& Integer, Integer	& $Y$ component of distance between structural nodes \\
-		\kw{zdistance}	& Real	& Integer, Integer	& $Z$ component of distance between structural nodes \\
+		\kw{xdistance}	& Real	& Integer, Integer	& $X$ component of distance between structural nodes$^*$ \\
+		\kw{ydistance}	& Real	& Integer, Integer	& $Y$ component of distance between structural nodes$^*$ \\
+		\kw{zdistance}	& Real	& Integer, Integer	& $Z$ component of distance between structural nodes$^*$ \\
+		\kw{distancep}	& Real	& Integer, Integer	& relative velocity along distance between structural nodes \\
 		\kw{xunitvec}	& Real	& Integer, Integer	& $X$ component of unit vector between structural nodes \\
 		\kw{yunitvec}	& Real	& Integer, Integer	& $Y$ component of unit vector between structural nodes \\
 		\kw{zunitvec}	& Real	& Integer, Integer	& $Z$ component of unit vector between structural nodes \\
@@ -567,9 +629,9 @@ This string returns the absolute $x$ component of the position of node ``\verb;N
 		\kw{yangle}	& Real	& Integer		& $Y$ component of structural node rotation vector \\
 		\kw{zangle}	& Real	& Integer		& $Z$ component of structural node rotation vector \\
 		\kw{anglerel}	& Real	& Integer, Integer	& angle between structural nodes (norm of rotation vector) \\
-		\kw{xanglerel}	& Real	& Integer, Integer	& $X$ component of rotation vector between structural nodes \\
-		\kw{yanglerel}	& Real	& Integer, Integer	& $Y$ component of rotation vector between structural nodes \\
-		\kw{zanglerel}	& Real	& Integer, Integer	& $Z$ component of rotation vector between structural nodes \\
+		\kw{xanglerel}	& Real	& Integer, Integer	& $X$ component of rotation vector between structural nodes$^*$ \\
+		\kw{yanglerel}	& Real	& Integer, Integer	& $Y$ component of rotation vector between structural nodes$^*$ \\
+		\kw{zanglerel}	& Real	& Integer, Integer	& $Z$ component of rotation vector between structural nodes$^*$ \\
 		\kw{velocity}	& Real	& Integer		& norm of structural node velocity \\
 		\kw{velocity2}	& Real	& Integer		& square norm of structural node velocity \\
 		\kw{xvelocity}	& Real	& Integer		& $X$ component of structural node velocity \\
@@ -579,11 +641,11 @@ This string returns the absolute $x$ component of the position of node ``\verb;N
 		\kw{vrel2}	& Real	& Integer, Integer	&
 				square norm of relative velocity between structural nodes \\
 		\kw{xvrel}	& Real	& Integer, Integer	&
-				$X$ component of relative velocity between structural nodes \\
+				$X$ component of relative velocity between structural nodes$^*$ \\
 		\kw{yvrel}	& Real	& Integer, Integer	&
-				$Y$ component of relative velocity between structural nodes \\
+				$Y$ component of relative velocity between structural nodes$^*$ \\
 		\kw{zvrel}	& Real	& Integer, Integer	&
-				$Z$ component of relative velocity between structural nodes \\
+				$Z$ component of relative velocity between structural nodes$^*$ \\
 		\kw{angvel}	& Real	& Integer		& norm of structural node angular velocity \\
 		\kw{angvel}	& Real	& Integer		& square norm of structural node angular velocity \\
 		\kw{xangvel}	& Real	& Integer		& $X$ component of structural node angular velocity \\
@@ -593,13 +655,27 @@ This string returns the absolute $x$ component of the position of node ``\verb;N
 		\kw{angvrel2}	& Real	& Integer, Integer	&
 				square norm of rel.\ angular velocity between structural nodes \\
 		\kw{xangvrel}	& Real	& Integer, Integer	&
-				$X$ component of rel.\ angular velocity between structural nodes \\
+				$X$ component of rel.\ angular velocity between structural nodes$^*$ \\
 		\kw{yangvrel}	& Real	& Integer, Integer	&
-				$Y$ component of rel.\ angular velocity between structural nodes \\
+				$Y$ component of rel.\ angular velocity between structural nodes$^*$ \\
 		\kw{zangvrel}	& Real	& Integer, Integer	&
-				$Z$ component of rel.\ angular velocity between structural nodes \\
+				$Z$ component of rel.\ angular velocity between structural nodes$^*$ \\
 		\kw{current}	& Real	& String		& allows to retrieve data specific to the current context \\
-\hline
+	\end{tabular}
+	\end{center}
+	{\footnotesize $^*$``relative'' is intended as second node minus first node}
+\end{table}
+\begin{table}
+	\begin{center}
+	\caption{Functions in the \kw{model} namespace (contd.)}
+	\label{tab:MODEL-NS-FUNCS-2}
+	\begin{tabular}{lllp{.6\textwidth}}
+		\hline
+		\multicolumn{1}{c}{\textbf{Name}} &
+		\multicolumn{1}{c}{\textbf{Ret.}} &
+		\multicolumn{1}{c}{\textbf{Arg[s]}} &
+		\multicolumn{1}{c}{\textbf{Description}} \\
+		\hline
 		\kw{drive}	& Real	& Integer, [Real]		&
 				evaluates the \htmlref{\kw{drive caller}}{sec:DRIVE-CALLER}
 				indicated by its label (the first argument)
@@ -622,7 +698,7 @@ This string returns the absolute $x$ component of the position of node ``\verb;N
 \label{sec:GENERAL:PLUGIN}
 Plugin variables, or plugins, as the name states, are pluggable extensions
 to the math parser that allow to register mechanisms to bind a variable
-to some means to dynamically generate its value.
+to some means of dynamically generating its value.
 As a consequence, any time a variable declared as part of a plugin
 is used, its value is dynamically evaluated executing the related code.
 
@@ -685,11 +761,11 @@ When \nt{prev} is \kw{true}, the value at the previous time step is used.
 
 \paragraph{Example.} \
 The variable \texttt{VARNAME} takes the value of the derivative
-of \kw{abstract} node \texttt{NODENAME}
+of \kw{abstract} node \texttt{NODELABEL}
 \begin{verbatim}
-    set: integer NODENAME = 1000;
+    set: integer NODELABEL = 1000;
     # the node must exist
-    set: [dof,VARNAME,NODENAME,abstract,differential];
+    set: [dof,VARNAME,NODELABEL,abstract,differential];
 \end{verbatim}
 
 
@@ -706,11 +782,14 @@ The syntax is
 \end{Verbatim}
 %\end{verbatim}
 where
-\nt{label} is the label of the node,
-\nt{type} is the node type,
-and the mutually exclusive \nt{index} and \nt{name} represent the index
-of the datum that is requested, \nt{name} being a user-friendly
+\begin{itemize}
+\item \nt{label} is the label of the node,
+\item \nt{type} is the node type, and
+\item the mutually exclusive \nt{index} and \nt{name} represent the index
+of the private datum that is requested, \nt{name} being a user-friendly
 representation of the actual index.
+For a description of valid values for \nt{name}, consult the \emph{Private Data} of the corresponding node type.
+\end{itemize}
 The \nt{index} form is the default; however, the \nt{name} form is recommended.
 Note that \nt{name} should be enclosed in double quotes,
 although not strictly required.
@@ -723,11 +802,11 @@ of the plugin variable specification.
 This implements a variable \texttt{VARNAME} with exactly the same value
 of the one defined in the example of the \kw{dof} plugin,
 where the variable takes the value of the derivative
-of the \kw{abstract} node \texttt{NODENAME}
+of the \kw{abstract} node \texttt{NODELABEL}
 \begin{verbatim}
-    set: integer NODENAME = 1000;
+    set: integer NODELABEL = 1000;
     # the node must exist
-    set: [node,VARNAME,NODENAME,abstract,string="xP"];
+    set: [node,VARNAME,NODELABEL,abstract,string="xP"];
 \end{verbatim}
 
 
@@ -744,11 +823,14 @@ The syntax is
 \end{Verbatim}
 %\end{verbatim}
 where
-\nt{label} is the label of the element,
-\nt{type} is the element type,
-and the mutually exclusive \nt{index} and \nt{name} represent the index
-of the datum that is requested, \nt{name} being a user-friendly
+\begin{itemize}
+\item \nt{label} is the label of the element,
+\item \nt{type} is the element type, and
+\item the mutually exclusive \nt{index} and \nt{name} represent the index
+of the private datum that is requested, \nt{name} being a user-friendly
 representation of the actual index.
+For a description of valid values for \nt{name}, consult the \emph{Private Data} of the corresponding element type.
+\end{itemize}
 The \nt{index} form is the default; however, the \nt{name} form is recommended.
 Note that \nt{name} should be enclosed in double quotes,
 although not strictly required.
@@ -759,11 +841,11 @@ of the plugin variable specification.
 
 \paragraph{Example.} \
 The variable \texttt{VARNAME} takes the value of the $z$ component 
-of the reaction force of \kw{joint} \texttt{ELEMNAME}
+of the reaction force of \kw{joint} \texttt{ELEMLABEL}
 \begin{verbatim}
-    set: integer ELEMNAME = 1000;
+    set: integer ELEMLABEL = 1000;
     # the joint must exist
-    set: [element,VARNAME,ELEMNAME,joint,string="Fz"];
+    set: [element,VARNAME,ELEMLABEL,joint,string="Fz"];
 \end{verbatim}
 
 
@@ -826,6 +908,19 @@ Implements the type \ty{Mat3x3}.
 		a_{31} & a_{32} & a_{33}
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # general case
+    1., 0., 0.,
+    0., 1., 0.,
+    0., 0., 1.
+    # or
+    matr,
+        1., 0., 0.,
+        0., 1., 0.,
+        0., 0., 1.
+\end{verbatim}
+
     \item symmetric matrix: keyword \kw{sym}, followed by a sequence
     of 6 reals, comma-separated, that represents the upper triangle, 
     row-oriented coefficients of a symmetric matrix, 
@@ -837,7 +932,16 @@ Implements the type \ty{Mat3x3}.
 		a_{13} & a_{23} & a_{33}
 	}}
 \end{equation}
-    \item skew symmetric matrix: keyword \kw{skew}, followed by a sequence
+\textbf{Example.}
+\begin{verbatim}
+    # symmetric matrix
+    sym,
+        1., 0., 0.,
+            1., 0.,
+                1.,
+\end{verbatim}
+
+    \item skew-symmetric matrix: keyword \kw{skew}, followed by a sequence
     of 3 reals, comma-separated, that are the components of the vector $\T{v}$
     that generates a skew symmetric matrix $\T{m}=\T{v}\times{}$:
 \begin{equation}
@@ -847,6 +951,12 @@ Implements the type \ty{Mat3x3}.
 		-v_2 & v_1 & 0
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # skew-symmetric matrix
+    skew , 1., 2., 3.
+\end{verbatim}
+
     \item diagonal matrix: keyword \kw{diag}, followed by a sequence
     of 3 reals, comma-separated, that represent the diagonal coefficients 
     of a diagonal matrix, namely $a_{11}$, $a_{22}$, $a_{33}$
@@ -857,11 +967,28 @@ Implements the type \ty{Mat3x3}.
 		0 & 0 & a_{33}
 	}}
 \end{equation}
+\textbf{Example.}
+\begin{verbatim}
+    # diagonal matrix
+    diag , 1., 1., 1.
+\end{verbatim}
+
     \item identity matrix: keyword \kw{eye}; the matrix is initialized
     as the identity matrix, that is a null matrix except for the diagonal 
     coefficients that are 1.
+\textbf{Example.}
+\begin{verbatim}
+    # identity matrix
+    eye
+\end{verbatim}
+
     \item null matrix: keyword \kw{null}; the matrix is initialized 
     with zeros.
+\begin{verbatim}
+    # null matrix
+    null 
+\end{verbatim}
+
 \end{enumerate}
 For example, the identity matrix can be defined as:
 \begin{verbatim}
@@ -889,7 +1016,7 @@ the above data as
     eye                                   # a la matlab
 \end{verbatim}
 
-\begin{figure}
+\begin{figure}[h]
 \centering
 \psfrag{a}{(a)}
 \psfrag{b}{(b)}
@@ -917,15 +1044,24 @@ Implements the type \ty{OrientationMatrix}.
 system, each of them preceded by its index in the final orientation matrix.
 The procedure that builds the orientation matrix from the two vectors
 is illustrated in Figure~\ref{fig:general:orientation-matrices:MatR2vec}.
-The first vector, vector 1 in subfigure (a), is normalized and assumed
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{v1} , \bnt{v1_1}, \bnt{v1_2} , \bnt{v1_3} ,
+    \bnt{v2} , \bnt{v2_1}, \bnt{v2_2} , \bnt{v2_3}
+
+    \bnt{v1} ::= \{ \kw{1} | \kw{2} | \kw{3} \}
+    \bnt{v2} ::= \{ \kw{1} | \kw{2} | \kw{3} \} # \bnt{v2} != \bnt{v1}
+\end{Verbatim}
+The first vector, \bnt{v1}, namely vector 1 in subfigure (a), is normalized and assumed
 to represent the desired direction.
-The second vector, vector 2' in subfigure (b), simply concurs
+The second vector, \bnt{v2}, namely vector 2' in subfigure (b), simply concurs
 in the definition of the plane the vector that is not given is normal to.
 The third vector, vector 3 in subfigure (c), results from the cross-product
 of the first two vectors, after normalization.
 The actual direction of the second vector, vector 2 in subfigure (d),
 results from the cross product of the third and the first vector.
-Examples:
+
+\noindent
+\textbf{Examples.}
 \begin{verbatim}
     1, 1.,0.,0., 2, 0.,1.,0.
 \end{verbatim}
@@ -957,7 +1093,15 @@ in initial direction 2, while direction 3 in the final reference frame remains
 parallel to \texttt{0.,0.,1.}, which represents direction 3 in the initial reference frame.
 
 \item a variant of the above, which may be useful when only one
-direction really matters, is illustrated in the example below:
+direction really matters, is
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{v1} , \bnt{v1_1}, \bnt{v1_2} , \bnt{v1_3} ,
+    \bnt{v2} , \kw{guess}
+
+    \bnt{v1} ::= \{ 1 | 2 | 3 \}
+    \bnt{v2} ::= \{ 1 | 2 | 3 \} # \bnt{v2} != \bnt{v1}
+\end{Verbatim}
+and is illustrated in the example below:
 \begin{verbatim}
     1, 1.,0.,0., 2, guess
 \end{verbatim}
@@ -966,12 +1110,12 @@ that is orthogonal to the given one, which is used as the direction
 indicated by the index (2 in the example).
 The vector is computed based on a very simple algorithm: it contains
 \begin{itemize}
-        \item 1.0 corresponding to the index with smallest module,
+        \item 1.0 corresponding to the index with smallest modulus,
         $v_1\plbr{\mathrm{min}}$;
 	\item $-v_1\plbr{\mathrm{min}}/v_1\plbr{\mathrm{max}}$
-	corresponding to the index with the largest module,
+	corresponding to the index with the largest modulus,
 	$v_1\plbr{\mathrm{max}}$;
-	\item 0.0 on the remaining index.
+	\item 0.0 for the remaining index.
 \end{itemize}
 
 \item identity matrix: keyword \kw{eye}; the identity matrix,
@@ -981,6 +1125,16 @@ frame.
 \item a complete orientation matrix: keyword \kw{matr}
 followed by the nine, row-oriented, coefficients, namely
 $ r_{11} $, $ r_{12} $, \ldots, $ r_{33} $.
+\begin{Verbatim}[commandchars=\\\{\}]
+    \kw{matr} ,
+        \bnt{r11} , \bnt{r12} , \bnt{r13} ,
+        \bnt{r21} , \bnt{r22} , \bnt{r23} ,
+        \bnt{r31} , \bnt{r32} , \bnt{r33}
+            [ , \kw{tolerance} , \bnt{tol} ]
+\end{Verbatim}
+The \kw{tolerance} \nt{tol} is used when checking the orthogonality of the matrix (the default is $10^{-12}$).
+
+\noindent
 Example:
 \begin{verbatim}
     matr,
@@ -988,7 +1142,7 @@ Example:
         r21, r22, r23,
         r31, r32, r33
 \end{verbatim}
-\emph{Note: orthogonality is not enforced; in case, only a warning is issued; be sure an orthogonal
+\emph{Note: orthogonality is not enforced; if the matrix is not orthogonal within the desired tolerance, only a warning is issued; be sure an orthogonal
 matrix, within the desired tolerance, is input}.
 
 \item Euler angles: keyword \kw{euler}, followed by the three
@@ -1370,8 +1524,8 @@ is not in the directory of the including one.
 
 \bigskip
 
-\fbox{There is no check for recursive \kw{include} directives, so 
-{\bf the user must take care of recursion}.}
+\fbox{There is no check for recursively including files, so 
+\textbf{the user must take care of avoiding recursions}.}
 
 \bigskip
 
@@ -1814,7 +1968,7 @@ user@host:~>$ mbdyn -f remarks
 MBDyn - Multi-Body Dynamics 1.6.2
 configured on Jun 26 2015 at 10:17:02
 
-Copyright 1996-2017 (C) Paolo Mantegazza and Pierangelo Masarati,
+Copyright 1996-2023 (C) Paolo Mantegazza and Pierangelo Masarati,
 Dipartimento di Ingegneria Aerospaziale <http://www.aero.polimi.it/>
 Politecnico di Milano                   <http://www.polimi.it/>
 
@@ -2043,6 +2197,7 @@ Drive callers are listed in Table~\ref{tab:DRIVE:DRIVE-CALLERS}.
 \textbf{Name} & \textbf{Differentiable} & \textbf{Notes} \\
 \hline\hline
 \kw{array} & $\surd$ & depends on subordinate drive callers \\
+\kw{bistop} & & \\ %
 \kw{closest next} & $\surd$ & depends on subordinate drive caller \\
 \kw{const} & $\surd$ & \\
 \kw{cosine} & $\surd$ & \\
@@ -2098,6 +2253,29 @@ normal drives; \nt{num\_drives} must be at least 1, in which case
 a simple drive caller is created, otherwise an array of drive callers 
 is created and at every call their value is added to give 
 the final value of the array drive.
+
+\subsection{Bistop drive}
+%\begin{verbatim}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{drive_caller} ::= \kw{bistop} ,
+        [ \kw{initial status}, \{ \kw{active} | \kw{inactive} \} , ]
+            (\hty{DriveCaller}) \bnt{activation_condition} ,
+            (\hty{DriveCaller}) \bnt{deactivation_condition}
+\end{Verbatim}
+%\end{verbatim}
+This drive caller returns 1.0 (\kw{TRUE}) when its status is \kw{active} and 0.0 (\kw{FALSE}) when it is \kw{inactive}.
+When in \kw{inactive} status, it turns to \kw{active} if the \nt{activation\_condition} is \kw{TRUE}.
+When in \kw{active} status, it turns to \kw{inactive} if the \nt{deactivation\_condition} is \kw{TRUE}.
+
+This drive caller is useful to implement a ``robust'' and irreversible status change, for example the deactivation of something, as
+\begin{verbatim}
+    bistop,
+        initial status, active,
+        # never re-activate
+        null,
+        # deactivate when the vertical component of node 1 velocity becomes negative
+        string, "model::node::structural(1, \"XP[3]\") < 0"
+\end{verbatim}
 
 \subsection{Closest next drive}
 \label{sec:DriveCaller:CLOSEST_NEXT}
@@ -2463,10 +2641,14 @@ uses the value of the rotation about axis $z$ of a revolute hinge
 as is (that is, in a linear expression with null constant coefficient 
 and unit linear coefficient, while
 \begin{verbatim}
+    element, 1000, joint, string, "rz", linear, 0., -60.
+\end{verbatim}
+multiplies the value by $-60$;
+\begin{verbatim}
     element, 1000, joint, index, 1
         string, "2.*exp(-100.*Var)"
 \end{verbatim}
-uses the same value, addressed in an alternative manner, in computing
+uses the same value, addressed in an alternative manner using the \kw{index} form, to evaluate
 a string expression.
 
 The same effect can be obtained using the \kw{element} plugin as follows:
@@ -3069,7 +3251,7 @@ with continuous 1st- and 2nd-order derivatives.
 \end{Verbatim}
 %\end{verbatim}
 \nt{expression\_string} is a string, delimited by double quotes.
-It is parsed by the math parser every time 
+It is parsed by the math parser when read during input, and evaluated every time 
 the \htmlref{\kw{drive}}{sec:DriveCaller} is invoked.
 The variable \kw{Time} is kept up to date and can be used in the 
 string to compute the return value, e.g.:
@@ -3084,6 +3266,7 @@ e.g.:
 \begin{verbatim}
     ..., string, "e^(-Var)*cos(2.*pi*Time)" ...
 \end{verbatim}
+Expressions may contain other variables and use functions defined in the available namespaces.
 
 \emph{Note: originally, the expression was parsed each time it is evaluated;
 this is not very efficient.
@@ -3102,6 +3285,33 @@ is internally stored as
     ..., string, "1+cos(2*pi*Time)", ...
 \end{verbatim}
 
+It is worth stressing that the expressions are dereferenced (i.e., their value is evaluated)
+when the drive caller is invoked during the analysis.
+So, if any variables that appear in the expressions are redefined during input parsing,
+and one wants the string drive caller to use their value at parsing time rather than run-time,
+the functions \texttt{\bnt{type}\kw{\_eval}} should be used, with
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{type} ::= \{ \kw{bool} | \kw{integer} | \kw{real} | \kw{string} \}
+\end{Verbatim}
+For example,
+\begin{verbatim}
+    set: integer CURR_NODE = 0;
+    # ...
+    ..., string, "model::distance(CURR_NODE, CURR_NODE+1)"
+    # ...
+    set: CURR_NODE = CURR_NODE + 100;
+    # ...
+    ..., string, "model::distance(CURR_NODE, CURR_NODE+1)"
+\end{verbatim}
+used repeatedly, modifying the variable \texttt{CURR\_NODE} in between, would result in all instances of the string drive caller end up using the last value of \texttt{CURR\_NODE} instead of the value that was current when the string drive caller was instantiated.
+Instead,
+\begin{verbatim}
+    ..., string, "integer_eval(model::distance(CURR_NODE, CURR_NODE+1))"
+\end{verbatim}
+would use the value of \texttt{CURR\_NODE} at the time the string was parsed.
+
+
+
 
 \subsection{Tanh drive}
 %\begin{verbatim}
@@ -3109,19 +3319,26 @@ is internally stored as
     \bnt{drive_caller} ::= \kw{tanh} ,
         \bnt{initial_time} ,
         \bnt{amplitude} ,
-        \bnt{slope} ,
+        \bnt{nd_slope} ,
         \bnt{initial_value}
 \end{Verbatim}
 %\end{verbatim}
 This drive computes a function of the type
 \begin{displaymath}
 	f\plbr{t} = \nt{initial\_value} + \nt{amplitude} \cdot\llk{tanh}\plbr{
-			\nt{slope} \cdot \plbr{
+			\nt{nd\_slope} \cdot \plbr{
 				t - \nt{initial\_time}
 			}
 		} .
 \end{displaymath}
-It is differentiable.
+It is differentiable; its derivative is
+\begin{displaymath}
+	\dot{f}\plbr{t} = \cfrac{\nt{amplitude} \cdot \nt{ns\_slope}}{\llk{cosh}^2\plbr{
+			\nt{nd\_slope} \cdot \plbr{
+				t - \nt{initial\_time}
+			}
+		}} .
+\end{displaymath}
 
 %%% TODO: add a plot that exemplifies the three cases
 
@@ -5001,11 +5218,11 @@ Finally there are some miscellaneous points:
     \begin{enumerate}
   
         \item \texttt{\kw{MBDYNVARS}=\bnt{expr\_list}}
-	where \nt{expr\_list} is a series of mathematical expressions
+	where \nt{expr\_list} is a list of mathematical expressions
 	separated by semicolons. 
-	They are parsed and evaluated; if variables are declared, they are
-	added to the symbol table to be used during the whole execution 
-	of the program.
+	They are parsed and evaluated; declared variables are
+	added to the symbol table and can be subsequently dereferenced
+	during the whole execution of the program.
     
         \item \texttt{\kw{MBDYN\_\bnt{type}\_\bnt{name}}=\bnt{value}},
 	where \nt{type} is a legal mbdyn type (\kw{integer}, \kw{real}
@@ -5024,15 +5241,59 @@ Finally there are some miscellaneous points:
     os.environ['MBDYNVARS'] = 'real DT = ' + str(dt) + ';';
     os.system('mbdyn -f input.mbd -o output > output.txt 2>&1 &');
     # use 'dt' in the python peer's analysis as appropriate...
+
+    # NOTE: a trailing '&' is placed to send mbdyn in background;
+    # the call to system() will return immediately, and the python
+    # script will have the opportunity to interact with the mbdyn
+    # execution, e.g., through socket streams
 \end{verbatim}
 
     same thing, but now using Matlab:
 \begin{verbatim}
     dt = 1.e-3;
     setenv('MBDYNVARS', sprintf('real DT = %s', dt));
-    system('mbdyn -f input.mbd -o output > output.txt 2>&1 &');
+    system('mbdyn -f input.mbd -o output > output.txt 2>&1');
+    # use 'dt' in the matlab peer's analysis as appropriate...
+
+    # NOTE: no trailing '&' is placed to avoid sending mbdyn in background;
+    # the call to system() will return when the simulation is over
+\end{verbatim}
+
+
+    \textbf{Note on running mbdyn from Matlab:} \
+    often, Matlab links its own dynamic libraries, which may be incompatible with those used to build mbdyn.
+    For this reason, it may be convenient to run mbdyn from within a shell script that sets a ``sane'' environment.
+    An example script, \texttt{mbdyn.sh}, can be found in \texttt{contrib/SimulinkInterface/}.
+    For example:
+\begin{verbatim}
+    system('./mbdyn.sh -f input.mbd -o output > output.txt 2>&1');
+\end{verbatim}
+
+    
+    \textbf{Note on using Windows >= 10 and WSL:} \
+    when executed by calling \texttt{system()} from Matlab running in Windows 10, Matlab must be instructed to use Windows Subsystem for Linux (WSL).
+    Furthermore, the correct paths need to be used.
+    To this end, use
+\begin{verbatim}
+    system('wsl /absolute/path/to/mbdyn/mbdyn.sh \
+        -f /absolute/path/to/input/input.mbd \
+        -o /absolute/path/to/output/output \
+        > /absolute/path/to/output/output.txt 2>&1');
+\end{verbatim}
+    Note: in this case, WSL will not see the environment populated by calling \texttt{setenv()} within Matlab.
+    To populate the environment, one can place the environment variables definition directly in the command line.
+    For example:
+\begin{verbatim}
+    dt = 1.e-3;
+    mbdynvars = sprintf('real DT = %s', dt);
+    system(['wsl MBDYNVARS="' mbdynvars '" /absolute/path/to/mbdyn/mbdyn.sh \
+        -f /absolute/path/to/input/input.mbd \
+        -o /absolute/path/to/output/output \
+        > /absolute/path/to/output/output.txt 2>&1']);
     # use 'dt' in the matlab peer's analysis as appropriate...
 \end{verbatim}
+    Note: writing the output directly to a Windows partition can significantly slow down the execution of MBDyn.
+
 
     \item Newlines and indentations are not meaningful. But good indentation
     habits can lead to better and more readable input files.

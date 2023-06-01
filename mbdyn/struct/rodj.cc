@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2014
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -296,19 +296,18 @@ Rod::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Rod", OH, name);
+			OutputPrepare_int("Rod", OH);
 
-			Var_dElle = OH.CreateVar<doublereal>(name + "l",
+			Var_dElle = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "l",
 				OutputHandler::Dimensions::Length,
 				"length of the element");
-			Var_dEllePrime = OH.CreateVar<doublereal>(name + "lP",
+			Var_dEllePrime = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "lP",
 				OutputHandler::Dimensions::Velocity,
 				"lengthening velocity of the element");
-			Var_v = OH.CreateVar<Vec3>(name + "v",
+			Var_v = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "v",
 				OutputHandler::Dimensions::Dimensionless,
 				"direction unit vector");
-			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, name + "CL");
+			ConstitutiveLaw1DOwner::OutputAppendPrepare(OH, m_sOutputNameBase + "." "constitutiveLaw");
 		}
 #endif // USE_NETCDF
 	}
@@ -476,17 +475,39 @@ Rod::iGetPrivDataIdx(const char *s) const
 		return 1;
 	}
 
-	if (strcmp(s, "L") == 0) {
+	if (strcmp(s, "l") == 0) {
 		return 2;
 	}
 
-	if (strcmp(s, "LPrime") == 0) {
+	if (strcmp(s, "lP") == 0) {
 		return 3;
 	}
 
 	size_t l = STRLENOF("constitutiveLaw.");
 	if (strncmp(s, "constitutiveLaw.", l) == 0) {
-		return 3 + ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
+		if (s[l] == '\0') {
+			// no room for constitutive law string
+			return 0;
+		}
+
+		unsigned int iIdx = ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
+		if (iIdx == 0) {
+			// propagate error
+			return 0;
+		}
+
+		return 3 + iIdx;
+	}
+
+	// obsolete forms
+	if (strcmp(s, "L") == 0) {
+		silent_cerr("warning, \"L\" to request rod length is obsolete; use \"l\" instead" << std::endl);
+		return 2;
+	}
+
+	if (strcmp(s, "LPrime") == 0) {
+		silent_cerr("warning, \"LPrime\" to request rod elongation rate is obsolete; use \"lP\" instead" << std::endl);
+		return 3;
 	}
 
 	/* error; handle later */

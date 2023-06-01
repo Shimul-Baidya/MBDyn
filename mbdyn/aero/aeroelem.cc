@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -467,10 +467,8 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 
 			std::ostringstream os;
 			os << "elem.aerodynamic." << GetLabel();
-			(void)OH.CreateVar(os.str(), elemnames[iNN - 1]);
-
-			os << '.';
-			std::string name = os.str();
+			m_sOutputNameBase = os.str();
+			(void)OH.CreateVar(m_sOutputNameBase, elemnames[iNN - 1]);
 
 			int j = 0;
 			for (std::vector<Aero_output>::iterator i = OutputData.begin();
@@ -488,7 +486,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				 * as handle for later write accesses.
 				 * Define also variable attributes */
 				{
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "alpha_" << j;
 					i->Var_alpha = OH.CreateVar<doublereal>(os.str(),
@@ -497,7 +495,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				{
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "gamma_" << j;
 					i->Var_gamma = OH.CreateVar<doublereal>(os.str(),
@@ -506,7 +504,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				{
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "Mach_" << j;
 					i->Var_Mach = OH.CreateVar<doublereal>(os.str(),
@@ -515,7 +513,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				{
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "cl_" << j;
 					i->Var_cl = OH.CreateVar<doublereal>(os.str(),
@@ -524,7 +522,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				{
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "cd_" << j;
 					i->Var_cd = OH.CreateVar<doublereal>(os.str(),
@@ -533,7 +531,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				{
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "cm_" << j;
 					i->Var_cm = OH.CreateVar<doublereal>(os.str(),
@@ -542,7 +540,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				if (uOutputFlags & AerodynamicOutput::OUTPUT_GP_X) {
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "X_" << j;
 					i->Var_X = OH.CreateVar<Vec3>(os.str(),
@@ -553,12 +551,12 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				if (uOutputFlags & AerodynamicOutput::OUTPUT_GP_R) {
 					os.str("");
 					os << "_" << j;
-					i->Var_Phi = OH.CreateRotationVar(name, os.str(), od,
+					i->Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, os.str(), od,
 						gp + " global");
 				}
 
 				if (uOutputFlags & AerodynamicOutput::OUTPUT_GP_V) {
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "V_" << j;
 					i->Var_V = OH.CreateVar<Vec3>(os.str(),
@@ -567,7 +565,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				if (uOutputFlags & AerodynamicOutput::OUTPUT_GP_W) {
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "Omega_" << j;
 					i->Var_W = OH.CreateVar<Vec3>(os.str(),
@@ -576,7 +574,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				if (uOutputFlags & AerodynamicOutput::OUTPUT_GP_F) {
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "F_" << j;
 					i->Var_F = OH.CreateVar<Vec3>(os.str(),
@@ -585,7 +583,7 @@ Aerodynamic2DElem<iNN>::OutputPrepare(OutputHandler &OH)
 				}
 
 				if (uOutputFlags & AerodynamicOutput::OUTPUT_GP_M) {
-					os.str(name);
+					os.str(m_sOutputNameBase + ".");
 					os.seekp(0, std::ios_base::end);
 					os << "M_" << j;
 					i->Var_M = OH.CreateVar<Vec3>(os.str(),

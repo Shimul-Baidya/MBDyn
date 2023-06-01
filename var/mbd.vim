@@ -1,7 +1,7 @@
 " $Header$
 " Vim syntax file
 " Language:	MBDyn
-" Maintainer:	Pierangelo Masarati <masarati@aero.polimi.it>
+" Maintainer:	Pierangelo Masarati <pierangelo.masarati@polimi.it>
 " Last Change:	2008 Feb 29
 " based on c syntax by Bram Moolenaar <Bram@vim.org>
 

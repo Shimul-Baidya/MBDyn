@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -53,6 +53,7 @@
 #include "streamdrive.h"
 #include "socketstreamdrive.h"
 #include "bufferstreamdrive.h"
+#include "bistopdrive.h"
 
 #ifdef USE_GINAC
 #include "ginacdrive.h"
@@ -3247,6 +3248,7 @@ InitDriveCallerData(void)
 	}
 
 	SetDriveCallerData("array", new ArrayDCR);
+	SetDriveCallerData("bistop", new BiStopDCR);
 	SetDriveCallerData("closest" "next", new ClosestNextDCR);
 	SetDriveCallerData("const", new ConstDCR);
 	SetDriveCallerData("cosine", new CosineDCR);

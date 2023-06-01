@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -454,26 +454,25 @@ RodBezier::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("rod bezier", OH, name);
+			OutputPrepare_int("rod bezier", OH);
 			
-			Var_F2 = OH.CreateVar<Vec3>(name + "F2",
+			Var_F2 = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F2",
 				OutputHandler::Dimensions::Force,
 				"force on Node 2 (x, y, z)");
 
-			Var_l = OH.CreateVar<doublereal>(name + "l",
+			Var_l = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "l",
 				OutputHandler::Dimensions::Length,
 				"length of the element");
 
-			Var_l1 = OH.CreateVar<Vec3>(name + "l1",
+			Var_l1 = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "l1",
 				OutputHandler::Dimensions::Dimensionless,
 				"node 1 reference unit vector (x, y, z)");
 			
-			Var_l2 = OH.CreateVar<Vec3>(name + "l2",
+			Var_l2 = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "l2",
 				OutputHandler::Dimensions::Dimensionless,
 				"node 2 reference unit vector (x, y, z)");
 
-			Var_v = OH.CreateVar<doublereal>(name + "v",
+			Var_v = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "v",
 				OutputHandler::Dimensions::Velocity,
 				"length rate of change");
 		}
@@ -902,21 +901,64 @@ RodBezier::iGetPrivDataIdx(const char *s) const
 {
 	ASSERT(s != NULL);
 
+	if (strcmp(s, "f") == 0) {
+		return 1;
+	}
+
+	if (strcmp(s, "l") == 0) {
+		return 2;
+	}
+
+	if (strcmp(s, "lP") == 0) {
+		return 3;
+	}
+
+	size_t l = STRLENOF("CL.");
+	if (strncmp(s, "CL.", l) == 0) {
+		if (s[l] == '\0') {
+			// no room for constitutive law string
+			return 0;
+		}
+
+		unsigned int iIdx = ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
+		if (iIdx == 0) {
+			// propagate error
+			return 0;
+		}
+
+		return 3 + iIdx;
+	}
+
 	if (strcmp(s, "F") == 0) {
+		silent_cerr("warning, \"F\" to request rod force is obsolete; use \"f\" instead" << std::endl);
 		return 1;
 	}
 
 	if (strcmp(s, "L") == 0) {
+		silent_cerr("warning, \"L\" to request rod length is obsolete; use \"l\" instead" << std::endl);
 		return 2;
 	}
 
 	if (strcmp(s, "LPrime") == 0) {
+		silent_cerr("warning, \"LPrime\" to request rod elongation rate is obsolete; use \"lP\" instead" << std::endl);
 		return 3;
 	}
 
-	size_t l = STRLENOF("constitutiveLaw.");
+	l = STRLENOF("constitutiveLaw.");
 	if (strncmp(s, "constitutiveLaw.", l) == 0) {
-		return 3 + ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
+		silent_cerr("warning, \"constitutiveLaw\" to request rod constitutive law data is obsolete; use \"CL\" instead" << std::endl);
+		if (s[l] == '\0') {
+			// no room for constitutive law string
+			return 0;
+		}
+
+		unsigned int iIdx = ConstitutiveLaw1DOwner::iGetPrivDataIdx(&s[l]);
+		if (iIdx == 0) {
+			// propagate error
+			return 0;
+		}
+
+		return 3 + iIdx;
 	}
 
 	/* error; handle later */

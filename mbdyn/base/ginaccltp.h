@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -39,12 +39,13 @@
 #include <ginac/ginac.h>
 
 #include "symcltp.h"
+#include "ginacmbd.h"
 
 /* GiNaCElasticConstitutiveLaw - begin */
 
 template <class T, class Tder>
 class GiNaCElasticConstitutiveLaw 
-: public SymbolicElasticConstitutiveLaw<T, Tder> {
+: public SymbolicElasticConstitutiveLaw<T, Tder>, private GiNaCEntity {
 private:
 	unsigned dim;
 
@@ -210,6 +211,9 @@ template <class T, class Tder> void
 GiNaCElasticConstitutiveLaw<T, Tder>::Update(const T& Eps, 
 	const T& /* EpsPrime */ )
 {
+#ifdef USE_MULTITHREAD
+        GiNaCGuard guard;
+#endif
 	GiNaC::lst l;
 
 	ElasticConstitutiveLaw<T, Tder>::Epsilon = Eps;
@@ -241,7 +245,7 @@ GiNaCElasticConstitutiveLaw<T, Tder>::Update(const T& Eps,
 
 template <>
 class GiNaCElasticConstitutiveLaw<doublereal, doublereal>
-: public SymbolicElasticConstitutiveLaw<doublereal, doublereal> {
+: public SymbolicElasticConstitutiveLaw<doublereal, doublereal>, private GiNaCEntity {
 private:
 	GiNaC::realsymbol gEps;		/* parameter symbol */
 
@@ -350,6 +354,9 @@ void
 GiNaCElasticConstitutiveLaw<doublereal, doublereal>::Update(const doublereal& Eps, 
 	const doublereal& /* EpsPrime */ )
 {
+#ifdef USE_MULTITHREAD
+        GiNaCEntity::GiNaCGuard guard;
+#endif
 	GiNaC::lst l;
 
 	ElasticConstitutiveLaw<doublereal, doublereal>::Epsilon = Eps;
@@ -373,7 +380,7 @@ GiNaCElasticConstitutiveLaw<doublereal, doublereal>::Update(const doublereal& Ep
 
 template <class T, class Tder>
 class GiNaCViscousConstitutiveLaw 
-: public SymbolicViscousConstitutiveLaw<T, Tder> {
+: public SymbolicViscousConstitutiveLaw<T, Tder>, private GiNaCEntity {
 private:
 	unsigned dim;
 
@@ -537,7 +544,10 @@ template <class T, class Tder> void
 GiNaCViscousConstitutiveLaw<T, Tder>::Update(const T& Eps, 
 	const T& EpsPrime)
 {
-	GiNaC::lst l;
+#ifdef USE_MULTITHREAD
+        GiNaCEntity::GiNaCGuard guard;
+#endif
+        GiNaC::lst l;
 
 	ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
 
@@ -564,7 +574,7 @@ GiNaCViscousConstitutiveLaw<T, Tder>::Update(const T& Eps,
 
 template <>
 class GiNaCViscousConstitutiveLaw<doublereal, doublereal>
-: public SymbolicViscousConstitutiveLaw<doublereal, doublereal> {
+: public SymbolicViscousConstitutiveLaw<doublereal, doublereal>, private GiNaCEntity {
 private:
 	GiNaC::realsymbol gEpsPrime;	/* parameter derivative symbol */
 
@@ -670,7 +680,10 @@ GiNaCViscousConstitutiveLaw<doublereal, doublereal>::Update(
 	const doublereal& /* Eps */ , 
 	const doublereal& EpsPrime)
 {
-	GiNaC::lst l;
+#ifdef USE_MULTITHREAD
+        GiNaCEntity::GiNaCGuard guard;
+#endif
+        GiNaC::lst l;
 
 	ConstitutiveLaw<doublereal, doublereal>::EpsilonPrime = EpsPrime;
 
@@ -691,7 +704,7 @@ GiNaCViscousConstitutiveLaw<doublereal, doublereal>::Update(
 
 template <class T, class Tder>
 class GiNaCViscoElasticConstitutiveLaw 
-: public SymbolicViscoElasticConstitutiveLaw<T, Tder> {
+: public SymbolicViscoElasticConstitutiveLaw<T, Tder>, private GiNaCEntity {
 private:
 	unsigned dim;
 
@@ -895,7 +908,10 @@ template <class T, class Tder> void
 GiNaCViscoElasticConstitutiveLaw<T, Tder>::Update(const T& Eps, 
 	const T& EpsPrime)
 {
-	GiNaC::lst l;
+#ifdef USE_MULTITHREAD
+        GiNaCEntity::GiNaCGuard guard;
+#endif
+        GiNaC::lst l;
 
 	ElasticConstitutiveLaw<T, Tder>::Epsilon = Eps;
 	ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
@@ -933,7 +949,7 @@ GiNaCViscoElasticConstitutiveLaw<T, Tder>::Update(const T& Eps,
 
 template <>
 class GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>
-: public SymbolicViscoElasticConstitutiveLaw<doublereal, doublereal> {
+: public SymbolicViscoElasticConstitutiveLaw<doublereal, doublereal>, private GiNaCEntity {
 private:
 	GiNaC::realsymbol gEps;		/* parameter symbol */
 	GiNaC::realsymbol gEpsPrime;	/* parameter derivative symbol */
@@ -1062,7 +1078,10 @@ GiNaCViscoElasticConstitutiveLaw<doublereal, doublereal>::Update(
 	const doublereal& Eps, 
 	const doublereal& EpsPrime)
 {
-	GiNaC::lst l;
+#ifdef USE_MULTITHREAD
+        GiNaCEntity::GiNaCGuard guard;
+#endif
+        GiNaC::lst l;
 
 	ConstitutiveLaw<doublereal, doublereal>::Epsilon = Eps;
 

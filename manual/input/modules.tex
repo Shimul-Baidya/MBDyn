@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -161,61 +161,11 @@ The output is obtained in plain text in the \textbf{.usr} file where the columns
                         %~ << std::endl;
 
 
-\subsection{Module-fab-electric}
-\emph{Author: Eduardo Okabe}
 
-\noindent
-This module implements several electric components.
-
-\subsubsection{Resistor}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{resistor}
-\end{Verbatim}
-
-\subsubsection{Capacitor}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{capacitor}
-\end{Verbatim}
-
-\subsubsection{Inductor}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{inductor}
-\end{Verbatim}
-
-\subsubsection{Diode}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{diode}
-\end{Verbatim}
-
-\subsubsection{Switch}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{switch}
-\end{Verbatim}
-
-\subsubsection{Electrical source}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{electrical source}
-\end{Verbatim}
-
-\subsubsection{Ideal transformer}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{ideal transformer}
-\end{Verbatim}
-
-\subsubsection{Operational amplifier}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{operational amplifier}
-\end{Verbatim}
-
-\subsubsection{BJT}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{bjt}
-\end{Verbatim}
-
-\subsubsection{Proximity sensor}
-\begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{proximity sensor}
-\end{Verbatim}
+% moved to separate file
+%\subsection{Module-fab-electric}
+%\emph{Author: Eduardo Okabe}
+\input{module-fab-electric}
 
 
 
@@ -687,6 +637,19 @@ Note that in this case $0 < \nt{restitution\_coef} \le 1$.
 Note that, to avoid division by zero, $\nt{dissipation\_coef} = 0$ when $|\dot{x}_0| < \nt{initial\_eps\_prime\_tol}$;
 as a consequence, when the initial contact velocity is below the threshold no dissipation takes place.
 
+\subsubsection{Output}
+This constitutive law appends data to the output of the elements it is used with in both the textual and NetCDF formats:
+\begin{itemize}
+\item the initial velocity at contact (\kw{xPi} in NetCDF format); when non-zero, it indicates that contact is taking place
+\item the dissipation coefficient that results from the initial velocity and approximately gives the desired restitution factor (\kw{dc} in NetCDF format)
+\end{itemize}
+In the textual format, those fields appear in the file where the element data is output, appended to the element's line after the regular fields.
+In NetCDF, they appear among the fields of the element, prefixed by \kw{constitutiveLaw.}\ (e.g. \kw{elem.joint.}\bnt{label}\kw{.constitutiveLaw.xPi}, where \nt{label} is the label of the joint that makes use of the constitutive law, for example a \kw{rod} joint).
+
+\subsubsection{Private Data}
+The same parameters output in the NetCDF format are also available as private data of the element the constitutive law is used with, prefixed by \kw{constitutiveLaw.}\ (e.g., access to the related datum is granted by the string \texttt{"model::element::joint(\bnt{label}, \textbackslash"constitutiveLaw.xPi\textbackslash")"} where \nt{label} is the label of the joint that makes use of the constitutive law, for example a \kw{rod} joint).
+
+
 
 \subsection{Module-damper-graall}
 \emph{Author: Pierangelo Masarati, based on an original work of Gian Luca Ghiringhelli}
@@ -722,7 +685,8 @@ based on \cite{PENNESTRI-2007-JB}.
         [ \kw{reference velocity} , \bnt{V0} , ]
         \kw{reference force} , \bnt{F0} ,
         \kw{activation} , (\hty{DriveCaller}) \bnt{activation}
-            [ , \kw{activation check} , (\ty{bool}) \bnt{activation_check} ]
+            [ , \kw{activation check} , (\ty{bool}) \bnt{activation_check}
+              , \kw{warn}, (\ty{bool}) \bnt{warn}]
         [ , \kw{ergonomy} , \{ \kw{yes} | \kw{no} \} ]
         [ , \kw{reflexive} , # only when ergonomy == no
             \kw{proportional gain} , \bnt{kp} ,
@@ -741,11 +705,11 @@ spring in an inverse kinematics analysis.
 The \kw{reflexive} keyword indicates that reflexive behavior is being defined;
 its use is mutually exclusive with the active status of the \kw{ergonomy} flag.
 
-The \kw{initial length} equal to \kw{reference length} unless specified.
+The \kw{initial length} is equal to the \kw{reference length} unless specified.
 It is used to differentiate the length of the rod as computed from the input
 from the length used to formulate the constitutive law.
 
-The \kw{reference velocity} is set to 2.5 m/s unless specified.
+The \kw{reference velocity} is set to 2.5 m/s, unless specified.
 
 The second occurrence of the \kw{reference length} is related
 to the reflexive contribution to muscular activation, which is defined as
@@ -762,6 +726,13 @@ to the reflexive contribution to muscular activation, which is defined as
 	+
 	\nt{kd} \cdot \frac{\dot{\ell}}{\nt{V0}}
 \end{align}
+Be careful that the resulting requested activation can be outside of the range 
+${0 \leq a \leq 1}$. If \nt{activation\_check} is \kw{yes}, the compliance of
+the requested activation with the bounds is verified, and the actual value of the
+activation will be reset at 0 in case of underflow and 1 in case of overflow. If \nt{warn}
+is set to yes, a warning will be printed in \texttt{stderr} when over/underflow conditions
+are reached. 
+
 The contribution of the muscle short-range stiffness (SRS) can be added with \kw{short
 range stiffness}. The optional  parameter \nt{delta} represents the maximum nondimensional
 stretch perturbation, above which the short-range stiffness contribution to the muscle
@@ -786,7 +757,7 @@ The optional keyword \kw{model} activates the selection of the implementation:
           f_1(x)
           \cdot
           \Delta x
-          & 0 \leq \Delta x < \delta
+          & 0 \leq \Delta x < \nt{delta}
         \\
         F_{\text{SRS}} = 
           \nt{gamma}
@@ -798,7 +769,7 @@ The optional keyword \kw{model} activates the selection of the implementation:
           f_1(x)
           \cdot
           \nt{delta}
-          & \Delta x \ge \delta
+          & \Delta x \ge \nt{delta}
       \end{cases}
     \end{equation}
     where $f_1$ is the active force-stretch relationship defined according to the model
@@ -835,13 +806,20 @@ attached to in the \texttt{.jnt} file. Two columns are added:
 \begin{itemize}
   \item \kw{a}: the actual total activation of the muscle;
   \item \kw{aReq}: the \emph{requested} activation of the muscle, before
-    saturation is applied to confine it in the $0 < a < 1$ range;
-  \item \kw{f1}: the active force-stretch relationship (Cf.~\cite{PENNESTRI-2007-JB}),
+    saturation is applied to confine it in the $0 \le a \le 1$ range;
+  \item \kw{f1}: the active force-stretch relationship \cite{PENNESTRI-2007-JB},
     evaluated at the current stretch;
   \item \kw{f2}: the active force-contraction velocity relationship
-    (Cf.~\cite{PENNESTRI-2007-JB}), evaluated at the current contraction velocity;
-  \item \kw{f3}: the passive force-stretch relationship (Cf.~\cite{PENNESTRI-2007-JB}),
+    \cite{PENNESTRI-2007-JB}, evaluated at the current contraction velocity;
+  \item \kw{f3}: the passive force-stretch relationship \cite{PENNESTRI-2007-JB},
     evaluated at the current stretch;
+  \item \kw{df1dx}: the active force-stretch relationship derivative with respect to the
+    stretch, evaluated at the current stretch;
+  \item \kw{df2dv}: the active force-contraction velocity relationship derivative
+    with respect to the contraction velocity, evaluated at the current contraction
+    velocity;
+  \item \kw{df3dx}: the passive force-stretch relationship derivative with respect to the
+    stretch, evaluated at the current stretch;
   \item (if \kw{reflexive}) \kw{Kp}: the current value of the proportional gain, in the
     reflexive contribution;
   \item (if \kw{reflexive}) \kw{Kd}: the current value of the derivative gain, in the
@@ -1225,6 +1203,7 @@ This module implements the Tcl plugin in form of run-time loadable module.
 Loadable element template (deprecated).
 
 \subsection{Module-udunits}
+\label{sec:modules:udunits}
 \emph{Author: Pierangelo Masarati}
 
 \noindent

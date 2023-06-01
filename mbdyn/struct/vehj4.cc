@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -136,14 +136,13 @@ DeformableAxialJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Deformable axial joint", OH, name);
+			OutputPrepare_int("Deformable axial joint", OH);
 
-			Var_Theta = OH.CreateVar<doublereal>(name + "Theta",
+			Var_Theta = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Theta",
 				OutputHandler::Dimensions::rad,
 				"relative angle");
 
-			Var_Omega = OH.CreateVar<doublereal>(name + "Omega",
+			Var_Omega = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"relative angular velocity");
 		}

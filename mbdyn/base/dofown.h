@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -51,6 +51,13 @@ class DofOrder {
 
         LASTORDER
    };
+
+   enum Equality {
+      EQUALITY = 0,
+      INEQUALITY,
+
+      LASTEQUALITY
+   };
 };
 
 
@@ -62,6 +69,7 @@ struct Dof {
    integer iIndex;
    DofOrder::Order Order;
    DofOrder::Order EqOrder;
+   DofOrder::Equality Equality;
    // Data used for the HybridStepIntegrator
    SolverBase::StepIntegratorType StepIntegrator; // index of step integrator used for this degree of freedom
    std::string Description;
@@ -128,9 +136,9 @@ class DofOwnerOwner {
     * questa convenzione e' stata assunta per compatibilita' con le
     * porzioni di codice scritte in FORTRAN
     */
-   virtual inline integer iGetFirstIndex(void) const {
-      return pDofOwner->iFirstIndex;
-   };
+      virtual inline integer iGetFirstIndex() const {
+         return pDofOwner->iFirstIndex;
+      }
 
         /**
          * Initialize state vector used in initial assembly.

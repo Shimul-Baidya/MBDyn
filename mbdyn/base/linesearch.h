@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
  */
 
  /*
-  * Portions Copyright (C) 2003-2017
+  * Portions Copyright (C) 2003-2023
   * Giuseppe Quaranta   <quaranta@aero.polimi.it>
   *
   * classi che implementano la risoluzione del sistema nonlineare
@@ -38,7 +38,7 @@
 
  /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2011(-2022) all rights reserved.
+        Copyright (C) 2011(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -57,6 +57,7 @@
 
 #include "nonlin.h"
 #include "vh.h"
+#include "sp_gradient_spmh.h"
 
 struct LineSearchParameters: CommonNonlinearSolverParam
 {
@@ -92,6 +93,10 @@ struct LineSearchParameters: CommonNonlinearSolverParam
      doublereal dMinStepScale;
      doublereal dTimeStepTol;
      doublereal dUpdateRatio;
+     doublereal dMcpTol;
+     doublereal dMcpSigma;
+     doublereal dMcpRho;
+     doublereal dMcpP;
 };
 
 class LineSearchSolver: public NonlinearSolver, protected LineSearchParameters
@@ -195,6 +200,7 @@ protected:
                            doublereal dSlope) const;
      void Residual(doublereal& f, integer iIterCnt);
      void Jacobian();
+     void OutputJacobian(const MatrixHandler& J) const;
 };
 
 class LineSearchFull: public LineSearchSolver
@@ -259,6 +265,119 @@ public:
                         doublereal& dErr,
                         const doublereal& SolTol,
                         doublereal& dSolErr);
+};
+
+// Newton Fischer Burmeister solver for Mixed (nonlinear) Complementarity Problems (MCP)
+// This code is basically a re-implementation of Newton_methods.c from INRIA's Siconos library.
+// https://nonsmooth.gricad-pages.univ-grenoble-alpes.fr/siconos/index.html
+// https://github.com/siconos/siconos
+
+// However this particular solver is built solely on top of MBDyn's native libraries.
+// So, there is no need to link with the Siconos library in order to use it.
+
+class LineSearchMCP: public LineSearchSolver
+{
+public:
+     LineSearchMCP(DataManager* pDM,
+                   const NonlinearSolverTestOptions& options,
+                   const struct LineSearchParameters& param);
+     ~LineSearchMCP();
+
+protected:
+     void Attach(const NonlinearProblem* pNLP, Solver* pS);
+     void ComputeHInt(const VectorHandler& z,
+                      const VectorHandler& F,
+                      const SpGradientSparseMatrixHandler& nablaFMCP,
+                      MatrixHandler& H);
+     void ComputeH(const VectorHandler& z,
+                   const VectorHandler& F,
+                   const SpGradientSparseMatrixHandler& nablaFMCP);     
+     void ComputeHInt(const VectorHandler& z,
+                      const VectorHandler& F,
+                      MatrixHandler& H,
+                      std::vector<doublereal>& rgRowScale,
+                      std::vector<doublereal>& rgColScale);
+     void ComputeH(const VectorHandler& z,
+                   const VectorHandler& F,
+                   std::vector<doublereal>& rgRowScale,
+                   std::vector<doublereal>& rgColScale);     
+     void ComputeHDescInt(const SpGradientSparseMatrixHandler& nablaFMCP,
+                          const VectorHandler& z,
+                          const VectorHandler& F,
+                          MatrixHandler& H) const;
+     void ComputeHDesc(const SpGradientSparseMatrixHandler& nablaFMCP,
+                       const VectorHandler& z,
+                       const VectorHandler& F) const;
+     void ComputeRHSDesc(const VectorHandler& z, const VectorHandler& F, VectorHandler& Fmin) const;
+     void ComputeFMCP(VectorHandler& F);
+     doublereal ComputeFMerit(const VectorHandler& z, const VectorHandler& F, VectorHandler& FMerit) const;
+     void Update(const VectorHandler& DeltaZ, VectorHandler& z) const;
+     doublereal ApplyInc(VectorHandler& z,
+                         VectorHandler& F,
+                         VectorHandler& FMerit,
+                         VectorHandler& DeltaZ,
+                         const VectorHandler& d,
+                         doublereal dInc);
+     void CheckLineSearch(doublereal& dThetaCurr,
+                          const doublereal dThetaPrev,
+                          const VectorHandler& JacThetaFMerit,
+                          VectorHandler& z,
+                          VectorHandler& F,
+                          VectorHandler& FMerit,
+                          VectorHandler& DeltaZ,
+                          const integer iIterCnt);
+     doublereal LineSearch(doublereal theta,
+                           doublereal preRHS,
+                           VectorHandler& z,
+                           VectorHandler& F,
+                           VectorHandler& FMerit,
+                           VectorHandler& DeltaZ,
+                           integer iIterCnt);
+     MyVectorHandler zH, FH, FMeritH, workV1, workV2, JacThetaFMeritH;
+};
+
+class MCPNewtonMinFB: public LineSearchMCP
+{
+public:
+     MCPNewtonMinFB(DataManager* pDM,
+                  const NonlinearSolverTestOptions& options,
+                  const struct LineSearchParameters& param);
+     ~MCPNewtonMinFB();
+
+     virtual void Solve(const NonlinearProblem *pNLP,
+                        Solver *pS,
+                        const integer iMaxIter,
+                        const doublereal& Tol,
+                        integer& iIterCnt,
+                        doublereal& dErr,
+                        const doublereal& SolTol,
+                        doublereal& dSolErr) override;
+private:
+     void Attach(const NonlinearProblem* pNLP, Solver* pS);
+     
+     SpGradientSparseMatrixHandler nablaFMCPH;
+};
+
+class MCPNewtonFB: public LineSearchMCP
+{
+public:
+     MCPNewtonFB(DataManager* pDM,
+                  const NonlinearSolverTestOptions& options,
+                  const struct LineSearchParameters& param);
+     ~MCPNewtonFB();
+
+     virtual void Solve(const NonlinearProblem *pNLP,
+                        Solver *pS,
+                        const integer iMaxIter,
+                        const doublereal& Tol,
+                        integer& iIterCnt,
+                        doublereal& dErr,
+                        const doublereal& SolTol,
+                        doublereal& dSolErr) override;
+private:
+     void Attach(const NonlinearProblem* pNLP, Solver* pS);
+     
+     std::vector<doublereal> rgRowScale, rgColScale;
 };
 
 #endif /* LINE_SEARCH_H */
