@@ -792,7 +792,7 @@ struct MuscleCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		}
 
 		// default [m/s]
-		doublereal V0 = 2.5;
+		doublereal V0 = 4*L0;
 		if (HP.IsKeyWord("reference" "velocity")) {
 			V0 = HP.GetReal();
 			if (V0 <= 0.) {
