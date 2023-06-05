@@ -726,9 +726,9 @@ struct MuscleCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 				"                        reference length, (DriveCaller) <lref> ]\n"
 				" 			 model, { pennestri | erf }\n"
 				"		  	[ , short range stiffness ]\n"
-				"			[ 	, model, { exponential | linear } ,]\n"
-				" 		  	[ 	, gamma, (real) <gamma> ,]\n"
-				"		   	[ 	, delta, (real) <delta> ,]\n"
+				"			[ 	, model, { exponential | linear }]\n"
+				" 		  	[ 	, gamma, (real) <gamma>]\n"
+				"		   	[ 	, delta, (real) <delta>]\n"
 				"                [ , prestress, <prestress> ]\n"
 				"                [ , prestrain, (DriveCaller) <prestrain> ]\n"
 				<< std::endl);
@@ -748,13 +748,25 @@ struct MuscleCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 			bGotErgo = true;
 		}
 
-		if (HP.IsKeyWord("pennestri")) {
-			silent_cerr("MuscleCL: deprecated \"pennestri\" at line "
-					<< HP.GetLineData()
-					<< " muscle model selection should be at the end "
-					<< " of definition, before prestress and prestrain"
-					<< std::endl);
-			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+		// Models
+		enum MuscleModel {
+			PENNESTRI,
+			ERF
+		} m_MuscleModel;
+		
+		// Pennestrì is the default model
+		m_MuscleModel = PENNESTRI;
+		
+		if (HP.IsKeyWord("model")) {
+			if (HP.IsKeyWord("pennestri")) {
+				NO_OP;	// default model
+			} else if (HP.IsKeyWord("erf")) {
+				m_MuscleModel = ERF;
+			} else {
+				silent_cerr("MuscleCL: unrecognised muscle model at line "
+						<< HP.GetLineData() << std::endl);
+				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+			}
 		}
 
 		doublereal Li = -1.;
@@ -829,15 +841,6 @@ struct MuscleCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 		DriveCaller* pKd(NULL);
 		const DriveCaller *pRefLen(0);
 	
-		// Models
-		enum MuscleModel {
-			PENNESTRI,
-			ERF
-		} m_MuscleModel;
-		
-		// Pennestrì is the default model
-		m_MuscleModel = PENNESTRI;
-
 		// Short Range Stiffness
 		bool bSRS(false);
 		
@@ -901,18 +904,6 @@ struct MuscleCLR : public ConstitutiveLawRead<doublereal, doublereal> {
 				if (HP.IsKeyWord("delta")) {
 					dSRSDelta = HP.GetReal();
 				}
-			}
-		}
-
-		if (HP.IsKeyWord("model")) {
-			if (HP.IsKeyWord("pennestri")) {
-				NO_OP;	// default model
-			} else if (HP.IsKeyWord("erf")) {
-				m_MuscleModel = ERF;
-			} else {
-				silent_cerr("MuscleCL: unrecognised muscle model at line "
-						<< HP.GetLineData() << std::endl);
-				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 		}
 
