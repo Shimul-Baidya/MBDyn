@@ -56,7 +56,8 @@ end: control data;
 set: real L0 = 200.e-3;	# m
 set: real F0 = 63.;	# N
 
-module load: "libmodule-muscles.la";
+# module load: "libmodule-muscles.la";
+module load: "../../../build-dbg/modules/module-muscles/.libs/libmodule-muscles.so";
 
 begin: nodes;
 	structural: 0, static, null, eye, null, null, output, no;
@@ -94,7 +95,8 @@ begin: elements;
 		1,
 			position, reference, node, L0/20., 0., 0.,
 		from nodes,
-		muscle Pennestri, help,
+		muscle, help, 
+		model, erf,
 			# ergonomy, yes,
 			initial length, L0,
 			reference length, L0,
@@ -111,7 +113,8 @@ begin: elements;
 		1,
 			position, reference, node, -L0/20., 0., 0.,
 		from nodes,
-		muscle Pennestri, help,
+		muscle, 
+		model, erf,
 			# ergonomy, yes,
 			initial length, L0,
 			reference length, L0,
