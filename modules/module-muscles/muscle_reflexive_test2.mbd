@@ -96,7 +96,9 @@ begin: elements;
 		1,
 			position, reference, node, L0/20., 0., 0.,
 		from nodes,
-		muscle Pennestri, help,
+		muscle, help,
+		# model, pennestri,
+		model, erf,
 			# ergonomy, yes,
 			initial length, L0,
 			reference length, L0,
@@ -109,7 +111,10 @@ begin: elements;
 			reflexive,
 				proportional gain, Kp,
 				derivative gain, Kd,
-				reference length, L0;
+				reference length, L0,
+			# short range stiffness, 
+			# 	model, exponential;
+			#	model, linear;
 
 	joint: 3, rod,
 		0,
@@ -117,7 +122,9 @@ begin: elements;
 		1,
 			position, reference, node, -L0/20., 0., 0.,
 		from nodes,
-		muscle Pennestri, help,
+		muscle, help,
+		# model, pennestri,
+		model, erf,
 			# ergonomy, yes,
 			initial length, L0,
 			reference length, L0,
@@ -130,7 +137,10 @@ begin: elements;
 			reflexive,
 				proportional gain, Kp,
 				derivative gain, Kd,
-				reference length, L0;
+				reference length, L0,
+			# short range stiffness, 
+			# 	model, exponential;
+			#	model, linear;
 
 	couple: 1, follower,
 		1,
