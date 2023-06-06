@@ -32,8 +32,8 @@
 \subsection{Pressure Loads}
 Pressure loads are intended mainly to apply prescribed pressure boundary conditions at the surface of solid elements.
 However, they could be used also for shell and membrane elements. The value of the pressure can be imposed
-by means of a set of drive callers or by means of a set of abstract nodes. By convention, pressure loads are always applied
-in the opposite direction of the surface normal vector. So, it is important that the surfaces are oriented properly
+by means of a set of drive callers, or by means of a set of abstract nodes. By convention, pressure loads are always applied
+in the opposite direction of the surface normal vector. So, it is important, that the surfaces are oriented properly
 when creating the mesh (e.g. use \emph{ReorientMesh} in \htmladdnormallink{\texttt{Gmsh}}{https://gmsh.info/}).
 See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -82,13 +82,13 @@ See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
                     reference, 4;
 \end{verbatim}
 
-\subsection{Surface Tractions}
-Surface tractions are similar to pressure loads but they do not necessarily act perpendicular to the surface.
+\subsection{Surface Traction's}
+Surface traction's are similar to pressure loads but they do not necessarily act perpendicular to the surface.
 So, they can be used to impose a prescribed shear stress at the surface of a solid body.
-Actually there are absolute and relative surface tractions. Absolute surface tractions are applied with respect
-to the global reference frame and do not change the direction of the applied force vector if the surface is moved
-or deformed during the simulation. In contradiction to that, relative surface tractions are also applied with respect
-to the global reference frame, but their direction and magnitude is changed like pressure loads if the surface is deformed or moved.
+Actually there are absolute and relative surface traction's. Absolute surface traction's are applied with respect
+to the global reference frame and do not change their direction and magnitude if the surface is moved
+or deformed during the simulation. In contradiction to that, relative surface traction's are also applied with respect
+to the global reference frame, but their direction and magnitude is changed similar to pressure loads, if the surface is deformed or moved.
 See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
 \begin{Verbatim}[commandchars=\\\{\}]
   \bnt{elem_type} ::= \{ \kw{tractionq4} | \kw{tractionq8} | \kw{tractionq8r} | \kw{tractiont6} \}

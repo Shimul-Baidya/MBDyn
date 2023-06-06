@@ -4889,7 +4889,7 @@ Either Young's modulus \nt{E}, Poisson's ratio \nt{nu} and the optional ratio \n
 or Mooney-Rivlin parameters \nt{C1}, \nt{C2} and the bulk modulus \nt{kappa} may be provided.
 If $\nt{delta}=0$ or $\nt{C2}=0$, a classical Neo-Hookean constitutive law is obtained.
 Equation~\ref{eq:CL:mooney-rivlin:param} shows the relations between those parameters.
-Currently fully incompressible constitutive laws are not yet supported by MBDyn.
+Currently fully incompressible constitutive laws are not yet supported in MBDyn.
 
 \begin{eqnarray}
   G & = & \frac{\nt{E}}{2\,\left(1 + \nt{nu}\right)} \\
@@ -4994,7 +4994,7 @@ The stress and strain rates of the Maxwell constitutive law are described by equ
   \dot{\boldsymbol{\varepsilon}}_i^v &=& \frac{\nt{E1}_i}{\nt{eta1}_i} \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right) \label{sec:CSL:Maxwell:strain_rate}
 \end{eqnarray}
 
-If the constitutive law is isotropic and it is used for solid elements, then the following expression, which is equivalent to Hooke's law, can be used for \nt{C}.
+If the constitutive law is isotropic, and it is used for solid elements, then the following expression, which is equivalent to Hooke's law, can be used for \nt{C}.
 \begin{eqnarray}
   \nt{C} &=& \frac{1}{\left(1 + \nu\right)\left(1 - 2 \, \nu\right)} \, \begin{pmatrix}
     1 - \nu & \nu & \nu & 0 & 0 & 0 \\

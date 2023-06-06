@@ -90,10 +90,10 @@ Also in case of constant density, density values must be provided for each node,
 In addition to linear elastic isotropic and linear viscoelastic isotropic constitutive laws,
 any linear or nonlinear elastic or viscoelastic 6D constitutive law can be used if it fulfills the following requirements:
 A constitutive law must expect the components of the Green-Lagrange strain tensor $\boldsymbol{G}$
-and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input and return the components of the Second Piola-Kirchhoff
+and optionally it's time derivatives $\dot{\boldsymbol{G}}$ as input, and return the components of the Second Piola-Kirchhoff
 stress tensor $\boldsymbol{S}$ as output. In addition to generic linear elastic and linear viscoelastic constitutive laws,
 also hyperelastic- and elasto-plastic constitutive laws are implemented.
-See also section~\ref{sec:CL:neo-hookean}, section~\ref{sec:CL:mooney-rivlin} and section~\ref{sec:CL:bilinear-isotropic-hardening}.
+See also section~\ref{sec:CL:neo-hookean}, section~\ref{sec:CL:mooney-rivlin}, section~\ref{sec:CL:bilinear-isotropic-hardening} and section~\ref{sec:CL:linear-viscoelastic-maxwell}.
 In case of viscoelastic constitutive laws, the strain rates $\dot{\boldsymbol{\varepsilon}}$ are scaled in order to make
 the effect of structural damping independent on the strain \cite{KUEBLER2005}.
 
@@ -121,13 +121,14 @@ As a consequence it is possible to build elements with varying elastic propertie
 The actual number of integration points is shown in table~\ref{sec:EL:SOLID:elemtypes}.
 \subsubsection{Output}
 \paragraph{Output of stress and strain}
-By default six components of the Cauchy stress tensor $\boldsymbol{\tau}$ and six strains $\bar{\boldsymbol{\varepsilon}}$ at element nodes are written to the output file.
+By default six components of the Cauchy stress tensor $\bar{\boldsymbol{\tau}}$ and six strains $\bar{\boldsymbol{\varepsilon}}$ at element nodes are written to the output file.
+See also equation~\ref{SEC:EL:solid:output:start} to equation~\ref{SEC:EL:solid:output:end} which are based on \cite{WALLRAPP1998}.
 Since stress and strain are evaluated at integration points instead of nodes, it is required to extrapolate $\bar{\boldsymbol{\tau}}$ and $\bar{\boldsymbol{\varepsilon}}$
 from integration points to nodes using Lapack's DGELSD function.
 \begin{eqnarray}
-  \boldsymbol{\tau} & = & \frac{1}{\det{\boldsymbol{F}}} \, \boldsymbol{F} \, \boldsymbol{S} \, \boldsymbol{F}^T \\
+  \boldsymbol{\tau} & = & \frac{1}{\det{\boldsymbol{F}}} \, \boldsymbol{F} \, \boldsymbol{S} \, \boldsymbol{F}^T   \label{SEC:EL:solid:output:start} \\
   \bar{\varepsilon}_{\alpha} & = & \sqrt{C_{\alpha\alpha}} - 1 \\
-  \sin{\vartheta_{\alpha\beta}} & = & \frac{C_{\alpha\beta}}{\left(1 + \bar{\varepsilon}_{\alpha}\right)\left(1 + \bar{\varepsilon}_{\beta}\right)} \\
+  \sin{\vartheta_{\alpha\beta}} & = & \frac{C_{\alpha\beta}}{\left(1 + \bar{\varepsilon}_{\alpha}\right)\left(1 + \bar{\varepsilon}_{\beta}\right)}   \label{SEC:EL:solid:output:end}  \\
   \bar{\boldsymbol{\tau}} & = & \begin{pmatrix}
     \tau_{11} &
     \tau_{22} &
