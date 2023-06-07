@@ -56,16 +56,16 @@ namespace sp_grad_test {
      void func_scalar2(const T& u, const T& v, const T& w, doublereal e, T& f);
 
      void func_scalar1_dv(const index_type nbdirs,
-			  const doublereal u,
-			  const doublereal ud[],
-			  const doublereal v,
-			  const doublereal vd[],
-			  const doublereal w,
-			  const doublereal wd[],
-			  doublereal e,
-			  doublereal& f,
-			  doublereal fd[],
-			  doublereal work[]);
+                          const doublereal u,
+                          const doublereal ud[],
+                          const doublereal v,
+                          const doublereal vd[],
+                          const doublereal w,
+                          const doublereal wd[],
+                          doublereal e,
+                          doublereal& f,
+                          doublereal fd[],
+                          doublereal work[]);
 
      template <typename U, typename V, typename W>
      bool func_bool1(const U& u, const V& v, const W& w, doublereal e);
@@ -92,13 +92,13 @@ namespace sp_grad_test {
      void func_mat_mul1(index_type n, const doublereal a[], const doublereal b[], doublereal& s);
 
      void func_mat_mul1_dv(index_type n,
-			   const doublereal a[],
-			   const doublereal ad[],
-			   const doublereal b[],
-			   const doublereal bd[],
-			   doublereal& s,
-			   doublereal sd[],
-			   index_type nbdirs);
+                           const doublereal a[],
+                           const doublereal ad[],
+                           const doublereal b[],
+                           const doublereal bd[],
+                           doublereal& s,
+                           doublereal sd[],
+                           index_type nbdirs);
 
      template <typename TA, typename TB>
      void
@@ -114,50 +114,50 @@ namespace sp_grad_test {
      void func_mat_mul4(index_type irows, index_type icols, const doublereal* A, const doublereal* x, doublereal* b);
 
      void func_mat_mul4_dd(index_type irows,
-			   index_type icols,
-			   const doublereal* A,
-			   const doublereal* x,
-			   doublereal* b);
+                           index_type icols,
+                           const doublereal* A,
+                           const doublereal* x,
+                           doublereal* b);
 
 
      void func_mat_mul4_dg(index_type irows,
-			   index_type icols,
-			   index_type nbdirs,
-			   const doublereal* A,
-			   const doublereal* x,
-			   const doublereal* xd,
-			   doublereal* b,
-			   doublereal* bd);
+                           index_type icols,
+                           index_type nbdirs,
+                           const doublereal* A,
+                           const doublereal* x,
+                           const doublereal* xd,
+                           doublereal* b,
+                           doublereal* bd);
 
      void func_mat_mul4_gg(index_type irows,
-			   index_type icols,
-			   index_type nbdirs,
-			   const doublereal* A,
-			   const doublereal* Ad,
-			   const doublereal* x,
-			   const doublereal* xd,
-			   doublereal* b,
-			   doublereal* bd);
+                           index_type icols,
+                           index_type nbdirs,
+                           const doublereal* A,
+                           const doublereal* Ad,
+                           const doublereal* x,
+                           const doublereal* xd,
+                           doublereal* b,
+                           doublereal* bd);
 
      void func_mat_mul4_gd(index_type irows,
-			   index_type icols,
-			   index_type nbdirs,
-			   const doublereal* A,
-			   const doublereal* Ad,
-			   const doublereal* x,
-			   doublereal* b,
-			   doublereal* bd);
+                           index_type icols,
+                           index_type nbdirs,
+                           const doublereal* A,
+                           const doublereal* Ad,
+                           const doublereal* x,
+                           doublereal* b,
+                           doublereal* bd);
 
      template <typename TA, typename TB>
      void func_mat_mul4(const index_type irows,
-			const index_type icols,
-			const index_type nbdirs,
-			const doublereal* A,
-			const doublereal* Ad,
-			const doublereal* x,
-			const doublereal* xd,
-			doublereal* b,
-			doublereal* bd);
+                        const index_type icols,
+                        const index_type nbdirs,
+                        const doublereal* A,
+                        const doublereal* Ad,
+                        const doublereal* x,
+                        const doublereal* xd,
+                        doublereal* b,
+                        doublereal* bd);
 
      template <typename TA, typename TX>
      void func_mat_mul4m(const std::vector<TA>& A, const std::vector<TX>& x, std::vector<typename util::ResultType<TA,TX>::Type>& b);
@@ -169,151 +169,164 @@ namespace sp_grad_test {
      void func_mat_mul4sm(const std::vector<TA>& A, const std::vector<TX>& x, std::vector<typename util::ResultType<TA, TX>::Type>& b);
 
      static constexpr index_type iNumRowsStatic1 = 10, iNumColsStatic1 = 8, iNumRowsStatic2 = 7, iNumColsStatic2 = 9;
-     
+
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add7(const SpMatrixBase<TA, NumRows, NumCols>& A,
-			const SpMatrixBase<TB, NumRows, NumCols>& B,
-			const SpMatrixBase<TC, NumRows, NumCols>& C,
-			SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
+                        const SpMatrixBase<TB, NumRows, NumCols>& B,
+                        const SpMatrixBase<TC, NumRows, NumCols>& C,
+                        SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
+
+     template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
+     void func_mat_add7(const SpMatrixBase<TA, NumRows, NumCols>& A,
+                        const SpMatrixBase<TB, NumRows, NumCols>& B,
+                        const SpMatrixBase<TC, NumRows, NumCols>& C,
+                        SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D,
+                        const SpGradExpDofMapHelper<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& oDofMap);
 
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add7a(const SpMatrixBase<TA, NumRows, NumCols>& A,
-			 const SpMatrixBase<TB, NumRows, NumCols>& B,
-			 const SpMatrixBase<TC, NumRows, NumCols>& C,
-			 SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
+                         const SpMatrixBase<TB, NumRows, NumCols>& B,
+                         const SpMatrixBase<TC, NumRows, NumCols>& C,
+                         SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
 
      template <typename TA, typename TB, typename TC>
      void func_mat_add7(index_type n,
-			index_type nbdirs,
-			const doublereal A[],
-			const doublereal Ad[],
-			const doublereal B[],
-			const doublereal Bd[],
-			const doublereal C[],
-			const doublereal Cd[],
-			doublereal D[],
-			doublereal Dd[]);
+                        index_type nbdirs,
+                        const doublereal A[],
+                        const doublereal Ad[],
+                        const doublereal B[],
+                        const doublereal Bd[],
+                        const doublereal C[],
+                        const doublereal Cd[],
+                        doublereal D[],
+                        doublereal Dd[]);
 
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add8(const SpMatrixBase<TA, NumRows, NumCols>& A,
-			const SpMatrixBase<TB, NumRows, NumCols>& B,
-			const TC& c,
-			SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
+                        const SpMatrixBase<TB, NumRows, NumCols>& B,
+                        const TC& c,
+                        SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
 
      void func_mat_add8(index_type n,
-			index_type nbdirs,
-			const doublereal A[],
-			const doublereal Ad[],
-			const doublereal B[],
-			const doublereal Bd[],
-			doublereal c,
-			const doublereal cd[],
-			doublereal D[],
-			doublereal Dd[]);
+                        index_type nbdirs,
+                        const doublereal A[],
+                        const doublereal Ad[],
+                        const doublereal B[],
+                        const doublereal Bd[],
+                        doublereal c,
+                        const doublereal cd[],
+                        doublereal D[],
+                        doublereal Dd[]);
 
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add8a(const SpMatrixBase<TA, NumRows, NumCols>& A,
-			 const SpMatrixBase<TB, NumRows, NumCols>& B,
-			 const TC& c,
-			 SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
+                         const SpMatrixBase<TB, NumRows, NumCols>& B,
+                         const TC& c,
+                         SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
 
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add8b(const SpMatrixBase<TA, NumRows, NumCols>& A,
-			 const SpMatrixBase<TB, NumRows, NumCols>& B,
-			 const TC& c,
-			 SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
-     
+                         const SpMatrixBase<TB, NumRows, NumCols>& B,
+                         const TC& c,
+                         SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumRows, NumCols>& D);
+
      template <typename TA, typename TB, typename TC, index_type NumRows, index_type NumCols>
      void func_mat_add9(const SpMatrixBase<TA, NumRows, NumCols>& A,
-			const SpMatrixBase<TB, NumCols, NumRows>& B,
-			const TC& c,
-			SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumCols, NumRows>& D);
+                        const SpMatrixBase<TB, NumCols, NumRows>& B,
+                        const TC& c,
+                        SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type, NumCols, NumRows>& D);
 
      template <typename TA, typename TB>
      void func_mat_mul10(const SpMatrixBase<TA>& A,
-			 const SpMatrixBase<TB>& B,
-			 SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C);
-     
+                         const SpMatrixBase<TB>& B,
+                         SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C);
+
+     template <typename TA, typename TB>
+     void func_mat_mul10(const SpMatrixBase<TA>& A,
+                         const SpMatrixBase<TB>& B,
+                         SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C,
+                         const SpGradExpDofMapHelper<typename util::ResultType<TA, TB>::Type>& oDofMap);
+
      void func_mat_mul10(index_type nra,
-			 index_type nca,
-			 index_type ncb,
-			 index_type nbdirs,
-			 const doublereal A[],
-			 const doublereal Ad[],
-			 const doublereal B[],
-			 const doublereal Bd[],
-			 doublereal C[],
-			 doublereal Cd[]);
+                         index_type nca,
+                         index_type ncb,
+                         index_type nbdirs,
+                         const doublereal A[],
+                         const doublereal Ad[],
+                         const doublereal B[],
+                         const doublereal Bd[],
+                         doublereal C[],
+                         doublereal Cd[]);
 
      template <typename TA, typename TB>
      void func_mat_mul10_trans(const SpMatrixBase<TA>& A,
-			       const SpMatrixBase<TB>& B,
-			       SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C_T);
+                               const SpMatrixBase<TB>& B,
+                               SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C_T);
 
      template <typename TA, typename TB>
      void func_mat_mul10_trans_add(const SpMatrixBase<TA>& A,
-				   const SpMatrixBase<TB>& B,
-				   SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C);
-     
+                                   const SpMatrixBase<TB>& B,
+                                   SpMatrixBase<typename util::ResultType<TA, TB>::Type>& C);
+
      template <typename TA, typename TB, typename TC>
      void func_mat_mul11(const SpMatrixBase<TA>& A,
-			 const SpMatrixBase<TB>& B,
-			 const SpMatrixBase<TC>& C,
-			 SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
+                         const SpMatrixBase<TB>& B,
+                         const SpMatrixBase<TC>& C,
+                         SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
 
      void func_mat_mul11(index_type n,
-			 index_type nbdirs,
-			 const doublereal A[],
-			 const doublereal Ad[],
-			 const doublereal B[],
-			 const doublereal Bd[],
-			 const doublereal C[],
-			 const doublereal Cd[],
-			 doublereal D[],
-			 doublereal Dd[],
-			 doublereal Tmp1[],
-			 doublereal Tmp1d[],
-			 doublereal Tmp2[],
-			 doublereal Tmp2d[]);
+                         index_type nbdirs,
+                         const doublereal A[],
+                         const doublereal Ad[],
+                         const doublereal B[],
+                         const doublereal Bd[],
+                         const doublereal C[],
+                         const doublereal Cd[],
+                         doublereal D[],
+                         doublereal Dd[],
+                         doublereal Tmp1[],
+                         doublereal Tmp1d[],
+                         doublereal Tmp2[],
+                         doublereal Tmp2d[]);
 
      template <typename TA, typename TB, typename TC>
      void func_mat_mul11_trans(const SpMatrixBase<TA>& A,
-			       const SpMatrixBase<TB>& B,
-			       const SpMatrixBase<TC>& C,
-			       SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
+                               const SpMatrixBase<TB>& B,
+                               const SpMatrixBase<TC>& C,
+                               SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
 
      template <typename TA, typename TB, typename TC>
      void func_mat_mul12a(const SpMatrixBase<TA>& A,
-			  const SpMatrixBase<TB>& B,
-			  const SpMatrixBase<TC>& C,
-			  SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
+                          const SpMatrixBase<TB>& B,
+                          const SpMatrixBase<TC>& C,
+                          SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
 
      template <typename TA, typename TB, typename TC>
      void func_mat_mul12b(const SpMatrixBase<TA>& A,
-			  const SpMatrixBase<TB>& B,
-			  const SpMatrixBase<TC>& C,
-			  SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
+                          const SpMatrixBase<TB>& B,
+                          const SpMatrixBase<TC>& C,
+                          SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
 
      template <typename TA, typename TB, typename TC>
      void func_mat_mul12c(const SpMatrixBase<TA>& A,
-			  const SpMatrixBase<TB>& B,
-			  const SpMatrixBase<TC>& C,
-			  SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
+                          const SpMatrixBase<TB>& B,
+                          const SpMatrixBase<TC>& C,
+                          SpMatrixBase<typename util::ResultType<typename util::ResultType<TA, TB>::Type, TC>::Type>& D);
 
      void func_mat_mul12(index_type nra,
-			 index_type nca,
-			 index_type ncb,
-			 index_type ncc,
-			 index_type nbdirs,
-			 const doublereal A[],
-			 const doublereal Ad[],
-			 const doublereal B[],
-			 const doublereal Bd[],
-			 const doublereal C[],
-			 const doublereal Cd[],
-			 doublereal D[],
-			 doublereal Dd[],
-			 doublereal Tmp1[],
-			 doublereal Tmp1d[]);
+                         index_type nca,
+                         index_type ncb,
+                         index_type ncc,
+                         index_type nbdirs,
+                         const doublereal A[],
+                         const doublereal Ad[],
+                         const doublereal B[],
+                         const doublereal Bd[],
+                         const doublereal C[],
+                         const doublereal Cd[],
+                         doublereal D[],
+                         doublereal Dd[],
+                         doublereal Tmp1[],
+                         doublereal Tmp1d[]);
 }
 #endif

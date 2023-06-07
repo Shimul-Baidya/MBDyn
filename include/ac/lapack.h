@@ -307,6 +307,16 @@ __FC_DECL__(dgetrs)(
 	integer *INFO);
 
 /* Subroutine */ extern int
+__FC_DECL__(dgetri)(
+        const integer* N,
+        doublereal* A,
+        const integer* LDA,
+        const integer* IPIV,
+        doublereal* WORK,
+        const integer* LWORK,
+        integer* INFO);
+     
+/* Subroutine */ extern int
 __FC_DECL__(dgecon)(
 	const char *NORM,
 	const integer *N,
