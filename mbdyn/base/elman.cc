@@ -96,6 +96,14 @@ DataManager::ElemManager(void)
 	ElemData[Elem::PLATE].Desc = "Plate";
 	ElemData[Elem::PLATE].ShortDesc = "plate";
 
+	ElemData[Elem::SOLID].OutFile = OutputHandler::SOLIDS;
+	ElemData[Elem::SOLID].Desc = "Solid";
+	ElemData[Elem::SOLID].ShortDesc = "solid";
+
+	ElemData[Elem::SURFACE_LOAD].OutFile = OutputHandler::SURFACE_LOADS;
+	ElemData[Elem::SURFACE_LOAD].Desc = "SurfaceLoad";
+	ElemData[Elem::SURFACE_LOAD].ShortDesc = "surface" "load";
+
 	ElemData[Elem::AIRPROPERTIES].OutFile = OutputHandler::AIRPROPS;
 	ElemData[Elem::AIRPROPERTIES].Desc = "AirProperties";
 	ElemData[Elem::AIRPROPERTIES].ShortDesc = "airprops";
@@ -147,6 +155,8 @@ DataManager::ElemManager(void)
 	ElemData[Elem::FORCE].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::BEAM].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
 	ElemData[Elem::PLATE].iDerivation = ELEM | GRAVITYOWNER | DOFOWNER | INITIALASSEMBLY;
+        ElemData[Elem::SOLID].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
+        ElemData[Elem::SURFACE_LOAD].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::AIRPROPERTIES].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::INDUCEDVELOCITY].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
 	ElemData[Elem::AEROMODAL].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
@@ -168,10 +178,12 @@ DataManager::ElemManager(void)
 	ElemData[Elem::JOINT_REGULARIZATION].ToBeUsedInAssembly(true);
 	ElemData[Elem::BEAM].ToBeUsedInAssembly(true);
 	ElemData[Elem::PLATE].ToBeUsedInAssembly(true);
-
+	ElemData[Elem::SOLID].ToBeUsedInAssembly(true);
+        ElemData[Elem::SURFACE_LOAD].ToBeUsedInAssembly(true);
 	/* Aggiungere qui se un tipo genera forze d'inerzia e quindi
 	 * deve essere collegato all'elemento accelerazione di gravita' */
 	ElemData[Elem::BODY].GeneratesInertiaForces(true);
+	ElemData[Elem::SOLID].GeneratesInertiaForces(true);
 	ElemData[Elem::JOINT].GeneratesInertiaForces(true);
 	ElemData[Elem::LOADABLE].GeneratesInertiaForces(true);
 	ElemData[Elem::PLATE].GeneratesInertiaForces(true);

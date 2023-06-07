@@ -82,8 +82,10 @@ const char* psExt[] = {
 	".dof",
 	".drv",		// 30
 	".trc",
+        ".sol",
+        ".prl",
 	".m",		// NOTE: ALWAYS LAST!
-	NULL		// 33
+	NULL		// 35
 };
 
 const std::unordered_map<const OutputHandler::Dimensions, const std::string> DimensionNames ({
@@ -504,6 +506,16 @@ OutputHandler::OutputHandler_int(void)
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[TRACES].pof = &ofTraces;
 
+	OutData[SOLIDS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+
+        OutData[SOLIDS].pof = &ofSolids;
+
+        OutData[SURFACE_LOADS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+             | OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+
+        OutData[SURFACE_LOADS].pof = &ofSurfaceLoads;
+        
 	OutData[EIGENANALYSIS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[EIGENANALYSIS].pof = &ofEigenanalysis;

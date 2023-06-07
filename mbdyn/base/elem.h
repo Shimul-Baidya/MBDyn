@@ -104,7 +104,9 @@ public:
 			JOINT_REGULARIZATION,
 		BEAM,
 		PLATE,
-
+                SOLID,
+                SURFACE_LOAD,
+                
 		FORCE,
 
 		INERTIA,

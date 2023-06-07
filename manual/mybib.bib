@@ -3287,6 +3287,88 @@
         pages = "572--574"
 }
 
+@BOOK{KUEBLER2005,
+        author = "Lars K{\"u}bler",
+        year = 2005,
+        title = "Simulation und Sensitivit{\"a}tsanalyse flexibler Mehrk{\"o}rpersysteme mit gro{\ss}en Deformationen",
+        publischer = "SHAKER",
+        chapter = "2.2",
+        pages = "38"
+}
+
+@BOOK{DHONDT2004,
+        author = "Guido Dhondt",
+        title = "The Finite Element Method for Three-Dimensional Thermomechanical Applications",
+        publisher = "Wiley",
+        year = 2004
+}
+
+@MANUAL{CODEASTERR30301,
+	author = "EDF R{\&}D",
+	year = 2001,        
+	title = "Code{\_}Aster - Shape functions and integration points of finite elements",
+	organization = "Electricite de France"
+}
+
+@manual{bleyer2018numericaltours,
+       title={Numerical Tours of Computational Mechanics with {FE}ni{CS}},
+       DOI={10.5281/zenodo.1287832},
+       howpublished = {https://comet-fenics.readthedocs.io},
+       publisher={Zenodo},
+       author={Jeremy Bleyer},
+       year={2018}
+}
+
+@article{SCHENK2004475,
+       title = {Solving unsymmetric sparse systems of linear equations with PARDISO},
+       journal = {Future Generation Computer Systems},
+       volume = {20},
+       number = {3},
+       pages = {475-487},
+       year = {2004},
+       note = {Selected numerical algorithms},
+       issn = {0167-739X},
+       doi = {https://doi.org/10.1016/j.future.2003.07.011},
+       url = {https://www.sciencedirect.com/science/article/pii/S0167739X03001882},
+       author = {Olaf Schenk and Klaus Gärtner},
+       keywords = {Computational sciences, Numerical linear algebra, Direct solver, Unsymmetric linear systems},
+       abstract = {Supernode partitioning for unsymmetric matrices together with complete block diagonal supernode pivoting and asynchronous computation can achieve high gigaflop rates for parallel sparse LU factorization on shared memory parallel computers. The progress in weighted graph matching algorithms helps to extend these concepts further and unsymmetric prepermutation of rows is used to place large matrix entries on the diagonal. Complete block diagonal supernode pivoting allows dynamical interchanges of columns and rows during the factorization process. The level-3 BLAS efficiency is retained and an advanced two-level left–right looking scheduling scheme results in good speedup on SMP machines. These algorithms have been integrated into the recent unsymmetric version of the PARDISO solver. Experiments demonstrate that a wide set of unsymmetric linear systems can be solved and high performance is consistently achieved for large sparse unsymmetric matrices from real world applications.}
+}
+
+@article{henon:inria-00346017,
+       TITLE = {{PaStiX: A High-Performance Parallel Direct Solver for Sparse Symmetric Definite Systems}},
+       AUTHOR = {H{\'e}non, Pascal and Ramet, Pierre and Roman, Jean},
+       URL = {https://inria.hal.science/inria-00346017},
+       JOURNAL = {{Parallel Computing}},
+       PUBLISHER = {{Elsevier}},
+       VOLUME = {28},
+       NUMBER = {2},
+       PAGES = {301--321},
+       YEAR = {2002},
+       HAL_ID = {inria-00346017},
+       HAL_VERSION = {v1},
+}
+
+@article{10.1145/569147.569149,
+       author = {Gupta, Anshul},
+       title = {Recent Advances in Direct Methods for Solving Unsymmetric Sparse Systems of Linear Equations},
+       year = {2002},
+       issue_date = {September 2002},
+       publisher = {Association for Computing Machinery},
+       address = {New York, NY, USA},
+       volume = {28},
+       number = {3},
+       issn = {0098-3500},
+       url = {https://doi.org/10.1145/569147.569149},
+       doi = {10.1145/569147.569149},
+       abstract = {During the past few years, algorithmic improvements alone have reduced the time required for the direct solution of unsymmetric sparse systems of linear equations by almost an order of magnitude. This paper compares the performance of some well-known software packages for solving general sparse systems. In particular, it demonstrates the consistently high level of performance achieved by WSMP---the most recent of such solvers. It compares the various algorithmic components of these solvers and discusses their impact on solver performance. Our experiments show that the algorithmic choices made in WSMP enable it to run more than twice as fast as the best among similar solvers and that WSMP can factor some of the largest sparse matrices available from real applications in only a few seconds on a 4-CPU workstation. Thus, the combination of advances in hardware and algorithms makes it possible to solve those general sparse linear systems quickly and easily that might have been considered too large until recently.},
+       journal = {ACM Trans. Math. Softw.},
+       month = {sep},
+       pages = {301–324},
+       numpages = {24},
+       keywords = {Multifrontal Method, Sparse Matrix Factorization, Parallel Sparse Solvers, Sparse LU Decomposition}
+}
+
 @article{WINTERS-2011-JB,
 	title = {Whole muscle length-tension relationships are accurately modeled as scaled sarcomeres in rabbit hindlimb muscles},
 	volume = {44},
@@ -3302,4 +3384,3 @@
 	year = {2011},
 	pages = {109--115},
 }
-
