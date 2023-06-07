@@ -11,6 +11,7 @@ Paolo Mantegazza        <paolo.mantegazza@polimi.it>
 
 MBDyn 1.X-Devel
 	Enhancements:
+		- solid elements; (Reinard Resch)
 		- many new integrators; (Pierangelo Masarati, Huimin Zhng, Runsen Zang,	...)
 		- experimental hybrid integrator; (Reinard Resch)
 		- Trilinos wrappers; (Reinard Resch)
