@@ -483,6 +483,10 @@ namespace sp_grad {
                :u(LhsTempHelper::EvalUnique(u)), v(RhsTempHelper::EvalUnique(v)) {
           }
 
+          constexpr SpMatCrossExpr(const LhsExprType& u, const RhsExprType& v, const SpGradExpDofMapHelper<ValueType>& oDofMap) noexcept
+               :u(LhsTempHelper::EvalUnique(u), oDofMap), v(RhsTempHelper::EvalUnique(v), oDofMap) {
+          }
+
           SpMatCrossExpr(SpMatCrossExpr&& oExpr)
                :u(std::move(oExpr.u)), v(std::move(oExpr.v)) {
           }
@@ -5192,6 +5196,17 @@ namespace sp_grad {
           return decltype(Cross(A, B))(A, B);
      }
 
+     template <typename LhsValue, typename RhsValue, typename LhsExpr, typename RhsExpr>
+     inline constexpr
+     SpMatCrossExpr<typename util::ResultType<LhsValue, RhsValue>::Type,
+                    const SpMatElemExprBase<LhsValue, LhsExpr>&,
+                    const SpMatElemExprBase<RhsValue, RhsExpr>&>
+     Cross(const SpMatElemExprBase<LhsValue, LhsExpr>& A,
+           const SpMatElemExprBase<RhsValue, RhsExpr>& B,
+           const SpGradExpDofMapHelper<typename util::ResultType<LhsValue, RhsValue>::Type>& oDofMap) noexcept {
+          return decltype(Cross(A, B))(A, B, oDofMap);
+     }
+
      template <typename Value, typename Expr>
      inline constexpr
      SpMatElemTranspExpr<Value, const SpMatElemExprBase<Value, Expr>&>
@@ -5416,6 +5431,57 @@ namespace sp_grad {
                                 vtmp.begin(),
                                 vtmp.begin() + iColSizeV,
                                 iRowOffsetV);
+
+          return a;
+     }
+
+     template <typename LhsValue, typename RhsValue, typename LhsExpr, typename RhsExpr>
+     inline constexpr
+     typename util::ResultType<LhsValue, RhsValue>::Type
+     Dot(const SpMatElemExprBase<LhsValue, LhsExpr>& u, const SpMatElemExprBase<RhsValue, RhsExpr>& v, const SpGradExpDofMapHelper<typename util::ResultType<LhsValue, RhsValue>::Type>& oDofMap) {
+          static_assert(u.iNumRowsStatic == v.iNumRowsStatic);
+          static_assert(u.iNumColsStatic == 1);
+          static_assert(v.iNumColsStatic == 1);
+          SP_GRAD_ASSERT(u.iGetNumRows() == v.iGetNumRows());
+
+          typedef const SpMatElemExprBase<LhsValue, LhsExpr>& LhsTmpExpr;
+          typedef const SpMatElemExprBase<RhsValue, RhsExpr>& RhsTmpExpr;
+          typedef typename util::remove_all<LhsTmpExpr>::type LhsExprType;
+          typedef typename util::remove_all<RhsTmpExpr>::type RhsExprType;
+
+          constexpr bool bLhsUsesIterators = (LhsExprType::uMatAccess & util::MatAccessFlag::ITERATORS) != 0;
+          constexpr bool bRhsUsesIterators = (RhsExprType::uMatAccess & util::MatAccessFlag::ITERATORS) != 0;
+
+          constexpr bool bUseTmpExprLhs = !(LhsExprType::iNumElemOps == 0 && bLhsUsesIterators);
+          constexpr bool bUseTmpExprRhs = !(RhsExprType::iNumElemOps == 0 && bRhsUsesIterators);
+
+          typedef util::TempExprHelper<LhsTmpExpr, bUseTmpExprLhs> UTmpType;
+          typedef util::TempExprHelper<RhsTmpExpr, bUseTmpExprRhs> VTmpType;
+
+          typename UTmpType::Type utmp{UTmpType::EvalUnique(u), oDofMap};
+          typename VTmpType::Type vtmp{VTmpType::EvalUnique(v), oDofMap};
+
+          static_assert(utmp.iNumElemOps == 0);
+          static_assert(vtmp.iNumElemOps == 0);
+          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+
+          const index_type iRowOffsetU = utmp.iGetRowOffset();
+          const index_type iColSizeU = utmp.iGetRowOffset() * utmp.iGetNumRows();
+          const index_type iRowOffsetV = vtmp.iGetRowOffset();
+          const index_type iColSizeV = vtmp.iGetNumRows() * iRowOffsetV;
+
+          typename util::ResultType<LhsValue, RhsValue>::Type a;
+          typedef util::InnerProductHelper<LhsValue, RhsValue> IPH;
+
+          IPH::MapEval(a,
+                       utmp.begin(),
+                       utmp.begin() + iColSizeU,
+                       iRowOffsetU,
+                       vtmp.begin(),
+                       vtmp.begin() + iColSizeV,
+                       iRowOffsetV,
+                       oDofMap);
 
           return a;
      }

@@ -162,20 +162,20 @@ BeamAd::AssReactionForce(sp_grad::SpGradientAssVec<T>& WorkVec,
 
      WorkVec.AddItem(iNode1FirstMomIndex + 1, F_I);
 
-     const SpColVector<T, 3> M_I(Cross(p[S_I] - X[NODE1], SubColVector<1, 1, 3>(Az[S_I])) + SubColVector<4, 1, 3>(Az[S_I]), oDofMap);
+     const SpColVector<T, 3> M_I(Cross(p[S_I] - X[NODE1], SubColVector<1, 1, 3>(Az[S_I]), oDofMap) + SubColVector<4, 1, 3>(Az[S_I]), oDofMap);
 
      WorkVec.AddItem(iNode1FirstMomIndex + 4, M_I);
 
      const SpColVector<T, 3> F_II(SubColVector<1, 1, 3>(Az[SII]) - SubColVector<1, 1, 3>(Az[S_I]), oDofMap);
      const SpColVector<T, 3> M_II(SubColVector<4, 1, 3>(Az[SII]) - SubColVector<4, 1, 3>(Az[S_I])
-                                  + Cross(p[SII] - X[NODE2], SubColVector<1, 1, 3>(Az[SII]))
-                                  - Cross(p[S_I] - X[NODE2], SubColVector<1, 1, 3>(Az[S_I])), oDofMap);
+                                  + Cross(p[SII] - X[NODE2], SubColVector<1, 1, 3>(Az[SII]), oDofMap)
+                                  - Cross(p[S_I] - X[NODE2], SubColVector<1, 1, 3>(Az[S_I]), oDofMap), oDofMap);
 
      WorkVec.AddItem(iNode2FirstMomIndex + 1, F_II);
      WorkVec.AddItem(iNode2FirstMomIndex + 4, M_II);
 
      const SpColVector<T, 3> F_III = -SubColVector<1, 1, 3>(Az[SII]);
-     const SpColVector<T, 3> M_III(Cross(SubColVector<1, 1, 3>(Az[SII]), p[SII] - X[NODE3]) - SubColVector<4, 1, 3>(Az[SII]), oDofMap);
+     const SpColVector<T, 3> M_III(Cross(SubColVector<1, 1, 3>(Az[SII]), p[SII] - X[NODE3], oDofMap) - SubColVector<4, 1, 3>(Az[SII]), oDofMap);
 
      WorkVec.AddItem(iNode3FirstMomIndex + 1, F_III);
      WorkVec.AddItem(iNode3FirstMomIndex + 4, M_III);
@@ -256,8 +256,8 @@ BeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           const SpColVector<T, 3> GgGrad(MatGVec(g[iSez], oDofMap) * gGrad[iSez], oDofMap);
 
           for (index_type i = 1; i <= 3; ++i) {
-               oDofMap.MapAssign(DefLoc[iSez](i), Dot(R[iSez].GetCol(i), L[iSez]) - L0[iSez](i));
-               oDofMap.MapAssign(DefLoc[iSez](i + 3), Dot(R[iSez].GetCol(i), GgGrad) + DefLocRef[iSez](i + 3));
+               DefLoc[iSez](i) = Dot(R[iSez].GetCol(i), L[iSez], oDofMap) - L0[iSez](i);
+               DefLoc[iSez](i + 3) = Dot(R[iSez].GetCol(i), GgGrad, oDofMap) + DefLocRef[iSez](i + 3);
           }
 
           /* Calcola le azioni interne */
@@ -268,8 +268,8 @@ BeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
           /* Porta le azioni interne nel sistema globale */
           for (integer i = 1; i <= 3; ++i) {
-               oDofMap.MapAssign(Az[iSez](i), Dot(Transpose(R[iSez].GetRow(i)), SubColVector<1, 1, 3>(AzLoc[iSez])));
-               oDofMap.MapAssign(Az[iSez](i + 3), Dot(Transpose(R[iSez].GetRow(i)), SubColVector<4, 1, 3>(AzLoc[iSez])));
+               Az[iSez](i) = Dot(Transpose(R[iSez].GetRow(i)), SubColVector<1, 1, 3>(AzLoc[iSez]), oDofMap);
+               Az[iSez](i + 3) = Dot(Transpose(R[iSez].GetRow(i)), SubColVector<4, 1, 3>(AzLoc[iSez]), oDofMap);
           }
 
           DEBUGCOUT("p[" << iSez << "]=" << p[iSez] << std::endl);
@@ -499,12 +499,12 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                                 + RDelta[iSez] * OmegaRef[iSez], oDofMap);
 
           /* rate of MatG */
-          const T dtmp0 = Dot(g[iSez], g[iSez]);
+          const T dtmp0 = Dot(g[iSez], g[iSez], oDofMap);
           const T dtmp1 = 4. + dtmp0;
           const T dtmp2 = -4. / (dtmp1 * dtmp1);
           const T dtmp3 = 2. / dtmp1;
 
-          const SpColVector<T, 3> GPrimeg((gPrime[iSez] * dtmp0 + g[iSez] * Dot(gPrime[iSez], g[iSez])) * dtmp2
+          const SpColVector<T, 3> GPrimeg((gPrime[iSez] * dtmp0 + g[iSez] * Dot(gPrime[iSez], g[iSez], oDofMap)) * dtmp2
                                           + Cross(gPrime[iSez], g[iSez]) * dtmp3, oDofMap);
 
           /* Derivate della posizione */
@@ -543,8 +543,8 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           const SpColVector<T, 3> GgGrad(G * gGrad[iSez], oDofMap);
 
           for (index_type i = 1; i <= 3; ++i) {
-               oDofMap.MapAssign(DefLoc[iSez](i), Dot(R[iSez].GetCol(i), L[iSez]) - L0[iSez](i));
-               oDofMap.MapAssign(DefLoc[iSez](i + 3), Dot(R[iSez].GetCol(i), GgGrad) + DefLocRef[iSez](i + 3));
+               DefLoc[iSez](i) = Dot(R[iSez].GetCol(i), L[iSez], oDofMap) - L0[iSez](i);
+               DefLoc[iSez](i + 3) = Dot(R[iSez].GetCol(i), GgGrad, oDofMap) + DefLocRef[iSez](i + 3);
           }
 
           /* Calcola le velocita' di deformazione nel sistema locale nei punti di valutazione */
@@ -552,8 +552,8 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           const SpColVector<T, 3> DL2(G * gPrimeGrad[iSez] + GPrimeg + Cross(GgGrad, Omega[iSez]), oDofMap);
 
           for (index_type i = 1; i <= 3; ++i) {
-               oDofMap.MapAssign(DefPrimeLoc[iSez](i), Dot(R[iSez].GetCol(i), DL1));
-               oDofMap.MapAssign(DefPrimeLoc[iSez](i + 3), Dot(R[iSez].GetCol(i), DL2) + DefPrimeLocRef[iSez](i + 3));
+               DefPrimeLoc[iSez](i) = Dot(R[iSez].GetCol(i), DL1, oDofMap);
+               DefPrimeLoc[iSez](i + 3) = Dot(R[iSez].GetCol(i), DL2, oDofMap) + DefPrimeLocRef[iSez](i + 3);
           }
 
           /* Calcola le azioni interne */
@@ -564,8 +564,8 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
           /* Porta le azioni interne nel sistema globale */
           for (index_type i = 1; i <= 3; ++i) {
-               oDofMap.MapAssign(Az[iSez](i), Dot(Transpose(R[iSez].GetRow(i)), SubColVector<1, 1, 3>(AzLoc[iSez])));
-               oDofMap.MapAssign(Az[iSez](i + 3), Dot(Transpose(R[iSez].GetRow(i)), SubColVector<4, 1, 3>(AzLoc[iSez])));
+               Az[iSez](i) = Dot(Transpose(R[iSez].GetRow(i)), SubColVector<1, 1, 3>(AzLoc[iSez]), oDofMap);
+               Az[iSez](i + 3) = Dot(Transpose(R[iSez].GetRow(i)), SubColVector<4, 1, 3>(AzLoc[iSez]), oDofMap);
           }
      }
 
