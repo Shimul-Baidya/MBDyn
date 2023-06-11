@@ -416,7 +416,7 @@ StaticBodyAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      if (g) {
           integer iFirstMomentumIndex = pNode->iGetFirstMomentumIndex();
           SpColVector<T, 3> FTmp = Acceleration * dMass;
-          SpColVector<T, 3> MTmp = Cross(STmp, Acceleration);
+          SpColVector<T, 3> MTmp(Cross(STmp, Acceleration), oDofMap);
 
           WorkVec.AddItem(iFirstMomentumIndex + 1, FTmp);
           WorkVec.AddItem(iFirstMomentumIndex + 4, MTmp);
@@ -553,7 +553,7 @@ ModalBodyAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      const SpMatrix<T, 3, 3> JTmp(SpMatrix<T, 3, 3>(R * J0, oDofMap) * Transpose(R), oDofMap);
 
      SpColVector<T, 3> F(XPP * -dMass - Cross(WP, STmp) - Cross(W, Cross(W, STmp), oDofMap), oDofMap);
-     SpColVector<T, 3> M(-Cross(STmp, XPP) - Cross(W, JTmp * W) - SpColVector<T, 3>(JTmp * WP, oDofMap));
+     SpColVector<T, 3> M(-Cross(STmp, XPP) - Cross(W, JTmp * W) - SpColVector<T, 3>(JTmp * WP, oDofMap), oDofMap);
 
      if (g) {
           F += GravityAcceleration * dMass;
