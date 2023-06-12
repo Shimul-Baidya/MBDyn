@@ -483,6 +483,10 @@ namespace sp_grad {
                :u(LhsTempHelper::EvalUnique(u)), v(RhsTempHelper::EvalUnique(v)) {
           }
 
+          constexpr SpMatCrossExpr(const LhsExprType& u, const RhsExprType& v, const SpGradExpDofMapHelper<ValueType>& oDofMap) noexcept
+               :u(LhsTempHelper::EvalUnique(u), oDofMap), v(RhsTempHelper::EvalUnique(v), oDofMap) {
+          }
+
           SpMatCrossExpr(SpMatCrossExpr&& oExpr)
                :u(std::move(oExpr.u)), v(std::move(oExpr.v)) {
           }
@@ -2254,6 +2258,9 @@ namespace sp_grad {
           }
           template <typename ValueTypeExpr, typename Expr>
           inline SpColVector(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr);
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpColVector(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr,
+                             const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpColVector(const std::initializer_list<ValueType>& rgValues);
           inline void ResizeReset(index_type iNumRows, index_type iNumDeriv);
           inline SpColVector& operator=(const SpColVector& oVec)=default;
@@ -2286,6 +2293,9 @@ namespace sp_grad {
           }
           template <typename ValueTypeExpr, typename Expr>
           inline SpRowVector(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr);
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpRowVector(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr,
+                             const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpRowVector(const std::initializer_list<ValueType>& rgValues);
           inline void ResizeReset(index_type iNumCols, index_type iNumDeriv);
           inline SpRowVector& operator=(const SpRowVector& oVec)=default;
@@ -2322,6 +2332,11 @@ namespace sp_grad {
           template <typename ValueTypeExpr, typename Expr>
           inline SpMatrixA(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr)
                :SpMatrix<ValueType, NumRows, NumCols>(oExpr) {
+          }
+
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpMatrixA(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr, const SpGradExpDofMapHelper<ValueType>& oDofMap)
+               :SpMatrix<ValueType, NumRows, NumCols>(oExpr, oDofMap) {
           }
 
           inline SpMatrixA(SpMatrixBase<ValueType, NumRows, NumCols>&& oMat)
@@ -2370,6 +2385,11 @@ namespace sp_grad {
                :SpColVector<ValueType, NumRows>(oExpr) {
           }
 
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpColVectorA(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr, const SpGradExpDofMapHelper<ValueType>& oDofMap)
+               :SpColVector<ValueType, NumRows>(oExpr, oDofMap) {
+          }
+
           inline SpColVectorA(SpMatrixBase<ValueType, NumRows, 1>&& oMat)
                :SpColVector<ValueType, NumRows>(std::move(oMat)) {
           }
@@ -2416,6 +2436,11 @@ namespace sp_grad {
           template <typename ValueTypeExpr, typename Expr>
           inline SpRowVectorA(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr)
                :SpRowVector<ValueType, NumCols>(oExpr) {
+          }
+
+          template <typename ValueTypeExpr, typename Expr>
+          inline SpRowVectorA(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr, const SpGradExpDofMapHelper<ValueType>& oDofMap)
+               :SpRowVector<ValueType, NumCols>(oExpr, oDofMap) {
           }
 
           inline SpRowVectorA(SpMatrixBase<ValueType, 1, NumCols>&& oMat)
@@ -5048,6 +5073,12 @@ namespace sp_grad {
      }
 
      template <typename ValueType, index_type NumRows>
+     template <typename ValueTypeExpr, typename Expr>
+     SpColVector<ValueType, NumRows>::SpColVector(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr, const SpGradExpDofMapHelper<ValueType>& oDofMap)
+          :SpMatrixBase<ValueType, NumRows, 1>(oExpr, oDofMap) {
+     }
+
+     template <typename ValueType, index_type NumRows>
      SpColVector<ValueType, NumRows>::SpColVector(const std::initializer_list<ValueType>& rgValues)
           :SpMatrixBase<ValueType, NumRows, 1>(rgValues) {
      }
@@ -5089,6 +5120,12 @@ namespace sp_grad {
      template <typename ValueTypeExpr, typename Expr>
      SpRowVector<ValueType, NumCols>::SpRowVector(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr)
           :SpMatrixBase<ValueType, 1, NumCols>(oExpr) {
+     }
+
+     template <typename ValueType, index_type NumCols>
+     template <typename ValueTypeExpr, typename Expr>
+     SpRowVector<ValueType, NumCols>::SpRowVector(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr, const SpGradExpDofMapHelper<ValueType>& oDofMap)
+          :SpMatrixBase<ValueType, 1, NumCols>(oExpr, oDofMap) {
      }
 
      template <typename ValueType, index_type NumCols>
@@ -5157,6 +5194,17 @@ namespace sp_grad {
      Cross(const SpMatElemExprBase<LhsValue, LhsExpr>& A,
            const SpMatElemExprBase<RhsValue, RhsExpr>& B) noexcept {
           return decltype(Cross(A, B))(A, B);
+     }
+
+     template <typename LhsValue, typename RhsValue, typename LhsExpr, typename RhsExpr>
+     inline constexpr
+     SpMatCrossExpr<typename util::ResultType<LhsValue, RhsValue>::Type,
+                    const SpMatElemExprBase<LhsValue, LhsExpr>&,
+                    const SpMatElemExprBase<RhsValue, RhsExpr>&>
+     Cross(const SpMatElemExprBase<LhsValue, LhsExpr>& A,
+           const SpMatElemExprBase<RhsValue, RhsExpr>& B,
+           const SpGradExpDofMapHelper<typename util::ResultType<LhsValue, RhsValue>::Type>& oDofMap) noexcept {
+          return decltype(Cross(A, B))(A, B, oDofMap);
      }
 
      template <typename Value, typename Expr>
@@ -5387,6 +5435,57 @@ namespace sp_grad {
           return a;
      }
 
+     template <typename LhsValue, typename RhsValue, typename LhsExpr, typename RhsExpr>
+     inline constexpr
+     typename util::ResultType<LhsValue, RhsValue>::Type
+     Dot(const SpMatElemExprBase<LhsValue, LhsExpr>& u, const SpMatElemExprBase<RhsValue, RhsExpr>& v, const SpGradExpDofMapHelper<typename util::ResultType<LhsValue, RhsValue>::Type>& oDofMap) {
+          static_assert(u.iNumRowsStatic == v.iNumRowsStatic);
+          static_assert(u.iNumColsStatic == 1);
+          static_assert(v.iNumColsStatic == 1);
+          SP_GRAD_ASSERT(u.iGetNumRows() == v.iGetNumRows());
+
+          typedef const SpMatElemExprBase<LhsValue, LhsExpr>& LhsTmpExpr;
+          typedef const SpMatElemExprBase<RhsValue, RhsExpr>& RhsTmpExpr;
+          typedef typename util::remove_all<LhsTmpExpr>::type LhsExprType;
+          typedef typename util::remove_all<RhsTmpExpr>::type RhsExprType;
+
+          constexpr bool bLhsUsesIterators = (LhsExprType::uMatAccess & util::MatAccessFlag::ITERATORS) != 0;
+          constexpr bool bRhsUsesIterators = (RhsExprType::uMatAccess & util::MatAccessFlag::ITERATORS) != 0;
+
+          constexpr bool bUseTmpExprLhs = !(LhsExprType::iNumElemOps == 0 && bLhsUsesIterators);
+          constexpr bool bUseTmpExprRhs = !(RhsExprType::iNumElemOps == 0 && bRhsUsesIterators);
+
+          typedef util::TempExprHelper<LhsTmpExpr, bUseTmpExprLhs> UTmpType;
+          typedef util::TempExprHelper<RhsTmpExpr, bUseTmpExprRhs> VTmpType;
+
+          typename UTmpType::Type utmp{UTmpType::EvalUnique(u), oDofMap};
+          typename VTmpType::Type vtmp{VTmpType::EvalUnique(v), oDofMap};
+
+          static_assert(utmp.iNumElemOps == 0);
+          static_assert(vtmp.iNumElemOps == 0);
+          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+
+          const index_type iRowOffsetU = utmp.iGetRowOffset();
+          const index_type iColSizeU = utmp.iGetRowOffset() * utmp.iGetNumRows();
+          const index_type iRowOffsetV = vtmp.iGetRowOffset();
+          const index_type iColSizeV = vtmp.iGetNumRows() * iRowOffsetV;
+
+          typename util::ResultType<LhsValue, RhsValue>::Type a;
+          typedef util::InnerProductHelper<LhsValue, RhsValue> IPH;
+
+          IPH::MapEval(a,
+                       utmp.begin(),
+                       utmp.begin() + iColSizeU,
+                       iRowOffsetU,
+                       vtmp.begin(),
+                       vtmp.begin() + iColSizeV,
+                       iRowOffsetV,
+                       oDofMap);
+
+          return a;
+     }
+
      template <typename Value, typename Expr>
      inline constexpr Value Norm(const SpMatElemExprBase<Value, Expr>& u) {
           using std::sqrt;
@@ -5432,29 +5531,24 @@ namespace sp_grad {
      }
 
      template <typename ValueType>
-     SpMatrix<ValueType, 3, 3> MatGVec(const SpColVector<ValueType, 3>& g) {
-          const ValueType d = (4./(4.+Dot(g, g)));
+     void MatGVec(const SpColVector<ValueType, 3>& g, SpMatrix<ValueType, 3, 3>& G, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+          ValueType d;
 
-          SpMatrix<ValueType, 3, 3> G(3, 3, 0);
+          oDofMap.MapAssign(d, (4./(4.+Dot(g, g))));
 
           G(1, 1) = d;
-          G(2, 1) = g(3) * d / 2.;
-          G(3, 1) = -g(2) * d / 2.;
-          G(1, 2) = -g(3) * d / 2.;
+          oDofMap.MapAssign(G(2, 1), g(3) * d / 2.);
+          oDofMap.MapAssign(G(3, 1), -g(2) * d / 2.);
+          oDofMap.MapAssign(G(1, 2), -g(3) * d / 2.);
           G(2, 2) = d;
-          G(3, 2) = g(1) * d / 2.;
-          G(1, 3) = g(2) * d / 2.;
-          G(2, 3) = -g(1) * d / 2.;
+          oDofMap.MapAssign(G(3, 2), g(1) * d / 2.);
+          oDofMap.MapAssign(G(1, 3), g(2) * d / 2.);
+          oDofMap.MapAssign(G(2, 3), -g(1) * d / 2.);
           G(3, 3) = d;
-
-          return G;
      }
 
      template <typename ValueType>
-     inline SpMatrix<ValueType, 3, 3>
-     MatRVec(const SpColVector<ValueType, 3>& g) {
-          SpMatrix<ValueType, 3, 3> RDelta(3, 3, 0);
-
+     void MatGVec(const SpColVector<ValueType, 3>& g, SpMatrix<ValueType, 3, 3>& G) {
           SpGradExpDofMapHelper<ValueType> oDofMap;
 
           oDofMap.GetDofStat(g);
@@ -5462,6 +5556,30 @@ namespace sp_grad {
           oDofMap.InsertDof(g);
           oDofMap.InsertDone();
 
+          MatGVec(g, G, oDofMap);
+     }
+
+     template <typename ValueType>
+     SpMatrix<ValueType, 3, 3> MatGVec(const SpColVector<ValueType, 3>& g) {
+          SpMatrix<ValueType, 3, 3> G(3, 3, 0);
+
+          MatGVec(g, G);
+
+          return G;
+     }
+
+     template <typename ValueType>
+     SpMatrix<ValueType, 3, 3> MatGVec(const SpColVector<ValueType, 3>& g, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+          SpMatrix<ValueType, 3, 3> G(3, 3, 0);
+
+          MatGVec(g, G, oDofMap);
+
+          return G;
+     }
+
+     template <typename ValueType>
+     inline void
+     MatRVec(const SpColVector<ValueType, 3>& g, SpMatrix<ValueType, 3, 3>& RDelta, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
           ValueType d, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6;
 
           oDofMap.MapAssign(d, 4. / (4. + g(1) * g(1) + g(2) * g(2) + g(3) * g(3)));
@@ -5481,6 +5599,27 @@ namespace sp_grad {
           oDofMap.MapAssign(RDelta(3,1), (tmp6 - g(2)) * d);
           oDofMap.MapAssign(RDelta(3,2), (tmp5 + g(1)) * d);
           oDofMap.MapAssign(RDelta(3,3), (tmp2 + tmp3) * d * 0.5 + 1.);
+     }
+
+     template <typename ValueType>
+     inline void
+     MatRVec(const SpColVector<ValueType, 3>& g, SpMatrix<ValueType, 3, 3>& RDelta) {
+          SpGradExpDofMapHelper<ValueType> oDofMap;
+
+          oDofMap.GetDofStat(g);
+          oDofMap.Reset();
+          oDofMap.InsertDof(g);
+          oDofMap.InsertDone();
+
+          MatRVec(g, RDelta, oDofMap);
+     }
+
+     template <typename ValueType>
+     inline SpMatrix<ValueType, 3, 3>
+     MatRVec(const SpColVector<ValueType, 3>& g) {
+          SpMatrix<ValueType, 3, 3> RDelta(3, 3, 0);
+
+          MatRVec(g, RDelta);
 
           return RDelta;
      }

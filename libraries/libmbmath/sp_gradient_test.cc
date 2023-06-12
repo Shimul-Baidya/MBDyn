@@ -816,7 +816,30 @@ namespace sp_grad_test {
                X3a = X1 + X2;
                X3b = X1;
                X3b += X2;
+
+               SpMatrix<SpGradient, 3, 3> R1a = MatRVec(X8a);
+               SpMatrix<SpGradient, 3, 3> G1a = MatGVec(X8a);
+               SpMatrix<SpGradient, 3, 3> Eye1a = Transpose(R1a) * R1a;
+
+               SpMatrix<SpGradient, 3, 3> R1b = MatRVec(X8b);
+               SpMatrix<SpGradient, 3, 3> G1b = MatGVec(X8b);
+               SpMatrix<SpGradient, 3, 3> Eye1b = R1b * Transpose(R1b);
+
                X4a = X1 * 2. + X2 / 3.;
+
+               SpMatrix<SpGradient, 3, 3> R9a = MatRVec(A2x3gf1);
+               SpMatrix<SpGradient, 3, 3> G9a = MatGVec(A2x3gf1);
+               SpMatrix<SpGradient, 3, 3> Eye9a = Transpose(R9a) * R9a;
+
+               for (index_type i = 1; i <= 3; ++i) {
+                    for (index_type j = 1; j <= 3; ++j) {
+                         SpGradient deltaij(i == j ? 1. : 0.);
+                         sp_grad_assert_equal(Eye1a(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(Eye1b(i, j), deltaij, dTol);
+                         sp_grad_assert_equal(Eye9a(i, j), deltaij, dTol);
+                    }
+               }
+
                X4b = X1;
                X4b *= 2.;
                X4b += X2 / 3.;
