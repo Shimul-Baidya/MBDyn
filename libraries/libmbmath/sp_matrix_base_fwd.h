@@ -218,9 +218,9 @@ namespace sp_grad {
 
           static SpMatrixDataStatic* pGetNullData() noexcept;
 
-          const ValueType* pGetData(index_type iRow, index_type iCol) const noexcept;
+          inline const ValueType* pGetData(index_type iRow, index_type iCol) const noexcept;
 
-          ValueType* pGetData(index_type iRow, index_type iCol) noexcept;
+          inline ValueType* pGetData(index_type iRow, index_type iCol) noexcept;
 
      private:
           static void Cleanup(SpMatrixData<ValueType>* pData);
