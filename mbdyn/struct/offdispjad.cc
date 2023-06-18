@@ -180,14 +180,15 @@ OffsetDispJointAd::AssRes(SubVectorHandler& WorkVec,
 
 unsigned int OffsetDispJointAd::iGetNumPrivData(void) const
 {
-     return 3u;
+     return 12u;
 }
 
 unsigned int OffsetDispJointAd::iGetPrivDataIdx(const char *s) const
 {
-     static constexpr char rgPrivDataName[][3] = {"Fx", "Fy", "Fz", "Mx", "My", "Mz"};
-
-     for (integer i = 0; i < 3; ++i) {
+     static constexpr char rgPrivDataName[][3] = {"Fx", "Fy", "Fz", "Mx", "My", "Mz", "fx", "fy", "fz", "mx", "my", "mz"};
+     constexpr integer iNumPrivData = sizeof(rgPrivDataName) / sizeof(rgPrivDataName[0]);
+     
+     for (integer i = 0; i < iNumPrivData; ++i) {
           if (0 == strcmp(rgPrivDataName[i], s)) {
                return i + 1;
           }
@@ -198,15 +199,29 @@ unsigned int OffsetDispJointAd::iGetPrivDataIdx(const char *s) const
 
 doublereal OffsetDispJointAd::dGetPrivData(unsigned int i) const
 {
+     const Mat3x3& R1 = pNode1->GetRCurr();
+
      switch (i) {
      case 1:
      case 2:
      case 3:
-          return -F1Tmp(i);
+          return -R1.GetCol(i).Dot(F1Tmp);
+
      case 4:
      case 5:
      case 6:
-          return -M1Tmp(i - 3);
+          return -R1.GetCol(i - 3).Dot(M1Tmp);
+
+     case 7:
+     case 8:
+     case 9:
+          return -F1Tmp(i - 6);
+
+     case 10:
+     case 11:
+     case 12:
+          return -M1Tmp(i - 9);
+
      default:
           ASSERT(0);
           return 0.;

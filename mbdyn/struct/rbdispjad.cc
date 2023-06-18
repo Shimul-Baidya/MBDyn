@@ -182,14 +182,16 @@ RigidBodyDispJointAd::AssRes(SubVectorHandler& WorkVec,
 
 unsigned int RigidBodyDispJointAd::iGetNumPrivData(void) const
 {
-     return 6u;
+     return 12u;
 }
 
 unsigned int RigidBodyDispJointAd::iGetPrivDataIdx(const char *s) const
 {
-     static constexpr char rgPrivDataName[][3] = {"Fx", "Fy", "Fz", "Mx", "My", "Mz"};
+     static constexpr char rgPrivDataName[][3] = {"Fx", "Fy", "Fz", "Mx", "My", "Mz", "fx", "fy", "fz", "mx", "my", "mz"};
 
-     for (integer i = 0; i < 3; ++i) {
+     constexpr integer iNumPrivData = sizeof(rgPrivDataName) / sizeof(rgPrivDataName[0]);
+     
+     for (integer i = 0; i < iNumPrivData; ++i) {
           if (0 == strcmp(rgPrivDataName[i], s)) {
                return i + 1;
           }
@@ -200,16 +202,28 @@ unsigned int RigidBodyDispJointAd::iGetPrivDataIdx(const char *s) const
 
 doublereal RigidBodyDispJointAd::dGetPrivData(unsigned int i) const
 {
+     const Mat3x3& Rm = pNodeMaster->GetRCurr();
+
      switch (i) {
      case 1:
      case 2:
      case 3:
-          return -FmTmp(i);
+          return -Rm.GetCol(i).Dot(FmTmp);
 
      case 4:
      case 5:
      case 6:
-          return -MmTmp(i - 3);
+          return -Rm.GetCol(i - 3).Dot(MmTmp);
+
+     case 7:
+     case 8:
+     case 9:
+          return -FmTmp(i - 6);
+
+     case 10:
+     case 11:
+     case 12:
+          return -MmTmp(i - 9);
 
      default:
           ASSERT(0);
@@ -253,7 +267,7 @@ unsigned int RigidBodyDispJointAd::iGetInitialNumDof(void) const
 void
 RigidBodyDispJointAd::InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 {
-     *piNumRows = 6 + rgNodesSlave.size() * 3;
+     *piNumRows = 24 + rgNodesSlave.size() * 6;
      *piNumCols = 0;
 }
 
