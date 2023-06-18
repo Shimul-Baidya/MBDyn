@@ -1,0 +1,74 @@
+\subsection{Offset displacement joint}
+\label{sec:EL:STRUCT:JOINT:OFFSET_DISP_JOINT}
+\emph{Author: Reinhard Resch}
+
+This element is a rigid body coupling constraint similar to NASTRAN's \texttt{RBE2} element,
+but it may be used also in the context of large deformations and large rotations.
+It is needed mainly to provide an interface between solid or membrane elements, which are using \htmlref{\kw{structural displacement node}}{sec:NODE:STRUCTURAL}s with only three degrees of freedom,
+and the large family of elements (e.g. joints, forces, ...) which can be used only for \htmlref{\kw{structural node}}{sec:NODE:STRUCTURAL}s with six degrees of freedom.
+
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{joint_type} ::= \kw{offset displacement joint}
+
+    \bnt{joint_arglist} ::=
+       (\ty{StructNode}) \bnt{node_label_1} ,
+       (\ty{StructDispNode}) \bnt{node_label_2}
+       [ , \kw{position} , \bnt{position_node_2} ]
+\end{Verbatim}
+
+The position of the \nt{node\_label\_2} is constrained in a way, that it's following exactly the rigid body motion of \nt{node\_label\_1}.
+So, a rigid connection is created.
+
+\subsubsection{Output}
+The output occurs in the \texttt{.jnt} file, which contains the reaction force and reaction couple related to the \nt{node\_label\_1}.
+
+\subsubsection{Private Data}
+The following data is available:
+\begin{enumerate}
+\item \kw{"Fx"} reaction force at \nt{node\_label\_1} along \nt{node\_label\_1} axis 1
+\item \kw{"Fy"} reaction force at \nt{node\_label\_1} along \nt{node\_label\_1} axis 2
+\item \kw{"Fz"} reaction force at \nt{node\_label\_1} along \nt{node\_label\_1} axis 3
+
+\item \kw{"Mx"} reaction moment at \nt{node\_label\_1} along \nt{node\_label\_1} axis 1
+\item \kw{"My"} reaction moment at \nt{node\_label\_1} along \nt{node\_label\_1} axis 2
+\item \kw{"Mz"} reaction moment at \nt{node\_label\_1} along \nt{node\_label\_1} axis 3
+
+\item \kw{"fx"} reaction force at \nt{node\_label\_1} along global axis 1
+\item \kw{"fy"} reaction force at \nt{node\_label\_1} along global axis 2
+\item \kw{"fz"} reaction force at \nt{node\_label\_1} along global axis 3
+
+\item \kw{"mx"} reaction moment at \nt{node\_label\_1} along global axis 1
+\item \kw{"my"} reaction moment at \nt{node\_label\_1} along global axis 2
+\item \kw{"mz"} reaction moment at \nt{node\_label\_1} along global axis 3
+\end{enumerate}
+
+\paragraph{Example.}
+This example mimics an instance of NASTRAN's \texttt{RBE2} element.
+\begin{Verbatim}
+  begin: nodes;
+    structural: 609, static, reference, ref_id_solid, null,
+                             reference, ref_id_solid, eye,
+                             reference, ref_id_solid, null,
+                             reference, ref_id_solid, null;
+    structural: 1, dynamic displacement,
+                             reference, ref_id_solid, 5.1e+02,  1.0e+01, -1.0e+01,
+                             reference, ref_id_solid, null;
+    structural: 2, dynamic displacement,
+                             reference, ref_id_solid, 5.1e+02,  -1.0e+01, -1.0e+01,
+                             reference, ref_id_solid, null;
+    ...
+    structural: 8, dynamic displacement,
+                             reference, ref_id_solid, 9.9e+02,  -1.0e+01, 1.0e+01,
+                             reference, ref_id_solid, null;
+  end: nodes;
+  begin: elements;
+    joint: 1, offset displacement joint, 609, 5;
+    joint: 2, offset displacement joint, 609, 6;
+    joint: 3, offset displacement joint, 609, 7;
+    joint: 4, offset displacement joint, 609, 9;
+    joint: 5, offset displacement joint, 609, 13;
+    joint: 6, offset displacement joint, 609, 14;
+    joint: 7, offset displacement joint, 609, 15;
+    joint: 8, offset displacement joint, 609, 16;
+  end: elements;
+\end{Verbatim}

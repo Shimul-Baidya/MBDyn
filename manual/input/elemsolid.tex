@@ -239,6 +239,7 @@ Kinetic energy is always zero if the keyword \kw{static} was used.
 \end{verbatim}
 
 \subsubsection{Pre- and post-processing}
+\label{sec:EL:SOLID:preprocessing}
 Since it would become tedious to create the mesh manually, pre- and post-processing of solid models
 can be performed by means of \htmladdnormallink{\texttt{GNU Octave}}{https://octave.org/},
 \htmladdnormallink{\texttt{mboct-fem-pkg}}{https://github.com/octave-user/mboct-fem-pkg}
@@ -269,7 +270,7 @@ See also the following example and figure~\ref{fig:EL:SOLID:COOKS-MEMBRANE} on h
   node_id_interface = \nt{rows}(mesh.nodes) + \kw{1};
   \ty{## define the position of a new node}
   mesh.nodes(node_id_interface, \kw{1}:\kw{3}) = [\kw{100e-3}, \kw{50e-3}, \kw{20e-3}];
-  \ty{## create an RBE3 element for the interface node}
+  \ty{## create an RBE3 element for the interface node (this will become a rigid body displacement joint)}
   \ty{## all nodes inside group 13 will be coupled to the interface node}
   mesh.elements.rbe3 = \nt{fem_pre_mesh_rbe3_from_surf}(mesh, \kw{13}, node_id_interface, \kw{"quad8"});
   \ty{## allocate the DOF status for all nodes}
