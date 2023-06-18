@@ -57,9 +57,11 @@ In order to derive the expressions for the kinematic constraints, the virtual pe
 \delta\T{u}_j & = & \delta\T{x}_m + \delta\T{\varphi}_m \times \left( \T{R}_m \, \T{o}_j \right) - \underbrace{\delta{\T{x}}_j}_{=\T{0}} \label{eq:rbdispjoint:deltau}
 \end{eqnarray}
 \begin{description}
+\item[$\delta\T{u}_j$] Virtual perturbation of $\T{u}_j$
 \item[$\delta\T{x}_m$] Virtual perturbation of the position of the master node
 \item[$\delta\T{R}_m$] Virtual perturbation of the orientation matrix of the master node
 \item[$\delta\T{\varphi}_m$] Virtual perturbation of the rotation vector of the master node
+\item[$\delta\T{x}_j$] Virtual perturbation of $\T{x}_j$
 \end{description}
 Since the kinematic constraints should be applied only to the master node, $\delta\T{x}_j=\T{0}$ is assumed.
 \paragraph{Fictitious strain energy}
@@ -112,7 +114,7 @@ In order to include Lagrange multipliers in the equations of motion, it is requi
 \begin{eqnarray}
 \delta\T{\Phi}_t & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m + \delta\T{\varphi}_m \times \left(\T{R}_m \, \T{o}_j\right) - \delta\T{x}_j \right] \\
                  & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m - \left(\T{R}_m \, \T{o}_j\right) \times \delta\T{\varphi}_m - \delta\T{x}_j \right] \\
-\delta\T{\Phi}_t^T & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m^T + \delta\T{\varphi}_m^T \, \left(\T{R}_m \, \T{o}_j\right)\times - \delta\T{x}_j^T \right] \label{eq:rbdispjoint:deltaPhit} \\
+\delta\T{\Phi}_t^T & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m^T + \delta\T{\varphi}_m^T \, \left(\T{R}_m \, \T{o}_j\right)\times - \delta\T{x}_j^T \right] \label{eq:rbdispjoint:deltaPhit}
 \end{eqnarray}
 Now equation~\ref{eq:rbdispjoint:deltaPhit} can be rearranged and written in matrix form:
 \begin{eqnarray}

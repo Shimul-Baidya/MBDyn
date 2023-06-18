@@ -275,7 +275,7 @@ It is required also because rigid bodies might be present in the same model, and
 The principle of virtual displacements leads to the following expression, which is using accelerations $\ddot{\hat{\T{u}}}$.
 So, it cannot be implemented directly.
 \begin{eqnarray}
-\bigcup_{e=1}^{N_e} \left(\T{M} \, \ddot{\hat{\T{u}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}}\right) = \T{0} \label{eq:solid:global_eq1}
+\bigcup_{e=1}^{N_e} \left(\T{M} \, \ddot{\hat{\T{u}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} - {^e}\hat{\T{f}}\right) = \T{0} \label{eq:solid:global_eq1}
 \end{eqnarray}
 
 \paragraph{Introducing the momentum}
@@ -295,7 +295,7 @@ This approach is strictly consistent with MBDyn's conventions for rigid bodies.
 With equation~\ref{eq:solid:beta} and equation~\ref{eq:solid:betadot} the global system of equations is formulated as:
 \begin{eqnarray}
 \bigcup_{e=1}^{N_e} \left(\hat{\T{\beta}} - \T{M} \, \dot{\hat{\T{u}}}\right) = \T{0} \\
--\bigcup_{e=1}^{N_e} \left(\dot{\hat{\T{\beta}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} \right) = \T{0}
+-\bigcup_{e=1}^{N_e} \left(\dot{\hat{\T{\beta}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} - {^e}\hat{\T{f}}\right) = \T{0}
 \end{eqnarray}
 
 \paragraph{Limitations}
@@ -330,7 +330,8 @@ In order to derive the expressions for external virtual work, surface loads must
 virtual displacements $\delta\hat{\T{u}}$ at the element nodes.
 \begin{eqnarray}
 \delta{^e}W & = & \bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \delta\T{u}_i\,{^A}\T{f}_i \right)\,dA \\
-          & = & \bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, {^A}\T{f}_i \right) \, dA
+          & = & \bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, {^A}\T{f}_i \right) \, dA \\
+          & = & \bigcup_{e=1}^{N_e} \sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, {^e}\hat{\T{f}}_{ik}
 \end{eqnarray}
 \paragraph{Pressure loads}
 In case of pressure loads, ${^A}\T{f}$ will always act normal to the surface.
