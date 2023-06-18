@@ -643,20 +643,6 @@ if test "$ol_enable_netcdf" != no ; then
                       ])
                 fi
 
-                if test $have_libnetcdf4 != "yes"; then
-                      try_NETCDF_LIBS="-lnetcdf-cxx4 -lnetcdf"
-                      LIBS="$try_NETCDF_LIBS $save_LIBS"
-                      AC_TRY_LINK([
-                           #include <netcdf>
-                      ],[
-                           /* test for netcdf */
-                           netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-                      ],[
-                           have_libnetcdf4=yes
-                           NETCDF_LIBS="$try_NETCDF_LIBS"
-                      ])
-                fi
-
                 AC_TRY_LINK([
                         #include <netcdf>
                 ],[
