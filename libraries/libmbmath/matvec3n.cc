@@ -348,7 +348,7 @@ Mat3xN& Mat3xN::operator=(Mat3xN&& A)
 
 void Mat3xN::Resize(integer ns)
 {
-   ASSERT(ns > 0);
+   ASSERT(ns >= 0);
    if (ns <= iMaxCols) {
       iNumCols = ns;
    } else {
