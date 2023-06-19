@@ -72,7 +72,7 @@ void
 _Safenewfill(void *pv, size_t size, char fill)
 {
    	ASSERT(pv);
-   	ASSERT(size);
+   	ASSERT(size >= 0);
    
    	char* pb = (char*)pv;
    	while (size--) {
