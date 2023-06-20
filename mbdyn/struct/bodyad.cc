@@ -61,43 +61,38 @@ BodyAd::~BodyAd(void)
 
 template <typename T>
 void
-BodyAd::AssVecRBK_int(const sp_grad::SpColVector<T, 3>& STmp,
+BodyAd::AssVecRBK_int(const RigidBodyKinematics* const pRBK,
+                      const sp_grad::SpColVector<T, 3>& X,
+                      const sp_grad::SpColVector<T, 3>& V,
+                      const sp_grad::SpColVector<T, 3>& W,
+                      const sp_grad::SpColVector<T, 3>& STmp,
                       const sp_grad::SpMatrix<T, 3, 3>& JTmp,
                       sp_grad::SpGradientAssVec<T>& WorkVec,
-                      doublereal dCoef,
-                      sp_grad::SpFunctionCall func)
+                      const sp_grad::SpGradExpDofMapHelper<T>& oDofMap)
 {
      using namespace sp_grad;
 
-     const RigidBodyKinematics *pRBK = pNode->pGetRBK();
-
-     SpColVector<T, 3> X(3, 1), V(3, 1), W(3, 0);
-
-     pNode->GetXCurr(X, dCoef, func);
-     pNode->GetVCurr(V, dCoef, func);
-     pNode->GetWCurr(W, dCoef, func);
-
-     SpColVector<T, 3> s0 = X * dMass + STmp;
+     const SpColVector<T, 3> s0 = X * dMass + STmp;
 
      // force
-     SpColVector<T, 3> F = pRBK->GetXPP() * -dMass
-          - Cross(pRBK->GetWP(), s0)
-          - Cross(pRBK->GetW(), Cross(pRBK->GetW(), s0));
+     const SpColVector<T, 3> F(pRBK->GetXPP() * -dMass
+                               - Cross(pRBK->GetWP(), s0, oDofMap)
+                               - Cross(pRBK->GetW(), Cross(pRBK->GetW(), s0, oDofMap), oDofMap), oDofMap);
+
+     const SpColVector<T, 3> a(pRBK->GetXPP()
+                               + Cross(pRBK->GetWP(), X, oDofMap)
+                               + Cross(pRBK->GetW(), Cross(pRBK->GetW(), X, oDofMap), oDofMap)
+                               + Cross(pRBK->GetW(), V, oDofMap), oDofMap);
+
+     const SpColVector<T, 3> JTmpWRBK(JTmp * pRBK->GetW(), oDofMap);
 
      // moment
-     SpColVector<T, 3> a = pRBK->GetXPP()
-          + Cross(pRBK->GetWP(), X)
-          + Cross(pRBK->GetW(), Cross(pRBK->GetW(), X))
-          + Cross(pRBK->GetW(), V);
-
-     const SpColVector<T, 3> JTmpWRBK = JTmp * pRBK->GetW();
-
-     SpColVector<T, 3> M = -Cross(STmp, a)
-          - Cross(pRBK->GetW(), JTmpWRBK)
-          - JTmp * pRBK->GetWP()
-          - Cross(W, JTmpWRBK)
-          + JTmp * Cross(W, pRBK->GetW())
-          - Cross(V, Cross(pRBK->GetW(), STmp));
+     const SpColVector<T, 3> M(-Cross(STmp, a, oDofMap)
+                               - Cross(pRBK->GetW(), JTmpWRBK, oDofMap)
+                               - SpColVector<T, 3>(JTmp * pRBK->GetWP(), oDofMap)
+                               - Cross(W, JTmpWRBK, oDofMap)
+                               + SpColVector<T, 3>(JTmp * Cross(W, pRBK->GetW(), oDofMap), oDofMap)
+                               - Cross(V, Cross(pRBK->GetW(), STmp, oDofMap), oDofMap), oDofMap);
 
      const integer iFirstMomentumIndex = pNode->iGetFirstMomentumIndex();
 
@@ -214,39 +209,63 @@ DynamicBodyAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      using namespace sp_grad;
 
      Vec3 GravityAcceleration;
-     bool g = GravityOwner::bGetGravity(pNode->GetXCurr(),
-                                        GravityAcceleration);
 
-     const RigidBodyKinematics *pRBK = pNode->pGetRBK();
+     const bool g = GravityOwner::bGetGravity(pNode->GetXCurr(),
+                                              GravityAcceleration);
+
+     const RigidBodyKinematics* const pRBK = pNode->pGetRBK();
 
      const integer iFirstPositionIndex = pNode->iGetFirstPositionIndex();
 
-     SpColVectorA<T, 3> V;
-     SpColVectorA<T, 3> W;
+     SpColVectorA<T, 3> X, V, W;
      SpMatrixA<T, 3, 3> R;
+
+     if (pRBK) {
+          pNode->GetXCurr(X, dCoef, func);
+     }
 
      pNode->GetVCurr(V, dCoef, func);
      pNode->GetWCurr(W, dCoef, func);
      pNode->GetRCurr(R, dCoef, func);
 
-     SpColVector<T, 3> STmp = R * S0;
-     SpMatrix<T, 3, 3> JTmp = R * J0 * Transpose(R);
-     SpColVector<T, 3> f1 = V * -dMass - Cross(W, STmp);
-     SpColVector<T, 3> f2 = -Cross(STmp, V) - JTmp * W;
+     SpGradExpDofMapHelper<T> oDofMap;
+
+     if (pRBK) {
+          oDofMap.GetDofStat(X);
+     }
+
+     oDofMap.GetDofStat(V);
+     oDofMap.GetDofStat(W);
+     oDofMap.GetDofStat(R);
+     oDofMap.Reset();
+
+     if (pRBK) {
+          oDofMap.InsertDof(X);
+     }
+
+     oDofMap.InsertDof(V);
+     oDofMap.InsertDof(W);
+     oDofMap.InsertDof(R);
+     oDofMap.InsertDone();
+
+     const SpColVector<T, 3> STmp(R * S0, oDofMap);
+     const SpMatrix<T, 3, 3> JTmp(SpMatrix<T, 3, 3>(R * J0, oDofMap) * Transpose(R), oDofMap);
+     const SpColVector<T, 3> f1(V * -dMass - Cross(W, STmp, oDofMap), oDofMap);
+     const SpColVector<T, 3> f2(-Cross(STmp, V, oDofMap) - SpColVector<T, 3>(JTmp * W, oDofMap), oDofMap);
 
      WorkVec.AddItem(iFirstPositionIndex + 1, f1);
      WorkVec.AddItem(iFirstPositionIndex + 4, f2);
 
      if (g) {
-          SpColVector<T, 3> f3 = GravityAcceleration * dMass;
-          SpColVector<T, 3> f4 = Cross(STmp, GravityAcceleration);
+          const SpColVector<T, 3> f3 = GravityAcceleration * dMass;
+          const SpColVector<T, 3> f4(Cross(STmp, GravityAcceleration), oDofMap);
 
           WorkVec.AddItem(iFirstPositionIndex + 7, f3);
           WorkVec.AddItem(iFirstPositionIndex + 10, f4);
      }
 
      if (pRBK) {
-          AssVecRBK_int(STmp, JTmp, WorkVec, dCoef, func);
+          AssVecRBK_int(pRBK, X, V, W, STmp, JTmp, WorkVec, oDofMap);
      }
 
      UpdateInertia(STmp, JTmp);
@@ -269,7 +288,7 @@ StaticBodyAd::StaticBodyAd(unsigned int uL,
      :Elem(uL, fOut),
       Body(uL, pN, dMass, Xgc, J, fOut),
       StaticBody(uL, pN, dMass, Xgc, J, fOut),
-      BodyAd(uL, pN, dMass, Xgc, J, fOut),       
+      BodyAd(uL, pN, dMass, Xgc, J, fOut),
       pNode(pN)
 {
 }
@@ -355,33 +374,56 @@ StaticBodyAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      using namespace sp_grad;
 
      Vec3 Acceleration(Zero3);
-     bool g = GravityOwner::bGetGravity(pNode->GetXCurr(), Acceleration);
+     const bool g = GravityOwner::bGetGravity(pNode->GetXCurr(), Acceleration);
 
      /* W is uninitialized because its use is conditioned by w */
-     const RigidBodyKinematics *pRBK = pNode->pGetRBK();
+     const RigidBodyKinematics* const pRBK = pNode->pGetRBK();
 
-     if (!g && !pRBK) {
-          return;
-     }
-
+     SpColVectorA<T, 3> X, V, W;
      SpMatrixA<T, 3, 3> R;
+
+     if (pRBK) {
+          pNode->GetXCurr(X, dCoef, func);
+          pNode->GetVCurr(V, dCoef, func);
+          pNode->GetWCurr(W, dCoef, func);
+     }
 
      pNode->GetRCurr(R, dCoef, func);
 
-     SpColVector<T, 3> STmp = R * S0;
-     SpMatrix<T, 3, 3> JTmp = R * J0 * Transpose(R);
+     SpGradExpDofMapHelper<T> oDofMap;
+
+     if (pRBK) {
+          oDofMap.GetDofStat(X);
+          oDofMap.GetDofStat(V);
+          oDofMap.GetDofStat(W);
+     }
+
+     oDofMap.GetDofStat(R);
+     oDofMap.Reset();
+
+     if (pRBK) {
+          oDofMap.InsertDof(X);
+          oDofMap.InsertDof(V);
+          oDofMap.InsertDof(W);
+     }
+
+     oDofMap.InsertDof(R);
+     oDofMap.InsertDone();
+
+     const SpColVector<T, 3> STmp(R * S0, oDofMap);
+     const SpMatrix<T, 3, 3> JTmp(SpMatrix<T, 3, 3>(R * J0, oDofMap) * Transpose(R), oDofMap);
 
      if (g) {
           integer iFirstMomentumIndex = pNode->iGetFirstMomentumIndex();
           SpColVector<T, 3> FTmp = Acceleration * dMass;
-          SpColVector<T, 3> MTmp = Cross(STmp, Acceleration);
+          SpColVector<T, 3> MTmp(Cross(STmp, Acceleration), oDofMap);
 
           WorkVec.AddItem(iFirstMomentumIndex + 1, FTmp);
           WorkVec.AddItem(iFirstMomentumIndex + 4, MTmp);
      }
 
      if (pRBK) {
-          AssVecRBK_int(STmp, JTmp, WorkVec, dCoef, func);
+          AssVecRBK_int(pRBK, X, V, W, STmp, JTmp, WorkVec, oDofMap);
      }
 
      UpdateInertia(STmp, JTmp);
@@ -486,27 +528,36 @@ ModalBodyAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      }
 
      SpColVector<T, 3> W(3, 3);
-
-     pNode->GetWCurr(W, dCoef, func);
-
      SpMatrix<T, 3, 3> R(3, 3, 3);
-
-     pNode->GetRCurr(R, dCoef, func);
-
-     SpColVector<T, 3> STmp = R * S0;
-     SpMatrix<T, 3, 3> JTmp = R * J0 * Transpose(R);
-
      SpColVector<T, 3> XPP(3, 1), WP(3, 1);
 
+     pNode->GetWCurr(W, dCoef, func);
+     pNode->GetRCurr(R, dCoef, func);
      pNode->GetXPPCurr(XPP, dCoef, func);
      pNode->GetWPCurr(WP, dCoef, func);
 
-     SpColVector<T, 3> F = XPP * -dMass - Cross(WP, STmp) - Cross(W, Cross(W, STmp));
-     SpColVector<T, 3> M = -Cross(STmp, XPP) - Cross(W, JTmp * W) - JTmp * WP;
+     SpGradExpDofMapHelper<T> oDofMap;
+
+     oDofMap.GetDofStat(W);
+     oDofMap.GetDofStat(R);
+     oDofMap.GetDofStat(XPP);
+     oDofMap.GetDofStat(WP);
+     oDofMap.Reset();
+     oDofMap.InsertDof(W);
+     oDofMap.InsertDof(R);
+     oDofMap.InsertDof(XPP);
+     oDofMap.InsertDof(WP);
+     oDofMap.InsertDone();
+
+     const SpColVector<T, 3> STmp(R * S0, oDofMap);
+     const SpMatrix<T, 3, 3> JTmp(SpMatrix<T, 3, 3>(R * J0, oDofMap) * Transpose(R), oDofMap);
+
+     SpColVector<T, 3> F(XPP * -dMass - Cross(WP, STmp) - Cross(W, Cross(W, STmp), oDofMap), oDofMap);
+     SpColVector<T, 3> M(-Cross(STmp, XPP) - Cross(W, JTmp * W) - SpColVector<T, 3>(JTmp * WP, oDofMap), oDofMap);
 
      if (g) {
           F += GravityAcceleration * dMass;
-          M += Cross(STmp, GravityAcceleration);
+          M.Add(Cross(STmp, GravityAcceleration), oDofMap);
      }
 
      const integer iFirstPositionIndex = pNode->iGetFirstPositionIndex();

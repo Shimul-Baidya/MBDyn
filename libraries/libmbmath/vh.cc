@@ -39,7 +39,8 @@
 #include <iostream>
 #include <iomanip>
 
-#include "matvec3.h"
+//#include "matvec3.h"
+#include "vh.h"
 #include "submat.h"
 
 class SubVectorHandler;

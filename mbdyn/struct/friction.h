@@ -41,11 +41,9 @@
 /** Base class for friction models
  */
 class BasicFriction : public SimulationEntity{
-private:
-	void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0) { NO_OP; };
 public:
+	using SimulationEntity::SetValue;
+	using SimulationEntity::AfterConvergence;
 /*
  * 	unsigned int iGetNumDof(void) const;
  * 	DofOrder::Order GetDofType(unsigned int i) const;

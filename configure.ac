@@ -594,67 +594,83 @@ dnl Enable NetCDF binary output (netcdf4)
 dnl
 
 if test "$ol_enable_netcdf" != no ; then
-	have_netcdf4=no
-	have_libnetcdf4=no
-	AC_LANG_CPLUSPLUS
-dnl checks for netcdf header file (for netcdf4 c++):
-	AC_CHECK_HEADER(netcdf,[have_netcdf4=yes],[have_netcdf4=no])
-	AC_LANG_C
-	if test $have_netcdf4 = "yes" ; then
-		AC_DEFINE(USE_NETCDF,1,[must include <netcdf> to use NetCDF4 C++ support])
-		save_LIBS="$LIBS"
-		try_NETCDF_LIBS="-lnetcdf_c++4 -lnetcdf"
-		LIBS="$try_NETCDF_LIBS $LIBS"
-		AC_LANG_CPLUSPLUS
-		AC_TRY_LINK([
-	#include <netcdf>
-			],[
-	/* test for netcdf */
-	netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-			],[
-				have_libnetcdf4=yes
-				NETCDF_LIBS="$try_NETCDF_LIBS"
-			],[
-			  try_NETCDF_LIBS="-lnetcdf-cxx4 -lnetcdf"
-		      LIBS="$try_NETCDF_LIBS $save_LIBS"
-			  AC_TRY_LINK([
-	#include <netcdf>
-			  ],[
-	/* test for netcdf */
-	netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-			  ],[
-				have_libnetcdf4=yes
-				NETCDF_LIBS="$try_NETCDF_LIBS"
-			  ])
-			])
-		AC_TRY_LINK([
-	#include <netcdf>
-			],[
-	/* test for netcdf sync */
-	netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-	nc.sync(); // test for sync option (comes in later version, >=4.3.0)
-	nc.close(); // test for close (appears in 4.3.0)
-			],[
+        have_netcdf4=no
+        have_libnetcdf4=no
+        AC_LANG_CPLUSPLUS
+        dnl checks for netcdf header file (for netcdf4 c++):
+        AC_CHECK_HEADER(netcdf,[have_netcdf4=yes],[have_netcdf4=no])
+        AC_LANG_C
+        if test $have_netcdf4 = "yes" ; then
+                save_LIBS="$LIBS"
+                try_NETCDF_LIBS="-lnetcdf-cxx4 -lnetcdf"
+                LIBS="$try_NETCDF_LIBS $LIBS"
+                AC_LANG_CPLUSPLUS
+                AC_TRY_LINK([
+                        #include <netcdf>
+                ],[
+                        /* test for netcdf */
+                        netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
+                ],[
+                        have_libnetcdf4=yes
+                        NETCDF_LIBS="$try_NETCDF_LIBS"
+                ])
 
-			], [
-				have_libnetcdf4=no
-				AC_MSG_WARN([netcdf-cxx4 version too old, link version 4.3.0 or more recent])
-			])
-			AC_LANG_C
-			LIBS="$save_LIBS"
-		fi
+                if test $have_libnetcdf4 != "yes"; then
+                      try_NETCDF_LIBS="-lnetcdf_c++4 -lnetcdf"
+                      LIBS="$try_NETCDF_LIBS $save_LIBS"
+                      AC_TRY_LINK([
+                           #include <netcdf>
+                      ],[
+                           /* test for netcdf */
+                           netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
+                      ],[
+                           have_libnetcdf4=yes
+                           NETCDF_LIBS="$try_NETCDF_LIBS"
+                      ])
+                fi
 
-	if test $have_libnetcdf4 = yes ; then
-		AC_DEFINE(USE_NETCDF,1,[define this to enable NetCDF4 based output])
-		AC_MSG_NOTICE([Enabling netcdf4 output capabilities])
-	elif test $ol_enable_netcdf != auto ; then
-		if test "$ol_enable_netcdf" = yes ; then
-			AC_MSG_ERROR([User requested netcdf4 but cannot be enabled, see messages above.])
-		else
-			AC_MSG_WARN([Not using netcdf4])
-		fi
-	fi
+                if test $have_libnetcdf4 != "yes"; then
+                      try_NETCDF_LIBS="-lnetcdf_cxx4 -lnetcdf"
+                      LIBS="$try_NETCDF_LIBS $save_LIBS"
+                      AC_TRY_LINK([
+                           #include <netcdf>
+                      ],[
+                           /* test for netcdf */
+                           netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
+                      ],[
+                           have_libnetcdf4=yes
+                           NETCDF_LIBS="$try_NETCDF_LIBS"
+                      ])
+                fi
 
+                AC_TRY_LINK([
+                        #include <netcdf>
+                ],[
+                        /* test for netcdf sync */
+                                netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
+                                nc.sync(); // test for sync option (comes in later version, >=4.3.0)
+                                nc.close(); // test for close (appears in 4.3.0)
+                ],[
+                        have_libnetcdf4=yes
+                ], [
+                        have_libnetcdf4=no
+                        AC_MSG_WARN([netcdf-cxx4 version too old, link version 4.3.0 or more recent])
+                ])
+
+                AC_LANG_C
+                LIBS="$save_LIBS"
+        fi
+
+        if test $have_libnetcdf4 = yes ; then
+                AC_DEFINE(USE_NETCDF,1,[define this to enable NetCDF4 based output])
+                AC_MSG_NOTICE([Enabling netcdf4 output capabilities])
+        elif test $ol_enable_netcdf != auto ; then
+                if test "$ol_enable_netcdf" = yes ; then
+                        AC_MSG_ERROR([User requested netcdf4 but cannot be enabled, see messages above.])
+                else
+                        AC_MSG_WARN([Not using netcdf4])
+                fi
+        fi
 fi
 
 if test "$ol_enable_netcdf" != no ; then

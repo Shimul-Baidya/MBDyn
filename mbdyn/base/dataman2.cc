@@ -159,6 +159,13 @@ DataManager::SetTime(const doublereal& dTime, const doublereal& dTimeStep,
 	if (pRBK) {
 		pRBK->Update();
 	}
+
+        if (pOutputMeter && pOutputMeter->dGet()) {
+             // For all multistage integrators, DataManager::SetTime() will be called multiple times per step,
+             // but DataManager::Output() will be called only once.
+             // So, it is required to save the last positive result of pOutputMeter->dGet() from all the stages.
+             bOutputNextStep = true;
+        }
 } /* End of DataManager::SetTime() */
 
 doublereal
@@ -1969,7 +1976,7 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 				continue;
 			}
 
-			iNodeIndex = pSN->iGetFirstIndex();
+			iNodeIndex = pN->iGetFirstIndex();
 			OutHdl.WriteNcVar(Var_Eig_Idx, iNodeIndex, start, count); 
 			start[1]++;
 		}
@@ -2345,10 +2352,12 @@ DataManager::Output(long lStep,
 
 	DriveTrace(OutHdl); // trace output will be written for every time step
 
-	/* output only when allowed by the output meter */
-	if (!force && !pOutputMeter->dGet()) {
-		return false;
-	}
+        /* output only when allowed by the output meter */
+        if (!(force || bOutputNextStep)) {
+                return false;
+        }
+
+        bOutputNextStep = false;
 
 	/*
 	 * Write general simulation data to binary NetCDF file

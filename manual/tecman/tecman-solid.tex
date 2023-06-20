@@ -1,0 +1,391 @@
+% MBDyn (C) is a multibody analysis code.
+% http://www.mbdyn.org
+%
+% Copyright (C) 1996-2023
+%
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+%
+% Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+% via La Masa, 34 - 20156 Milano, Italy
+% http://www.aero.polimi.it
+%
+% Changing this copyright notice is forbidden.
+%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation (version 2 of the License).
+%
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with this program; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+\emph{Author: Reinhard Resch} \\
+Solid elements are intended to model general three dimensional structures subject to large deformations, large strain and nonlinear material.
+\paragraph{Files.} \
+It is implemented in files\\
+\begin{tabular}{l}
+\texttt{mbdyn/struct/solid.h} \\
+\texttt{mbdyn/struct/solid.cc} \\
+\texttt{mbdyn/struct/solidshape.h} \\
+\texttt{mbdyn/struct/solidshape.cc} \\
+\texttt{mbdyn/struct/solidinteg.h} \\
+\texttt{mbdyn/struct/solidinteg.cc} \\
+\texttt{mbdyn/struct/solidpress.h} \\
+\texttt{mbdyn/struct/solidpress.cc} \\
+\texttt{mbdyn/struct/solidcsl.h} \\
+\texttt{mbdyn/struct/solidcsl.cc}
+\end{tabular}
+\subsection{Kinematics}
+\label{sec:solid:interpol}
+MBDyn's solid elements are based on the classical displacement based isoparametric Finite Element formulation \cite{BATHE2016}.
+The three dimensional global Cartesian coordinates $\T{x}$ and the displacements $\T{u}=\T{x} - {^0}\T{x}$, of a particle inside an element,
+are interpolated between coordinates $\hat{\T{x}}$ and displacements $\hat{\T{u}}$ at element nodes by means of shape functions $\T{h}=\mathit{f}\left(\T{r}\right)$ \cite{BATHE2016}, \cite{KUEBLER2005}.
+\begin{eqnarray}
+  \T{u}_{i} &=& \sum_{k=1}^{N_n}\hat{\T{u}}_{ik} \,\T{h}_{k} \label{eq:solid:u:interpol} \\
+  \T{x}_{i} &=& \sum_{k=1}^{N_n}\hat{\T{x}}_{ik} \,\T{h}_{k} \\
+  \T{u} &=& \begin{pmatrix} \T{u}_1 & \T{u}_2 & \T{u}_3 \end{pmatrix}^T \\
+  \T{x} &=& \begin{pmatrix} \T{x}_1 & \T{x}_2 & \T{x}_3 \end{pmatrix}^T \\
+  \T{r} &=& \begin{pmatrix} \T{r}_1 & \T{r}_2 & \T{r}_3 \end{pmatrix}^T \\
+  \hat{\T{u}} &=& \begin{pmatrix}
+    \hat{\T{u}}_{1,1} & \hat{\T{u}}_{1,2} & \ldots{} & \hat{\T{u}}_{1,N_n} \\
+    \hat{\T{u}}_{2,1} & \hat{\T{u}}_{2,2} & \ldots{} & \hat{\T{u}}_{2,N_n} \\
+    \hat{\T{u}}_{3,1} & \hat{\T{u}}_{2,2} & \ldots{} & \hat{\T{u}}_{3,N_n}
+  \end{pmatrix} \\
+  \T{h} & = & \begin{pmatrix}
+    \T{h}_1 & \T{h}_2 & \ldots{} & \T{h}_{N_n}
+  \end{pmatrix}^T
+\end{eqnarray}
+
+\begin{description}
+\item[$\T{x}=\mathit{f}\left(\T{r}\right)$] global Cartesian coordinates of a particle inside the deformed body
+\item[$^0\T{x}=\mathit{f}\left(\T{r}\right)$] global Cartesian coordinates of a particle inside the undeformed body
+\item[$\T{u}=\T{x}-{^0}\T{x}$] deformation of a particle within the body
+\item[$\T{r}$] curvilinear natural coordinates of a particle within the body
+\item[$\T{h}=\mathit{f}\left(\T{r}\right)$] shape functions of a particular Finite Element type
+\item[$N_n$] number of nodes per element
+\end{description}
+
+\paragraph{Shape functions}
+All solid elements in MBDyn are based on templates and are using standard shape functions based on \cite{BATHE2016}, \cite{DHONDT2004} and \cite{CODEASTERR30301}.
+In order to implement a new solid~element type in MBDyn, it is sufficient to provide a new C++ class which defines it's shape functions $\T{h}$,
+derivatives of the shape functions versus the natural coordinates $\T{h}_d=\frac{\partial \T{h}}{\partial \T{r}}$ and also the integration points $\left.\T{r}\right\vert_g$ and weights $\left.\alpha\right\vert_g$.
+The following types of elements are currently implemented:
+\begin{itemize}
+\item Hexahedrons with linear and quadratic shape functions \cite{BATHE2016}, \cite{DHONDT2004}
+\item Pentahedrons with quadratic shape functions \cite{CODEASTERR30301}
+\item Tetrahedrons with quadratic shape functions \cite{CODEASTERR30301}
+\end{itemize}
+See also MBDyn's input-manual for further information.
+
+\paragraph{Deformation gradient}
+Because MBDyn's solid elements are based on a Total~Lagrangian~Formulation, the deformation gradient $\T{F}$ is evaluated with respect to the undeformed state ${^0}\T{x}$.
+As a consequence, the Jacobian matrix ${^0}\T{J}$ and the gradient operator $\T{h}_{0d}$ are constant.
+\begin{IEEEeqnarray}{rCl}
+  {^0}\T{J}_{ij} & = & \frac{\partial{^0}\T{x}_j}{\partial \T{r}_i} = \sum_{k=1}^{N_n} {^0}\hat{\T{x}}_{jk} \, \underbrace{\frac{\partial \T{h}_{k}}{\partial \T{r}_i}}_{\T{h}_{d_{ki}}} = \left({^0}\T{x}\,\T{h}_d\right)^T\\
+  \left\{{^0}\T{J}^{-1}\right\}_{ij} & = & \frac{\partial\T{r}_j}{\partial {^0}\T{x}_i} \\
+  %\T{h}_{d_{ij}} & = & \frac{\partial \T{h}_i}{\partial \T{r}_j} \\
+  \T{F}_{ij} & = & \frac{\partial \T{x}_{i}}{\partial {^0}\T{x}_{j}} = \delta_{ij} + \frac{\partial \T{u}_i}{\partial ^0\T{x}_{j}} = \delta_{ij} + \sum_{k=1}^{N_n}\hat{\T{u}}_{ik} \, \underbrace{\frac{\partial \T{h}_k}{\partial ^0\T{x}_{j}}}_{\T{h}_{{0d}_{kj}}} \label{eq:solid:F} \\
+  \dot{\T{F}}_{ij} & = & \sum_{k=1}^{N_n}\dot{\hat{\T{u}}}_{ik} \, \T{h}_{{0d}_{kj}} \label{eq:solid:Fdot} \\
+  \T{h}_{0d_{ij}} & = & \frac{\partial \T{h}_i}{\partial {^0}\T{x}_{j}} = \sum_{k=1}^3 \frac{\partial \T{h}_i}{\partial \T{r}_{k}} \, \frac{\partial \T{r}_k}{\partial {^0}\T{x}_j} = \left\{\T{h}_{d}\,{^0}\T{J}^{-T}\right\}_{ij} \\
+  %\T{J} & = & {^0}\T{x} \, \T{h}_d \\
+  %\T{h}_{d_{ij}} & = & \frac{\partial \T{h}_i}{\partial \T{r}_j} \\
+  \delta_{ij} & = & \left\{
+  \begin{array}{lll}
+  1 & \text{if} & i = j \cr
+  0 & \text{if} & i \neq j
+  \end{array}
+  \right.
+\end{IEEEeqnarray}
+\begin{description}
+\item[$\T{F}$] deformation gradient
+\item[${^0}\T{J}$] Jacobian matrix $\det{\left({^0}\T{J}\right)}>0$
+\item[$\T{h}_{0d}=\frac{\partial \T{h}}{\partial {^0}\T{x}}$] derivative of shape functions versus global Cartesian coordinates
+\item[$\T{h}_d=\frac{\partial \T{h}}{\partial \T{r}}$] derivative of shape functions versus natural coordinates
+\item[$\delta_{ij}$] Kronecker~delta
+\end{description}
+
+\paragraph{If elements become excessively distorted}
+It is required that the deformation gradient $\T{F}$ and the Jacobian matrix ${^0}\T{J}$ are always invertible \cite{BATHE2016}, \cite{KUEBLER2005}.
+For that reason $\det{\left(\T{F}\right)}>0$ will be checked by the solver at every iteration, and $\det{\left({^0}\T{J}\right)}>0$ will be checked
+when the mesh is loaded. An exception will be thrown by the solver if any elements become excessively distorted and those conditions do not hold.
+
+\paragraph{Strain tensor and stress tensor}
+In order to derive the expressions for virtual strain energy, the Green-Lagrange strain tensor $\T{G}$ and the 2nd~Piola-Kirchhoff stress tensor $\T{S}$ are used.
+It is important to note, that the 2nd~Piola-Kirchhoff stress tensor is work conjugate with the Green-Lagrange strain tensor \cite{WALLRAPP1998}, \cite{BATHE2016}, \cite{KUEBLER2005}.
+Since MBDyn's solid element is pure displacement based, the stress tensor $\T{S}$ is a function of the strain tensor $\T{G}$ and optionally it's time derivative $\dot{\T{G}}$ and the strain history.
+In case of viscoelastic constitutive laws, the strain rates $\dot{\T{G}}$ are scaled according to equation~\ref{eq:solid:Gdot} in order to make the effect of viscous damping independent on the strain \cite{KUEBLER2005}.
+\begin{eqnarray}
+\T{C}_{ij} & = & \sum_{k=1}^3\T{F}_{ki}\,\T{F}_{kj} \\
+\T{G}_{ij} & = & \frac{1}{2} \, \left(\T{C}_{ij} - \delta_{ij} \right) = \frac{1}{2} \, \left(\sum_{k=1}^3\T{F}_{ki}\,\T{F}_{kj} - \delta_{ij}\right) \label{eq:solid:G} \\
+\dot{\T{G}}_{ij} & = & \frac{1}{2} \, \left[\sum_{k=1}^3\left(\dot{\T{F}}_{ki}\,\T{F}_{kj} + \T{F}_{ki}\,\dot{\T{F}}_{kj} \right)\right] \\
+\dot{\T{G}}^{\star} & = & \T{C}^{-1} \, \dot{\T{G}} \, \T{C}^{-1} \, \det{\left(\T{F}\right)} \label{eq:solid:Gdot} \\
+\T{S} & = & \mathit{f}\left(\T{G}, \, \dot{\T{G}}^{\star}\right)
+\end{eqnarray}
+
+\begin{description}
+\item[$\T{C}$] Right Cauchy-Green strain tensor
+\item[$\T{G}$] Green-Lagrange strain tensor
+\item[$\dot{\T{G}}^{\star}$] scaled Green-Lagrange strain rates
+\item[$\T{S}$] 2nd Piola-Kirchhoff stress tensor
+\end{description}
+
+\paragraph{Constitutive laws}
+The relationship between stress tensor $\T{S}$ and strain tensor $\T{G}$ is determined by a specific constitutive law.
+Right now, the following types of constitutive laws are implemented:
+\begin{itemize}
+\item linear elastic generic
+\item linear viscoelastic Kelvin-Voigt \cite{KUEBLER2005}
+\item linear viscoelastic Maxwell \cite{bleyer2018numericaltours}
+\item nonlinear hyperelastic Neo-Hookean \cite{KUEBLER2005}
+\item nonlinear hyperelastic Mooney-Rivlin \cite{BATHE2016}
+\item bilinear elasto-plastic with isotropic hardening \cite{BATHE2016}
+\end{itemize}
+See MBDyn's input-manual for further information about constitutive laws usable for solid elements.
+
+\subsection{The principle of virtual displacements}
+The equations of motion for displacement based Finite Element methods can be derived from the principle of virtual displacements \cite{WALLRAPP1998}, \cite{BATHE2016}, \cite{KUEBLER2005}.
+\begin{eqnarray}
+\underbrace{\bigcup_{e=1}^{N_e}\int_{^0V} {^0}\rho \, \left[\sum_{i=1}^3 \delta\T{u}_i\,\left(\ddot{\T{u}}_i - \T{b}_i\right) \right]\, d^0V}_{\delta ^mW} + \underbrace{\bigcup_{e=1}^{N_e}\int_{^0V} \left(\sum_{i=1}^3\sum_{j=1}^3 \delta\T{G}_{ij}\,\T{S}_{ij} \right) \, d^0V}_{\delta^iW} \nonumber \\
+= \underbrace{\bigcup_{e=1}^{N_e}\int_{A} \sum_{i=1}^3 \delta\T{u}_i\,^A\T{f}_i \,dA}_{\delta^eW}
+\end{eqnarray}
+
+\begin{description}
+\item[${^0}\rho$] Density of the undeformed body
+\item[${^0}V$] Volume of the undeformed body
+\item[$\T{b}$] Body loads due to gravity and rigid body kinematics
+\item[${^A}\T{f}$] Surface loads due to pressure and surface traction's
+\item[${^m}W$] Virtual work of body loads (e.g. inertia terms and gravity loads)
+\item[${^i}W$] Internal virtual work (e.g. virtual strain energy)
+\item[${^e}W$] External virtual work (e.g. due to surface loads ${^A}\T{f}$)
+\item{$N_e$} Number of solid elements
+\item[$\bigcup$] Summation over all elements
+\end{description}
+
+\subsection{Virtual strain energy}
+In order to get the expression for the internal force vector at the element nodes $^i\hat{\T{k}}$, the following equivalence is used:
+\begin{eqnarray}
+\delta ^iW & = & \bigcup_{e=1}^{N_e} \int_{^0V} \left(\sum_{i=1}^3\sum_{j=1}^3 \delta \T{G}_{ij} \, \T{S}_{ij} \right) \, d^0V = \bigcup_{e=1}^{N_e}\sum_{k=1}^{3} \sum_{l=1}^{N_n} \delta \hat{\T{u}}_{kl} \, ^i\hat{\T{k}}_{kl} \label{eq:solid:deltaWi}
+\end{eqnarray}
+
+\paragraph{Virtual perturbation of the strain tensor}
+As a first step, the virtual perturbation of the strain tensor $\delta\T{G}$ must be expressed in terms of the vector of virtual nodal displacements $\delta\hat{\T{u}}$.
+For that purpose, the virtual perturbation of equation~\ref{eq:solid:G} must be derived.
+\begin{eqnarray}
+\delta \T{G}_{ij} & = & \frac{1}{2} \sum_{k=1}^3\left(\delta \T{F}_{ki} \, \T{F}_{kj} + \T{F}_{ki} \, \delta \T{F}_{kj}\right) \label{eq:solid:deltaG}
+\end{eqnarray}
+
+\paragraph{Virtual perturbation of the deformation gradient $\delta\T{F}$}
+In the same way, the virtual perturbation of equation~\ref{eq:solid:F} is derived.
+Since we are using a Total~Lagrangian~Formulation, $\T{h}_{0d}$ is a constant matrix.
+\begin{eqnarray}
+\delta \T{F}_{ij} & = & \sum_{k=1}^{N_n} \delta \hat{\T{u}}_{ik} \, \T{h}_{0d_{kj}} \label{eq:solid:deltaF}
+\end{eqnarray}
+
+\paragraph{Virtual perturbation of the strain tensor expressed by virtual displacements $\delta{\hat{\T{u}}}$}
+Now equation~\ref{eq:solid:deltaF} is substituted into equation~\ref{eq:solid:deltaG}.
+\begin{eqnarray}
+\delta \T{G}_{ij} & = & \frac{1}{2} \, \sum_{k=1}^3 \sum_{l=1}^{N_n} \delta \hat{\T{u}}_{kl} \, \left( \T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki} \right) \label{eq:solid:deltaG_F}
+\end{eqnarray}
+
+\paragraph{Virtual strain energy expressed by virtual displacements $\delta{\hat{\T{u}}}$}
+Finally equation~\ref{eq:solid:deltaG_F} is substituted into equation~\ref{eq:solid:deltaWi}.
+\begin{eqnarray}
+\delta ^iW & = & \frac{1}{2} \bigcup_{e=1}^{N_e} \int_{^0V} \left[ \sum_{i=1}^3 \sum_{j=1}^3 \sum_{k=1}^3 \sum_{l=1}^{N_n} \delta \hat{\T{u}}_{kl}\left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij} \right] \, d^0V \label{eq:solid:deltaWi_u}
+\end{eqnarray}
+
+\paragraph{Internal elastic reactions due to internal stress}
+Because equation~\ref{eq:solid:deltaWi_u} and equation~\ref{eq:solid:deltaWi} must be valid for arbitrary virtual displacements $\delta\hat{\T{u}}$, we can get $^i\hat{\T{k}}$ just by comparing the coefficients of those two equations.
+\begin{eqnarray}
+^i\hat{\T{k}}_{kl} & = & \frac{1}{2} \, \int_{^0V} \left[ \sum_{i=1}^3 \sum_{j=1}^3 \left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij} \right] \, d^0V
+\end{eqnarray}
+
+\paragraph{Numerical integration}
+Finally standard numerical integration schemes (e.g. Gauss-Legendre) are applied, which sum up the weighted integrand at several integration points \cite{BATHE2016}, \cite{KUEBLER2005}.
+Also in this case the values of $\det{\left({^0}\T{J}\right)}$ are constant for each integration point~$g$ because a Total Lagrangian Formulation is used.
+\begin{eqnarray}
+^i\hat{\T{k}}_{kl} & \approx & \frac{1}{2} \sum_{g=1}^{N_g} \left.\left[ \sum_{i=1}^3 \sum_{j=1}^3 \left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij}  \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g}
+\end{eqnarray}
+\begin{description}
+\item{$\alpha$} Weighting factor
+\item{$N_g$} Number of integration points
+\item{$\vert_g$} Expression is evaluated at integration point $g$
+\end{description}
+
+\subsection{Virtual work of inertia terms and body loads}
+Also accelerations $\ddot{\hat{\T{u}}}$ and virtual displacements $\delta\hat{\T{u}}$ are interpolated by the same shape functions $\T{h}$.
+\begin{eqnarray}
+\delta^{m}W & = & \bigcup_{e=1}^{N_e} \int_{^0V} \sum_{i=1}^3 {^0}\rho \, \delta\T{u}_i \, \left(\ddot{\T{u}}_i - \T{b}_i\right) \, d^0V \label{eq:solid:delta_Wm} \\
+\delta\T{u}_i & = & \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_k \label{eq:solid:delta_u} \\
+\ddot{\T{u}}_i & = & \sum_{k=1}^{N_n} \ddot{\hat{\T{u}}}_{ik} \, \T{h}_k \label{eq:solid:delta_ddotu}
+\end{eqnarray}
+
+\paragraph{Body loads}
+In MBDyn, body loads due to gravity $\T{g}$ and rigid body kinematics are considered. See also section~\ref{sec:nodes:structural nodes:relative frame dynamics}.
+As a consequence, solid elements may be used also for typical rotor-dynamic analysis.
+\begin{eqnarray}
+\T{b} & = & \T{g} - \ddot{\overline{\T{x}}}_0 - \overline{\T{\omega}}_0 \times \left(\overline{\T{\omega}}_0 \times \T{x} \right) - \dot{\overline{\T{\omega}}}_0 \times \T{x} - 2 \, \overline{\T{\omega}}_0 \dot{\T{u}}
+\end{eqnarray}
+
+\begin{description}
+\item[$\T{g}$] Gravity.
+\item[$\ddot{\overline{\T{x}}}_0$] Acceleration of the global reference frame.
+\item[$\overline{\T{\omega}}_0$]  Angular velocity of the global reference frame.
+\item[$\dot{\overline{\T{\omega}}}_0$]  Angular acceleration of the global reference frame.
+\end{description}
+
+\paragraph{Mass matrix and body load vector}
+When equation~\ref{eq:solid:delta_u} and equation~\ref{eq:solid:delta_ddotu} are substituted into equation~\ref{eq:solid:delta_Wm},
+the virtual work $\delta^mW$ can be written in terms of the consistent mass matrix $\T{M}$ and body load vector $^b\hat{\T{f}}$.
+Because of the isoparametric approach, the consistent mass matrix $\T{M}$ is constant and needs to be evaluated only once \cite{BATHE2016}, \cite{KUEBLER2005}.
+In contradiction to that, the actual magnitudes of $\T{b}$ and $^b\hat{\T{f}}$ may be time dependent.
+\begin{eqnarray}
+\hat{\T{M}}_{kl} & = & \int_{^0V} {^0}\rho \, \T{h}_k \, \T{h}_l \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k \, \T{h}_l \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
+{^b}\hat{\T{f}}_{ik} & = & \int_{^0V} {^0}\rho \, \T{h}_k \, \T{b}_i \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k \, \T{b}_i \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
+\delta^{m}W & = & \bigcup_{e=1}^{N_e}\left(\sum_{i=1}^3\sum_{k=1}^{N_n}\sum_{l=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \ddot{\hat{\T{u}}}_{il} \, \hat{\T{M}}_{kl}
+ - \sum_{i=1}^3\sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, {^b}\hat{\T{f}}_{ik}\right) = \bigcup_{e=1}^{N_e} \delta\hat{\T{u}}^T \, \left(\T{M} \, \ddot{\hat{\T{u}}} - {^b}\hat{\T{f}} \right)
+\end{eqnarray}
+\begin{description}
+\item[$\hat{\T{M}}$] $N_n\times N_n$ element mass matrix in compact storage
+\item[$\T{M}$] $3 N_n \times 3 N_n$ element mass matrix in redundant storage (e.g. $\T{M}_{iijk} = \hat{\T{M}}_{jk}$)
+\item[${^b}\hat{\T{f}}$] Element body load vector
+\end{description}
+
+\paragraph{Lumped mass matrix}
+In addition to a consistent mass matrix, also a lumped mass matrix can be used in MBDyn.
+For that purpose, the diagonal of the consistent mass matrix is scaled, so that the overall mass is conserved.
+\begin{eqnarray}
+\hat{\T{M}}_{kk}^{\star} & = & \int_{^0V} {^0}\rho \, \T{h}_k^2 \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k^2 \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
+\hat{\T{M}}_{kk}&=&\hat{\T{M}}_{kk}^{\star} \, \frac{\,m}{\sum_{k=1}^{N_n}\hat{\T{M}}_{kk}^{\star}} \\
+m&=&\int_{^0V}{^0}\rho\,d{^0V} \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \alpha \, \det{\left(^0\T{J}\right)}\right]\right\vert_{g}
+\end{eqnarray}
+If a lumped mass matrix is used, the virtual work of the inertia terms becomes:
+\begin{eqnarray}
+\delta^{m}W & = & \bigcup_{e=1}^{N_e}\left(\sum_{i=1}^3\sum_{k=1}^{N_n}\delta\hat{\T{u}}_{ik} \, \ddot{\hat{\T{u}}}_{ik} \, \hat{\T{M}}_{kk}
+ - \sum_{i=1}^3\sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, {^b}\hat{\T{f}}_{ik}\right)
+\end{eqnarray}
+
+\subsection{Reformulation of inertia terms required for a first order DAE solver}
+Since MBDyn does not use accelerations for the solution of equations of motion, a reformulation of the equations of motion is required for solid elements.
+It is required also because rigid bodies might be present in the same model, and those rigid bodies might share common nodes with solid elements.
+The principle of virtual displacements leads to the following expression, which is using accelerations $\ddot{\hat{\T{u}}}$.
+So, it cannot be implemented directly.
+\begin{eqnarray}
+\bigcup_{e=1}^{N_e} \left(\T{M} \, \ddot{\hat{\T{u}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} - {^e}\hat{\T{f}}\right) = \T{0} \label{eq:solid:global_eq1}
+\end{eqnarray}
+
+\paragraph{Introducing the momentum}
+Since the mass matrix $\T{M}$ is constant,
+equation~\ref{eq:solid:global_eq1} can be easily reformulated as a system of two first order ODE's
+using the momentum $\hat{\T{\beta}}$ as a new unknown.
+This approach is strictly consistent with MBDyn's conventions for rigid bodies.
+\begin{eqnarray}
+\hat{\T{\beta}}=\T{M}\,\dot{\hat{\T{u}}} \label{eq:solid:beta} \\
+\dot{\hat{\T{\beta}}}=\T{M}\,\ddot{\hat{\T{u}}} \label{eq:solid:betadot}
+\end{eqnarray}
+
+\begin{description}
+\item[$\hat{\T{\beta}}$] Momentum at element nodes
+\end{description}
+
+With equation~\ref{eq:solid:beta} and equation~\ref{eq:solid:betadot} the global system of equations is formulated as:
+\begin{eqnarray}
+\bigcup_{e=1}^{N_e} \left(\hat{\T{\beta}} - \T{M} \, \dot{\hat{\T{u}}}\right) = \T{0} \\
+-\bigcup_{e=1}^{N_e} \left(\dot{\hat{\T{\beta}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} - {^e}\hat{\T{f}}\right) = \T{0}
+\end{eqnarray}
+
+\paragraph{Limitations}
+The only remaining limitation of this approach is, that it is not possible to compute accelerations
+for a model using solid elements, unless a lumped mass matrix is used for all solid elements in the model.
+See the MBDyn's input-manual for further information.
+
+\subsection{Elements for surface loads}
+In order to apply surface loads at solid elements, dedicated surface elements are required.
+Basically the same isoparametric approach known from section~\ref{sec:solid:interpol} is applied also to surface elements.
+Instead of the determinant of the Jacobian matrix, equation~\ref{eq:surface:dA} is used to transform infinitesimal surface areas
+between natural curvilinear coordinates $\T{r}$ and global Cartesian coordinates $\T{x}$.
+\begin{eqnarray}
+\T{x}_i & = & \sum_{k=1}^{N_n} \T{h}_k \, \hat{\T{x}}_{ik} \\
+\T{u}_i & = & \sum_{k=1}^{N_n} \T{h}_k \, \hat{\T{u}}_{ik} \\
+dA & = & \left\Vert\frac{\partial \T{x}}{\partial \T{r}_1} \times \frac{\partial \T{x}}{\partial \T{r}_2} \right\Vert \,d\T{r}_1 \, d\T{r}_2 \label{eq:surface:dA} \\
+\frac{\partial \T{x}_i}{\partial \T{r}_1} & = &\sum_{k=1}^{N_n} \frac{\partial \T{h}_{k}}{\partial \T{r}_1} \, \hat{\T{x}}_i \\
+\frac{\partial \T{x}_i}{\partial \T{r}_2} & = &\sum_{k=1}^{N_n} \frac{\partial \T{h}_{k}}{\partial \T{r}_2} \, \hat{\T{x}}_i \\
+\T{r}=\begin{pmatrix} \T{r}_1 & \T{r}_2 \end{pmatrix}^T
+\end{eqnarray}
+\paragraph{Shape functions}
+Also surface elements are based on C++ templates in order to simplify the implementation of new element types.
+The following types of elements are currently implemented:
+\begin{itemize}
+\item Quadrangular elements with linear and quadratic shape functions \cite{BATHE2016}, \cite{DHONDT2004}
+\item Triangular elements with quadratic shape functions \cite{CODEASTERR30301}
+\end{itemize}
+See also MBDyn's input-manual for further information.
+
+\paragraph{Virtual work of surface loads}
+In order to derive the expressions for external virtual work, surface loads must be expressed in terms of
+virtual displacements $\delta\hat{\T{u}}$ at the element nodes.
+\begin{eqnarray}
+\delta{^e}W & = & \bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \delta\T{u}_i\,{^A}\T{f}_i \right)\,dA \\
+          & = & \bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, {^A}\T{f}_i \right) \, dA \\
+          & = & \bigcup_{e=1}^{N_e} \sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, {^e}\hat{\T{f}}_{ik}
+\end{eqnarray}
+\paragraph{Pressure loads}
+In case of pressure loads, ${^A}\T{f}$ will always act normal to the surface.
+It should be emphasized, that the surface normal- and tangent vectors must be evaluated with respect to the deformed state.
+\begin{eqnarray}
+{^A}\T{f} & = & -\frac{1}{\left\Vert{^A}\T{n}\right\Vert} \, {^A}\T{n} \, p \\
+p & = & \sum_{k=1}^{N_n} \T{h}_{k} \, \hat{\T{p}}_k \\
+{^A}\T{n} & = & \frac{\partial \T{x}}{\partial \T{r}_1} \times \frac{\partial \T{x}}{\partial \T{r}_2}
+%{^A}\T{n}_{1_i} & = & \frac{\partial \T{x}_i}{\partial \T{r}_1}  = \sum_{k=1}^{N_n} \frac{\partial \T{h}_{k}}{\partial \T{r}_1} \, \hat{\T{x}}_i \\
+%{^A}\T{n}_{2_i} & = & \frac{\partial \T{x}_i}{\partial \T{r}_2}  = \sum_{k=1}^{N_n} \frac{\partial \T{h}_{k}}{\partial \T{r}_2} \, \hat{\T{x}}_i \\
+%dA & = & \left\Vert{^A}\T{n}^{\star}\right\Vert \,d\T{r}_1 \, d\T{r}_2= \left\Vert{^A}\T{n}_1 \times {^A}\T{n}_2 \right\Vert \,d\T{r}_1 \, d\T{r}_2
+\end{eqnarray}
+\begin{description}
+\item[$p$] pressure at a point $\T{x}$ at the surface
+\item[$\hat{\T{p}}$] pressures at the element nodes
+\item[${^A}\T{n}$] outward surface normal vector at point $\T{x}$
+\end{description}
+Finally, the virtual work of pressure loads can be evaluated by numerical integration across the surface area.
+Due to the fact, that the surface may be moved or deformed during the simulation, pressure loads will not be constant,
+even if the nodal pressures are constant values. In addition to that, pressure loads do contribute to the global stiffness matrix,
+and they will change the natural frequencies of structures they are applied to.
+\begin{eqnarray}
+\delta{^e}W & = & -\bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, {^A}\T{n}_i \, \frac{p}{\left\Vert{^A}\T{n}\right\Vert}\right) \, dA \\
+ & \approx & -\bigcup_{e=1}^{N_e}\sum_{g=1}^{N_g} \left.\left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, p \, {^A}\T{n}_i \, \alpha \right)\right\vert_{g}
+\end{eqnarray}
+\paragraph{Surface traction's}
+Surface traction's are similar to pressure loads, but they do not necessarily act normal to the surface.
+Instead the initial orientation of traction loads will be specified by the user, by means of an orientation matrix $\T{R}_f$.
+In that way, shear stresses may be imposed at the surface of a body.
+\begin{eqnarray}
+\T{e}_1^{\star} & = & \frac{\partial \T{x}}{\partial \T{r}_1} \\
+\T{e}_2^{\star} & = & \frac{\partial \T{x}}{\partial \T{r}_2} \\
+\T{e}_3^{\star} & = & \T{e}_1^{\star} \times \T{e}_2^{\star} \\
+\T{e}_2^{\star\star} & = & \T{e}_3^{\star} \times \T{e}_1^{\star} \\
+{^A}\T{R} & = & \begin{pmatrix}
+\frac{1}{\left\Vert\T{e}_1^{\star}\right\Vert} \, \T{e}_1^{\star} & \frac{1}{\left\Vert\T{e}_2^{\star\star}\right\Vert} \, \T{e}_2^{\star\star} & \frac{1}{\left\Vert\T{e}_3^{\star}\right\Vert} \, \T{e}_3^{\star}
+\end{pmatrix} \\
+{^A}\T{f} & = & {^A}\T{R} \, {^{A_0}}\T{R}^T \, \T{R}_f \, {^A}\bar{\T{f}} \\
+{^A}\bar{\T{f}}_i & = & \sum_{k=1}^{N_n} \T{h}_{k} \, {^A}\bar{\hat{\T{f}}}_{ik} \\
+\delta{^e}W & = & \bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, {^A}\T{f}_i \right) \, dA \\
+ & \approx & \bigcup_{e=1}^{N_e}\sum_{g=1}^{N_g} \left.\left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, {^A}\T{f}_i \, \left\Vert \T{e}_3^{\star} \right\Vert \, \alpha \right)\right\vert_{g}
+\end{eqnarray}
+\begin{description}
+\item[${^A}\T{R}$] relative orientation matrix at point $\T{x}$ at the deformed state
+\item[${^{A_0}}\T{R}$] relative orientation matrix at point $\T{x}$ at the undeformed state
+\item[$\T{R}_f$] absolute orientation matrix for the applied traction load with respect to the undeformed state
+\item[${^A}\T{f}$] surface traction's at point $\T{x}$ with respect to the global reference frame
+\item[${^A}\bar{\T{f}}$] surface traction's at point $\T{x}$ with respect to the local reference frame
+\item[${^A}\bar{\hat{\T{f}}}$] surface traction's at element nodes
+\end{description}
+
+\subsection{Implementation notes}
+Many authors of textbooks about nonlinear Finite Element Methods spent
+a lot of effort to explain the consistent derivation of the tangent stiffness matrix,
+since this is crucial for any Newton-like nonlinear solver \cite{WALLRAPP1998}, \cite{BATHE2016}.
+In contradiction to that, the analytical derivation of a sparse tangent stiffness matrix is not required for MBDyn's solid elements,
+because they are exploiting a technique called ``Automatic~Differentiation'' for Newton~based- as well as Newton~Krylov based solvers.

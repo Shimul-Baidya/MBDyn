@@ -82,8 +82,10 @@ const char* psExt[] = {
 	".dof",
 	".drv",		// 30
 	".trc",
+        ".sol",
+        ".prl",
 	".m",		// NOTE: ALWAYS LAST!
-	NULL		// 33
+	NULL		// 35
 };
 
 const std::unordered_map<const OutputHandler::Dimensions, const std::string> DimensionNames ({
@@ -524,6 +526,16 @@ OutputHandler::OutputHandler_int(void)
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[TRACES].pof = &ofTraces;
 
+	OutData[SOLIDS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+
+        OutData[SOLIDS].pof = &ofSolids;
+
+        OutData[SURFACE_LOADS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+             | OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+
+        OutData[SURFACE_LOADS].pof = &ofSurfaceLoads;
+        
 	OutData[EIGENANALYSIS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[EIGENANALYSIS].pof = &ofEigenanalysis;
@@ -579,37 +591,31 @@ OutputHandler::Open(const OutputHandler::OutFiles out)
 		// FIXME: we should use the default format, or any selected by the user;
 		// but wait a minute: can this actually happen?
 		// return NetCDFOpen(out, netCDF::NcFile::nc4);
-		return NetCDFOpen(out, netCDF::NcFile::classic);
+		NetCDFOpen(out, netCDF::NcFile::classic);
 
-	} else
+	}
 #endif /* USE_NETCDF */
-	{
-		if (!IsOpen(out)) {
-			const char *fname = _sPutExt(psExt[out]);
+	if (UseText(out) && !IsOpen(out)) {
+		const char *fname = _sPutExt(psExt[out]);
 
-			// Apre lo stream
-			OutData[out].pof->open(fname);
+		// Open stream
+		OutData[out].pof->open(fname);
 
-			if (!(*OutData[out].pof)) {
-				silent_cerr("Unable to open file "
-					"\"" << fname << "\"" << std::endl);
-				throw ErrFile(MBDYN_EXCEPT_ARGS);
-			}
-
-			if (UseText(out)) {
-				// Setta la formattazione dei campi
-				if (UseDefaultPrecision(out)) {
-					OutData[out].pof->precision(iCurrPrecision);
-				}
-
-				// Setta la notazione
-				if (UseScientific(out)) {
-					OutData[out].pof->setf(std::ios::scientific);
-				}
-			}
+		if (!(*OutData[out].pof)) {
+			silent_cerr("Unable to open file "
+				"\"" << fname << "\"" << std::endl);
+			throw ErrFile(MBDYN_EXCEPT_ARGS);
 		}
 
-		return;
+		// Set precision
+		if (UseDefaultPrecision(out)) {
+			OutData[out].pof->precision(iCurrPrecision);
+		}
+
+		// Set notation
+		if (UseScientific(out)) {
+			OutData[out].pof->setf(std::ios::scientific);
+		}
 	}
 
 	return;
