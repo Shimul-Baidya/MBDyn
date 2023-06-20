@@ -277,6 +277,8 @@ public:
 	
 	void ReadOutputUnits(MBDynParser& HP);
 
+	inline std::string GetUnits(Dimensions phys_dim) {return Units[phys_dim];};
+
 	/* Aggiungere qui le funzioni che aprono i singoli stream */
 	void Open(const OutputHandler::OutFiles out);
 #ifdef USE_NETCDF
