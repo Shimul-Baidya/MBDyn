@@ -803,7 +803,7 @@ void
 HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 {
 #ifdef USE_NETCDF
-	ASSERT(OH.IsOpen(OutputHandler::NETFCDF));
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 	if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 		OutputHandler::NcDimVec m_vDimHFElem(1);
 		m_vDimHFElem[0] = OH.CreateDim("HFELEM");
