@@ -41,6 +41,7 @@
 #include <iostream>
 #include <cfloat>
 
+#include "output.h"
 #include "dataman.h"
 #include "userelem.h"
 
@@ -729,8 +730,9 @@ m_iConvergedPeriod(0)
 		}
 	}
 
-	if (HP.IsKeyWord("print" "all" "periods"))
+	if (HP.IsKeyWord("print" "all" "periods")) {
 		m_bPrintAllPeriods = true;
+	}
 
 	if (HP.IsKeyWord("write" "after" "convergence" "periods")){
 		try {
@@ -803,10 +805,36 @@ void
 HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 {
 #ifdef USE_NETCDF
+	if (OH.UseNetCDF(OutputHandler::LOADABLE) && !(m_pDM->GetNetCDFFileFormat() == MBDynNcFile::nc4)) {
+		silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): WARNING \"print all periods\" is only compatible with NetCDF4 file format (nc4)" << std::endl);
+	}
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 	if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+
 		OutputHandler::NcDimVec m_vDimHFElem(1);
-		m_vDimHFElem[0] = OH.CreateDim("HFELEM");
+		if (m_pDM->GetNetCDFFileFormat() == MBDynNcFile::nc4) {
+			// Only nc4 format supports more than one unlimited dimension
+			m_vDimHFElem[0] = OH.CreateDim("HFELEM");
+		} else {
+			// NetCDF output at each period is disabled in this case
+			switch (m_OmegaInc) {
+			case Inc_ADDITIVE:
+				m_vDimHFElem[0] = OH.CreateDim("HFELEM", std::floor((m_dOmegaMax - m_dOmega0) / m_dOmegaAddInc) + 1);
+				break;
+
+			case Inc_MULTIPLICATIVE:
+				m_vDimHFElem[0] = OH.CreateDim("HFELEM", std::floor(std::log(m_dOmegaMax)/std::log(m_dOmegaMulInc) - std::log(m_dOmega0)/std::log(m_dOmegaMulInc)) + 1);
+				break;
+
+			case Inc_CUSTOM:
+				m_vDimHFElem[0] = OH.CreateDim("HFELEM", m_Omega.size());
+				break;
+
+			default:
+				// impossible
+				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+			}
+		}
 
 		std::ostringstream os;
 		os << "elem.loadable." << GetLabel();
@@ -853,7 +881,7 @@ HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
 					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
 					attrs[2] = OutputHandler::AttrVal("description", "Sine part of input <" + m_sInputName.str() + ">");
-					m_vInputNcVars[2*i] =  OH.CreateVar(m_sOutputBaseName + m_sInputName.str() + "Sin",
+					m_vInputNcVars[2*i] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Sin",
 						netCDF::NcType::nc_DOUBLE,
 						attrs, 
 						m_vDimHFElem);
@@ -862,7 +890,7 @@ HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
 					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
 					attrs[2] = OutputHandler::AttrVal("description", "Cosine part of input <" + m_sInputName.str() + ">");
-					m_vInputNcVars[2*i + 1] =  OH.CreateVar(m_sOutputBaseName + m_sInputName.str() + "Cos",
+					m_vInputNcVars[2*i + 1] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Cos",
 						netCDF::NcType::nc_DOUBLE,
 						attrs, 
 						m_vDimHFElem);
@@ -872,7 +900,7 @@ HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
 					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
 					attrs[2] = OutputHandler::AttrVal("description", "Amplitude of input <" + m_sInputName.str() + ">");
-					m_vInputNcVars[2*i] =  OH.CreateVar(m_sOutputBaseName + m_sInputName.str() + "Amplitude",
+					m_vInputNcVars[2*i] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Amplitude",
 						netCDF::NcType::nc_DOUBLE,
 						attrs,
 						m_vDimHFElem);
@@ -881,7 +909,7 @@ HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
 					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
 					attrs[2] = OutputHandler::AttrVal("description", "Phase of input <" + m_sInputName.str() + ">");
-					m_vInputNcVars[2*i + 1] =  OH.CreateVar(m_sOutputBaseName + m_sInputName.str() + "Phase",
+					m_vInputNcVars[2*i + 1] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Phase",
 						netCDF::NcType::nc_DOUBLE,
 						attrs,
 						m_vDimHFElem);
@@ -916,7 +944,7 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 			}
 #ifdef USE_NETCDF
 			if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-				OH.WriteNcVar(Var_dConvTime, m_pDM->dGetTime());
+				OH.WriteNcVar(Var_dConvTime, m_pDM->dGetTime(), m_iOmegaCnt);
 			}
 #endif
 			if (m_iPeriod == 0) // just converged
@@ -929,8 +957,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 				}
 #ifdef USE_NETCDF
 				if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut);
-					OH.WriteNcVar(Var_iNumPeriods, m_iPeriodOut);
+					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut, m_iOmegaCnt);
+					OH.WriteNcVar(Var_iNumPeriods, m_iPeriodOut, m_iOmegaCnt);
 				}
 #endif // USE_NETCDF
 			} else {
@@ -940,9 +968,9 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 						<< " " << m_iPeriod;		// 4:	how many periods required (-1 if not converged?)
 				}
 #ifdef USE_NETCDF
-				if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut);
-					OH.WriteNcVar(Var_iNumPeriods, m_iPeriod);
+				if (OH.UseNetCDF(OutputHandler::LOADABLE) && m_pDM->GetNetCDFFileFormat() == MBDynNcFile::nc4) {
+					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut, m_iPeriod);
+					OH.WriteNcVar(Var_iNumPeriods, m_iPeriod, m_iPeriod);
 				}
 #endif // USE_NETCDF
 			}
@@ -959,8 +987,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], m_Xsin[i] / m_dAmplitude);
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i] / m_dAmplitude);
+								OH.WriteNcVar(m_vInputNcVars[2*i], (doublereal)(m_Xsin[i] / m_dAmplitude), m_iOmegaCnt);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i] / m_dAmplitude, m_iOmegaCnt);
 							}
 #endif // USE_NETCDF
 						} else {
@@ -970,8 +998,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], m_Xsin[i]);
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i]);
+								OH.WriteNcVar(m_vInputNcVars[2*i], m_Xsin[i], m_iOmegaCnt);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i], m_iOmegaCnt);
 							}
 #endif // USE_NETCDF
 						}
@@ -993,8 +1021,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude );
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]));
+								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude, m_iOmegaCnt );
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt);
 							}
 #endif // USE_NETCDF
 						} else {
@@ -1005,8 +1033,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]));
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]));
+								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]), m_iOmegaCnt);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt);
 							}
 #endif
 						}
@@ -1022,8 +1050,9 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 				for (unsigned i = 0; i < m_Input.size(); ++i)
 					if (m_Input[i].m_Flag & HFInput::HF_TARGET)
 						out << " " << RMSPrev[0][i];
-			out << std::endl;
 			}
+			std::ostream& out = OH.Loadable();
+			out << std::endl;
 		}
 	}
 
