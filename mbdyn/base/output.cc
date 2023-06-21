@@ -1059,6 +1059,7 @@ template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const unsigned int&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const unsigned int&, const unsigned int&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const unsigned int&);
