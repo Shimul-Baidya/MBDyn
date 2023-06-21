@@ -104,8 +104,8 @@ private:
 	doublereal m_dOmegaMulInc;
 	std::vector<doublereal> m_Omega;
 
-	integer m_iOmegaCnt;
-	integer m_iPeriod;
+	unsigned m_iOmegaCnt;
+	unsigned m_iPeriod;
 	integer m_iPeriodRMS;
 	integer m_iPeriodCnt;
 	integer m_iNumSubSteps;
