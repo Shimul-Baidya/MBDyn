@@ -416,8 +416,13 @@ bAutoDiff(false)
 	     }
 
 	     if (bOutputFrames) {
-		  OutHdl.Open(OutputHandler::REFERENCEFRAMES);
-		  HP.OutputFrames(OutHdl.ReferenceFrames());
+		  if (OutHdl.UseText(OutputHandler::REFERENCEFRAMES)) {
+			OutHdl.Open(OutputHandler::REFERENCEFRAMES);
+			HP.OutputFrames(OutHdl.ReferenceFrames());
+		  } else {
+			silent_cerr("warning, requested reference frames output but text output is disabled." << std::endl
+					<< "NetCDF output of reference frames is not implemented yet." << std::endl);
+		  }
 	     }
 
 	     /* fine lettura elementi */
