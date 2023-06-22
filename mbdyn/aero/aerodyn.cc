@@ -195,13 +195,15 @@ AirProperties::InitialAssRes(SubVectorHandler& WorkVec,
 void
 AirProperties::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::AIRPROPS)) {
 		OH.AirProps() << std::setw(8) << GetLabel()
 			<< " " << dGetAirDensity(Zero3)
 			<< " " << dGetSoundSpeed(Zero3)
 			<< " " << GetVelocity(Zero3)
 			<< std::endl;
 	}
+
+	// TODO: NetCDF output...
 }
  
 Vec3

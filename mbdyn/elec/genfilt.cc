@@ -381,7 +381,7 @@ GenelStateSpaceSISO::SetValue(DataManager *pDM,
 void
 GenelStateSpaceSISO::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::GENELS)) {
 		std::ostream &out(OH.Genels());
 		out << std::setw(8) << GetLabel();
 		for (unsigned int i = 0; i < iNumDofs; i++) {
@@ -392,6 +392,8 @@ GenelStateSpaceSISO::Output(OutputHandler& OH) const
 		}
 		out << "\n";
 	}
+
+	// TODO: NetCDF output...
 }
 
 void
@@ -835,7 +837,7 @@ GenelStateSpaceMIMO::SetValue(DataManager *pDM,
 void
 GenelStateSpaceMIMO::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::GENELS)) {
 		std::ostream& out(OH.Genels());
 		out << std::setw(8) << GetLabel();
 		for (unsigned int i = 0; i < iNumDofs; i++) {

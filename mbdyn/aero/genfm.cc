@@ -366,7 +366,7 @@ GenericAerodynamicForce::AssRes(SubVectorHandler& WorkVec,
 void
 GenericAerodynamicForce::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::AERODYNAMIC)) {
       		OH.Aerodynamic()
 			<< std::setw(8) << GetLabel()
 			<< " " << dAlpha*180./M_PI
