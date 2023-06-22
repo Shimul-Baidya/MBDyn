@@ -410,7 +410,7 @@ ThreeWayMinorLoss::AssRes(SubVectorHandler& WorkVec,
 void
 ThreeWayMinorLoss::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput() OH.UseText(OutputHandler::HYDRAULIC) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) {
 		std::ostream& out = OH.Hydraulic();
 		out << std::setw(8) << GetLabel()
 		<< " " << vel  << " " << flow << std::endl;
@@ -645,7 +645,7 @@ Orifice::AssRes(SubVectorHandler& WorkVec,
 void
 Orifice::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput() OH.UseText(OutputHandler::HYDRAULIC)) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) {
 		std::ostream& out = OH.Hydraulic();
 		out << std::setw(8) << GetLabel()	/*  1 */
 			<< " " << vel			/*  2 */

@@ -2423,7 +2423,27 @@ PetersHeRotor::~PetersHeRotor(void)
 void
 PetersHeRotor::OutputPrepare(OutputHandler& OH)
 {
-	DinamicInflowRotor::OutputPrepare(OH);
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+	     if (OH.UseNetCDF(OutputHandler::ROTORS)) {
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+		/* The first part of the output is the same for Rotor and
+		 * PetersHeRotor 
+		 */
+		Rotor::OutputPrepare(OH);
+
+		Var_dVConst = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "VConst",
+				OutputHandler::Dimensions::Velocity,
+				"constant inflow state");
+		Var_dVSine = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "VSine",
+				OutputHandler::Dimensions::Velocity,
+				"sine inflow state (lateral)");
+		Var_dVCosine= OH.CreateVar<doublereal>(m_sOutputNameBase + "." "VCosine",
+				OutputHandler::Dimensions::Velocity,
+				"cosine inflow state (longitudinal)");
+	     }
+#endif // USE_NETCDF
+	}
 }
 
 void

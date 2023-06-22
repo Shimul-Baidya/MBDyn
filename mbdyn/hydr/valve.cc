@@ -1932,7 +1932,7 @@ Pressure_valve::AssRes(SubVectorHandler& WorkVec,
 
 void Pressure_valve::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput() OH.UseText(OutputHandler::HYDRAULIC)) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << s << " " << v  << " "<< vp  
@@ -2430,7 +2430,7 @@ Flow_valve::AssRes(SubVectorHandler& WorkVec,
   
 void Flow_valve::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput() OH.UseText(OutputHandler::HYDRAULIC) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << s  << " " << v  << " "<< vp  

@@ -724,6 +724,12 @@ protected:
 		const doublereal& dVCosineTmp,
 		flag fOut);
 
+#ifdef USE_NETCDF
+	MBDynNcVar Var_dVConst;		// Constant inflow state
+	MBDynNcVar Var_dVSine;		// Sine inflow state (lateral) 
+	MBDynNcVar Var_dVCosine;	// Cosine inflow state (longitudinal)
+#endif // USE_NETCDF
+
 public:
 	PetersHeRotor(unsigned int uLabel, const DofOwner* pDO);
 	PetersHeRotor(unsigned int uLabel,
@@ -753,6 +759,7 @@ public:
 
 	// output; si assume che ogni tipo di elemento sappia,
 	// attraverso l'OutputHandler, dove scrivere il proprio output
+	virtual void OutputPrepare(OutputHandler& OH);
 	virtual void Output(OutputHandler& OH) const;
 
 	// Dimensioni del workspace
