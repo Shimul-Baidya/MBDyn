@@ -32,7 +32,7 @@
 #ifndef SAH_H
 #define SAH_H
 
-#include <node.h>
+#include <scalarnode.h>
 #include <drive.h>
 
 /* SampleAndHold - begin */ 

@@ -445,11 +445,13 @@ Pipe::AfterConvergence(const VectorHandler& X, const VectorHandler& XP)
    
 void Pipe::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       OH.Hydraulic()
 	<< std::setw(8) << GetLabel()
 	<< " " <<  vel << " " << flow  << " " << Re << std::endl;
    }
+
+   // TODO: NetCDF output...
 }
 
 
@@ -995,7 +997,7 @@ Dynamic_pipe::AfterConvergence(const VectorHandler& X, const VectorHandler& XP)
 
 void Dynamic_pipe::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out 
 	<< std::setw(8) << GetLabel()
@@ -1005,6 +1007,8 @@ void Dynamic_pipe::Output(OutputHandler& OH) const
 	<< " " << pp
 	<< std::endl;
    }
+
+   // TODO: NetCDF output...
 }
 
 void 
@@ -1434,7 +1438,7 @@ DynamicPipe::AfterConvergence(const VectorHandler& X, const VectorHandler& XP)
 
 void DynamicPipe::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) {
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) {
       std::ostream& out = OH.Hydraulic();
       out 
 	<< std::setw(8) << GetLabel()	/*  1 */
@@ -1455,6 +1459,8 @@ void DynamicPipe::Output(OutputHandler& OH) const
 	<< " " << turbulent		/* 16 */
 	<< std::endl;
    }
+
+   // TODO: NetCDF output...
 }
 
 void 

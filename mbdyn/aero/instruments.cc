@@ -253,7 +253,7 @@ AircraftInstruments::Restart(std::ostream& out) const
 void
 AircraftInstruments::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::AERODYNAMIC)) {
 		std::ostream& out = OH.Aerodynamic()
 			<< std::setw(8) << GetLabel();
 
@@ -263,6 +263,8 @@ AircraftInstruments::Output(OutputHandler& OH) const
 
 		out << std::endl;
 	}
+
+	// TODO: NetCDF output...
 }
 
 /* Dimensioni del workspace */

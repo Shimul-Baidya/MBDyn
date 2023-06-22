@@ -42,13 +42,13 @@
 #define NODEAD_H
 
 #include "myassert.h"
-#include "node.h"
+#include "scalarnode.h"
 #include "sp_gradient.h"
 
 class ScalarNodeAd: virtual public ScalarNode {
 public:
      ScalarNodeAd(unsigned int uL, const DofOwner* pDO, flag fOut);
-     virtual ~ScalarNodeAd();
+     virtual ~ScalarNodeAd(void);
 
      inline void GetX(doublereal& dX, doublereal dCoef, sp_grad::SpFunctionCall func) const;
      inline void GetX(sp_grad::SpGradient& dX, doublereal dCoef, sp_grad::SpFunctionCall func) const;
@@ -63,7 +63,7 @@ class ScalarDifferentialNodeAd: virtual public ScalarDifferentialNode, public Sc
 public:
      ScalarDifferentialNodeAd(unsigned int uL, const DofOwner* pDO,
                               const doublereal& dx, const doublereal& dxp, flag fOut);
-     virtual ~ScalarDifferentialNodeAd();
+     virtual ~ScalarDifferentialNodeAd(void);
 
      inline void GetXPrime(doublereal& dXPrime, doublereal dCoef, sp_grad::SpFunctionCall func) const;
      inline void GetXPrime(sp_grad::SpGradient& dXPrime, doublereal dCoef, sp_grad::SpFunctionCall func) const;
@@ -75,7 +75,7 @@ public:
      ScalarAlgebraicNodeAd(unsigned int uL, const DofOwner* pDO,
                            doublereal dx, flag fOut);
 
-     virtual ~ScalarAlgebraicNodeAd();
+     virtual ~ScalarAlgebraicNodeAd(void);
 };
 
 inline void ScalarNodeAd::GetX(doublereal& dX, doublereal dCoef, sp_grad::SpFunctionCall func) const

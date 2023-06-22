@@ -65,11 +65,12 @@ ScalarDifferentialNodeAd::ScalarDifferentialNodeAd(unsigned int uL,
       ScalarDifferentialNode(uL, pDO, dx, dxp, fOut),
       ScalarNodeAd(uL, pDO, fOut)      
 {
-
+	NO_OP;
 }
 
-ScalarDifferentialNodeAd::~ScalarDifferentialNodeAd()
+ScalarDifferentialNodeAd::~ScalarDifferentialNodeAd(void)
 {
+	NO_OP;
 }
 
 ScalarAlgebraicNodeAd::ScalarAlgebraicNodeAd(unsigned int uL,
@@ -82,6 +83,6 @@ ScalarAlgebraicNodeAd::ScalarAlgebraicNodeAd(unsigned int uL,
 {
 }
 
-ScalarAlgebraicNodeAd::~ScalarAlgebraicNodeAd()
+ScalarAlgebraicNodeAd::~ScalarAlgebraicNodeAd(void)
 {
 }

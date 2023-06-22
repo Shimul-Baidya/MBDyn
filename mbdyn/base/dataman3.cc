@@ -1554,6 +1554,10 @@ EndOfUse:
 		// FIXME: replace with a single call that sets NetCDF for all types that support it
 		OutHdl.SetNetCDF(OutputHandler::NETCDF);
 		OutHdl.SetNetCDF(OutputHandler::STRNODES);
+		OutHdl.SetNetCDF(OutputHandler::ELECTRIC);
+		OutHdl.SetNetCDF(OutputHandler::THERMALNODES);
+		OutHdl.SetNetCDF(OutputHandler::PRESNODES);
+		OutHdl.SetNetCDF(OutputHandler::ABSTRACT);
 		OutHdl.SetNetCDF(OutputHandler::INERTIA);
 		OutHdl.SetNetCDF(OutputHandler::JOINTS);
 		OutHdl.SetNetCDF(OutputHandler::BEAMS);

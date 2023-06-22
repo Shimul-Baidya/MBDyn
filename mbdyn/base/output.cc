@@ -125,6 +125,9 @@ const std::unordered_map<const OutputHandler::Dimensions, const std::string> Dim
 	{ OutputHandler::Dimensions::Moment , std::string("Moment") },
 	{ OutputHandler::Dimensions::Voltage , std::string("Voltage") },
 	{ OutputHandler::Dimensions::Charge , std::string("Charge") },
+	{ OutputHandler::Dimensions::Resistance , std::string("Resistance") },
+	{ OutputHandler::Dimensions::Capacitance, std::string("Capacitance") },
+	{ OutputHandler::Dimensions::Inductance, std::string("Inductance") },
 	{ OutputHandler::Dimensions::Frequency , std::string("Frequency") },
 	{ OutputHandler::Dimensions::deg , std::string("deg") },
 	{ OutputHandler::Dimensions::rad , std::string("rad") },
@@ -134,6 +137,7 @@ const std::unordered_map<const OutputHandler::Dimensions, const std::string> Dim
 	{ OutputHandler::Dimensions::MassFlow, std::string("Mass flow")},
 	{ OutputHandler::Dimensions::Jerk , std::string("Jerk") },
 	{ OutputHandler::Dimensions::VoltageDerivative , std::string("Voltage derivative") },
+	{ OutputHandler::Dimensions::TemperatureDerivative , std::string("Temperature derivative") },
 	{ OutputHandler::Dimensions::UnknownDimension , std::string("Unknown dimension") }
 });
 
@@ -283,6 +287,18 @@ void OutputHandler::SetDerivedUnits(std::unordered_map<Dimensions, std::string>&
 		Units[Dimensions::Mass] + " " +
 		Units[Dimensions::Time] + "^-3 " +
 		Units[Dimensions::Current] + "^-1";
+	Units[Dimensions::Resistance] = Units[Dimensions::Length] + "^2 " + 
+		Units[Dimensions::Mass] + " " + 
+		Units[Dimensions::Time] + "^-3 " +
+		Units[Dimensions::Current] + "^-2";
+	Units[Dimensions::Capacitance] = Units[Dimensions::Length] + "^-2 " + 
+		Units[Dimensions::Mass] + "^-1 " + 
+		Units[Dimensions::Time] + "^4 " +
+		Units[Dimensions::Current] + "^2";
+	Units[Dimensions::Inductance] = Units[Dimensions::Length] + "^2 " + 
+		Units[Dimensions::Mass] + " " + 
+		Units[Dimensions::Time] + "^-2 " +
+		Units[Dimensions::Current] + "^-2";
 	Units[Dimensions::Frequency] = Units[Dimensions::Time] + "^-1";
 	Units[Dimensions::Charge] = Units[Dimensions::Time] + " " +
 		Units[Dimensions::Current];
@@ -384,11 +400,13 @@ OutputHandler::OutputHandler_int(void)
 	OutData[STRNODES].pof = &ofStrNodes;
 
 	OutData[ELECTRIC].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[ELECTRIC].pof= &ofElectric;
 
 	OutData[THERMALNODES].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[THERMALNODES].pof= &ofThermalNodes;
 
 	OutData[THERMALELEMENTS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
@@ -396,7 +414,8 @@ OutputHandler::OutputHandler_int(void)
 	OutData[THERMALELEMENTS].pof= &ofThermalElements;
 
 	OutData[ABSTRACT].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[ABSTRACT].pof = &ofAbstract;
 
 	OutData[INERTIA].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
@@ -442,7 +461,8 @@ OutputHandler::OutputHandler_int(void)
 	OutData[HYDRAULIC].pof = &ofHydraulic;
 
 	OutData[PRESNODES].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[PRESNODES].pof = &ofPresNodes;
 
 	OutData[LOADABLE].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
@@ -1038,6 +1058,9 @@ template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const unsigned int&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const unsigned int&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&,

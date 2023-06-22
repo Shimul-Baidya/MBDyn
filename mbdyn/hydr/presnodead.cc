@@ -48,8 +48,10 @@ PressureNodeAd::PressureNodeAd(unsigned int uL, const DofOwner* pDO, doublereal 
       PressureNode(uL, pDO, dx, fOut),
       ScalarAlgebraicNodeAd(uL, pDO, dx, fOut)
 {
+	NO_OP;
 }
    
-PressureNodeAd::~PressureNodeAd()
+PressureNodeAd::~PressureNodeAd(void)
 {
+	NO_OP;
 }

@@ -1291,7 +1291,7 @@ If the \kw{modal} joint element is connected to a modal node
 instead of being clamped to the ground, the optional keyword \kw{resultant}
 is allowed for each mode drive caller.
 The keyword \kw{resultant} is followed by two $3\times 1$ vectors
-containing the resultant force and moment associated to the related mode.
+containing the resultant force and moment associated with the related mode.
 
 If the keyword \kw{list} was given, the mode numbers must be
 the actual mode numbers defined in the FEM model.
@@ -3954,7 +3954,7 @@ instead.
 \subsection{Deformable displacement joint}
 \label{sec:EL:JOINT:DEFORMABLEDISP}
 This joint implements a configuration dependent force that is exchanged
-between two points associated to two nodes with an offset.
+between two points associated with two nodes with an offset.
 The force may depend, by way of a generic 3D constitutive law, 
 on the relative position and velocity of the two points, 
 expressed in the reference frame of node 1.
@@ -4172,7 +4172,7 @@ of the angular strain rate.
 \subsection{Deformable joint}
 \label{sec:EL:JOINT:DEFORMABLEJOINT}
 This joint implements a configuration dependent force and moment
-that are exchanged by two points associated to two nodes with an offset.
+that are exchanged by two points associated with two nodes with an offset.
 The force the and moment may depend, by way of a generic 6D constitutive law,
 on the relative position, orientation, velocity and angular velocity 
 of the two points, expressed in the reference frame of node 1.
@@ -7175,7 +7175,7 @@ of elements to be computed.
 \end{Verbatim}
 %\end{verbatim}
 where \kw{type} currently can be \kw{body}, \kw{joint} and \kw{loadable}, 
-although more elements associated to inertia might participate in the future.
+although more elements associated with inertia might participate in the future.
 All elements whose labels are listed must exist, and duplicates
 are detected and considered errors.
 The keyword \kw{all} causes all the elements of type \nt{type} 

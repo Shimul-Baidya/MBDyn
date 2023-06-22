@@ -35,6 +35,7 @@
 #define GENFILT_H
 
 #include "genel.h"
+#include "scalarnode.h"
 #include "scalarvalue.h"
 
 /* GenelStateSpaceSISO - begin */
