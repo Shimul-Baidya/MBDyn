@@ -53,19 +53,22 @@
 #include "sp_matrix_base.h"
 
 namespace sp_grad {
-     template <typename Func, typename Expr>
-     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::MapAssignOper(GpGradProd& g, const GpGradProdBase<Expr>& expr) {
+     template <typename Func>
+     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::MapAssignOper(GpGradProd& g, const GpGradProd& expr) {
           return g.template AssignOper<Func>(expr);
      }
 
-     template <typename Expr>
-     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Add(GpGradProd& g, const GpGradProdBase<Expr>& expr) {
+     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Add(GpGradProd& g, const GpGradProd& expr) {
           return MapAssignOper<SpGradBinPlus>(g, expr);
      }
 
-     template <typename Expr>
-     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Sub(GpGradProd& g, const GpGradProdBase<Expr>& expr) {
+     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Sub(GpGradProd& g, const GpGradProd& expr) {
           return MapAssignOper<SpGradBinMinus>(g, expr);
+     }
+
+     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::MapAssign(GpGradProd& g, const GpGradProd& expr) {
+          g = expr;
+          return g;
      }
 
      inline void SpGradExpDofMapHelper<SpGradient>::ResetDofStat() {
@@ -1273,29 +1276,20 @@ namespace sp_grad {
           return &oNullData;
      }
 
-     template <typename Expr>
-     constexpr GpGradProd::GpGradProd(const GpGradProdBase<Expr>& oExpr)
-          :dVal(oExpr.dGetValue()), dDer(oExpr.dGetDeriv()) {
+     inline GpGradProd& GpGradProd::operator+=(const GpGradProd& oExpr) {
+          return AssignOper<SpGradBinPlus>(oExpr);
      }
 
-     template <typename Expr>
-     inline GpGradProd& GpGradProd::operator+=(const GpGradProdBase<Expr>& oExpr) {
-          return AssignOper<SpGradBinPlus, Expr>(oExpr);
+     inline GpGradProd& GpGradProd::operator-=(const GpGradProd& oExpr) {
+          return AssignOper<SpGradBinMinus>(oExpr);
      }
 
-     template <typename Expr>
-     inline GpGradProd& GpGradProd::operator-=(const GpGradProdBase<Expr>& oExpr) {
-          return AssignOper<SpGradBinMinus, Expr>(oExpr);
+     inline GpGradProd& GpGradProd::operator*=(const GpGradProd& oExpr) {
+          return AssignOper<SpGradBinMult>(oExpr);
      }
 
-     template <typename Expr>
-     inline GpGradProd& GpGradProd::operator*=(const GpGradProdBase<Expr>& oExpr) {
-          return AssignOper<SpGradBinMult, Expr>(oExpr);
-     }
-
-     template <typename Expr>
-     inline GpGradProd& GpGradProd::operator/=(const GpGradProdBase<Expr>& oExpr) {
-          return AssignOper<SpGradBinDiv, Expr>(oExpr);
+     inline GpGradProd& GpGradProd::operator/=(const GpGradProd& oExpr) {
+          return AssignOper<SpGradBinDiv>(oExpr);
      }
 
      inline void GpGradProd::InsertDeriv(GpGradProd& g, doublereal dCoef) const
@@ -1303,8 +1297,8 @@ namespace sp_grad {
           g.dDer += dDer * dCoef;
      }
 
-     template <typename BinFunc, typename Expr>
-     inline GpGradProd& GpGradProd::AssignOper(const GpGradProdBase<Expr>& oExpr) {
+     template <typename BinFunc>
+     inline GpGradProd& GpGradProd::AssignOper(const GpGradProd& oExpr) {
           const doublereal uv = dGetValue();
           const doublereal ud = dGetDeriv();
           const doublereal vv = oExpr.dGetValue();

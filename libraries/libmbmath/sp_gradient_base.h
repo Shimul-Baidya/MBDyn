@@ -339,31 +339,6 @@ namespace sp_grad {
      }
 
      class GpGradProd;
-
-     template <typename DERIVED>
-     class GpGradProdBase: public SpGradCommon {
-     protected:
-          constexpr GpGradProdBase() noexcept {}
-          ~GpGradProdBase() noexcept {}
-
-     public:
-          static constexpr ExprEvalFlags eExprEvalFlags = ExprEvalDuplicate;
-
-          constexpr doublereal dGetValue() const {
-               return pGetRep()->dGetValue();
-          }
-
-          constexpr doublereal dGetDeriv() const {
-               return pGetRep()->dGetDeriv();
-          }
-
-          static constexpr bool bIsScalarConst = DERIVED::bIsScalarConst;
-
-     private:
-          constexpr const DERIVED* pGetRep() const {
-               return static_cast<const DERIVED*>(this);
-          }
-     };
 }
 
 #endif

@@ -2093,15 +2093,11 @@ namespace sp_grad {
           inline SpMatrixBase& operator=(const SpMatrixBase& oMat);
           template <typename Expr>
           inline SpMatrixBase& operator*=(const SpGradBase<Expr>& b);
-          template <typename Expr>
-          inline SpMatrixBase& operator*=(const GpGradProdBase<Expr>& b);
           inline SpMatrixBase& operator*=(const SpGradient& b);
           inline SpMatrixBase& operator*=(const GpGradProd& b);
           inline SpMatrixBase& operator*=(doublereal b);
           template <typename Expr>
           inline SpMatrixBase& operator/=(const SpGradBase<Expr>& b);
-          template <typename Expr>
-          inline SpMatrixBase& operator/=(const GpGradProdBase<Expr>& b);
           inline SpMatrixBase& operator/=(const SpGradient& b);
           inline SpMatrixBase& operator/=(const GpGradProd& b);
           inline SpMatrixBase& operator/=(const doublereal b);
@@ -4444,26 +4440,6 @@ namespace sp_grad {
      }
 
      template <typename ValueType, index_type NumRows, index_type NumCols>
-     template <typename Expr>
-     SpMatrixBase<ValueType, NumRows, NumCols>& SpMatrixBase<ValueType, NumRows, NumCols>::operator*=(const GpGradProdBase<Expr>& b) {
-          SP_GRAD_ASSERT(bValid());
-
-          constexpr SpGradCommon::ExprEvalFlags eEvalFlags = util::remove_all<Expr>::type::eExprEvalFlags;
-          constexpr bool bThisIsGradient = std::is_same<ValueType, GpGradProd>::value;
-
-          static_assert(bThisIsGradient, "Cannot convert GpGradProd to doublereal");
-          static_assert(!std::is_same<typename util::remove_all<Expr>::type, GpGradProd>::value);
-
-          const SpMatElemScalarExpr<GpGradProd, const GpGradProd, NumRows, NumCols> btmp{b};
-
-          btmp.template AssignEval<util::MatTranspEvalFlag::DIRECT, eEvalFlags, SpGradBinMult>(*this);
-
-          SP_GRAD_ASSERT(bValid());
-
-          return *this;
-     }
-
-     template <typename ValueType, index_type NumRows, index_type NumCols>
      SpMatrixBase<ValueType, NumRows, NumCols>& SpMatrixBase<ValueType, NumRows, NumCols>::operator*=(const SpGradient& b) {
           SP_GRAD_ASSERT(bValid());
 
@@ -4524,26 +4500,6 @@ namespace sp_grad {
           static_assert(!std::is_same<typename util::remove_all<Expr>::type, SpGradient>::value);
 
           const SpMatElemScalarExpr<SpGradient, const SpGradient, NumRows, NumCols> btmp{b};
-
-          btmp.template AssignEval<util::MatTranspEvalFlag::DIRECT, eEvalFlags, SpGradBinDiv>(*this);
-
-          SP_GRAD_ASSERT(bValid());
-
-          return *this;
-     }
-
-     template <typename ValueType, index_type NumRows, index_type NumCols>
-     template <typename Expr>
-     SpMatrixBase<ValueType, NumRows, NumCols>& SpMatrixBase<ValueType, NumRows, NumCols>::operator/=(const GpGradProdBase<Expr>& b) {
-          SP_GRAD_ASSERT(bValid());
-
-          constexpr SpGradCommon::ExprEvalFlags eEvalFlags = util::remove_all<Expr>::type::eExprEvalFlags;
-          constexpr bool bThisIsGradient = std::is_same<ValueType, GpGradProd>::value;
-
-          static_assert(bThisIsGradient, "Cannot convert GpGradProd to doublereal");
-          static_assert(!std::is_same<typename util::remove_all<Expr>::type, GpGradProd>::value);
-
-          const SpMatElemScalarExpr<GpGradProd, const GpGradProd, NumRows, NumCols> btmp{b};
 
           btmp.template AssignEval<util::MatTranspEvalFlag::DIRECT, eEvalFlags, SpGradBinDiv>(*this);
 
@@ -5262,18 +5218,6 @@ namespace sp_grad {
           return decltype(operator*(A, b)){A, SpMatElemScalarExpr<SpGradient, SpGradient>{SpGradient{EvalUnique(b)}}}; // Avoid multiple evaluations of b!
      }
 
-     template <typename LhsValue, typename LhsExpr, typename RhsExpr>
-     inline constexpr
-     SpMatElemBinExpr<typename util::ResultType<LhsValue, GpGradProd>::Type,
-                      SpGradBinMult,
-                      const SpMatElemExprBase<LhsValue, LhsExpr>&,
-                      const SpMatElemScalarExpr<GpGradProd, GpGradProd> >
-     operator*(const SpMatElemExprBase<LhsValue, LhsExpr>& A,
-               const GpGradProdBase<RhsExpr>& b) noexcept {
-          static_assert(!std::is_same<typename util::remove_all<RhsExpr>::type, GpGradProd>::value);
-          return decltype(operator*(A, b)){A, SpMatElemScalarExpr<GpGradProd, GpGradProd>{GpGradProd{b}}}; // Avoid multiple evaluations of b!
-     }
-
      template <typename LhsValue, typename LhsExpr>
      inline constexpr
      SpMatElemBinExpr<typename util::ResultType<LhsValue, doublereal>::Type,
@@ -5350,18 +5294,6 @@ namespace sp_grad {
      operator/(const SpMatElemExprBase<LhsValue, LhsExpr>& A,
                const SpGradBase<RhsExpr>& b) noexcept {
           return decltype(operator/(A, b)){A, SpMatElemScalarExpr<SpGradient, SpGradient>{SpGradient{EvalUnique(b)}}}; // Avoid multiple evaluations of b!
-     }
-
-
-     template <typename LhsValue, typename LhsExpr, typename RhsExpr>
-     inline constexpr
-     SpMatElemBinExpr<typename util::ResultType<LhsValue, GpGradProd>::Type,
-                      SpGradBinDiv,
-                      const SpMatElemExprBase<LhsValue, LhsExpr>&,
-                      const SpMatElemScalarExpr<GpGradProd, GpGradProd> >
-     operator/(const SpMatElemExprBase<LhsValue, LhsExpr>& A,
-               const GpGradProdBase<RhsExpr>& b) noexcept {
-          return decltype(operator/(A, b)){A, SpMatElemScalarExpr<GpGradProd, GpGradProd>{GpGradProd{EvalUnique(b)}}}; // Avoid multiple evaluations of b!
      }
 
      template <typename LhsValue, typename LhsExpr>
