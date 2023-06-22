@@ -368,12 +368,14 @@ Accumulator::AssRes(SubVectorHandler& WorkVec,
 void 
 Accumulator::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << s << " " << v << " " << vp << " " << pgas  
 	<< " " << flow << " " << density << std::endl;
    }
+
+   // TODO: NetCDF output...
 }
 
 void 
@@ -699,11 +701,13 @@ Tank::AssRes(SubVectorHandler& WorkVec,
 void 
 Tank::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) {
+   if (bToBeOutput() OH.UseText(OutputHandler::HYDRAULIC)) {
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel();
       out << " " << s << " " << sp << " " << flow1 << " " << flow2 << std::endl;
    }
+
+   // TODO: NetCDF output...
 }
 
 void 

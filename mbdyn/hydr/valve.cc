@@ -313,13 +313,15 @@ Control_valve::AssRes(SubVectorHandler& WorkVec,
   
 void Control_valve::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << Stato 
 	<< " " << flow1 << " " << flow2 
 	<< " " << flow3 << " " << flow4 << std::endl;
-   }   
+   }
+
+   // TODO: NetCDF output...
 }
 
 const OutputHandler::Dimensions 
@@ -606,13 +608,15 @@ Control_valve2::AssRes(SubVectorHandler& WorkVec,
 void
 Control_valve2::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) { 
+	if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
 		std::ostream& out = OH.Hydraulic();
 		out << std::setw(8) << GetLabel()
 			<< " " << Stato 
 			<< " " << -f[N1] << " " << -f[N2] 
 			<< " " << -f[N3] << " " << -f[N4] << std::endl;
 	}   
+
+   // TODO: NetCDF output...
 }
 
 void 
@@ -1076,13 +1080,15 @@ Dynamic_control_valve::AssRes(SubVectorHandler& WorkVec,
 
 void Dynamic_control_valve::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << s << " "  << sp << " "  << vp 
 	<< " " << flow1 << " " << flow2 << " " << flow3 << " " << flow4
 	<< " " << A1 << " "  << A2 << " "  << A3 << " " << A4 << " " << std::endl;
    }
+
+   // TODO: NetCDF output...
 }
 
 
@@ -1533,7 +1539,7 @@ Pressure_flow_control_valve::AssRes(SubVectorHandler& WorkVec,
 
 void Pressure_flow_control_valve::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << s << " "  << sp << " "  << vp 
@@ -1541,6 +1547,8 @@ void Pressure_flow_control_valve::Output(OutputHandler& OH) const
 	<< " " << flow5 << " " << flow6
 	<< " " << A1 << " "  << A2 << " "  << A3 << " " << A4 << " " << std::endl;
    }
+
+   // TODO: NetCDF output...
 }
 
 
@@ -1924,12 +1932,14 @@ Pressure_valve::AssRes(SubVectorHandler& WorkVec,
 
 void Pressure_valve::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << s << " " << v  << " "<< vp  
 	<< " " << flow1  << " " << flow2 << std::endl;
    }  
+
+   // TODO: NetCDF output...
 }
 
 
@@ -2420,12 +2430,14 @@ Flow_valve::AssRes(SubVectorHandler& WorkVec,
   
 void Flow_valve::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() OH.UseText(OutputHandler::HYDRAULIC) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << s  << " " << v  << " "<< vp  
 	<< " " << flow1  << " "<< flow2  << " "<< flow3  << std::endl;
    }  
+
+   // TODO: NetCDF output...
 }
 
 void Flow_valve::SetValue(DataManager *pDM,

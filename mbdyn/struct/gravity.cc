@@ -125,6 +125,7 @@ UniformGravity::Output(OutputHandler& OH) const
 			OH.Gravity() << std::setw(8) << GetLabel()
 				<< " " << Acc << std::endl;
 		}
+		// TODO: NetCDF output...
 	}
 }
 

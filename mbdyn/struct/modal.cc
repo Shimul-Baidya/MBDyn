@@ -1340,7 +1340,7 @@ Modal::AssRes(SubVectorHandler& WorkVec,
 void
 Modal::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::MODAL)) {
 		/* stampa sul file di output i modi */
 		std::ostream& out = OH.Modal();
 
@@ -5980,7 +5980,12 @@ ReadModal(DataManager* pDM,
         }
 
 	if (fOut) {
-		pDM->OutputOpen(OutputHandler::MODAL);
+		if (pDM->pGetOutHdl()->UseText(OutputHandler::MODAL)) {
+			pDM->OutputOpen(OutputHandler::MODAL);
+		} else {
+			silent_cerr("Modal(" << uLabel << "): warning, requested output but text output is disabled."					
+					<< " NetCDF output of Modal Joint is not implemented yet." << std::endl;);
+		}
 	}
 
 	std::ostream& os = pDM->GetLogFile();

@@ -300,7 +300,7 @@ AerodynamicExternal::AssRes(SubVectorHandler& WorkVec,
 void
 AerodynamicExternal::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::EXTERNALS)) {
 		integer lab = -1*GetLabel();
 		std::ostream& out = OH.Externals()
                         << std::setw(8) << lab
@@ -314,6 +314,8 @@ AerodynamicExternal::Output(OutputHandler& OH) const
 			}
 		}
 	}
+
+	// TODO: NetCDF output...
 }
 
 Elem *

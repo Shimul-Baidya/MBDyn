@@ -463,7 +463,7 @@ Actuator::AssRes(SubVectorHandler& WorkVec,
 
 void Actuator::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << flow1  << " " << flow2 
@@ -473,6 +473,8 @@ void Actuator::Output(OutputHandler& OH) const
 	<< " " << density1 << " " << density2
 	<< std::endl;
    }  
+
+   // TODO: NetCDF output...
 }
 
 
