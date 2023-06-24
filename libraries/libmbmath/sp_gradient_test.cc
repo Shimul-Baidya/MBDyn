@@ -3663,6 +3663,250 @@ namespace sp_grad_test {
 #endif
      }
 
+     void test18(index_type inumloops, index_type inumnz, index_type inumdof)
+     {
+          using namespace std;
+          using namespace std::chrono;
+
+          cerr << __PRETTY_FUNCTION__ << ":\n";
+
+          random_device rd;
+          mt19937 gen(rd());
+          uniform_real_distribution<doublereal> randval(-0.5, 0.5);
+          uniform_int_distribution<index_type> randdof(1, inumdof);
+          uniform_int_distribution<index_type> randnz(0, inumnz - 1);
+
+          gen.seed(0);
+
+          SpGradient u, v, w, f, fc;
+
+          doublereal e = randval(gen), fVal;
+          index_type unz = 0, vnz = 0, wnz = 0;
+          index_type fnz = 0, funz = 0, fcnz = 0;
+          const doublereal dTol = sqrt(std::numeric_limits<doublereal>::epsilon());
+          vector<doublereal> ud, vd, wd, fd, work;
+          duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), sp_grad_compr_time(0), c_full_time(0);
+
+          decltype(sp_grad_time) sp_grad_s_time(0);
+
+          for (index_type iloop = 0; iloop < inumloops; ++iloop) {
+               sp_grad_rand_gen(u, randnz, randdof, randval, gen);
+               sp_grad_rand_gen(v, randnz, randdof, randval, gen);
+               sp_grad_rand_gen(w, randnz, randdof, randval, gen);
+
+               unz += u.iGetSize();
+               vnz += v.iGetSize();
+               wnz += w.iGetSize();
+
+               SpGradDofStat s;
+
+               u.GetDofStat(s);
+               v.GetDofStat(s);
+               w.GetDofStat(s);
+
+               const index_type nbdirs = s.iNumNz ? s.iMaxDof : 0;
+
+               func_scalar3(u.dGetValue(), v.dGetValue(), w.dGetValue(), e, fVal);
+
+               auto sp_grad_start = high_resolution_clock::now();
+
+               func_scalar3(u, v, w, e, f);
+
+               sp_grad_time += high_resolution_clock::now() - sp_grad_start;
+
+               funz += f.iGetSize();
+
+               f.Sort();
+
+               fnz += f.iGetSize();
+
+               auto sp_grad_compr_start = high_resolution_clock::now();
+
+               func_scalar3_compressed(u, v, w, e, fc);
+
+               sp_grad_compr_time += high_resolution_clock::now() - sp_grad_compr_start;
+
+               fcnz += fc.iGetSize();
+
+               assert(fabs(f.dGetValue() / fVal - 1.) < dTol);
+
+               assert(fabs(fc.dGetValue() / fVal - 1.) < dTol);
+
+               ud.clear();
+               vd.clear();
+               wd.clear();
+               fd.clear();
+               work.clear();
+               ud.resize(nbdirs);
+               vd.resize(nbdirs);
+               wd.resize(nbdirs);
+               fd.resize(nbdirs);
+               work.resize(0);
+
+               for (index_type i = 1; i <= s.iMaxDof; ++i) {
+                    ud[i - 1] = u.dGetDeriv(i);
+                    vd[i - 1] = v.dGetDeriv(i);
+                    wd[i - 1] = w.dGetDeriv(i);
+               }
+
+               auto c_full_start = high_resolution_clock::now();
+
+               func_scalar3_dv(nbdirs,
+                               u.dGetValue(),
+                               front(ud),
+                               v.dGetValue(),
+                               front(vd),
+                               w.dGetValue(),
+                               front(wd),
+                               e,
+                               fVal,
+                               front(fd),
+                               front(work));
+
+               c_full_time += high_resolution_clock::now() - c_full_start;
+
+               SP_GRAD_TRACE("fref f\n");
+               SP_GRAD_TRACE(fVal << " " << f.dGetValue() << endl);
+
+               assert(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
+
+               for (index_type i = 1; i <= s.iMaxDof; ++i) {
+                    SP_GRAD_TRACE(fd[i - 1] << " " << f.dGetDeriv(i) << endl);
+                    assert(fabs(fd[i - 1] - f.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    assert(fabs(fd[i - 1] - fc.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
+               }
+          }
+
+          auto sp_grad_time_ns = duration_cast<nanoseconds>(sp_grad_time).count();
+          auto sp_grad_compr_time_ns = duration_cast<nanoseconds>(sp_grad_compr_time).count();
+          auto c_full_time_ns = duration_cast<nanoseconds>(c_full_time).count();
+
+          cerr << "test2: test passed with tolerance "
+               << scientific << setprecision(6)
+               << dTol
+               << " and nz=" << inumnz
+               << " unz=" << fixed << setprecision(0) << ceil(static_cast<doublereal>(unz) / inumloops)
+               << " vnz=" << fixed << setprecision(0) << ceil(static_cast<doublereal>(vnz) / inumloops)
+               << " wnz=" << fixed << setprecision(0) << ceil(static_cast<doublereal>(wnz) / inumloops)
+               << endl;
+
+          cerr << "test2: sp_grad_time = " << fixed << setprecision(6)
+               << static_cast<doublereal>(sp_grad_time_ns) / 1e9
+               << " nz=" << fixed << setprecision(0) << ceil(static_cast<doublereal>(fnz) / inumloops)
+               << " unz=" << fixed << setprecision(0) << ceil(static_cast<doublereal>(funz) / inumloops)
+               << endl;
+          cerr << "test2: sp_grad_compressed_time = " << fixed << setprecision(6)
+               << static_cast<doublereal>(sp_grad_compr_time_ns) / 1e9
+               << " nz=" << fixed << setprecision(0) << ceil(static_cast<doublereal>(fcnz) / inumloops)
+               << endl;
+          cerr << "test2: c_full_time = " << fixed << setprecision(6)
+               << static_cast<doublereal>(c_full_time_ns) / 1e9 << endl;
+          cerr << "test2: sp_grad_time / c_full_time = "
+               << static_cast<doublereal>(sp_grad_time_ns) / max<int64_t>(1L, c_full_time_ns) // Avoid division by zero
+               << endl;
+          cerr << "test2: sp_grad_compr_time / c_full_time = "
+               << static_cast<doublereal>(sp_grad_compr_time_ns) / max<int64_t>(1L, c_full_time_ns) // Avoid division by zero
+               << endl;
+     }
+
+     void test18gp(index_type inumloops, index_type inumnz, index_type inumdof)
+     {
+          using namespace std;
+          using namespace std::chrono;
+
+          cerr << __PRETTY_FUNCTION__ << ":\n";
+
+          random_device rd;
+          mt19937 gen(rd());
+          uniform_real_distribution<doublereal> randval(-0.5, 0.5);
+          uniform_int_distribution<index_type> randdof(1, inumdof);
+          uniform_int_distribution<index_type> randnz(0, inumnz - 1);
+
+          gen.seed(0);
+
+          GpGradProd u, v, w, f;
+
+          doublereal e = randval(gen), fVal;
+          const doublereal dTol = sqrt(std::numeric_limits<doublereal>::epsilon());
+          vector<doublereal> ud, vd, wd, fd, work;
+          duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), c_full_time(0);
+
+          decltype(sp_grad_time) sp_grad_s_time(0);
+
+          for (index_type iloop = 0; iloop < inumloops; ++iloop) {
+               sp_grad_rand_gen(u, randnz, randdof, randval, gen);
+               sp_grad_rand_gen(v, randnz, randdof, randval, gen);
+               sp_grad_rand_gen(w, randnz, randdof, randval, gen);
+
+               const index_type nbdirs = 1;
+
+               func_scalar3(u.dGetValue(), v.dGetValue(), w.dGetValue(), e, fVal);
+
+               auto sp_grad_start = high_resolution_clock::now();
+
+               func_scalar3(u, v, w, e, f);
+
+               sp_grad_time += high_resolution_clock::now() - sp_grad_start;
+
+
+               assert(fabs(f.dGetValue() / fVal - 1.) < dTol);
+
+               ud.clear();
+               vd.clear();
+               wd.clear();
+               fd.clear();
+               work.clear();
+               ud.resize(nbdirs);
+               vd.resize(nbdirs);
+               wd.resize(nbdirs);
+               fd.resize(nbdirs);
+               work.resize(0);
+
+               ud[0] = u.dGetDeriv();
+               vd[0] = v.dGetDeriv();
+               wd[0] = w.dGetDeriv();
+
+               auto c_full_start = high_resolution_clock::now();
+
+               func_scalar3_dv(nbdirs,
+                               u.dGetValue(),
+                               front(ud),
+                               v.dGetValue(),
+                               front(vd),
+                               w.dGetValue(),
+                               front(wd),
+                               e,
+                               fVal,
+                               front(fd),
+                               front(work));
+
+               c_full_time += high_resolution_clock::now() - c_full_start;
+
+               SP_GRAD_TRACE("fref f\n");
+               SP_GRAD_TRACE(fVal << " " << f.dGetValue() << endl);
+
+               assert(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
+
+               SP_GRAD_TRACE(fd[0] << " " << f.dGetDeriv() << endl);
+               assert(fabs(fd[0] - f.dGetDeriv()) < dTol * max(1.0, fabs(fd[0])));
+          }
+
+          auto sp_grad_time_ns = duration_cast<nanoseconds>(sp_grad_time).count();
+          auto c_full_time_ns = duration_cast<nanoseconds>(c_full_time).count();
+
+          cerr << "test2: test passed with tolerance "
+               << scientific << setprecision(6)
+               << dTol
+               << endl;
+          cerr << "test2: sp_grad_time = " << fixed << setprecision(6)
+               << static_cast<doublereal>(sp_grad_time_ns) / 1e9
+               << endl;
+          cerr << "test2: c_full_time = " << fixed << setprecision(6)
+               << static_cast<doublereal>(c_full_time_ns) / 1e9 << endl;
+          cerr << "test2: sp_grad_time / c_full_time = "
+               << static_cast<doublereal>(sp_grad_time_ns) / max<int64_t>(1L, c_full_time_ns) // Avoid division by zero
+               << endl;
+     }
 }
 
 int main(int argc, char* argv[])
@@ -3794,6 +4038,8 @@ int main(int argc, char* argv[])
           if (SP_GRAD_RUN_TEST(17.2)) testInv<doublereal, 3>(inumloops, inumnz, inumdof);
           if (SP_GRAD_RUN_TEST(17.3)) testInv<SpGradient, 2>(inumloops, inumnz, inumdof);
           if (SP_GRAD_RUN_TEST(17.4)) testInv<SpGradient, 3>(inumloops, inumnz, inumdof);
+          if (SP_GRAD_RUN_TEST(18.1)) test18(inumloops, inumnz, inumdof);
+          if (SP_GRAD_RUN_TEST(18.2)) test18gp(inumloops, inumnz, inumdof);
 
           cerr << "All tests passed\n"
                << "\n\tloops performed: " << inumloops

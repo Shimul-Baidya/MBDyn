@@ -84,6 +84,8 @@ namespace sp_grad {
      SP_GRADIENT_DEFINE_BINARY_OPERATOR(SpGradBinExpr, atan2, SpGradBinAtan2)
      SP_GRADIENT_DEFINE_BINARY_OPERATOR(SpGradBinExpr, copysign, SpGradBinCopysign)
      SP_GRADIENT_DEFINE_BINARY_OPERATOR(SpGradBinExpr, fmod, SpGradBinFmod)
+     SP_GRADIENT_DEFINE_BINARY_OPERATOR(SpGradBinExpr, min, SpGradBinMin)
+     SP_GRADIENT_DEFINE_BINARY_OPERATOR(SpGradBinExpr, max, SpGradBinMax)
 
      SP_GRADIENT_DEFINE_BINARY_OPERATOR_CONST_ARG_RHS(SpGradBinExpr, pow, SpGradBinPowInt, integer)
 
@@ -141,21 +143,21 @@ namespace sp_grad {
      std::ostream& operator<<(std::ostream& os, const SpGradient& g);
 #endif
 
-#define GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
+#define GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
      inline GpGradProd \
      SP_GRAD_OP_FUNC(const GpGradProd& u, SP_CONST_ARG_TYPE v) noexcept { \
           return GpGradProd(SP_GRAD_OP_CLASS::f(u.dGetValue(), v), SP_GRAD_OP_CLASS::df_du(u.dGetValue(), v) * u.dGetDeriv()); \
      }
 
-#define GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
+#define GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
      inline GpGradProd \
      SP_GRAD_OP_FUNC(SP_CONST_ARG_TYPE u, const GpGradProd& v) noexcept { \
           return GpGradProd(SP_GRAD_OP_CLASS::f(u, v.dGetValue()), SP_GRAD_OP_CLASS::df_dv(u, v.dGetValue()) * v.dGetDeriv()); \
      }
 
-#define GRAD_PROD_DEFINE_BINARY_OPERATOR(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS) \
-     GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
-     GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
+#define GRAD_PROD_DEFINE_BINARY_OPERATOR(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS) \
+     GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
+     GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
                                                                         \
      inline GpGradProd \
      SP_GRAD_OP_FUNC(const GpGradProd& u, const GpGradProd& v) noexcept { \
@@ -168,44 +170,46 @@ namespace sp_grad {
           return GpGradProd(SP_GRAD_OP_CLASS::f(u.dGetValue()), SP_GRAD_OP_CLASS::df_du(u.dGetValue()) * u.dGetDeriv()); \
      }
 
-#define GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
+#define GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
      inline bool \
      SP_GRAD_OP_FUNC(const GpGradProd& u, SP_CONST_ARG_TYPE v) noexcept { \
           return SP_GRAD_OP_CLASS::f(u.dGetValue(), v); \
      }
 
-#define GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
+#define GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, SP_CONST_ARG_TYPE) \
      inline bool \
      SP_GRAD_OP_FUNC(SP_CONST_ARG_TYPE u, const GpGradProd& v) noexcept { \
           return SP_GRAD_OP_CLASS::f(u, v.dGetValue()); \
      }
 
-#define GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS) \
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_EXPR, SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
+#define GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS) \
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_LHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR_CONST_ARG_RHS(SP_GRAD_OP_FUNC, SP_GRAD_OP_CLASS, doublereal) \
                                                                         \
      inline bool \
      SP_GRAD_OP_FUNC(const GpGradProd& u, const GpGradProd& v) noexcept { \
           return SP_GRAD_OP_CLASS::f(u.dGetValue(), v.dGetValue()); \
      }
 
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, operator +, SpGradBinPlus)
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, operator -, SpGradBinMinus)
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, operator *, SpGradBinMult)
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, operator /, SpGradBinDiv)
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, pow, SpGradBinPow)
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, atan2, SpGradBinAtan2)
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, copysign, SpGradBinCopysign)
-     GRAD_PROD_DEFINE_BINARY_OPERATOR(GpGradProdBinExpr, fmod, SpGradBinFmod)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(operator +, SpGradBinPlus)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(operator -, SpGradBinMinus)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(operator *, SpGradBinMult)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(operator /, SpGradBinDiv)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(pow, SpGradBinPow)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(atan2, SpGradBinAtan2)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(copysign, SpGradBinCopysign)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(fmod, SpGradBinFmod)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(min, SpGradBinMin)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR(max, SpGradBinMax)
 
-     GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_RHS(GpGradProdBinExpr, pow, SpGradBinPowInt, integer)
+     GRAD_PROD_DEFINE_BINARY_OPERATOR_CONST_ARG_RHS(pow, SpGradBinPowInt, integer)
 
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(GpGradProdBoolExpr, operator <, SpGradBoolLessThan)
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(GpGradProdBoolExpr, operator <=, SpGradBoolLessEqual)
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(GpGradProdBoolExpr, operator >, SpGradBoolGreaterThan)
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(GpGradProdBoolExpr, operator >=, SpGradBoolGreaterEqual)
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(GpGradProdBoolExpr, operator ==, SpGradBoolEqualTo)
-     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(GpGradProdBoolExpr, operator !=, SpGradBoolNotEqualTo)
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(operator <, SpGradBoolLessThan)
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(operator <=, SpGradBoolLessEqual)
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(operator >, SpGradBoolGreaterThan)
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(operator >=, SpGradBoolGreaterEqual)
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(operator ==, SpGradBoolEqualTo)
+     GRAD_PROD_DEFINE_BOOL_BINARY_OPERATOR(operator !=, SpGradBoolNotEqualTo)
 
      GRAD_PROD_DEFINE_UNARY_OPERATOR(operator-, SpGradUnaryMinus)
      GRAD_PROD_DEFINE_UNARY_OPERATOR(fabs, SpGradFabs)

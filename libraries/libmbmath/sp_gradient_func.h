@@ -47,494 +47,560 @@
 
 namespace sp_grad {
      struct SpGradAssignNoUpdateU {
-     	  static void update_u(doublereal df_du, SpDerivRec* pFirstU, SpDerivRec* pLastU) {
-	       // u* = f(u, v)
-	       // f(u, v) = {u + v, u - v}
-	       // df/du == 1
-	       // u*' = u' + df/dv * v'	       
-	  }
+          static void update_u(doublereal df_du, SpDerivRec* pFirstU, SpDerivRec* pLastU) {
+               // u* = f(u, v)
+               // f(u, v) = {u + v, u - v}
+               // df/du == 1
+               // u*' = u' + df/dv * v'
+          }
      };
 
      struct SpGradAssignUpdateU {
-	  static void update_u(doublereal df_du, SpDerivRec* pFirstU, SpDerivRec* pLastU) {
-	       // u* = f(u, v)
-	       // f(u, v) = {u * v, u / v}
-	       // u*' = df/du * u' + df/dv * v'
-	       while (pFirstU < pLastU) {
-		    pFirstU->dDer *= df_du;
-		    ++pFirstU;
-	       }
-	  }
+          static void update_u(doublereal df_du, SpDerivRec* pFirstU, SpDerivRec* pLastU) {
+               // u* = f(u, v)
+               // f(u, v) = {u * v, u / v}
+               // u*' = df/du * u' + df/dv * v'
+               while (pFirstU < pLastU) {
+                    pFirstU->dDer *= df_du;
+                    ++pFirstU;
+               }
+          }
      };
-     
+
      struct SpGradBinPlus: SpGradAssignNoUpdateU {
-	  static constexpr doublereal f(doublereal u, doublereal v) {
-	       return u + v;
-	  }
+          static constexpr doublereal f(doublereal u, doublereal v) {
+               return u + v;
+          }
 
-	  static constexpr doublereal df_du(doublereal u, doublereal v) {
-	       return 1.;
-	  }
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return 1.;
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return 1.;
-	  }
-	  
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return 1.;
+          }
+
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "+";
-	  }
+          static void Print(std::ostream& os) {
+               os << "+";
+          }
 #endif
      };
 
      struct SpGradBinMinus: SpGradAssignNoUpdateU {
-	  static constexpr doublereal f(doublereal u, doublereal v) {
-	       return u - v;
-	  }
+          static constexpr doublereal f(doublereal u, doublereal v) {
+               return u - v;
+          }
 
-	  static constexpr doublereal df_du(doublereal u, doublereal v) {
-	       return 1.;
-	  }
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return 1.;
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return -1.;
-	  }
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return -1.;
+          }
 
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "-";
-	  }
+          static void Print(std::ostream& os) {
+               os << "-";
+          }
 #endif
      };
 
      struct SpGradBinMult: SpGradAssignUpdateU {
-	  static constexpr doublereal f(doublereal u, doublereal v) {
-	       return u * v;
-	  }
+          static constexpr doublereal f(doublereal u, doublereal v) {
+               return u * v;
+          }
 
-	  static constexpr doublereal df_du(doublereal u, doublereal v) {
-	       return v;
-	  }
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return v;
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return u;
-	  }
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return u;
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "*";
-	  }
+          static void Print(std::ostream& os) {
+               os << "*";
+          }
 #endif
      };
 
      struct SpGradBinDiv: SpGradAssignUpdateU {
-	  static constexpr doublereal f(doublereal u, doublereal v) {
-	       return u / v;
-	  }
+          static constexpr doublereal f(doublereal u, doublereal v) {
+               return u / v;
+          }
 
-	  static constexpr doublereal df_du(doublereal u, doublereal v) {
-	       return 1. / v;
-	  }
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return 1. / v;
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return -u / (v * v);
-	  }
-	  
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return -u / (v * v);
+          }
+
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "/";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "/";
+          }
+#endif
      };
 
      struct SpGradBinPow {
-	  static constexpr doublereal f(doublereal u, doublereal v) {
-	       return pow(u, v);
-	  }
+          static constexpr doublereal f(doublereal u, doublereal v) {
+               return pow(u, v);
+          }
 
-	  static constexpr doublereal df_du(doublereal u, doublereal v) {
-	       return v * pow(u, v - 1.);
-	  }
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return v * pow(u, v - 1.);
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return pow(u, v) * log(u);
-	  }
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return pow(u, v) * log(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "pow";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "pow";
+          }
+#endif
      };
 
      struct SpGradBinPowInt {
-	  static constexpr doublereal f(doublereal u, integer v) {
-	       return pow(u, v);
-	  }
+          static constexpr doublereal f(doublereal u, integer v) {
+               return pow(u, v);
+          }
 
-	  static constexpr doublereal df_du(doublereal u, integer v) {
-	       return v * pow(u, v - 1);
-	  }
+          static constexpr doublereal df_du(doublereal u, integer v) {
+               return v * pow(u, v - 1);
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, integer v) {
-	       return 0.;
-	  }
+          static constexpr doublereal df_dv(doublereal u, integer v) {
+               return 0.;
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "powi";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "powi";
+          }
+#endif
      };
 
      struct SpGradBinAtan2 {
-	  static constexpr doublereal f(doublereal u, doublereal v) {
-	       return atan2(u, v);
-	  }
+          static constexpr doublereal f(doublereal u, doublereal v) {
+               return atan2(u, v);
+          }
 
-	  static constexpr doublereal df_du(doublereal u, doublereal v) {
-	       return v / (v * v + u * u);
-	  }
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return v / (v * v + u * u);
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return -u / (v * v + u * u);
-	  }
-                
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return -u / (v * v + u * u);
+          }
+
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "atan2";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "atan2";
+          }
+#endif
      };
 
      struct SpGradBinCopysign {
-	  static doublereal f(doublereal u, doublereal v) {
-	       return std::copysign(u, v);
-	  }
+          /* Maxima 5.43.2 http://maxima.sourceforge.net */
+          /*
+            copysign(u, v):=abs(u) * v / abs(v);
+            df_du:diff(copysign(u, v), u);
+            df_dv:diff(copysign(u, v), v);
+            fortran(df_du);
+            fortran(df_dv);
+           */
+          static doublereal f(doublereal u, doublereal v) {
+               return std::copysign(u, v);
+          }
 
-	  static doublereal df_du(doublereal u, doublereal v) {
-	       return std::copysign(1., u) * std::copysign(1., v);
-	  }
+          static doublereal df_du(doublereal u, doublereal v) {
+               return std::copysign(1., u) * std::copysign(1., v);
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return 0.;
-	  }
-                
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return 0.;
+          }
+
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "copysign";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "copysign";
+          }
+#endif
      };
 
      struct SpGradBinFmod {
-	  static constexpr doublereal f(doublereal u, doublereal v) {
-	       return fmod(u, v);
-	  }
+          static constexpr doublereal f(doublereal u, doublereal v) {
+               return fmod(u, v);
+          }
 
-	  static constexpr doublereal df_du(doublereal u, doublereal v) {
-	       return 1.;
-	  }
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return 1.;
+          }
 
-	  static constexpr doublereal df_dv(doublereal u, doublereal v) {
-	       return -int(u / v);
-	  }
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return -int(u / v);
+          }
 
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "fmod";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "fmod";
+          }
+#endif
+     };
+
+     struct SpGradBinMax {
+          /* Maxima 5.43.2 http://maxima.sourceforge.net */
+          /*
+            kill(all)$
+            fmax(a, b):=(a + b + abs(a - b)) / 2;
+            df_du:diff(fmax(u, v), u);
+            df_dv:diff(fmax(u, v), v);
+            fortran(df_du);
+            fortran(df_dv);
+           */
+          static doublereal f(doublereal u, doublereal v) {
+               return std::max(u, v);
+          }
+
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return (1. - (v - u) / fabs(v - u)) / 2.;
+          }
+
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return ((v - u) / fabs(v - u) + 1.) / 2.;
+          }
+
+#ifdef SP_GRAD_DEBUG
+          static void Print(std::ostream& os) {
+               os << "max";
+          }
+#endif
+     };
+
+     struct SpGradBinMin {
+          /* Maxima 5.43.2 http://maxima.sourceforge.net */
+          /*
+            kill(all)$
+            fmin(a, b):=(a + b - abs(a - b)) / 2;
+            df_du:diff(fmin(u, v), u);
+            df_dv:diff(fmin(u, v), v);
+            fortran(df_du);
+            fortran(df_dv);
+           */
+          static doublereal f(doublereal u, doublereal v) {
+               return std::min(u, v);
+          }
+
+          static constexpr doublereal df_du(doublereal u, doublereal v) {
+               return ((v - u) / fabs(v - u) + 1.) / 2.;
+          }
+
+          static constexpr doublereal df_dv(doublereal u, doublereal v) {
+               return (1. - (v - u) / fabs(v - u)) / 2.;
+          }
+
+#ifdef SP_GRAD_DEBUG
+          static void Print(std::ostream& os) {
+               os << "min";
+          }
+#endif
      };
 
      struct SpGradUnaryMinus {
-	  static constexpr doublereal f(doublereal u) {
-	       return -u;
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return -u;
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return -1;
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return -1;
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "-";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "-";
+          }
+#endif
      };
 
 
      struct SpGradFabs {
-	  static doublereal f(doublereal u) {
-	       return fabs(u);
-	  }
+          static doublereal f(doublereal u) {
+               return fabs(u);
+          }
 
-	  static doublereal df_du(doublereal u) {
-	       return std::copysign(1., u);
-	  }
-                
+          static doublereal df_du(doublereal u) {
+               return std::copysign(1., u);
+          }
+
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "fabs";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "fabs";
+          }
+#endif
      };
 
      struct SpGradSqrt {
-	  static constexpr doublereal f(doublereal u) {
-	       return sqrt(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return sqrt(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. / (2. * sqrt(u));
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. / (2. * sqrt(u));
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "sqrt";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "sqrt";
+          }
+#endif
      };
 
      struct SpGradExp {
-	  static constexpr doublereal f(doublereal u) {
-	       return exp(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return exp(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return exp(u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return exp(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "exp";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "exp";
+          }
+#endif
      };
 
      struct SpGradLog {
-	  static constexpr doublereal f(doublereal u) {
-	       return log(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return log(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. / u;
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. / u;
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "log";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "log";
+          }
+#endif
      };
 
      struct SpGradSin {
-	  static constexpr doublereal f(doublereal u) {
-	       return sin(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return sin(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return cos(u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return cos(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "sin";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "sin";
+          }
+#endif
      };
 
      struct SpGradCos {
-	  static constexpr doublereal f(doublereal u) {
-	       return cos(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return cos(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return -sin(u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return -sin(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "cos";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "cos";
+          }
+#endif
      };
 
      struct SpGradTan {
-	  static constexpr doublereal f(doublereal u) {
-	       return tan(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return tan(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. + tan(u) * tan(u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. + tan(u) * tan(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "tan";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "tan";
+          }
+#endif
      };
 
      struct SpGradSinh {
-	  static constexpr doublereal f(doublereal u) {
-	       return sinh(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return sinh(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return cosh(u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return cosh(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "sinh";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "sinh";
+          }
+#endif
      };
 
      struct SpGradCosh {
-	  static constexpr doublereal f(doublereal u) {
-	       return cosh(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return cosh(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return sinh(u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return sinh(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "cosh";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "cosh";
+          }
+#endif
      };
 
      struct SpGradTanh {
-	  static constexpr doublereal f(doublereal u) {
-	       return tanh(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return tanh(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. - tanh(u) * tanh(u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. - tanh(u) * tanh(u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "tanh";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "tanh";
+          }
+#endif
      };
 
      struct SpGradAsin {
-	  static constexpr doublereal f(doublereal u) {
-	       return asin(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return asin(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. / sqrt(1 - u * u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. / sqrt(1 - u * u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "asin";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "asin";
+          }
+#endif
      };
 
      struct SpGradAcos {
-	  static constexpr doublereal f(doublereal u) {
-	       return acos(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return acos(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return -1. / sqrt(1 - u * u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return -1. / sqrt(1 - u * u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "acos";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "acos";
+          }
+#endif
      };
 
      struct SpGradAtan {
-	  static constexpr doublereal f(doublereal u) {
-	       return atan(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return atan(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. / (1. + u * u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. / (1. + u * u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "atan";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "atan";
+          }
+#endif
      };
 
      struct SpGradAsinh {
-	  static constexpr doublereal f(doublereal u) {
-	       return asinh(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return asinh(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. / sqrt(1. + u * u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. / sqrt(1. + u * u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "asinh";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "asinh";
+          }
+#endif
      };
 
      struct SpGradAcosh {
-	  static constexpr doublereal f(doublereal u) {
-	       return acosh(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return acosh(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. / sqrt(u * u - 1.);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. / sqrt(u * u - 1.);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "acosh";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "acosh";
+          }
+#endif
      };
 
      struct SpGradAtanh {
-	  static constexpr doublereal f(doublereal u) {
-	       return atanh(u);
-	  }
+          static constexpr doublereal f(doublereal u) {
+               return atanh(u);
+          }
 
-	  static constexpr doublereal df_du(doublereal u) {
-	       return 1. / (1. - u * u);
-	  }
+          static constexpr doublereal df_du(doublereal u) {
+               return 1. / (1. - u * u);
+          }
 #ifdef SP_GRAD_DEBUG
-	  static void Print(std::ostream& os) {
-	       os << "atanh";
-	  }
-#endif                
+          static void Print(std::ostream& os) {
+               os << "atanh";
+          }
+#endif
      };
 
      struct SpGradBoolLessThan {
-	  static constexpr bool f(doublereal u, doublereal v) {
-	       return u < v;
-	  }
+          static constexpr bool f(doublereal u, doublereal v) {
+               return u < v;
+          }
      };
 
      struct SpGradBoolLessEqual {
-	  static constexpr bool f(doublereal u, doublereal v) {
-	       return u <= v;
-	  }
+          static constexpr bool f(doublereal u, doublereal v) {
+               return u <= v;
+          }
      };
 
      struct SpGradBoolGreaterThan {
-	  static constexpr bool f(doublereal u, doublereal v) {
-	       return u > v;
-	  }
+          static constexpr bool f(doublereal u, doublereal v) {
+               return u > v;
+          }
      };
 
      struct SpGradBoolGreaterEqual {
-	  static constexpr bool f(doublereal u, doublereal v) {
-	       return u >= v;
-	  }
+          static constexpr bool f(doublereal u, doublereal v) {
+               return u >= v;
+          }
      };
 
      struct SpGradBoolEqualTo {
-	  static constexpr bool f(doublereal u, doublereal v) {
-	       return u == v;
-	  }
+          static constexpr bool f(doublereal u, doublereal v) {
+               return u == v;
+          }
      };
 
-     struct SpGradBoolNotEqualTo {     
-	  static constexpr bool f(doublereal u, doublereal v) {
-	       return u != v;
-	  }
+     struct SpGradBoolNotEqualTo {
+          static constexpr bool f(doublereal u, doublereal v) {
+               return u != v;
+          }
      };
 }
 

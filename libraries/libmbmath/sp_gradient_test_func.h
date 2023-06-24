@@ -52,9 +52,6 @@ namespace sp_grad_test {
      template <typename T>
      void func_scalar1_compressed(const T& u, const T& v, const T& w, doublereal e, T& f);
 
-     template <typename T>
-     void func_scalar2(const T& u, const T& v, const T& w, doublereal e, T& f);
-
      void func_scalar1_dv(const index_type nbdirs,
                           const doublereal u,
                           const doublereal ud[],
@@ -66,6 +63,17 @@ namespace sp_grad_test {
                           doublereal& f,
                           doublereal fd[],
                           doublereal work[]);
+
+     template <typename T>
+     void func_scalar2(const T& u, const T& v, const T& w, doublereal e, T& f);
+
+     template <typename T>
+     void func_scalar3(const T& u, const T& v, const T& w, doublereal e, T& f);
+
+     template <typename T>
+     void func_scalar3_compressed(const T& u, const T& v, const T& w, doublereal e, T& f);
+
+     void func_scalar3_dv(const index_type nbdirs, const doublereal u, const doublereal ud[], const doublereal v, const doublereal vd[], const doublereal w, const doublereal wd[], const doublereal e, doublereal &f, doublereal fd[], doublereal work[]);
 
      template <typename U, typename V, typename W>
      bool func_bool1(const U& u, const V& v, const W& w, doublereal e);
