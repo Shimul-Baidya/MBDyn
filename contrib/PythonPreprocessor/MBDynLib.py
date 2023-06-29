@@ -402,24 +402,24 @@ class eye:
 class Reference:
     def __init__(self, idx, pos, orient, vel, angvel):
         assert isinstance(pos, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the position of a reference must be ' +  
-            ' an instance of the Position class;' + 
+            '\n-------------------\nERROR:'+
+            ' the position of a reference must be ' +
+            ' an instance of the Position class;' +
             '\n-------------------\n')
         assert isinstance(orient, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the orientation of a reference must be ' +  
-            ' an instance of the Position class;' + 
+            '\n-------------------\nERROR:' +
+            ' the orientation of a reference must be ' +
+            ' an instance of the Position class;' +
             '\n-------------------\n')
         assert isinstance(vel, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the velocity of a reference must be ' +  
-            ' an instance of the Position class;' + 
+            '\n-------------------\nERROR:' +
+            ' the velocity of a reference must be ' +
+            ' an instance of the Position class;' +
             '\n-------------------\n')
         assert isinstance(angvel, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the angulare velocity of a reference must be ' +  
-            ' an instance of the Position class;' + 
+            '\n-------------------\nERROR:' +
+            ' the angulare velocity of a reference must be ' +
+            ' an instance of the Position class;' +
             '\n-------------------\n')
         self.idx = idx
         self.position = pos
@@ -1039,28 +1039,28 @@ class Rod:
 class DeformableDiaplacement:
     def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
         assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' in defining a deformable displacement joint, the' +
-            ' nodes must be given in a list' + 
+            ' nodes must be given in a list' +
             '\n-------------------\n')
         assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' defining a deformable displacement joint with ' + str(len(nodes)) +
             ' nodes' + '\n-------------------\n')
         assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' in defining a deformable displacement joint, the' +
-            ' relative positions must be given in a list' + 
-            '\n-------------------\n')    
+            ' relative positions must be given in a list' +
+            '\n-------------------\n')
         assert len(nodes) == len(positions), (
             '\n-------------------\nERROR:' +
             ' defining a deformable displacement joint with ' + str(len(nodes)) +
             ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
             '\n-------------------\n')
         assert isinstance(orientations, list), (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' in defining a deformable displacement joint, the' +
-            ' relative position orientations must be given in a list' + 
+            ' relative position orientations must be given in a list' +
             '\n-------------------\n')
         self.idx = idx
         self.nodes = nodes
@@ -1088,28 +1088,28 @@ class DeformableDiaplacement:
 class DeformableHinge:
     def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
         assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' in defining a deformable hinge, the' +
-            ' nodes must be given in a list' + 
+            ' nodes must be given in a list' +
             '\n-------------------\n')
         assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' defining a deformable hinge with ' + str(len(nodes)) +
             ' nodes' + '\n-------------------\n')
         assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' in defining a displacement hinge, the' +
-            ' relative positions must be given in a list' + 
-            '\n-------------------\n')    
+            ' relative positions must be given in a list' +
+            '\n-------------------\n')
         assert len(nodes) == len(positions), (
             '\n-------------------\nERROR:' +
             ' defining a deformable hinge with ' + str(len(nodes)) +
             ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
             '\n-------------------\n')
         assert isinstance(orientations, list), (
-            '\n-------------------\nERROR:' + 
+            '\n-------------------\nERROR:' +
             ' in defining a deformable hinge, the' +
-            ' relative position orientations must be given in a list' + 
+            ' relative position orientations must be given in a list' +
             '\n-------------------\n')
         self.idx = idx
         self.nodes = nodes
