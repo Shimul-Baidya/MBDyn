@@ -40,7 +40,7 @@
 ##
 ##################################################################
 
-function y = my_func2()
+function y = my_func2(x)
     global f;
     global Time;
     y = sin(2*pi*f*Time);

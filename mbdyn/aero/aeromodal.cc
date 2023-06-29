@@ -594,7 +594,7 @@ AerodynamicModal::AssVec(SubVectorHandler& WorkVec)
 void
 AerodynamicModal::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::AEROMODALS)) {
 		OH.AeroModals() << std::setw(8) << GetLabel() << " ";
 		for (unsigned int iCnt = 1; iCnt <= NAeroStates; iCnt++) {
 			OH.AeroModals() << " " << pxa->operator()(iCnt);
@@ -604,6 +604,8 @@ AerodynamicModal::Output(OutputHandler& OH) const
 		}
 		OH.AeroModals() << std::endl;
 	}
+
+	// TODO: NetCDF output
 }
 
 /* AerodynamicModal - end */

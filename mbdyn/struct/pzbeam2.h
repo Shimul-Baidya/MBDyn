@@ -32,6 +32,7 @@
 #ifndef PZBEAM2_H
 #define PZBEAM2_H
 
+#include "scalarnode.h"
 #include "beam.h"
 #include "beam2.h"
 #include "matvec3n.h"

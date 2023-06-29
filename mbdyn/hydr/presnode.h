@@ -37,7 +37,7 @@
 #ifndef PRESNODE_H
 #define PRESNODE_H
 
-#include "node.h"
+#include "scalarnode.h"
 
 class PressureNode : virtual public ScalarAlgebraicNode {
 public:
@@ -47,7 +47,8 @@ public:
    
      virtual Node::Type GetNodeType(void) const;
    
-     void Output(OutputHandler& OH) const;
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::PRESNODES; };
+	virtual void OutputPrepare(OutputHandler &OH);
 
      /* returns the dimension of the component */
      const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;

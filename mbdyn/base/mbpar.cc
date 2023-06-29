@@ -51,6 +51,7 @@
 #include "c81data.h"
 
 #include "dataman.h"
+#include "solidcsl.h"
 #include "modules.h"
 
 #include "legalese.h"
@@ -222,6 +223,7 @@ pDM(0)
 	InitDriveCallerData();
 	InitTplDC();
 	InitCL();
+        InitSolidCSL();
 	InitSF();
 	InitStreamOutputContentTypes();
 

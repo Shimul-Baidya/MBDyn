@@ -35,7 +35,7 @@
 #define BULK_H
 
 #include "elem.h"
-#include "node.h"
+#include "scalarnode.h"
 #include "drive.h"
 
 

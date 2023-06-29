@@ -96,6 +96,8 @@ DataManager::ReadControl(MBDynParser& HP,
 		psReadControlElems[Elem::JOINT_REGULARIZATION],
 		psReadControlElems[Elem::BEAM],
 		psReadControlElems[Elem::PLATE],
+                psReadControlElems[Elem::SOLID],
+                psReadControlElems[Elem::SURFACE_LOAD],
 		psReadControlElems[Elem::AIRPROPERTIES],
 		psReadControlElems[Elem::INDUCEDVELOCITY],
 		psReadControlElems[Elem::AEROMODAL],
@@ -191,6 +193,8 @@ DataManager::ReadControl(MBDynParser& HP,
 			JOINT_REGULARIZATIONS,
 		BEAMS,
 		PLATES,
+                SOLIDS,
+                SURFACE_LOADS,
 		AIRPROPERTIES,
 		INDUCEDVELOCITYELEMENTS,
 		AEROMODALS,
@@ -404,6 +408,22 @@ DataManager::ReadControl(MBDynParser& HP,
 			}
 		} break;
 
+		case SOLIDS: {
+			integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
+			ElemData[Elem::SOLID].iExpectedNum = iDmy;
+			DEBUGLCOUT(MYDEBUG_INPUT, "Solids: " << iDmy << std::endl);
+                        // FIXME: Assertion fails if this is enabled
+			// if (iDmy > 0 ) {
+			// 	bInitialJointAssemblyToBeDone = true;
+			// }
+		} break;
+
+                case SURFACE_LOADS: {
+                        integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
+                        ElemData[Elem::SURFACE_LOAD].iExpectedNum = iDmy;
+                        DEBUGLCOUT(MYDEBUG_INPUT, "SurfaceLoads: " << iDmy << std::endl);
+                } break;
+                     
 		/* Elementi aerodinamici: proprieta' dell'aria */
 		case AIRPROPERTIES: {
 			if (ElemData[Elem::AIRPROPERTIES].iExpectedNum > 0) {
@@ -656,7 +676,23 @@ DataManager::ReadControl(MBDynParser& HP,
 						<< std::endl);
 					break;
 
-				case AERODYNAMICELEMENTS:
+				case SOLIDS:
+					ElemData[Elem::SOLID].ToBeUsedInAssembly(true);
+					DEBUGLCOUT(MYDEBUG_INPUT,
+						"Solids will be used "
+						"in initial joint assembly"
+						<< std::endl);
+					break;
+                                        
+                                case SURFACE_LOADS:
+                                        ElemData[Elem::SURFACE_LOAD].ToBeUsedInAssembly(true);
+                                        DEBUGLCOUT(MYDEBUG_INPUT,
+                                                "Surface loads will be used "
+                                                "in initial joint assembly"
+                                                << std::endl);
+                                        break;
+
+                                case AERODYNAMICELEMENTS:
 					ElemData[Elem::AERODYNAMIC].ToBeUsedInAssembly(true);
 					DEBUGLCOUT(MYDEBUG_INPUT,
 						"Aerodynamic Elements will be used "
@@ -1157,6 +1193,14 @@ EndOfUse:
 					ElemData[Elem::PLATE].DefaultOut(true);
 					break;
 
+                                case SOLIDS:
+                                        ElemData[Elem::SOLID].DefaultOut(true);
+                                        break;
+
+                                case SURFACE_LOADS:
+                                        ElemData[Elem::SURFACE_LOAD].DefaultOut(true);
+                                        break;
+
 				case RIGIDBODIES:
 					ElemData[Elem::BODY].DefaultOut(true);
 					break;
@@ -1510,6 +1554,10 @@ EndOfUse:
 		// FIXME: replace with a single call that sets NetCDF for all types that support it
 		OutHdl.SetNetCDF(OutputHandler::NETCDF);
 		OutHdl.SetNetCDF(OutputHandler::STRNODES);
+		OutHdl.SetNetCDF(OutputHandler::ELECTRIC);
+		OutHdl.SetNetCDF(OutputHandler::THERMALNODES);
+		OutHdl.SetNetCDF(OutputHandler::PRESNODES);
+		OutHdl.SetNetCDF(OutputHandler::ABSTRACT);
 		OutHdl.SetNetCDF(OutputHandler::INERTIA);
 		OutHdl.SetNetCDF(OutputHandler::JOINTS);
 		OutHdl.SetNetCDF(OutputHandler::BEAMS);

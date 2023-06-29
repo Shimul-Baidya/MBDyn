@@ -225,6 +225,9 @@ protected:
 	MBDynNcVar Var_Eig_dVR;
 	MBDynNcVar Var_Eig_dVL;
 
+public:
+	inline netCDF::NcFile::FileFormat GetNetCDFFileFormat(void) const { return NetCDF_Format; }
+
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 #endif /* USE_NETCDF */
 	OrientationDescription od;

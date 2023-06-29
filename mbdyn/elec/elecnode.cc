@@ -89,5 +89,22 @@ ElectricNode::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) c
 
 	return out;
 }
+
+void
+ElectricNode::OutputPrepare(OutputHandler &OH)
+{
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::ELECTRIC)) {
+			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+			ScalarDifferentialNode::OutputPrepare_int(OH,
+				"V", OutputHandler::Dimensions::Voltage, "Voltage",
+				"VP", OutputHandler::Dimensions::VoltageDerivative, "Voltage time derivative");
+		}
+#endif // USE_NETCDF
+	}
+}
+
 /* ElectricNode - end */
 

@@ -32,7 +32,7 @@
 #ifndef J2P_H
 #define J2P_H
 
-#include "node.h"
+#include "scalarnode.h"
 #include "elem.h"
 
 /* Elem2Param - begin */ 

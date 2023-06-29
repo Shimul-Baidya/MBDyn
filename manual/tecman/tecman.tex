@@ -40,6 +40,7 @@
 \usepackage{color}
 \usepackage{cancel}
 \usepackage{pdfpages}
+\usepackage[retainorgcmds]{IEEEtrantools}
 
 \input{../stdmacro}
 %poor man's bold symbol
@@ -6029,7 +6030,6 @@ The same considerations formulated for the \texttt{TotalJoint} apply.
 
 
 
-
 \subsection{Gimbal}
 \label{sec:GimbalRotationJoint}
 This element implements an ideal gimbal joint.
@@ -6584,7 +6584,8 @@ and the strapdown sensor is in the node ($\T{b} = \T{0}$).
 
 
 
-
+\subsection{Rigid body displacement joint}
+\input{tecman-rbdispjoint.tex}
 
 \section{Deformable Constraints}
 Definitions
@@ -9875,7 +9876,8 @@ Note: $\T{e}_z \T{e}_z^T \T{\omega}_2\times{} = \T{e}_z \plbr{\T{e}_z\times\T{\o
 \chapter{Shell Element}
 \input{tecman-shell}
 
-
+\chapter{Solid Element}
+\input{tecman-solid}
 
 \chapter{Aerodynamic Elements}
 \input{tecman-aero}

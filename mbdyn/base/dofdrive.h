@@ -43,7 +43,7 @@
 #define DOFDRIVE_H
 
 #include <drive.h>
-#include <node.h>
+#include <scalarnode.h>
 
 class DofDriveCaller : public DriveCaller, public DriveOwner
 {

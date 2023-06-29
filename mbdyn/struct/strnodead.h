@@ -212,16 +212,28 @@ private:
      void UpdateRotation(const VectorHandler& Y, doublereal dCoef) const;
 
      template <typename T>
-     inline void UpdateRotation(const Mat3x3& RRef, const Vec3& WRef, const sp_grad::SpColVector<T, 3>& g, const sp_grad::SpColVector<T, 3>& gP, sp_grad::SpMatrix<T, 3, 3>& RCurr, sp_grad::SpColVector<T, 3>& WCurr, doublereal dCoef, sp_grad::SpFunctionCall func) const;
+     inline void UpdateRotation(const Mat3x3& RRef,
+                                const Vec3& WRef,
+                                const sp_grad::SpColVector<T, 3>& g,
+                                const sp_grad::SpColVector<T, 3>& gP,
+                                sp_grad::SpMatrix<T, 3, 3>& RCurr,
+                                sp_grad::SpColVector<T, 3>& WCurr,
+                                doublereal dCoef,
+                                sp_grad::SpFunctionCall func,
+                                const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
      inline void GetWCurrInitAss(sp_grad::SpColVector<doublereal, 3>& W, doublereal dCoef, sp_grad::SpFunctionCall func) const;
      inline void GetWCurrInitAss(sp_grad::SpColVector<sp_grad::SpGradient, 3>& W, doublereal dCoef, sp_grad::SpFunctionCall func) const;
      inline void GetWCurrInitAss(sp_grad::SpColVector<sp_grad::GpGradProd, 3>& W, doublereal dCoef, sp_grad::SpFunctionCall func) const;
 
      sp_grad::SpFunctionCall eCurrFunc;
+     mutable sp_grad::SpFunctionCall ePrevFunc;
      mutable sp_grad::SpMatrixA<sp_grad::SpGradient, 3, 3, 3> RCurr_grad;
      mutable sp_grad::SpColVectorA<sp_grad::SpGradient, 3, 3> WCurr_grad;
+     mutable sp_grad::SpGradExpDofMapHelper<sp_grad::SpGradient> oDofMap_grad;
      mutable sp_grad::SpMatrixA<sp_grad::GpGradProd, 3, 3> RCurr_gradp;
      mutable sp_grad::SpColVectorA<sp_grad::GpGradProd, 3> WCurr_gradp;
+     static constexpr sp_grad::SpGradExpDofMapHelper<sp_grad::GpGradProd> oDofMap_gradp{};
+
      mutable Vec3 gY;
      mutable bool bNeedRotation, bUpdateRotation, bUpdateRotationGradProd;
 };

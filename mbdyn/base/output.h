@@ -108,8 +108,10 @@ public:
 		DOFSTATS,
 		DRIVECALLERS,			// 30
 		TRACES,
+                SOLIDS,
+                SURFACE_LOADS,
 		EIGENANALYSIS,			// NOTE: ALWAYS LAST!
-		LASTFILE			// 33
+		LASTFILE			// 35
 	};
 	enum struct Dimensions {
 		Dimensionless,
@@ -148,6 +150,9 @@ public:
 		Moment,
 		Voltage,
 		Charge,
+		Resistance,
+		Capacitance,
+		Inductance,
 		Frequency,
 		deg,
 		rad,
@@ -156,6 +161,7 @@ public:
 		MassFlow,
 		Jerk,
 		VoltageDerivative,
+		TemperatureDerivative,
 		UnknownDimension
 	};
 
@@ -241,6 +247,8 @@ private:
 	std::ofstream ofDofStats;		/* 30 */
 	std::ofstream ofDriveCallers;
 	std::ofstream ofTraces;
+        std::ofstream ofSolids;
+        std::ofstream ofSurfaceLoads;
 	std::ofstream ofEigenanalysis;
 
 	int iCurrWidth;
@@ -268,6 +276,8 @@ public:
 	virtual ~OutputHandler(void);
 	
 	void ReadOutputUnits(MBDynParser& HP);
+
+	inline std::string GetUnits(Dimensions phys_dim) {return Units[phys_dim];};
 
 	/* Aggiungere qui le funzioni che aprono i singoli stream */
 	void Open(const OutputHandler::OutFiles out);
@@ -333,6 +343,8 @@ public:
 	inline std::ostream& DofStats(void) const;
 	inline std::ostream& DriveCallers(void) const;
 	inline std::ostream& Traces(void) const;
+        inline std::ostream& Solids(void) const;
+        inline std::ostream& SurfaceLoads(void) const;
 	inline std::ostream& Eigenanalysis(void) const;
 
 	inline int iW(void) const;
@@ -710,6 +722,20 @@ OutputHandler::DriveCallers(void) const
 {
 	ASSERT(IsOpen(DRIVECALLERS));
 	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofDriveCallers));
+}
+
+inline std::ostream&
+OutputHandler::Solids(void) const
+{
+	ASSERT(IsOpen(SOLIDS));
+	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofSolids));
+}
+
+inline std::ostream&
+OutputHandler::SurfaceLoads(void) const
+{
+	ASSERT(IsOpen(SURFACE_LOADS));
+	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofSurfaceLoads));
 }
 
 inline std::ostream&

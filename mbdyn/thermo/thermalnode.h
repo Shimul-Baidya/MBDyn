@@ -31,7 +31,7 @@
 #ifndef THERMALNODE_H
 #define THERMALNODE_H
 
-#include "node.h"
+#include "scalarnode.h"
 
 /* ThermalNode - begin */
 
@@ -51,15 +51,16 @@ public:
 	virtual Node::Type GetNodeType(void) const;
 	
 	/* Output */
-	void Output(OutputHandler&OH) const;
+	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::THERMALNODES; };
+	virtual void OutputPrepare(OutputHandler &OH);
 
 	/* returns the dimension of the component */
 	const virtual OutputHandler::Dimensions GetEquationDimension(integer index) const;
 
 	/* describes the dimension of components of equation */
-   virtual std::ostream& DescribeEq(std::ostream& out,
-		   const char *prefix = "",
-		   bool bInitial = false) const;
+	virtual std::ostream& DescribeEq(std::ostream& out,
+		const char *prefix = "",
+		bool bInitial = false) const;
 };
 
 /* ThermalNode - end */
