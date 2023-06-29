@@ -1028,15 +1028,18 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 			}
 
 
-			if(bRMSTestTarget && OH.UseText(OutputHandler::LOADABLE)) {
+			if (bRMSTestTarget && OH.UseText(OutputHandler::LOADABLE)) {
 				std::ostream& out = OH.Loadable();
 				out << " " << m_dAmplitudeOut;
 				for (unsigned i = 0; i < m_Input.size(); ++i)
 					if (m_Input[i].m_Flag & HFInput::HF_TARGET)
 						out << " " << RMSPrev[0][i];
 			}
-			std::ostream& out = OH.Loadable();
-			out << std::endl;
+
+			if (OH.UseText(OutputHandler::LOADABLE)) {
+				std::ostream& out = OH.Loadable();
+				out << std::endl;
+			}
 		}
 	}
 
