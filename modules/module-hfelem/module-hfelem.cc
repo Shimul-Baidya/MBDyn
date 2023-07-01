@@ -944,7 +944,7 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 						<< " " << m_iPeriodOut;		// 4:	how many periods required (-1 if not converged?)
 				}
 #ifdef USE_NETCDF
-				if (OH.UseNetCDF(OutputHandler::LOADABLE) && m_bConverged) {
+				if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 					OH.WriteNcVar(Var_dConvTime, m_pDM->dGetTime(), m_iOmegaCnt - 1);
 					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut, m_iOmegaCnt - 1);
 					OH.WriteNcVar(Var_iNumPeriods, m_iPeriodOut, m_iOmegaCnt - 1);
@@ -970,7 +970,7 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 								out << " " << m_Xsin[i] / m_dAmplitude << " " << m_Xcos[i] / m_dAmplitude;
 							}
 #ifdef USE_NETCDF
-							if (OH.UseNetCDF(OutputHandler::LOADABLE) && m_bConverged) {
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 								OH.WriteNcVar(m_vInputNcVars[2*i], (doublereal)(m_Xsin[i] / m_dAmplitude), m_iOmegaCnt - 1);
 								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i] / m_dAmplitude, m_iOmegaCnt - 1);
 							}
@@ -981,7 +981,7 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 								out << " " << m_Xsin[i] << " " << m_Xcos[i];
 							}
 #ifdef USE_NETCDF
-							if (OH.UseNetCDF(OutputHandler::LOADABLE) && m_bConverged) {
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 								OH.WriteNcVar(m_vInputNcVars[2*i], m_Xsin[i], m_iOmegaCnt - 1);
 								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i], m_iOmegaCnt - 1);
 							}
@@ -1004,7 +1004,7 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 						  	    	<< " " << std::atan2(m_Xcos[i], m_Xsin[i]);
 							}
 #ifdef USE_NETCDF
-							if (OH.UseNetCDF(OutputHandler::LOADABLE) && m_bConverged) {
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude, m_iOmegaCnt - 1);
 								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt - 1);
 							}
@@ -1016,7 +1016,7 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 						  	    	    << " " << std::atan2(m_Xcos[i], m_Xsin[i]);
 							}
 #ifdef USE_NETCDF
-							if (OH.UseNetCDF(OutputHandler::LOADABLE) && m_bConverged) {
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
 								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]), m_iOmegaCnt - 1);
 								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt - 1);
 							}
@@ -1028,15 +1028,18 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 			}
 
 
-			if(bRMSTestTarget && OH.UseText(OutputHandler::LOADABLE)) {
+			if (bRMSTestTarget && OH.UseText(OutputHandler::LOADABLE)) {
 				std::ostream& out = OH.Loadable();
 				out << " " << m_dAmplitudeOut;
 				for (unsigned i = 0; i < m_Input.size(); ++i)
 					if (m_Input[i].m_Flag & HFInput::HF_TARGET)
 						out << " " << RMSPrev[0][i];
 			}
-			std::ostream& out = OH.Loadable();
-			out << std::endl;
+
+			if (OH.UseText(OutputHandler::LOADABLE)) {
+				std::ostream& out = OH.Loadable();
+				out << std::endl;
+			}
 		}
 	}
 
