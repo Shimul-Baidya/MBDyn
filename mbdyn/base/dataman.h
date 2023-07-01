@@ -183,10 +183,10 @@ protected:
 
 protected:
 	DriveCaller *pFDJacMeter;
-
+        doublereal dFDJacCoef;
 public:
 	bool bFDJac(void) const;
-
+        doublereal dGetFDJacCoef() const { return dFDJacCoef; }
 	/* specialized output stuff */
 public:
 	enum ResType {

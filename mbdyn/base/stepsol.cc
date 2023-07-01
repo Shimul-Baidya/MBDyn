@@ -40,6 +40,7 @@
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
 #include <limits>
+#include <array>
 
 #include "schurdataman.h"
 #include "external.h"
@@ -505,43 +506,86 @@ StepNIntegrator::Residual(VectorHandler* pRes, VectorHandler* pAbsRes) const
 void
 StepNIntegrator::Jacobian(MatrixHandler* pJac) const
 {
-	ASSERT(pDM != NULL);
-	pDM->AssJac(*pJac, db0Differential);
+     ASSERT(pDM != NULL);
+     pDM->AssJac(*pJac, db0Differential);
 
-	// Finite difference check of Jacobian matrix
-	// Uncomment this whenever you need to debug your new Jacobian
-	// NOTE: might not be safe!
-	if (pDM->bFDJac()) {
- 		NaiveMatrixHandler fdjac(pJac->iGetNumRows());
- 		fdjac.Reset();
- 		MyVectorHandler basesol(pJac->iGetNumRows());
- 		MyVectorHandler incsol(pJac->iGetNumRows());
- 		MyVectorHandler inc(pJac->iGetNumRows());
- 		Residual(&basesol, 0);
-		doublereal ddd = 0.001;
- 		for (integer i = 1; i <= pJac->iGetNumRows(); i++) {
- 			incsol.Reset();
- 			inc.Reset();
- 			inc.PutCoef(i, ddd);
- 			Update(&inc);
- 			// std::cerr << pXPrimeCurr->operator()(30) << std::endl;
- 			pDM->AssRes(incsol, db0Differential);
- 			inc.Reset();
- 			inc.PutCoef(i, -ddd);
- 			Update(&inc);
- 			incsol -= basesol;
- 			incsol *= (1./(-ddd));
- 			for (integer j = 1; j <= pJac->iGetNumCols(); j++) {
- 				fdjac.PutCoef(j, i, std::abs(incsol(j)) > 1.E-100 ? incsol(j) : 0.);
- 			}
- 		}
+     // Finite difference check of Jacobian matrix
+     // Uncomment this whenever you need to debug your new Jacobian
+     // NOTE: might not be safe!
+     if (pDM->bFDJac()) {
+          NaiveMatrixHandler fdjac(pJac->iGetNumRows());
+          fdjac.Reset();
+          // constexpr integer N = 5;
+          // static constexpr std::array<doublereal, N> pertFD{-2., -1., 1., 2., 0.};
+          // static constexpr std::array<integer, N> idxFD{1, 2, 3, 4, 0};
+          // static constexpr std::array<doublereal, N - 1> coefFD{1. / 12., -8. / 12., 8. / 12., -1. / 12.};
 
- 		std::cerr << "\nxxxxxxxxxxxxxxx\n" << std::endl;
- 		std::cerr << *pJac << std::endl;
- 		std::cerr << "\n---------------\n" << std::endl;
- 		std::cerr << fdjac << std::endl;
- 		std::cerr << "\n===============\n" << std::endl;
-	}
+          constexpr integer N = 7;
+          static constexpr std::array<doublereal, N> pertFD{-3., -2., -1., 1., 2., 3., 0.};
+          static constexpr std::array<integer, N> idxFD{1, 2, 3, 4, 5, 6, 0};
+          static constexpr std::array<doublereal, N - 1> coefFD{-1. / 60., 9. / 60., -45. / 60., 45. / 60., -9./60., 1./60.};
+
+          std::array<MyVectorHandler, N> incsol;
+          MyVectorHandler inc(pJac->iGetNumCols());
+
+          inc.Reset();
+
+          for (integer k = 0; k < N; ++k) {
+               incsol[k].Resize(pJac->iGetNumRows());
+          }
+
+
+          const doublereal h = pDM->dGetFDJacCoef();
+          doublereal dMaxDiff = -std::numeric_limits<doublereal>::max();
+          integer iRowMaxDiff = -1;
+          integer iColMaxDiff = -1;
+
+          for (integer j = 1; j <= pJac->iGetNumCols(); ++j) {
+               inc.PutCoef(j, pertFD[0] * h);
+
+               for (integer k = 0; k < N; ++k) {
+                    Update(&inc);
+                    incsol[idxFD[k]].Reset();
+                    pDM->AssRes(incsol[idxFD[k]], db0Differential);
+
+                    inc.PutCoef(j, (k + 1 < N) ? (pertFD[k + 1] - pertFD[k]) * h : 0.);
+               }
+
+               doublereal normColj = 0.;
+
+               for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+                    doublereal Jacij = 0.;
+
+                    for (integer k = 0; k < N - 1; ++k) {
+                         Jacij -= (incsol[idxFD[k]](i) - incsol[0](i)) * coefFD[k];
+                    }
+
+                    Jacij /=  h;
+
+                    normColj += Jacij * Jacij;
+                    fdjac.PutCoef(i, j, Jacij);
+               }
+
+               normColj = sqrt(normColj);
+
+               for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+                    const doublereal dCurrDiff = fabs(fdjac.dGetCoef(i, j) - pJac->dGetCoef(i, j)) / normColj;
+
+                    if (dCurrDiff > dMaxDiff) {
+                         iRowMaxDiff = i;
+                         iColMaxDiff = j;
+                         dMaxDiff = dCurrDiff;
+                    }
+               }
+          }
+
+          std::cerr << "\nxxxxxxxxxxxxxxx\n" << std::endl;
+          std::cerr << *pJac << std::endl;
+          std::cerr << "\n---------------\n" << std::endl;
+          std::cerr << fdjac << std::endl;
+          std::cerr << "\n===============\n" << std::endl;
+          std::cerr << "maximum difference at Jac(" << iRowMaxDiff << "," << iColMaxDiff << "): " << dMaxDiff << "\n";
+     }
 }
 
 void StepNIntegrator::Jacobian(VectorHandler* pJac, const VectorHandler* pY) const

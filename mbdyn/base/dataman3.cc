@@ -1333,6 +1333,10 @@ EndOfUse:
 			}
 			DriveCaller *pTmp = HP.GetDriveCaller(false);
 			pFDJacMeter = pTmp;
+
+                        if (HP.IsKeyWord("coefficient")) {
+                             dFDJacCoef = HP.GetReal();
+                        }
 		} break;
 
 		case READSOLUTIONARRAY:{

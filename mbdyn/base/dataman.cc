@@ -146,6 +146,7 @@ pOutputMeter(0),
 bOutputNextStep(false),
 iOutputCount(0),
 pFDJacMeter(0),
+dFDJacCoef(1e-6),
 ResMode(RES_TEXT),
 #ifdef USE_NETCDF
 // NetCDF stuff
