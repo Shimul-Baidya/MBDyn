@@ -41,7 +41,7 @@
 
 #include "dataman.h"
 #include "dataman_.h"
-
+#include "fdjac.h"
 #include "gravity.h"
 #include "aerodyn.h"
 #include "solver.h"
@@ -2652,14 +2652,11 @@ DataManager::GetEqualityType(int i) const
         return Dofs[i - 1].Equality;
 }
 
-bool
-DataManager::bFDJac(void) const
-{
-	if (pFDJacMeter) {
-		return (pFDJacMeter->dGet() != 0.);
-	}
-
-	return false;
+void
+DataManager::FDJacCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac) {
+     if (pFDJac) {
+          pFDJac->JacobianCheck(pNLP, pJac);
+     }
 }
 
 unsigned

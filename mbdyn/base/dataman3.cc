@@ -51,6 +51,7 @@
 #include "filedrv.h"
 #include "nodead.h"
 #include "elecnodead.h"
+#include "fdjac.h"
 #include "presnode.h"
 #include "presnodead.h"
 #include "j2p.h"
@@ -1326,18 +1327,68 @@ EndOfUse:
 			}
 			break;
 
-		case FDJAC_METER: {
-			if (pFDJacMeter != 0) {
-				silent_cerr("\"finite difference jacobian meter\" already defined" << std::endl);
-				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
-			}
-			DriveCaller *pTmp = HP.GetDriveCaller(false);
-			pFDJacMeter = pTmp;
-
-                        if (HP.IsKeyWord("coefficient")) {
-                             dFDJacCoef = HP.GetReal();
+                case FDJAC_METER: {
+                        if (pFDJac != nullptr) {
+                                silent_cerr("\"finite difference jacobian meter\" already defined" << std::endl);
+                                throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
                         }
-		} break;
+                        std::unique_ptr<DriveCaller> pFDJacMeter(HP.GetDriveCaller(false));
+                        const doublereal dFDJacCoef = HP.IsKeyWord("coefficient") ? HP.GetReal() : 1e-6;
+                        const integer iFDJacOrder = HP.IsKeyWord("order") ? HP.GetInt() : 1;
+
+                        unsigned uOutputFlags = FiniteDifferenceJacobianBase::FDJAC_OUTPUT_ALL;
+
+                        if (HP.IsKeyWord("output")) {
+                             while (HP.IsArg()) {
+                                  if (HP.IsKeyWord("none")) {
+                                       uOutputFlags = FiniteDifferenceJacobianBase::FDJAC_OUTPUT_NONE;
+                                  } else if (HP.IsKeyWord("all")) {
+                                       uOutputFlags = FiniteDifferenceJacobianBase::FDJAC_OUTPUT_ALL;
+                                  } else if (HP.IsKeyWord("matrices")) {
+                                       if (HP.GetYesNoOrBool()) {
+                                            uOutputFlags |= FiniteDifferenceJacobianBase::FDJAC_OUTPUT_MAT_PER_ITER;
+                                       } else {
+                                            uOutputFlags &= ~FiniteDifferenceJacobianBase::FDJAC_OUTPUT_MAT_PER_ITER;
+                                       }
+                                  } else if (HP.IsKeyWord("statistics" "iteration")) {
+                                       if (HP.GetYesNoOrBool()) {
+                                            uOutputFlags |= FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_PER_ITER;
+                                       } else {
+                                            uOutputFlags &= ~FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_PER_ITER;
+                                       }
+                                  } else if (HP.IsKeyWord("statistics")) {
+                                       if (HP.GetYesNoOrBool()) {
+                                            uOutputFlags |= FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_END;
+                                       } else {
+                                            uOutputFlags &= ~FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_END;
+                                       }
+                                  }
+                             }
+                        }
+
+                        typedef FiniteDifferenceJacobian<2> FDJac2;
+                        typedef FiniteDifferenceJacobian<2> FDJac3;
+                        typedef FiniteDifferenceJacobian<5> FDJac5;
+                        typedef FiniteDifferenceJacobian<7> FDJac7;
+
+                        switch (iFDJacOrder + 1) {
+                        case 2:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac2, FDJac2(this, std::move(pFDJacMeter), dFDJacCoef, uOutputFlags));
+                             break;
+                        case 3:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac3, FDJac3(this, std::move(pFDJacMeter), dFDJacCoef, uOutputFlags));
+                             break;
+                        case 5:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac5, FDJac5(this, std::move(pFDJacMeter), 2. * dFDJacCoef, uOutputFlags));
+                             break;
+                        case 7:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac7, FDJac7(this, std::move(pFDJacMeter), 3. * dFDJacCoef, uOutputFlags));
+                             break;
+                        default:
+                             silent_cerr("invalid order " << iFDJacOrder << " for finite difference operator at line " << HP.GetLineData() << "\n");
+                             throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                        }
+                } break;
 
 		case READSOLUTIONARRAY:{
 			int len = strlen(sInputFileName) + sizeof(".X");
