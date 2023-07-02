@@ -36,7 +36,7 @@
 #include <memory>
 
 #include "vh.h"
-#include "naivemh.h"
+#include "mh.h"
 #include "datamanforward.h"
 #include "drive.h"
 
@@ -48,7 +48,7 @@ struct FiniteDifferenceOperator<2> {
      static constexpr integer N = 2;
      static constexpr std::array<doublereal, N> pertFD{1., 0.};
      static constexpr std::array<integer, N> idxFD{1, 0};
-     static constexpr std::array<doublereal, N - 1> coefFD{1.};
+     static constexpr std::array<doublereal, N> coefFD{1., -1.};
 };
 
 template <>
@@ -75,8 +75,7 @@ struct FiniteDifferenceOperator<7> {
      static constexpr std::array<doublereal, N - 1> coefFD{-1. / 60., 9. / 60., -45. / 60., 45. / 60., -9./60., 1./60.};
 };
 
-class FiniteDifferenceJacobianBase {
-public:
+struct FiniteDifferenceJacobianParam {
      enum OutputFlags: unsigned {
           FDJAC_OUTPUT_NONE = 0x0u,
           FDJAC_OUTPUT_STAT_PER_ITER = 0x1u,
@@ -85,37 +84,51 @@ public:
           FDJAC_OUTPUT_ALL = 0xFFFFFFFFu,
      };
 
-     FiniteDifferenceJacobianBase(DataManager* pDM,
-                                  std::unique_ptr<DriveCaller>&& pFDJacMeter,
-                                  doublereal dFDJacCoef,
-                                  unsigned uOutputFlags);
+     FiniteDifferenceJacobianParam()
+          :dFDJacCoef(1e-4),
+           uOutputFlags(FDJAC_OUTPUT_ALL) {
+     }
+
+     FiniteDifferenceJacobianParam(FiniteDifferenceJacobianParam&& oParam)
+          :pFDJacMeterStep(std::move(oParam.pFDJacMeterStep)),
+           pFDJacMeterIter(std::move(oParam.pFDJacMeterIter)),
+           dFDJacCoef(oParam.dFDJacCoef),
+           uOutputFlags(oParam.uOutputFlags) {
+     }
+
+     std::unique_ptr<DriveCaller> pFDJacMeterStep;
+     std::unique_ptr<DriveCaller> pFDJacMeterIter;
+     doublereal dFDJacCoef;
+     unsigned uOutputFlags;
+};
+
+class FiniteDifferenceJacobianBase: public FiniteDifferenceJacobianParam {
+public:
+     FiniteDifferenceJacobianBase(DataManager* pDM, FiniteDifferenceJacobianParam&& oParam);
      virtual ~FiniteDifferenceJacobianBase();
 
      virtual void JacobianCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac)=0;
 
 protected:
-     void Output(const MatrixHandler* pJac, doublereal dMaxDiff, integer iRowMaxDiff, integer iColMaxDiff);
+     void Output(const MatrixHandler* pJac, doublereal dTimeCurr, doublereal dMaxDiff, integer iRowMaxDiff, integer iColMaxDiff);
 
      DataManager* const pDM;
-     std::unique_ptr<NaiveMatrixHandler> pFDJac;
+     std::unique_ptr<MatrixHandler> pFDJac;
      MyVectorHandler inc;
 
+     doublereal dTimePrev;
+     doublereal dTimeMaxDiff;
      doublereal dMaxDiffAll;
      integer iRowMaxDiffAll;
      integer iColMaxDiffAll;
      integer iJacobians;
-     const std::unique_ptr<DriveCaller> pFDJacMeter;
-     const doublereal h;
-     const unsigned uOutputFlags;
+     integer iIterations;
 };
 
 template <integer N>
 class FiniteDifferenceJacobian: public FiniteDifferenceJacobianBase, private FiniteDifferenceOperator<N> {
 public:
-     FiniteDifferenceJacobian(DataManager* pDM,
-                              std::unique_ptr<DriveCaller>&& pFDJacMeter,
-                              doublereal dFDJacCoef,
-                              unsigned uOutputFlags);
+     FiniteDifferenceJacobian(DataManager* pDM, FiniteDifferenceJacobianParam&& oParam);
      virtual ~FiniteDifferenceJacobian();
 
      virtual void JacobianCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac) override final;

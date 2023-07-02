@@ -30,13 +30,15 @@
 
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
+#include <algorithm>
 #include "dataman.h"
 #include "fdjac.h"
+#include "fullmh.h"
 
 constexpr integer FiniteDifferenceOperator<2>::N;
 constexpr std::array<doublereal, 2> FiniteDifferenceOperator<2>::pertFD;
 constexpr std::array<integer, 2> FiniteDifferenceOperator<2>::idxFD;
-constexpr std::array<doublereal, 2 - 1> FiniteDifferenceOperator<2>::coefFD;
+constexpr std::array<doublereal, 2> FiniteDifferenceOperator<2>::coefFD;
 
 constexpr integer FiniteDifferenceOperator<3>::N;
 constexpr std::array<doublereal, 3> FiniteDifferenceOperator<3>::pertFD;
@@ -53,36 +55,38 @@ constexpr std::array<doublereal, 7> FiniteDifferenceOperator<7>::pertFD;
 constexpr std::array<integer, 7> FiniteDifferenceOperator<7>::idxFD;
 constexpr std::array<doublereal, 7 - 1> FiniteDifferenceOperator<7>::coefFD;
 
-FiniteDifferenceJacobianBase::FiniteDifferenceJacobianBase(DataManager* const pDM, std::unique_ptr<DriveCaller>&& pFDJacMeter, doublereal dFDJacCoef, unsigned uOutputFlags)
-     :pDM(pDM),
+FiniteDifferenceJacobianBase::FiniteDifferenceJacobianBase(DataManager* const pDM, FiniteDifferenceJacobianParam&& oParam)
+     :FiniteDifferenceJacobianParam(std::move(oParam)),
+      pDM(pDM),
+      dTimePrev(-std::numeric_limits<doublereal>::max()),
+      dTimeMaxDiff(-std::numeric_limits<doublereal>::max()),
       dMaxDiffAll(-std::numeric_limits<doublereal>::max()),
       iRowMaxDiffAll(-1),
       iColMaxDiffAll(-1),
       iJacobians(0),
-      pFDJacMeter(std::move(pFDJacMeter)),
-      h(dFDJacCoef),
-      uOutputFlags(uOutputFlags)
-{
+      iIterations(0)
+ {
 }
 
 FiniteDifferenceJacobianBase::~FiniteDifferenceJacobianBase()
 {
      if (iJacobians > 0 && (uOutputFlags & FDJAC_OUTPUT_STAT_END)) {
-          silent_cerr("Finite difference Jacobian matrix check (" << iJacobians << "):\n");
+          silent_cerr("Finite difference Jacobian matrix check #" << iJacobians << " Time=" << dTimeMaxDiff << ":\n");
           silent_cerr("maximum difference at Jac(" << iRowMaxDiffAll << "," << iColMaxDiffAll << "): " << dMaxDiffAll << "\n");
      }
 }
 
-void FiniteDifferenceJacobianBase::Output(const MatrixHandler* const pJac, const doublereal dMaxDiff, const integer iRowMaxDiff, const integer iColMaxDiff)
+void FiniteDifferenceJacobianBase::Output(const MatrixHandler* const pJac, const doublereal dTimeCurr, const doublereal dMaxDiff, const integer iRowMaxDiff, const integer iColMaxDiff)
 {
-     if (dMaxDiff > dMaxDiffAll) {
+     if (dMaxDiff >= dMaxDiffAll) {
+          dTimeMaxDiff = dTimeCurr;
           dMaxDiffAll = dMaxDiff;
           iRowMaxDiffAll = iRowMaxDiff;
           iColMaxDiffAll = iColMaxDiff;
      }
 
      if (uOutputFlags & (FDJAC_OUTPUT_STAT_PER_ITER | FDJAC_OUTPUT_MAT_PER_ITER)) {
-          silent_cerr("Finite difference Jacobian check (" << iJacobians << "):\n");
+          silent_cerr("Finite difference Jacobian check #" << iJacobians << " Time=" << dTimeCurr << " Iteration(" << iIterations << "):\n");
      }
 
      if (uOutputFlags & FDJAC_OUTPUT_STAT_PER_ITER) {
@@ -99,8 +103,8 @@ void FiniteDifferenceJacobianBase::Output(const MatrixHandler* const pJac, const
 }
 
 template <integer N>
-FiniteDifferenceJacobian<N>::FiniteDifferenceJacobian(DataManager* const pDM, std::unique_ptr<DriveCaller>&& pFDJacMeter, doublereal dFDJacCoef, unsigned uOutputFlags)
-     :FiniteDifferenceJacobianBase(pDM, std::move(pFDJacMeter), dFDJacCoef, uOutputFlags)
+FiniteDifferenceJacobian<N>::FiniteDifferenceJacobian(DataManager* const pDM, FiniteDifferenceJacobianParam&& oParam)
+     :FiniteDifferenceJacobianBase(pDM, std::move(oParam))
 {
 }
 
@@ -114,7 +118,7 @@ void FiniteDifferenceJacobian<N>::Attach(const MatrixHandler* pJac)
 {
      if (inc.iGetSize() != pJac->iGetNumCols()) {
           if (uOutputFlags & FDJAC_OUTPUT_MAT_PER_ITER) {
-               pFDJac.reset(new NaiveMatrixHandler(pJac->iGetNumCols()));
+               pFDJac.reset(new FullMatrixHandler(pJac->iGetNumRows(), pJac->iGetNumCols()));
           }
 
           inc.Resize(pJac->iGetNumCols());
@@ -136,72 +140,84 @@ void FiniteDifferenceJacobian<N>::JacobianCheck(const NonlinearProblem* const pN
      // Finite difference check of Jacobian matrix
      // NOTE: might not be safe!
 
-     if (!pFDJacMeter->dGet()) {
-          return;
+     const doublereal dTimeCurr = pDM->dGetTime();
+
+     if (dTimeCurr != dTimePrev) {
+          iIterations = 0;
      }
 
-     Attach(pJac);
+     ++iIterations;
 
-     ++iJacobians;
+     if (pFDJacMeterStep->dGet() && pFDJacMeterIter->dGet(iIterations)) {
+          ++iJacobians;
 
-     if (pFDJac) {
-          pFDJac->Reset();
+          Attach(pJac);
+
+          if (pFDJac) {
+               pFDJac->Reset();
+          }
+
+          inc.Reset();
+
+          doublereal dMaxDiff = -std::numeric_limits<doublereal>::max();
+          integer iRowMaxDiff = -1;
+          integer iColMaxDiff = -1;
+
+          for (integer j = 1; j <= pJac->iGetNumCols(); ++j) {
+               inc.PutCoef(j, pertFD[0] * dFDJacCoef);
+
+               ASSERT(incsol.size() >= idxFD.size());
+               static_assert(pertFD.size() >= idxFD.size());
+
+               for (size_t k = 0; k < idxFD.size(); ++k) {
+                    pNLP->Update(&inc);
+
+                    ASSERT(incsol[idxFD[k]].iGetSize() == pJac->iGetNumRows());
+
+                    incsol[idxFD[k]].Reset();
+                    pNLP->Residual(&incsol[idxFD[k]]);
+
+                    inc.PutCoef(j, (k + 1 < pertFD.size()) ? (pertFD[k + 1] - pertFD[k]) * dFDJacCoef : 0.);
+               }
+
+               doublereal normColj = 0.;
+
+               for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+                    doublereal Jacij = 0.;
+
+                    static_assert(idxFD.size() >= coefFD.size());
+
+                    for (size_t k = 0; k < coefFD.size(); ++k) {
+                         Jacij -= incsol[idxFD[k]](i) * coefFD[k];
+                    }
+
+                    Jacij /=  dFDJacCoef;
+
+                    normColj += Jacij * Jacij;
+
+                    incsol[0](i) = Jacij;
+
+                    if (pFDJac) {
+                         pFDJac->PutCoef(i, j, Jacij);
+                    }
+               }
+
+               normColj = sqrt(normColj);
+
+               for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+                    const doublereal dCurrDiff = fabs(incsol[0](i) - pJac->dGetCoef(i, j)) / normColj;
+
+                    if (dCurrDiff > dMaxDiff) {
+                         iRowMaxDiff = i;
+                         iColMaxDiff = j;
+                         dMaxDiff = dCurrDiff;
+                    }
+               }
+          }
+
+          Output(pJac, dTimeCurr, dMaxDiff, iRowMaxDiff, iColMaxDiff);
      }
-
-     inc.Reset();
-
-     doublereal dMaxDiff = -std::numeric_limits<doublereal>::max();
-     integer iRowMaxDiff = -1;
-     integer iColMaxDiff = -1;
-
-     for (integer j = 1; j <= pJac->iGetNumCols(); ++j) {
-          inc.PutCoef(j, pertFD[0] * h);
-
-          for (integer k = 0; k < N; ++k) {
-               pNLP->Update(&inc);
-
-               ASSERT(incsol[idxFD[k]].iGetSize() == pJac->iGetNumRows());
-
-               incsol[idxFD[k]].Reset();
-               pNLP->Residual(&incsol[idxFD[k]]);
-
-               inc.PutCoef(j, (k + 1 < N) ? (pertFD[k + 1] - pertFD[k]) * h : 0.);
-          }
-
-          doublereal normColj = 0.;
-
-          for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
-               doublereal Jacij = 0.;
-
-               for (integer k = 0; k < N - 1; ++k) {
-                    Jacij -= (incsol[idxFD[k]](i) - incsol[0](i)) * coefFD[k];
-               }
-
-               Jacij /=  h;
-
-               normColj += Jacij * Jacij;
-
-               incsol[0](i) = Jacij;
-
-               if (pFDJac) {
-                    pFDJac->PutCoef(i, j, Jacij);
-               }
-          }
-
-          normColj = sqrt(normColj);
-
-          for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
-               const doublereal dCurrDiff = fabs(incsol[0](i) - pJac->dGetCoef(i, j)) / normColj;
-
-               if (dCurrDiff > dMaxDiff) {
-                    iRowMaxDiff = i;
-                    iColMaxDiff = j;
-                    dMaxDiff = dCurrDiff;
-               }
-          }
-     }
-
-     Output(pJac, dMaxDiff, iRowMaxDiff, iColMaxDiff);
+     dTimePrev = dTimeCurr;
 }
 
 template
