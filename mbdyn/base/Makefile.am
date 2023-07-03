@@ -257,7 +257,7 @@ schurdataman.cc \
 schurdataman.h
 endif
 
-libbase_la_LIBADD = @LIBS@ @SECURITY_LIBS@ @OCTAVE_LIBS@ $(GINACLIB_LIBS)
+libbase_la_LIBADD = @LIBS@ @SECURITY_LIBS@ @OCTAVE_LIBS@ @TRILINOS_LIBS@ $(GINACLIB_LIBS)
 libbase_la_LDFLAGS = -static
 
 AM_CPPFLAGS = \
