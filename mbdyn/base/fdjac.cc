@@ -95,10 +95,18 @@ void FiniteDifferenceJacobianBase::Output(const MatrixHandler* const pJac, const
 
      if (pFDJac) {
           silent_cerr("\nxxxxxxxxxxxxxxx\n\n");
-          silent_cerr(*pJac << "\n");
-          silent_cerr("\n---------------\n\n");
-          silent_cerr(*pFDJac << "\n");
-          silent_cerr("\n===============\n\n");
+
+          if (silent_err) {
+               pJac->Print(std::cerr, MatrixHandler::MAT_PRINT_TRIPLET);
+          }
+
+          silent_cerr("\n\n---------------\n\n");
+
+          if (silent_err) {
+               pFDJac->Print(std::cerr, MatrixHandler::MAT_PRINT_TRIPLET);
+          }
+
+          silent_cerr("\n\n===============\n\n");
      }
 }
 
