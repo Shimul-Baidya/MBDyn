@@ -28,6 +28,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+        Copyright (C) 2023(-2023) all rights reserved.
+
+        The copyright of this code is transferred
+        to Pierangelo Masarati and Paolo Mantegazza
+        for use in the software MBDyn as described
+        in the GNU Public License version 2.1
+*/
+
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
 #include <algorithm>
@@ -55,14 +65,17 @@ constexpr std::array<doublereal, 7> FiniteDifferenceOperator<7>::pertFD;
 constexpr std::array<integer, 7> FiniteDifferenceOperator<7>::idxFD;
 constexpr std::array<doublereal, 7 - 1> FiniteDifferenceOperator<7>::coefFD;
 
+FiniteDifferenceJacobianBase::JacobianStat::JacobianStat()
+     :dTimeSample(-std::numeric_limits<doublereal>::max()),
+      dMaxDiff(-std::numeric_limits<doublereal>::max()),
+      iRowMaxDiff(-1),
+      iColMaxDiff(-1) {
+}
+
 FiniteDifferenceJacobianBase::FiniteDifferenceJacobianBase(DataManager* const pDM, FiniteDifferenceJacobianParam&& oParam)
      :FiniteDifferenceJacobianParam(std::move(oParam)),
       pDM(pDM),
       dTimePrev(-std::numeric_limits<doublereal>::max()),
-      dTimeMaxDiff(-std::numeric_limits<doublereal>::max()),
-      dMaxDiffAll(-std::numeric_limits<doublereal>::max()),
-      iRowMaxDiffAll(-1),
-      iColMaxDiffAll(-1),
       iJacobians(0),
       iIterations(0)
  {
@@ -71,26 +84,55 @@ FiniteDifferenceJacobianBase::FiniteDifferenceJacobianBase(DataManager* const pD
 FiniteDifferenceJacobianBase::~FiniteDifferenceJacobianBase()
 {
      if (iJacobians > 0 && (uOutputFlags & FDJAC_OUTPUT_STAT_END)) {
-          silent_cerr("Finite difference Jacobian matrix check #" << iJacobians << " Time=" << dTimeMaxDiff << ":\n");
-          silent_cerr("maximum difference at Jac(" << iRowMaxDiffAll << "," << iColMaxDiffAll << "): " << dMaxDiffAll << "\n");
+          silent_cerr("Finite difference Jacobian matrix check #" << iJacobians << " Time=" << oJacStatMax.dTimeSample << ":\n");
+          silent_cerr("maximum difference at Jac(" << oJacStatMax.iRowMaxDiff << "," << oJacStatMax.iColMaxDiff << "): " << oJacStatMax.dMaxDiff << "\n");
      }
 }
 
-void FiniteDifferenceJacobianBase::Output(const MatrixHandler* const pJac, const doublereal dTimeCurr, const doublereal dMaxDiff, const integer iRowMaxDiff, const integer iColMaxDiff)
+void FiniteDifferenceJacobianBase::JacobianCheck(const NonlinearProblem* const pNLP, const MatrixHandler* const pJac)
 {
-     if (dMaxDiff >= dMaxDiffAll) {
-          dTimeMaxDiff = dTimeCurr;
-          dMaxDiffAll = dMaxDiff;
-          iRowMaxDiffAll = iRowMaxDiff;
-          iColMaxDiffAll = iColMaxDiff;
+     // Finite difference check of Jacobian matrix
+     // NOTE: might not be safe!
+
+     JacobianStat oJacStatCurr;
+
+     oJacStatCurr.dTimeSample = pDM->dGetTime();
+
+     if (oJacStatCurr.dTimeSample != dTimePrev) {
+          iIterations = 0;
+     }
+
+     ++iIterations;
+
+     if (pFDJacMeterStep->dGet() && pFDJacMeterIter->dGet(iIterations)) {
+          ++iJacobians;
+
+          Attach(pJac);
+
+          if (pFDJac) {
+               pFDJac->Reset();
+          }
+
+          inc.Reset();
+
+          JacobianCheckImpl(pNLP, pJac, oJacStatCurr);
+     }
+
+     dTimePrev = oJacStatCurr.dTimeSample;
+}
+
+void FiniteDifferenceJacobianBase::Output(const MatrixHandler* const pJac, const JacobianStat& oJacStatCurr)
+{
+     if (oJacStatCurr.dMaxDiff >= oJacStatMax.dMaxDiff) {
+          oJacStatMax = oJacStatCurr;
      }
 
      if (uOutputFlags & (FDJAC_OUTPUT_STAT_PER_ITER | FDJAC_OUTPUT_MAT_PER_ITER)) {
-          silent_cerr("Finite difference Jacobian check #" << iJacobians << " Time=" << dTimeCurr << " Iteration(" << iIterations << "):\n");
+          silent_cerr("Finite difference Jacobian check #" << iJacobians << " Time=" << oJacStatCurr.dTimeSample << " Iteration(" << iIterations << "):\n");
      }
 
      if (uOutputFlags & FDJAC_OUTPUT_STAT_PER_ITER) {
-          silent_cerr("maximum difference at Jac(" << iRowMaxDiff << "," << iColMaxDiff << "): " << dMaxDiff << "\n");
+          silent_cerr("maximum difference at Jac(" << oJacStatCurr.iRowMaxDiff << "," << oJacStatCurr.iColMaxDiff << "): " << oJacStatCurr.dMaxDiff << "\n");
      }
 
      if (pFDJac) {
@@ -110,6 +152,21 @@ void FiniteDifferenceJacobianBase::Output(const MatrixHandler* const pJac, const
      }
 }
 
+void FiniteDifferenceJacobianBase::Attach(const MatrixHandler* pJac)
+{
+     if (inc.iGetSize() != pJac->iGetNumCols()) {
+          if (uOutputFlags & FDJAC_OUTPUT_MAT_PER_ITER) {
+               pFDJac.reset(new FullMatrixHandler(pJac->iGetNumRows(), pJac->iGetNumCols()));
+          }
+
+          inc.Resize(pJac->iGetNumCols());
+     }
+
+     ASSERT(!pFDJac || pFDJac->iGetNumRows() == pJac->iGetNumRows());
+     ASSERT(!pFDJac || pFDJac->iGetNumCols() == pJac->iGetNumCols());
+     ASSERT(inc.iGetSize() == pJac->iGetNumCols());
+}
+
 template <integer N>
 FiniteDifferenceJacobian<N>::FiniteDifferenceJacobian(DataManager* const pDM, FiniteDifferenceJacobianParam&& oParam)
      :FiniteDifferenceJacobianBase(pDM, std::move(oParam))
@@ -124,108 +181,76 @@ FiniteDifferenceJacobian<N>::~FiniteDifferenceJacobian()
 template <integer N>
 void FiniteDifferenceJacobian<N>::Attach(const MatrixHandler* pJac)
 {
-     if (inc.iGetSize() != pJac->iGetNumCols()) {
-          if (uOutputFlags & FDJAC_OUTPUT_MAT_PER_ITER) {
-               pFDJac.reset(new FullMatrixHandler(pJac->iGetNumRows(), pJac->iGetNumCols()));
-          }
+     FiniteDifferenceJacobianBase::Attach(pJac);
 
-          inc.Resize(pJac->iGetNumCols());
-
-          for (integer k = 0; k < N; ++k) {
+     if (incsol[0].iGetSize() != pJac->iGetNumCols()) {
+          for (size_t k = 0; k < incsol.size(); ++k) {
                incsol[k].Resize(pDM->iGetNumDofs());
           }
      }
 
-     ASSERT(!pFDJac || pFDJac->iGetNumRows() == pJac->iGetNumRows());
-     ASSERT(!pFDJac || pFDJac->iGetNumCols() == pJac->iGetNumCols());
-     ASSERT(inc.iGetSize() == pJac->iGetNumCols());
      ASSERT(incsol[0].iGetSize() == pJac->iGetNumRows());
 }
 
 template <integer N>
-void FiniteDifferenceJacobian<N>::JacobianCheck(const NonlinearProblem* const pNLP, const MatrixHandler* const pJac)
+void FiniteDifferenceJacobian<N>::JacobianCheckImpl(const NonlinearProblem* const pNLP, const MatrixHandler* const pJac, JacobianStat& oJacStatCurr)
 {
      // Finite difference check of Jacobian matrix
      // NOTE: might not be safe!
 
-     const doublereal dTimeCurr = pDM->dGetTime();
+     for (integer j = 1; j <= pJac->iGetNumCols(); ++j) {
+          inc.PutCoef(j, pertFD[0] * dFDJacCoef);
 
-     if (dTimeCurr != dTimePrev) {
-          iIterations = 0;
-     }
+          ASSERT(incsol.size() >= idxFD.size());
+          static_assert(pertFD.size() >= idxFD.size());
 
-     ++iIterations;
+          for (size_t k = 0; k < idxFD.size(); ++k) {
+               pNLP->Update(&inc);
 
-     if (pFDJacMeterStep->dGet() && pFDJacMeterIter->dGet(iIterations)) {
-          ++iJacobians;
+               ASSERT(incsol[idxFD[k]].iGetSize() == pJac->iGetNumRows());
 
-          Attach(pJac);
+               incsol[idxFD[k]].Reset();
+               pNLP->Residual(&incsol[idxFD[k]]);
 
-          if (pFDJac) {
-               pFDJac->Reset();
+               inc.PutCoef(j, (k + 1 < pertFD.size()) ? (pertFD[k + 1] - pertFD[k]) * dFDJacCoef : 0.);
           }
 
-          inc.Reset();
+          doublereal normColj = 0.;
 
-          doublereal dMaxDiff = -std::numeric_limits<doublereal>::max();
-          integer iRowMaxDiff = -1;
-          integer iColMaxDiff = -1;
+          for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+               doublereal Jacij = 0.;
 
-          for (integer j = 1; j <= pJac->iGetNumCols(); ++j) {
-               inc.PutCoef(j, pertFD[0] * dFDJacCoef);
+               static_assert(idxFD.size() >= coefFD.size());
 
-               ASSERT(incsol.size() >= idxFD.size());
-               static_assert(pertFD.size() >= idxFD.size());
-
-               for (size_t k = 0; k < idxFD.size(); ++k) {
-                    pNLP->Update(&inc);
-
-                    ASSERT(incsol[idxFD[k]].iGetSize() == pJac->iGetNumRows());
-
-                    incsol[idxFD[k]].Reset();
-                    pNLP->Residual(&incsol[idxFD[k]]);
-
-                    inc.PutCoef(j, (k + 1 < pertFD.size()) ? (pertFD[k + 1] - pertFD[k]) * dFDJacCoef : 0.);
+               for (size_t k = 0; k < coefFD.size(); ++k) {
+                    Jacij -= incsol[idxFD[k]](i) * coefFD[k];
                }
 
-               doublereal normColj = 0.;
+               Jacij /=  dFDJacCoef;
 
-               for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
-                    doublereal Jacij = 0.;
+               normColj += Jacij * Jacij;
 
-                    static_assert(idxFD.size() >= coefFD.size());
+               incsol[0](i) = Jacij;
 
-                    for (size_t k = 0; k < coefFD.size(); ++k) {
-                         Jacij -= incsol[idxFD[k]](i) * coefFD[k];
-                    }
-
-                    Jacij /=  dFDJacCoef;
-
-                    normColj += Jacij * Jacij;
-
-                    incsol[0](i) = Jacij;
-
-                    if (pFDJac) {
-                         pFDJac->PutCoef(i, j, Jacij);
-                    }
-               }
-
-               normColj = sqrt(normColj);
-
-               for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
-                    const doublereal dCurrDiff = fabs(incsol[0](i) - pJac->dGetCoef(i, j)) / normColj;
-
-                    if (dCurrDiff > dMaxDiff) {
-                         iRowMaxDiff = i;
-                         iColMaxDiff = j;
-                         dMaxDiff = dCurrDiff;
-                    }
+               if (pFDJac) {
+                    pFDJac->PutCoef(i, j, Jacij);
                }
           }
 
-          Output(pJac, dTimeCurr, dMaxDiff, iRowMaxDiff, iColMaxDiff);
+          normColj = sqrt(normColj);
+
+          for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+               const doublereal dCurrDiff = fabs(incsol[0](i) - pJac->dGetCoef(i, j)) / normColj;
+
+               if (dCurrDiff > oJacStatCurr.dMaxDiff) {
+                    oJacStatCurr.iRowMaxDiff = i;
+                    oJacStatCurr.iColMaxDiff = j;
+                    oJacStatCurr.dMaxDiff = dCurrDiff;
+               }
+          }
      }
-     dTimePrev = dTimeCurr;
+
+     Output(pJac, oJacStatCurr);
 }
 
 template
@@ -239,3 +264,57 @@ class FiniteDifferenceJacobian<5>;
 
 template
 class FiniteDifferenceJacobian<7>;
+
+AdForwardModeJacobian::AdForwardModeJacobian(DataManager* pDM, FiniteDifferenceJacobianParam&& oParam)
+     :FiniteDifferenceJacobianBase(pDM, std::move(oParam)) {
+}
+
+AdForwardModeJacobian::~AdForwardModeJacobian()
+{
+
+}
+
+void AdForwardModeJacobian::JacobianCheckImpl(const NonlinearProblem* pNLP, const MatrixHandler* pJac, JacobianStat& oJacStatCurr)
+{
+     for (integer j = 1; j <= pJac->iGetNumCols(); ++j) {
+          inc.PutCoef(j, 1.);
+          pNLP->Jacobian(&JY, &inc);
+
+          doublereal normColj = 0.;
+
+          for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+               const doublereal Jacij = JY.dGetCoef(i);
+
+               normColj += Jacij * Jacij;
+
+               if (pFDJac) {
+                    pFDJac->PutCoef(i, j, Jacij);
+               }
+          }
+
+          normColj = sqrt(normColj);
+
+          for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
+               const doublereal dCurrDiff = fabs(JY.dGetCoef(i) - pJac->dGetCoef(i, j)) / normColj;
+
+               if (dCurrDiff > oJacStatCurr.dMaxDiff) {
+                    oJacStatCurr.iRowMaxDiff = i;
+                    oJacStatCurr.iColMaxDiff = j;
+                    oJacStatCurr.dMaxDiff = dCurrDiff;
+               }
+          }
+
+          inc.PutCoef(j, 0.);
+     }
+
+     Output(pJac, oJacStatCurr);
+}
+
+void AdForwardModeJacobian::Attach(const MatrixHandler* pJac)
+{
+     FiniteDifferenceJacobianBase::Attach(pJac);
+
+     if (JY.iGetSize() != pJac->iGetNumRows()) {
+          JY.Resize(pJac->iGetNumRows());
+     }
+}

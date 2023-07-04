@@ -28,6 +28,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+        Copyright (C) 2023(-2023) all rights reserved.
+
+        The copyright of this code is transferred
+        to Pierangelo Masarati and Paolo Mantegazza
+        for use in the software MBDyn as described
+        in the GNU Public License version 2.1
+*/
 
 #ifndef FDJAC_H__INCLUDED
 #define FDJAC_H__INCLUDED
@@ -107,40 +116,68 @@ public:
      FiniteDifferenceJacobianBase(DataManager* pDM, FiniteDifferenceJacobianParam&& oParam);
      virtual ~FiniteDifferenceJacobianBase();
 
-     virtual void JacobianCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac)=0;
+     void JacobianCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac);
 
 protected:
-     void Output(const MatrixHandler* pJac, doublereal dTimeCurr, doublereal dMaxDiff, integer iRowMaxDiff, integer iColMaxDiff);
+     struct JacobianStat {
+          JacobianStat();
+          doublereal dTimeSample;
+          doublereal dMaxDiff;
+          integer iRowMaxDiff;
+          integer iColMaxDiff;
+     };
+
+     virtual void JacobianCheckImpl(const NonlinearProblem* pNLP, const MatrixHandler* pJac, JacobianStat& oJacStatCurr)=0;
+
+     virtual void Attach(const MatrixHandler* pJac);
+
+     void
+     Output(const MatrixHandler* pJac,
+            const JacobianStat& oJacStatCurr);
 
      DataManager* const pDM;
      std::unique_ptr<MatrixHandler> pFDJac;
      MyVectorHandler inc;
 
      doublereal dTimePrev;
-     doublereal dTimeMaxDiff;
-     doublereal dMaxDiffAll;
-     integer iRowMaxDiffAll;
-     integer iColMaxDiffAll;
+
+     JacobianStat oJacStatMax;
+
      integer iJacobians;
      integer iIterations;
 };
 
+// Allow us to validate the Jacobian
 template <integer N>
 class FiniteDifferenceJacobian: public FiniteDifferenceJacobianBase, private FiniteDifferenceOperator<N> {
 public:
      FiniteDifferenceJacobian(DataManager* pDM, FiniteDifferenceJacobianParam&& oParam);
      virtual ~FiniteDifferenceJacobian();
 
-     virtual void JacobianCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac) override final;
-
 private:
-     void Attach(const MatrixHandler* pJac);
+     virtual void JacobianCheckImpl(const NonlinearProblem* pNLP, const MatrixHandler* pJac, JacobianStat& oJacStatCurr) override final;
+
+     virtual void Attach(const MatrixHandler* pJac) override final;
 
      using FiniteDifferenceOperator<N>::pertFD;
      using FiniteDifferenceOperator<N>::idxFD;
      using FiniteDifferenceOperator<N>::coefFD;
 
      std::array<MyVectorHandler, N> incsol;
+};
+
+// Allow us to validate if sp_grad::SpGradient and sp_grad:GpGradProd are consistent
+class AdForwardModeJacobian: public FiniteDifferenceJacobianBase {
+public:
+     AdForwardModeJacobian(DataManager* pDM, FiniteDifferenceJacobianParam&& oParam);
+     virtual ~AdForwardModeJacobian();
+
+private:
+     virtual void JacobianCheckImpl(const NonlinearProblem* pNLP, const MatrixHandler* pJac, JacobianStat& oJacStatCurr) override final;
+
+     virtual void Attach(const MatrixHandler* pJac) override final;
+
+     MyVectorHandler JY;
 };
 
 #endif
