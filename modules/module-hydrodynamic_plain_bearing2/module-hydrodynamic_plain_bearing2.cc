@@ -5608,7 +5608,7 @@ namespace {
                return pDM->dGetStepIntegratorCoef(iDof);
           }
 
-#ifdef DEBUG
+#if HYDRO_DEBUG > 1
 #define HYDRO_DUMP_VAR(pRootElem, Expr) \
           (pRootElem)->DumpVar(__FILE__, __LINE__, __PRETTY_FUNCTION__,  #Expr, Expr)
 
@@ -6996,7 +6996,7 @@ namespace {
           return pDM->pGetNonlinearSolver()->GetNonlinearSolverHint(eType);
      }
 
-#ifdef DEBUG
+#if HYDRO_DEBUG > 1
      template <index_type NumRows, index_type NumCols>
      void HydroRootElement::DumpVar(const char* pszFile, int nLine, const char* pszFunc, const char* pszExpr, const SpMatrixBase<SpGradient, NumRows, NumCols>& A) const
      {
@@ -20421,7 +20421,7 @@ namespace {
                          const doublereal alpha = rgGaussPntDat[idxGauss].detJ
                               * dGetGaussWeight(i, iIntegRule)
                               * dGetGaussWeight(j, iIntegRule)
-                              * dEquationScale / dA; // do not scale the residual by surface area
+                              * dEquationScale / (dCoef * dA); // do not scale the residual by surface area
                          const SpColVector<doublereal, iNumNodes>& N = rgGaussPntDat[idxGauss].N;
                          const SpMatrix<doublereal, 2, iNumNodes>& B = rgGaussPntDat[idxGauss].B;
                          const SpMatrix<doublereal, iNumNodes, iNumNodes>& BTB = rgGaussPntDat[idxGauss].BTB;
