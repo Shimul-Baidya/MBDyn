@@ -256,6 +256,7 @@ DerivativeSolver::DerivativeSolver(const doublereal Tl,
 		const doublereal dFactorCoef)
 : ImplicitStepIntegrator(iMaxIt, Tl, dSolTl, 1, 1, bmod_res_test),
 dCoef(dC),
+dInitialCoef(dC),
 iMaxIterCoef(iMaxIterCoef),
 dFactorCoef(dFactorCoef)
 {
@@ -294,7 +295,7 @@ DerivativeSolver::Advance(Solver* pS,
 		pDM->LinkToSolution(*pXCurr, *pXPrimeCurr);
 
 		bool bConverged = false;
-		const doublereal dInitialCoef = dCoef;
+		ASSERT(dInitialCoef == dCoef);
 		doublereal dCoefBest = dCoef;
 		doublereal dResErrMin = std::numeric_limits<doublereal>::max();
 		doublereal dSolErrMin = dResErrMin;
@@ -473,8 +474,13 @@ doublereal DerivativeSolver::dGetCoef(unsigned int iDof) const
 doublereal
 DerivativeSolver::TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const
 {
-	dAlgebraicEqu = dCoef;
-	return 1.;
+     // In case of automatic detection of the "derivatives coefficient",
+     // we want to make sure, that the first residual is independent on
+     // the actual value of dCoef. In that way, we will select the best
+     // coefficient based on the true residual.
+     dAlgebraicEqu = dCoef * dCoef / dInitialCoef;
+
+     return 1.;
 }
 
 
