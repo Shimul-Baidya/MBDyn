@@ -36,6 +36,7 @@ dnl OpenLDAP Autoconf Macros
 dnl
 divert(-1)
 builtin(include, build/mbdyn.m4)dnl
+builtin(include, build/m4_ax_check_compile_flag.m4)dnl
 builtin(include, build/m4_ax_pkg_swig.m4)dnl
 builtin(include, build/m4_ax_python_devel.m4)dnl
 builtin(include, build/m4_ax_swig_enable_cxx.m4)dnl
