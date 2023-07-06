@@ -45,11 +45,13 @@ endif
 
 if USE_SOCKET
 
+bin_PROGRAMS += \
+socket2stream \
+stream2socket 
+
 if HAVE_GETPASS
 bin_PROGRAMS += \
 sockdrive \
-socket2stream \
-stream2socket \
 trim
 endif
 
