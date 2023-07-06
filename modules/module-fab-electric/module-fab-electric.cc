@@ -37,6 +37,7 @@
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
 #include <iostream>
+#include <sstream>
 #include <cfloat>
 
 #include "dataman.h"
@@ -52,9 +53,13 @@ UserDefinedElem(uLabel, pDO)
 	// help
 	if (HP.IsKeyWord("help")) {
 		silent_cout(
-"									\n"
-"Module: 	resistor			\n"
-"									\n"
+"\n"
+"<name> ::= resistor\n"
+"\n"
+"<module_data> ::=\n"
+"<electric_node_1_label> ,\n"
+"<electric_node_2_label> ,\n"
+"(real) <resistance>\n"
 			<< std::endl);
 
 		if (!HP.IsArg()) {
@@ -92,19 +97,45 @@ Resistor::~Resistor(void)
 }
 
 void
+Resistor::OutputPrepare(OutputHandler& OH)
+{
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+	if (bToBeOutput()) {
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			std::ostringstream os;
+			os << "elem.loadable." << GetLabel();
+			(void)OH.CreateVar(os.str(), "Resistor");
+
+			m_sOutputNameBase = os.str();
+
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
+					OutputHandler::Dimensions::Current,
+					"Current on resistor");
+		}
+	}
+#endif // USE_NETCDF
+}
+
+void
 Resistor::Output(OutputHandler& OH) const
 {
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			OH.WriteNcVar(Var_di_curr, i_curr);
+		}
+#endif // USE_NETCDF
 
-   if (bToBeOutput()) {
-   std::ostream& out = OH.Loadable();
-   out << std::setw(8) << GetLabel()
-      << " " << i_curr        // current on resistor
-      << " " << Voltage1      // voltage on node 1
-      << " " << Voltage2      // voltage on node 2
-      << std::endl;
-   }
-
+		if (OH.UseText(OutputHandler::LOADABLE)) {
+			std::ostream& out = OH.Loadable();
+			out << std::setw(8) << GetLabel()
+				<< " " << i_curr        // current on resistor
+				<< std::endl;
+		}
+	}
 }
+
 
 unsigned int
 Resistor::iGetNumDof(void) const
@@ -294,9 +325,13 @@ UserDefinedElem(uLabel, pDO)
 	// help
 	if (HP.IsKeyWord("help")) {
 		silent_cout(
-"									\n"
-"Module: 	Capacitor			\n"
-"									\n"
+"\n"
+"<name> ::= capacitor\n"
+"\n"
+"<module_data> ::=\n"
+"<electric_node_1_label> ,\n"
+"<electric_node_2_label> ,\n"
+"(real) <capacitance>\n"
 			<< std::endl);
 
 		if (!HP.IsArg()) {
@@ -334,18 +369,43 @@ Capacitor::~Capacitor(void)
 }
 
 void
+Capacitor::OutputPrepare(OutputHandler& OH)
+{
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+	if (bToBeOutput()) {	
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			std::ostringstream os;
+			os << "elem.loadable." << GetLabel();
+			(void)OH.CreateVar(os.str(), "Capacitor");
+
+			std::string m_sOutputNameBase = os.str();
+
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
+					OutputHandler::Dimensions::Current,
+					"Current on capacitor");
+		}
+	}
+#endif // USE_NETCDF
+}
+
+void
 Capacitor::Output(OutputHandler& OH) const
 {
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			OH.WriteNcVar(Var_di_curr, i_curr);
+		}
+#endif // USE_NETCDF
 
-   if (bToBeOutput()) {
-   std::ostream& out = OH.Loadable();
-   out << std::setw(8) << GetLabel()
-      << " " << i_curr        // current on Capacitor
-      << " " << Voltage1      // voltage on node 1
-      << " " << Voltage2      // voltage on node 2
-      << std::endl;
-   }
-
+		if (OH.UseText(OutputHandler::LOADABLE)) {
+			std::ostream& out = OH.Loadable();
+			out << std::setw(8) << GetLabel()
+				<< " " << i_curr        // current on Capacitor
+				<< std::endl;
+		}
+	}
 }
 
 unsigned int
@@ -538,9 +598,13 @@ UserDefinedElem(uLabel, pDO)
 	// help
 	if (HP.IsKeyWord("help")) {
 		silent_cout(
-"									\n"
-"Module: 	Inductor			\n"
-"									\n"
+"\n"
+"<name> ::= inductor\n"
+"\n"
+"<module_data> ::=\n"
+"<electric_node_1_label> ,\n"
+"<electric_node_2_label> ,\n"
+"(real) <inductance>\n"
 			<< std::endl);
 
 		if (!HP.IsArg()) {
@@ -578,18 +642,43 @@ Inductor::~Inductor(void)
 }
 
 void
+Inductor::OutputPrepare(OutputHandler& OH)
+{
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+	if (bToBeOutput()) {
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			std::ostringstream os;
+			os << "elem.loadable." << GetLabel();
+			(void)OH.CreateVar(os.str(), "Inductor");
+
+			m_sOutputNameBase = os.str();
+
+			Var_di_curr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "I",
+					OutputHandler::Dimensions::Current,
+					"Current on inductor");
+		}
+	}
+#endif // USE_NETCDF
+}
+
+void
 Inductor::Output(OutputHandler& OH) const
 {
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+			OH.WriteNcVar(Var_di_curr, i_curr);
+		}
+#endif // USE_NETCDF
 
-   if (bToBeOutput()) {
-   std::ostream& out = OH.Loadable();
-   out << std::setw(8) << GetLabel()
-      << " " << i_curr        // current on Inductor
-      << " " << Voltage1      // voltage on node 1
-      << " " << Voltage2      // voltage on node 2
-      << std::endl;
-   }
-
+		if (OH.UseText(OutputHandler::LOADABLE)) {
+			std::ostream& out = OH.Loadable();
+			out << std::setw(8) << GetLabel()
+				<< " " << i_curr        // current on resistor
+				<< std::endl;
+		}
+	}
 }
 
 unsigned int

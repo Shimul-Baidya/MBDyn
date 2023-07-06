@@ -105,7 +105,7 @@ GenelClamp::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 void
 GenelClamp::Output(OutputHandler& OH ) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::GENELS)) {
 		std::ostream& out = OH.Genels();
 		out << std::setw(8) << GetLabel() << " " << dRct << std::endl;
 	}
@@ -285,7 +285,7 @@ GenelDistance::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 void
 GenelDistance::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::GENELS)) {
 		std::ostream& out = OH.Genels();
 		out << std::setw(8) << GetLabel() << " " << dRct << std::endl;
 	}

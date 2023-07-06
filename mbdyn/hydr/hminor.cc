@@ -206,11 +206,13 @@ MinorLoss::AssRes(SubVectorHandler& WorkVec,
 void
 MinorLoss::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) {
 		std::ostream& out = OH.Hydraulic();
 		out << std::setw(8) << GetLabel()
 			<< " " << vel  << " " << flow << std::endl;
 	}
+
+	// TODO: NetCDF output...
 }
 
 const OutputHandler::Dimensions 
@@ -408,11 +410,13 @@ ThreeWayMinorLoss::AssRes(SubVectorHandler& WorkVec,
 void
 ThreeWayMinorLoss::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) {
 		std::ostream& out = OH.Hydraulic();
 		out << std::setw(8) << GetLabel()
-			<< " " << vel  << " " << flow << std::endl;
+		<< " " << vel  << " " << flow << std::endl;
 	}
+
+	// TODO: NetCDF output...
 }
 
 const OutputHandler::Dimensions 
@@ -641,7 +645,7 @@ Orifice::AssRes(SubVectorHandler& WorkVec,
 void
 Orifice::Output(OutputHandler& OH) const
 {
-	if (bToBeOutput()) {
+	if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) {
 		std::ostream& out = OH.Hydraulic();
 		out << std::setw(8) << GetLabel()	/*  1 */
 			<< " " << vel			/*  2 */
@@ -650,6 +654,8 @@ Orifice::Output(OutputHandler& OH) const
 			<< " " << turbulent		/*  5 */
 			<< std::endl;
 	}
+
+	// TODO: NetCDF output...
 }
 
 const OutputHandler::Dimensions 

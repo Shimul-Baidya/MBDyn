@@ -863,7 +863,7 @@ The optional keyword \kw{model} activates the selection of the implementation:
 
 \paragraph{Output.}
 The module appends additional output to the row of the element it is
-attached to in the \texttt{.jnt} file. Two columns are added:
+attached to in the \texttt{.jnt} file. The following columns are added:
 \begin{itemize}
   \item \kw{a}: the actual total activation of the muscle;
   \item \kw{aReq}: the \emph{requested} activation of the muscle, before
@@ -890,7 +890,7 @@ attached to in the \texttt{.jnt} file. Two columns are added:
   \item (if \kw{short range stiffness}): \kw{SRSdfdx}: the gradient of the short-range
     stiffness force contribution with respect to the nondimensional stretch.
 \end{itemize}
-The two parameters are also added to the NetCDF output of the element.
+The same parameters are also added to the NetCDF output of the element, with the names indicated above.
 
 \section{Drive Caller Modules}
 

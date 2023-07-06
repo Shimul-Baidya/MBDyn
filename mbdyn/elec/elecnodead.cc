@@ -53,8 +53,10 @@ ElectricNodeAd::ElectricNodeAd(unsigned int uL,
       ElectricNode(uL, pDO, dx, dxp, fOut),
       ScalarDifferentialNodeAd(uL, pDO, dx, dxp, fOut)
 {
+	NO_OP;
 }
 
-ElectricNodeAd::~ElectricNodeAd()
+ElectricNodeAd::~ElectricNodeAd(void)
 {
+	NO_OP;
 }

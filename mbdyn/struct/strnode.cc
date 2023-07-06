@@ -1884,7 +1884,7 @@ StructNode::OutputPrepare(OutputHandler &OH)
 			}
 
 			std::ostringstream os;
-			os << "node.struct." << GetLabel();
+			os << "node.struct." << GetLabel(); // FIXME: use ShortDesc!
 			(void)OH.CreateVar(os.str(), type);
 
 			// node sub-data

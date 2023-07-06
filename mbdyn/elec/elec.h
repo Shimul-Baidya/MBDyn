@@ -35,6 +35,7 @@
 #define ELEC_H
 
 #include "elem.h"
+#include "scalarnode.h"
       
 extern const char* psElectricNames[];
 

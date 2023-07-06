@@ -34,6 +34,7 @@ begin: control data;
 	electric nodes: 4;
 	genels: 2;
 	default output: all;
+	#output results: netcdf;
 end: control data;
 
 set: real R1 = 20.;       # resistance [ohms]   
@@ -69,8 +70,7 @@ begin: elements;
       1, electric, algebraic, 
       sine, 0., 10*2.*pi, 1., forever, 0.;      
            
-	module load: "libmodule-fab-electric.so";
-
+	module load: "libmodule-fab-electric";
 
 	user defined: 1, resistor, 
 	   1,             # node of source 
@@ -116,3 +116,4 @@ begin: elements;
 
 end: elements;
 
+# vim:ft=mbd

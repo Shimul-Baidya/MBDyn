@@ -123,9 +123,46 @@ contained in specific variables, whose names describe the contents.
 
 Currently supported node types are:
 \begin{itemize}
+\item Abstract nodes, indicated as \kw{abstr}.
+\item Electric nodes, indicated as \kw{elec}.
+\item Pressure nodes, indicated as \kw{pres}.
 \item Structural nodes, indicated as \kw{struct}.
+\item Thermal nodes, indicated as \kw{thermal}.
 \end{itemize}
 
+
+\subsubsection{Abstract Node}
+\label{sec:NetCDF:Node:Abstract Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.abstr.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state is present;
+
+\item \kw{node.elec.}\bnt{label}\kw{.X} contains the state of the node;
+
+\item \kw{node.elec.}\bnt{label}\kw{.XP} contains the time derivative of the state of the node.
+\end{itemize}
+
+
+\subsubsection{Electric Node}
+\label{sec:NetCDF:Node:Electric Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.elec.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state (of the voltage) is present;
+
+\item \kw{node.elec.}\bnt{label}\kw{.V} contains the voltage of the node;
+
+\item \kw{node.elec.}\bnt{label}\kw{.VP} contains the time derivative of the voltage of the node.
+\end{itemize}
+
+
+\subsubsection{Pressure Node}
+\label{sec:NetCDF:Node:Pressure Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.pres.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{algebraic}, indicating that the time derivative of the state (of the pressure) is not present;
+
+\item \kw{node.pres.}\bnt{label}\kw{.p} contains the pressure of the node;
+\end{itemize}
 
 
 \subsubsection{Structural Node}
@@ -170,23 +207,35 @@ in the appropriate reference frame;
 of the node, in the appropriate reference frame.
 \end{itemize}
 
-If requested, the inertia associated to \kw{dynamic} nodes is output
+If requested, the inertia associated with \kw{dynamic} nodes is output
 within the namespace of the node, although actually handled
 by the corresponding \kw{automatic structural} element.
 As a consequence, extra variables can appear in the output
 of \kw{dynamic} nodes.
 \begin{itemize}
 \item \kw{node.struct.}\bnt{label}\kw{.B} contains the momentum of the inertia
-associated to the node, in the appropriate reference frame;
+associated with the node, in the appropriate reference frame;
 
 \item \kw{node.struct.}\bnt{label}\kw{.G} contains the momenta moment of the inertia
-associated to the node, in the appropriate reference frame;
+associated with the node, in the appropriate reference frame;
 
 \item \kw{node.struct.}\bnt{label}\kw{.BP} contains the derivative of the momentum
-of the inertia associated to the node, in the appropriate reference frame;
+of the inertia associated with the node, in the appropriate reference frame;
 
 \item \kw{node.struct.}\bnt{label}\kw{.GP} contains the derivative of momenta moment
-of the inertia associated to the node, in the appropriate reference frame.
+of the inertia associated with the node, in the appropriate reference frame.
+\end{itemize}
+
+
+\subsubsection{Thermal Node}
+\label{sec:NetCDF:Node:Thermal Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.thermal.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state (of the temperature) is present;
+
+\item \kw{node.thermal.}\bnt{label}\kw{.T} contains the temperature of the node;
+
+\item \kw{node.thermal.}\bnt{label}\kw{.TP} contains the time derivative of the temperature of the node.
 \end{itemize}
 
 

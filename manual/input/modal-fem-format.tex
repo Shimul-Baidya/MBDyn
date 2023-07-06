@@ -279,7 +279,7 @@ Note however that the positive-definiteness of the generalized
 stiffness matrix is not a requirement.
 
 \item \kw{RECORD GROUP 11} contains the lumped inertia matrix
-associated to the \nt{NNODES} (exposed) FEM nodes;
+associated with the \nt{NNODES} (exposed) FEM nodes;
 for each node, the $X$, $Y$, $Z$, $RX$, $RY$ and $RY$ inertia
 coefficients are listed (they can be zero).
 The nodal mass coefficients $Y$ and $Z$ should be equal
@@ -485,7 +485,7 @@ The corresponding global inertia properties are:
 \subsection{Example: Static Model}
 As an example, a very simple, hand-made FEM model file is presented below.
 It models a FEM model made of three aligned nodes, where inertia 
-is only associated to the mid-node.
+is only associated with the mid-node.
 As a consequence, the three mode shapes must be interpreted as static
 shapes, since the modal mass matrix is null.
 Note that each line is prefixed with a two-digit line number 
