@@ -152,6 +152,10 @@ GenelClamp::AssRes(SubVectorHandler& WorkVec,
 
 	WorkVec.PutItem(1, iRowIndex, -dRct);
 
+        DEBUGCERR("GenelClamp::AssRes: dGet() = " << dGet() << "\n");
+        DEBUGCERR("GenelClamp::AssRes: dVal = " << dVal << "\n");
+        DEBUGCERR("GenelClamp::AssRes: dCoef = " << dCoef << "\n");
+
 	doublereal dConstr = dGet() - dVal;
 	if (SD.iOrder == 0
 		&& SD.pNode->GetDofType(0) == DofOrder::DIFFERENTIAL
@@ -159,6 +163,9 @@ GenelClamp::AssRes(SubVectorHandler& WorkVec,
 	{
 		dConstr /= dCoef;
 	}
+
+        DEBUGCERR("GenelClamp::AssRes: dConstr = " << dConstr << "\n");
+
 	WorkVec.PutItem(2, iFirstReactionIndex, dConstr);
 
 	return WorkVec;
