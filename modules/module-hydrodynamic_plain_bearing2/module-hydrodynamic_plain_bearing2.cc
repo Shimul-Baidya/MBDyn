@@ -93,7 +93,7 @@ namespace {
 #define HYDRO_ASSERT(expr) ASSERT(expr)
 #endif
 
-#if HYDRO_DEBUG >= 2
+#if HYDRO_TRACE_LEVEL > 0
 #define HYDRO_TRACE(expr) static_cast<void>(std::cerr << expr)
 #else
 #define HYDRO_TRACE(expr) static_cast<void>(0)
@@ -5608,7 +5608,7 @@ namespace {
                return pDM->dGetStepIntegratorCoef(iDof);
           }
 
-#if HYDRO_DEBUG > 1
+#if HYDRO_TRACE_LEVEL > 0
 #define HYDRO_DUMP_VAR(pRootElem, Expr) \
           (pRootElem)->DumpVar(__FILE__, __LINE__, __PRETTY_FUNCTION__,  #Expr, Expr)
 
@@ -6996,7 +6996,7 @@ namespace {
           return pDM->pGetNonlinearSolver()->GetNonlinearSolverHint(eType);
      }
 
-#if HYDRO_DEBUG > 1
+#if HYDRO_TRACE_LEVEL > 0
      template <index_type NumRows, index_type NumCols>
      void HydroRootElement::DumpVar(const char* pszFile, int nLine, const char* pszFunc, const char* pszExpr, const SpMatrixBase<SpGradient, NumRows, NumCols>& A) const
      {
@@ -16052,7 +16052,7 @@ namespace {
           std::cerr.precision(16);
 #endif
 
-          DEBUGCERR("Update node " << pNode->iGetNodeNumber() << "\n");
+          HYDRO_TRACE("Update node " << pNode->iGetNodeNumber() << "\n");
           HYDRO_TRACE("X1=[" << X1 << "].';\n");
           HYDRO_TRACE("R1=[" << R1 << "].';\n");
           HYDRO_TRACE("o1=[" << o1 << "].';\n");
@@ -20421,7 +20421,7 @@ namespace {
                          const doublereal alpha = rgGaussPntDat[idxGauss].detJ
                               * dGetGaussWeight(i, iIntegRule)
                               * dGetGaussWeight(j, iIntegRule)
-                              * dEquationScale / (dCoef * dA); // do not scale the residual by surface area
+                              * dEquationScale / dA; // do not scale the residual by surface area
                          const SpColVector<doublereal, iNumNodes>& N = rgGaussPntDat[idxGauss].N;
                          const SpMatrix<doublereal, 2, iNumNodes>& B = rgGaussPntDat[idxGauss].B;
                          const SpMatrix<doublereal, iNumNodes, iNumNodes>& BTB = rgGaussPntDat[idxGauss].BTB;
