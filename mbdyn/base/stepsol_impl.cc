@@ -125,7 +125,12 @@ ImplicitEulerIntegrator::SetCoef(doublereal dT,
 		doublereal dAlpha,
 		enum StepChange /* NewStep */)
 {
-	db0Differential = db0Algebraic = dT*dAlpha;
+        DEBUGCERR("ImplicitEulerIntegrator::SetCoef: dT = " << dT << "\n");
+        DEBUGCERR("ImplicitEulerIntegrator::SetCoef: dAlpha = " << dAlpha << "\n");
+
+        db0Differential = db0Algebraic = dT*dAlpha;
+
+        DEBUGCERR("ImplicitEulerIntegrator::SetCoef: db0Differential = " << db0Differential << "\n");
 }
 
 /* Nota: usa predizione lineare per le derivate (massimo ordine possibile) */
