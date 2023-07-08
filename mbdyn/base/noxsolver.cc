@@ -799,8 +799,8 @@ namespace {
 
           pNonlinearSolver->reset(*pSolutionView);
 
-          if (!bKeepJacAcrossSteps) {
-               ForcePrecondRebuild();
+          if (!bKeepJacAcrossSteps || bInDerivativeSolver) {
+               ForcePrecondRebuild(); // Will be useful for automatic derivative solver
           }
 
           iIterCnt = 0;
