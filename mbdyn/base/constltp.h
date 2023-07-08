@@ -285,8 +285,8 @@ typedef ConstitutiveLaw<Vec6, Mat6x6> ConstitutiveLaw6D;
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                   sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+                                   sp_grad::SpColVector<doublereal, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -304,8 +304,8 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, Consti
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+                                   sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -338,8 +338,8 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradien
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+                                   sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -357,9 +357,9 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradPro
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 const sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& EpsPrime,
-                                 sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+                                 const sp_grad::SpColVector<doublereal, iDim>& EpsPrime,
+                                 sp_grad::SpColVector<doublereal, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -376,9 +376,9 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, Consti
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 const sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& EpsPrime,
-                                 sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+                                   const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& EpsPrime,
+                                   sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -420,9 +420,9 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradien
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 const sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& EpsPrime,
-                                 sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+                                   const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& EpsPrime,
+                                   sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp)
 {
      using namespace sp_grad;
 
