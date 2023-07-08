@@ -373,8 +373,8 @@ class Vec3: public sp_grad::SpConstMatElemAdapter<Vec3>
      Vec3& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& v) {
           using namespace sp_grad;
 
-          static_assert(v.iNumRowsStatic == iNumRowsStatic);
-          static_assert(v.iNumColsStatic == iNumColsStatic);
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumRowsStatic == iNumRowsStatic);
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumColsStatic == iNumColsStatic);
           
           for (index_type i = 1; i <= iNumRowsStatic; ++i) {
                (*this)(i) = v.dGetValue(i, 1);
@@ -1097,8 +1097,8 @@ class Mat3x3: public sp_grad::SpConstMatElemAdapter<Mat3x3>
      Mat3x3& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& m) {
           using namespace sp_grad;
 
-          static_assert(m.iNumRowsStatic == iNumRowsStatic);
-          static_assert(m.iNumColsStatic == iNumColsStatic);
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumRowsStatic == iNumRowsStatic);
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumColsStatic == iNumColsStatic);
 
           for (index_type j = 1; j <= iNumColsStatic; ++j) {
                for (index_type i = 1; i <= iNumRowsStatic; ++i) {

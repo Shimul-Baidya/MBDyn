@@ -5322,9 +5322,11 @@ namespace sp_grad {
      inline constexpr
      typename util::ResultType<LhsValue, RhsValue>::Type
      Dot(const SpMatElemExprBase<LhsValue, LhsExpr>& u, const SpMatElemExprBase<RhsValue, RhsExpr>& v) {
-          static_assert(u.iNumRowsStatic == v.iNumRowsStatic);
-          static_assert(u.iNumColsStatic == 1);
-          static_assert(v.iNumColsStatic == 1);
+          typedef SpMatElemExprBase<LhsValue, LhsExpr> uType;
+          typedef SpMatElemExprBase<RhsValue, RhsExpr> vType;
+          static_assert(uType::iNumRowsStatic == vType::iNumRowsStatic);
+          static_assert(uType::iNumColsStatic == 1);
+          static_assert(vType::iNumColsStatic == 1);
           SP_GRAD_ASSERT(u.iGetNumRows() == v.iGetNumRows());
 
           typedef const SpMatElemExprBase<LhsValue, LhsExpr>& LhsTmpExpr;
@@ -5371,9 +5373,11 @@ namespace sp_grad {
      inline constexpr
      typename util::ResultType<LhsValue, RhsValue>::Type
      Dot(const SpMatElemExprBase<LhsValue, LhsExpr>& u, const SpMatElemExprBase<RhsValue, RhsExpr>& v, const SpGradExpDofMapHelper<typename util::ResultType<LhsValue, RhsValue>::Type>& oDofMap) {
-          static_assert(u.iNumRowsStatic == v.iNumRowsStatic);
-          static_assert(u.iNumColsStatic == 1);
-          static_assert(v.iNumColsStatic == 1);
+          typedef SpMatElemExprBase<LhsValue, LhsExpr> uType;
+          typedef SpMatElemExprBase<RhsValue, RhsExpr> vType;
+          static_assert(uType::iNumRowsStatic == vType::iNumRowsStatic);
+          static_assert(uType::iNumColsStatic == 1);
+          static_assert(vType::iNumColsStatic == 1);
           SP_GRAD_ASSERT(u.iGetNumRows() == v.iGetNumRows());
 
           typedef const SpMatElemExprBase<LhsValue, LhsExpr>& LhsTmpExpr;
@@ -5451,14 +5455,14 @@ namespace sp_grad {
      template <index_type iRowStart, index_type iRowStep, index_type iNumRows, typename ValueType, typename Expr>
      inline constexpr SpSubMatStatExpr<ValueType, const SpMatElemExprBase<ValueType, Expr>&, iRowStart, iRowStep, iNumRows, 1, 1, 1>
      SubColVector(const SpMatElemExprBase<ValueType, Expr>& A) {
-          static_assert(A.iNumColsStatic == 1);
+          static_assert(SpMatElemExprBase<ValueType, Expr>::iNumColsStatic == 1);
           return decltype(SubColVector<iRowStart, iRowStep, iNumRows>(A))(A);
      }
 
      template <index_type iColStart, index_type iColStep, index_type iNumCols, typename ValueType, typename Expr>
      inline constexpr SpSubMatStatExpr<ValueType, const SpMatElemExprBase<ValueType, Expr>&, 1, 1, 1, iColStart, iColStep, iNumCols>
      SubRowVector(const SpMatElemExprBase<ValueType, Expr>& A) {
-          static_assert(A.iNumRowsStatic == 1);
+          static_assert(SpMatElemExprBase<ValueType, Expr>::iNumRowsStatic == 1);
           return decltype(SubRowVector<iColStart, iColStep, iNumCols>(A))(A);
      }
 

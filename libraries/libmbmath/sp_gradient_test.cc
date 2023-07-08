@@ -3308,8 +3308,8 @@ namespace sp_grad_test {
                     }
                }
 
-               SpMatrix<T, A.iNumRowsStatic, B.iNumColsStatic> K(A.iNumRowsStatic, B.iNumColsStatic, 0);
-               SpMatrix<T, A.iNumRowsStatic, B.iNumColsStatic> L(A.iNumRowsStatic, B.iNumColsStatic, 0);
+               SpMatrix<T, decltype(A)::iNumRowsStatic, decltype(B)::iNumColsStatic> K(A.iNumRowsStatic, B.iNumColsStatic, 0);
+               SpMatrix<T, decltype(A)::iNumRowsStatic, decltype(B)::iNumColsStatic> L(A.iNumRowsStatic, B.iNumColsStatic, 0);
 
                for (index_type j = 1; j <= B.iGetNumCols(); ++j) {
                     for (index_type i = 1; i <= A.iGetNumRows(); ++i) {
