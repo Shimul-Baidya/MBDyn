@@ -782,6 +782,9 @@ NonlinearSolver::MakeResTest(Solver *pS,
 		dScaleAlgEqu *= dScaleAlgebraic;
 	}
 
+        DEBUGCERR("NonlinearSolver::MakeResTest: dScaleAlgebraic = " << dScaleAlgebraic << "\n");
+        DEBUGCERR("NonlinearSolver::MakeResTest: dScaleAlgEqu = " << dScaleAlgEqu << "\n");
+
 	dTest = pResTest->MakeTest(pS, Size, Vec, true, dScaleAlgEqu, &dTestDiff) * dTestScale;
 	return ((dTest <= dTol) && pS->pGetDataManager()->IsConverged()); // operator <= will work also for NonlinearSolverTestNone
 }
