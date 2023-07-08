@@ -340,8 +340,8 @@ DerivativeSolver::Advance(Solver* pS,
 
 			/* Save smallest residual error and corresponding derivative coefficient. */
 			if (Err < dResErrMin) {
-				dResErrMin = Err;
-				dSolErrMin = SolErr;
+                                dResErrMin = Err;
+                                dSolErrMin = SolErr;
 				dCoefBest = dCoef;
 			}
 
@@ -377,20 +377,23 @@ DerivativeSolver::Advance(Solver* pS,
 			} else {
 				/* Convergence could not be achieved with any coefficient.
 				 * Choose those coefficient with smallest residual error 
-				 * and increase the tolerance, so it will converge in any case. */
-				const doublereal dSafetyFactor = 1.01;
+				 * and increase the tolerance, so it should converge in any case. */
+				const doublereal dSafetyFactor = 2.;
 
 				dCoef = dCoefBest;
-				dTol = dSafetyFactor * dResErrMin;
-				dSolTol = dSafetyFactor * dSolErrMin;
+                                // No need to apply tighter tolerances than requested,
+                                // because the solver could converge even before reaching this point.
+				dTol = std::max(dTol, dSafetyFactor * dResErrMin);
+				dSolTol = std::max(dSolTol, dSafetyFactor * dSolErrMin);
                                 MaxIterFact = 2;
 			}
 
 			silent_cout("Derivatives(" << i + 1  << '/' << 2 * iMaxIterCoef + 1
-				<< ") t=" << pDM->dGetTime()
-				<< " coef=" << dCoef / TStep
-				<< " tol=" << dTol
-				<< std::endl);
+                                    << ") t=" << pDM->dGetTime()
+                                    << " coef=" << dCoef / TStep
+                                    << " tol=" << dTol
+                                    << " soltol=" << dSolTol
+                                    << "\n");
 		}
 		/* if it gets here, it surely converged */
 		pDM->AfterConvergence();
@@ -474,11 +477,9 @@ doublereal DerivativeSolver::dGetCoef(unsigned int iDof) const
 doublereal
 DerivativeSolver::TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const
 {
-     // In case of automatic detection of the "derivatives coefficient",
-     // we want to make sure, that the first residual is independent on
-     // the actual value of dCoef. In that way, we will select the best
-     // coefficient based on the true residual.
-     dAlgebraicEqu = dCoef * dCoef / dInitialCoef;
+     dAlgebraicEqu = dCoef;
+
+     DEBUGCERR("DerivativeSolver::TestScale: dAlgebraicEqu = " << dAlgebraicEqu << "\n");
 
      return 1.;
 }
