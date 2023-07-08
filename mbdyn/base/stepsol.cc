@@ -378,7 +378,7 @@ DerivativeSolver::Advance(Solver* pS,
 				/* Convergence could not be achieved with any coefficient.
 				 * Choose those coefficient with smallest residual error 
 				 * and increase the tolerance, so it should converge in any case. */
-				const doublereal dSafetyFactor = 2.;
+				const doublereal dSafetyFactor = 1.1;
 
 				dCoef = dCoefBest;
                                 // No need to apply tighter tolerances than requested,
