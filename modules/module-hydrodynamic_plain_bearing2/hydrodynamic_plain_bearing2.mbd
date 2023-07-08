@@ -47,17 +47,17 @@ begin: initial value;
 
         max iterations: 100;
         tolerance: 1e-6, test, norm, 1e-6, test, norm;
-        method: ss4, 0.0;
+        method: ss4, 0.6;
 
         enforce constraint equations: constraint violations;
 
-        derivatives tolerance: 1e-3, 1e-3;
-        derivatives max iterations: 20;
-        derivatives coefficient: 1e-5;
+        derivatives tolerance: 1e-6, 1e-6;
+        derivatives max iterations: 3;
+        derivatives coefficient: 1e-6, auto;
 
         ## set: bool enable_mcp = TRUE;
         ## linear solver: umfpack, grad, scale, row max column max, always, max iterations, 10;
-        ## nonlinear solver: mcp newton min fb, print convergence info, yes, lambda min, 0., tolerance x, 1e-7;
+        ##nonlinear solver: mcp newton min fb, print convergence info, no, lambda min, 0., tolerance x, 1e-7;
 
         ## set: bool enable_mcp = TRUE;
         ## linear solver: siconos dense;
@@ -65,7 +65,7 @@ begin: initial value;
 
         ## set: bool enable_mcp = FALSE;
         ## linear solver: umfpack, grad, scale, row max column max, always, max iterations, 10;
-        ## nonlinear solver: line search, modified, 0, default solver options, heavy nonlinear, print convergence info, yes, lambda min, 0., tolerance x, 1e-7;
+        ##nonlinear solver: line search, modified, 0, default solver options, heavy nonlinear, print convergence info, no, lambda min, 0., tolerance x, 1e-7;
 
         ## set: bool enable_mcp = TRUE;
         ## linear solver: siconos dense;
@@ -86,9 +86,11 @@ begin: initial value;
         print convergence info, no,
         verbose, yes,
         minimum step, 1e-12,
+        recovery step, 1e-6,
         linear solver tolerance, 1e-12,
-        linear solver max iterations, 300,
-        krylov subspace size, 20;
+        linear solver max iterations, 30,
+        krylov subspace size, 30,
+        verbose, yes;
 
         threads: assembly, 1;
         threads: solver, 1;
@@ -101,7 +103,9 @@ begin: control data;
        print: equation description, to file;
        #print: element connection, to file;
        #print: node connection, to file;
-       finite difference jacobian meter: one, coefficient, 1e-6, order, 1,output,none,matrices, yes, statistics iteration,yes;
+
+       ##finite difference jacobian meter: one, coefficient, 1e-5, order, 1, output, none, matrices, no, statistics iteration, yes, statistics, yes;
+       ##finite difference jacobian meter: one, forward mode automatic differentiation, output, none, statistics, yes, statistics iteration, yes, matrices, no;
        use automatic differentiation;
        skip initial joint assembly;
        max iterations: 10;
@@ -709,7 +713,7 @@ begin: elements;
         hydrodynamic plain bearing2,
             hydraulic fluid, reference, (6001),
             viscosity vapor, (1.5e-06),
-            ##mesh, linear finite difference,
+            ## mesh, linear finite difference,
             mesh, quadratic finite element,
             ## enable mcp, enable_mcp,
             ## pressure step integrator, implicit euler,
@@ -737,7 +741,7 @@ begin: elements;
                     rectangle, width, 1.38e-3, height, 0.8 * (0.0062),
             theta dof scale, 1e6,
             pressure dof scale, 1e9,
-            equation scale, 5e-5,
+            equation scale, 1.,
             output pressure, yes,
             output density, yes,
             output friction loss, yes,
