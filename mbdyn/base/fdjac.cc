@@ -199,7 +199,10 @@ void FiniteDifferenceJacobian<N>::JacobianCheckImpl(const NonlinearProblem* cons
      // NOTE: might not be safe!
 
      for (integer j = 1; j <= pJac->iGetNumCols(); ++j) {
-          inc.PutCoef(j, pertFD[0] * dFDJacCoef);
+          const doublereal Xj = pDM->GetDofType(j) == DofOrder::DIFFERENTIAL ? pDM->GetpXPCurr()->dGetCoef(j) : pDM->GetpXCurr()->dGetCoef(j);
+          const doublereal h = dFDJacCoef * (1. + fabs(Xj));
+
+          inc.PutCoef(j, pertFD[0] * h);
 
           ASSERT(incsol.size() >= idxFD.size());
           static_assert(pertFD.size() >= idxFD.size());
@@ -212,7 +215,7 @@ void FiniteDifferenceJacobian<N>::JacobianCheckImpl(const NonlinearProblem* cons
                incsol[idxFD[k]].Reset();
                pNLP->Residual(&incsol[idxFD[k]]);
 
-               inc.PutCoef(j, (k + 1 < pertFD.size()) ? (pertFD[k + 1] - pertFD[k]) * dFDJacCoef : 0.);
+               inc.PutCoef(j, (k + 1 < pertFD.size()) ? (pertFD[k + 1] - pertFD[k]) * h : 0.);
           }
 
           doublereal normColj = 0.;
@@ -226,7 +229,7 @@ void FiniteDifferenceJacobian<N>::JacobianCheckImpl(const NonlinearProblem* cons
                     Jacij -= incsol[idxFD[k]](i) * coefFD[k];
                }
 
-               Jacij /=  dFDJacCoef;
+               Jacij /=  h;
 
                normColj += Jacij * Jacij;
 
