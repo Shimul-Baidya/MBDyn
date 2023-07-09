@@ -188,7 +188,6 @@ class DerivativeSolver:
 	public ImplicitStepIntegrator{
 private:
 	doublereal dCoef;
-	const doublereal dInitialCoef;
 	const int iMaxIterCoef;
 	const doublereal dFactorCoef;
 

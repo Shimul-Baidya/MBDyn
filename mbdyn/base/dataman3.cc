@@ -161,7 +161,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		"default" "scale",
 
 		"finite" "difference" "jacobian" "meter",
-
+                "jacobian" "check",
 		"read" "solution" "array",
 
 		"select" "timeout",
@@ -258,7 +258,8 @@ DataManager::ReadControl(MBDynParser& HP,
 		DEFAULTAERODYNAMICOUTPUT,
 		DEFAULTSCALE,
 
-		FDJAC_METER,
+                FDJAC_METER,
+                JACOBIAN_CHECK,
 
 		READSOLUTIONARRAY,
 
@@ -1327,7 +1328,8 @@ EndOfUse:
 			}
 			break;
 
-                case FDJAC_METER: {
+                case FDJAC_METER:
+                case JACOBIAN_CHECK: {
                         if (pFDJac != nullptr) {
                                 silent_cerr("\"finite difference jacobian meter\" already defined" << std::endl);
                                 throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);

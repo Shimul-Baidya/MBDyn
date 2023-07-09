@@ -256,7 +256,6 @@ DerivativeSolver::DerivativeSolver(const doublereal Tl,
 		const doublereal dFactorCoef)
 : ImplicitStepIntegrator(iMaxIt, Tl, dSolTl, 1, 1, bmod_res_test),
 dCoef(dC),
-dInitialCoef(dC),
 iMaxIterCoef(iMaxIterCoef),
 dFactorCoef(dFactorCoef)
 {
@@ -295,7 +294,7 @@ DerivativeSolver::Advance(Solver* pS,
 		pDM->LinkToSolution(*pXCurr, *pXPrimeCurr);
 
 		bool bConverged = false;
-		ASSERT(dInitialCoef == dCoef);
+                const doublereal dInitialCoef = dCoef;
 		doublereal dCoefBest = dCoef;
 		doublereal dResErrMin = std::numeric_limits<doublereal>::max();
 		doublereal dSolErrMin = dResErrMin;
