@@ -211,7 +211,7 @@ namespace sp_grad {
      };
 
      template <typename T>
-     class SpGradientTraits;
+     struct SpGradientTraits;
 
      template <>
      struct SpGradientTraits<doublereal> {

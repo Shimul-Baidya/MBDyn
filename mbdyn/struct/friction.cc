@@ -283,7 +283,7 @@ DiscreteCoulombFriction::DiscreteCoulombFriction(
 		const BasicScalarFunction *const ff,
 		const doublereal s2,
 		const doublereal vr) :
-converged_sticked(true),
+//converged_sticked(true),
 status(sticked),
 transition_type(null),
 converged_v(0),
@@ -431,7 +431,7 @@ void DiscreteCoulombFriction::AssRes(
 //* 			std::cerr << "sono dentro; v: " << v << 
 //*				" previous_switch_v: " << previous_switch_v << std::endl;
 //* 			std::cerr << "current velocity: " << current_velocity << std::endl;
-			if (((transition_type != from_sticked_to_sliding) ||
+			if (((transition_type != from_sticked_to_sliding) &&
 				(transition_type != from_sticking_to_sliding)) &&
 				((std::fabs(v-current_velocity) < std::fabs(previous_switch_v)) ||
 					(first_switch == true))) {

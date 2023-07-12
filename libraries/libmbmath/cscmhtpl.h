@@ -88,12 +88,12 @@ public:
      virtual integer iGetNumCols() const override { return NCols; }
 
      virtual const doublereal&
-     operator () (const integer iRow, const integer iCol) const {
+     operator () (const integer iRow, const integer iCol) const override {
           return *pFindItem(iRow, iCol);
      }
 
      virtual doublereal&
-     operator () (const integer iRow, const integer iCol) {
+     operator () (const integer iRow, const integer iCol) override {
           return *pFindItem(iRow, iCol);
      }
 
@@ -250,7 +250,7 @@ public:
      virtual VectorHandler&
      MatVecMul_base(void (VectorHandler::*op)(integer iRow,
 					      const doublereal& dCoef),
-		    VectorHandler& out, const VectorHandler& in) const {
+		    VectorHandler& out, const VectorHandler& in) const override {
 	  ASSERT(in.iGetSize() == iGetNumCols());
 	  ASSERT(out.iGetSize() == iGetNumRows());
 
@@ -271,7 +271,7 @@ public:
      virtual VectorHandler&
      MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
 					       const doublereal& dCoef),
-		     VectorHandler& out, const VectorHandler& in) const {
+		     VectorHandler& out, const VectorHandler& in) const override {
 	  ASSERT(in.iGetSize() == iGetNumRows());
 	  ASSERT(out.iGetSize() == iGetNumCols());
 

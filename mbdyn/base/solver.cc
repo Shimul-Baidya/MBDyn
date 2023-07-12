@@ -7135,8 +7135,14 @@ Solver::Eig(bool bNewLine)
 
 doublereal Solver::dGetInitialMaxTimeStep() const
 {
-	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(PostponedDriveCaller)) {
-		return ::dDefaultMaxTimeStep;
+// 	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(PostponedDriveCaller)) {
+// 		return ::dDefaultMaxTimeStep;
+// 	}
+	{
+		auto ts_drv = MaxTimeStep.pGetDriveCaller();
+		if (dynamic_cast<PostponedDriveCaller*>(ts_drv) != 0) {
+			return ::dDefaultMaxTimeStep;
+		}
 	}
 
 	// The same behavior like in previous releases

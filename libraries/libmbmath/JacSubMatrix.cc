@@ -299,11 +299,9 @@ void ExpandableMatrix::SetBlockDim(const integer block, const integer ncols) {
 	ASSERTMSGBREAK(block>0, "ExpandableMatrix:SetBlockDim(), block shold be > 0");
 	ASSERTMSGBREAK(block <= GetNBlocks(), "ExpandableMatrix:SetBlockDim(), block shold be "
 		"<= GetNBlocks()");
-	int pippo = 0;
 	for (std::vector<ExpandableRowVector>::iterator i = v[block-1].rows.begin();
 		i != v[block-1].rows.end(); ++i)
 	{
-			pippo++;
 			i->ReDim(ncols);
 	}
 }

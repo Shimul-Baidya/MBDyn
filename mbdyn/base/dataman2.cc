@@ -358,7 +358,7 @@ DataManager::DofOwnerInit(void)
 					continue;
 				}
 				switch (pDispNode->GetStructDispNodeType()) {
-				case StructNode::STATIC:
+				case StructDispNode::STATIC:
 					continue;
 
 				default:

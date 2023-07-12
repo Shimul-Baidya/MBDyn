@@ -435,7 +435,14 @@ MatrixHandler::dGetCoef(integer ix, integer iy) const {
         return operator()(ix, iy);
 }
 
-#define HAVE_CONDITION_NUMBER ((defined(HAVE_DGETRF_) || defined(HAVE_DGETRF)) && (defined(HAVE_DGECON_) || defined(HAVE_DGECON)))
+// according to clang this leads to undefined behavior
+// #define HAVE_CONDITION_NUMBER ((defined(HAVE_DGETRF_) || defined(HAVE_DGETRF)) && (defined(HAVE_DGECON_) || defined(HAVE_DGECON)))
+// replacement:
+#if ((defined(HAVE_DGETRF_) || defined(HAVE_DGETRF)) && (defined(HAVE_DGECON_) || defined(HAVE_DGECON)))
+#define HAVE_CONDITION_NUMBER 1
+#else
+#define HAVE_CONDITION_NUMBER 0
+#endif
 
 namespace {
         void LapackCopyMatrix(const MatrixHandler& MH, std::vector<doublereal>& A, integer& M, integer& N)

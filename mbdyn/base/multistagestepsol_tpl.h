@@ -212,7 +212,8 @@ tplStageNIntegrator<N>::~tplStageNIntegrator(void)
 
 template <unsigned N> template <unsigned S>
 void
-tplStageNIntegrator<N>::PredictDofForStageS(const int DCount,
+tplStageNIntegrator<N>::PredictDofForStageS(
+	const int DCount,
 	const DofOrder::Order Order,
 	const VectorHandler* const pSol) const
 {
@@ -228,8 +229,10 @@ tplStageNIntegrator<N>::PredictDofForStageS(const int DCount,
 		doublereal dXP = dPredDerForStageS(S, dXm1mN, dXP0mN);
 		if (S == N) {
 			dXP0mN[0] = dXP;
-		} else {
+		} else if (S < N) {
 			dXP0mN[S + 1] = dXP;
+		} else {
+			ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
 		doublereal dX = dPredStateForStageS(S, dXm1mN, dXP0mN);
 
@@ -258,8 +261,10 @@ tplStageNIntegrator<N>::PredictDofForStageS(const int DCount,
 		doublereal dX = dPredDerAlgForStageS(S, dXIm1mN, dX0mN);
 		if (S == N) {
 			dX0mN[0] = dX;
-		} else {
+		} else if (S < N) {
 			dX0mN[S + 1] = dX;
+		} else {
+			ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
 		doublereal dXI = dPredStateAlgForStageS(S, dXIm1mN, dX0mN);
 

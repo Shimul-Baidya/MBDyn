@@ -180,8 +180,9 @@ NonlinearSolverTest::Type NonlinearSolverTestNone::GetType() const
 }
 
 doublereal
-NonlinearSolverTestNone::MakeTest(Solver *pS, integer Size, 
+NonlinearSolverTestNone::MakeTest(Solver *pS, const integer& Size,
 		const VectorHandler& Vec, bool bResidual,
+		doublereal dScaleAlgEqu,
 		doublereal* pTestDiff)
 {
    	DEBUGCOUTFNAME("NonlinearSolverTestNone::MakeTest");

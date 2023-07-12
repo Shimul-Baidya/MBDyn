@@ -103,6 +103,7 @@ public:
 		return out;
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& EpsPrime = ::mb_zero<T>()) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
@@ -314,6 +315,7 @@ public:
 		return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& /* EpsPrime */  = mb_zero<T>()) {
 		ElasticConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		ConstitutiveLaw<T, Tder>::F = ElasticConstitutiveLaw<T, Tder>::PreStress
@@ -363,6 +365,7 @@ public:
 		return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& /* EpsPrime */ = mb_zero<T>()) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		ConstitutiveLaw<T, Tder>::F = ElasticConstitutiveLaw<T, Tder>::PreStress
@@ -432,7 +435,7 @@ public:
 		NO_OP;
 	};
 
-	virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy(void) const {
+	virtual ConstitutiveLaw<Vec6, Mat6x6>* pCopy(void) const override {
 		ConstitutiveLaw<Vec6, Mat6x6>* pCL = 0;
 
 		typedef LinearElasticGenericAxialTorsionCouplingConstitutiveLaw<Vec6, Mat6x6> cl;
@@ -446,13 +449,14 @@ public:
 		return pCL;
 	};
 
-	virtual std::ostream& Restart(std::ostream& out) const {
+	virtual std::ostream& Restart(std::ostream& out) const override {
 		out << "linear elastic generic axial torsion coupling, ",
 			Write(out, FDE, ", ") << ", " << dAxialTorsionCoupling;
 		return Restart_int(out);
 	};
 
-	virtual void Update(const Vec6& Eps, const Vec6& /* EpsPrime */ = mb_zero<Vec6>()) {
+	using ConstitutiveLawAd<Vec6, Mat6x6>::Update;
+	virtual void Update(const Vec6& Eps, const Vec6& /* EpsPrime */ = mb_zero<Vec6>()) override {
 		Epsilon = Eps;
 		doublereal d = Epsilon.dGet(1);
 		FDE.Put(4, 4, dRefTorsion + d*dAxialTorsionCoupling);
@@ -515,7 +519,7 @@ public:
 		NO_OP;
 	};
 
-	virtual ConstitutiveLaw1D* pCopy(void) const {
+	virtual ConstitutiveLaw1D* pCopy(void) const override {
 		ConstitutiveLaw1D* pCL = 0;
 
 		typedef CubicElasticGenericConstitutiveLaw<doublereal, doublereal> cl;
@@ -527,7 +531,7 @@ public:
 		return pCL;
 	};
 
-	virtual std::ostream& Restart(std::ostream& out) const {
+	virtual std::ostream& Restart(std::ostream& out) const override {
 		out << "cubic elastic generic, ",
 			Write(out, Stiff1, ", ") << ", ",
 			Write(out, Stiff2, ", ") << ", ",
@@ -535,7 +539,8 @@ public:
 		return ElasticConstitutiveLaw1D::Restart_int(out);
 	};
 
-	virtual void Update(const doublereal& Eps, const doublereal& /* EpsPrime */ = 0.) {
+	using SimulationEntity::Update;
+	virtual void Update(const doublereal& Eps, const doublereal& /* EpsPrime*/ = 0.) override {
 		ConstitutiveLaw1D::Epsilon = Eps;
 		doublereal e1 = Eps - ElasticConstitutiveLaw1D::Get();
 		doublereal f1 = fabs(e1);
@@ -570,7 +575,7 @@ public:
 		NO_OP;
 	};
 
-	virtual ConstitutiveLaw3D* pCopy(void) const {
+	virtual ConstitutiveLaw3D* pCopy(void) const override {
 		ConstitutiveLaw3D* pCL = 0;
 
 		typedef CubicElasticGenericConstitutiveLaw<Vec3, Mat3x3> cl;
@@ -582,7 +587,7 @@ public:
 		return pCL;
 	};
 
-	virtual std::ostream& Restart(std::ostream& out) const {
+	virtual std::ostream& Restart(std::ostream& out) const override {
 		out << "cubic elastic generic, ",
 			Write(out, Stiff1, ", ") << ", ",
 			Write(out, Stiff2, ", ") << ", ",
@@ -590,7 +595,8 @@ public:
 		return ElasticConstitutiveLaw3D::Restart_int(out);
 	};
 
-	virtual void Update(const Vec3& Eps, const Vec3& /* EpsPrime */ = Zero3) {
+	using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
+	virtual void Update(const Vec3& Eps, const Vec3& /* EpsPrime */ = Zero3) override {
 		ConstitutiveLaw3D::Epsilon = Eps;
 		Vec3 v1 = Eps - ElasticConstitutiveLaw3D::Get();
 		ConstitutiveLaw3D::F = ElasticConstitutiveLaw3D::PreStress;
@@ -811,7 +817,7 @@ private:
 	doublereal dLowerLimitStrain;
 	doublereal dSecondStiffness;
 	doublereal dThirdStiffness;
-	flag fSecondStiff;
+	//flag fSecondStiff;
 
 public:
 	DoubleLinearElasticConstitutiveLaw(const TplDriveCaller<doublereal>* pDC,
@@ -914,7 +920,7 @@ public:
 		NO_OP;
 	};
 
-	virtual ConstitutiveLaw<Vec3, Mat3x3>* pCopy(void) const {
+	virtual ConstitutiveLaw<Vec3, Mat3x3>* pCopy(void) const override {
 		ConstitutiveLaw<Vec3, Mat3x3>* pCL = 0;
 
 		typedef DoubleLinearElasticConstitutiveLaw<Vec3, Mat3x3> cl;
@@ -931,7 +937,7 @@ public:
 		return pCL;
 	};
 
-	virtual std::ostream& Restart(std::ostream& out) const {
+	virtual std::ostream& Restart(std::ostream& out) const override {
 		out << "double linear elastic, "
 			<< dStiffness << ", "
 			<< dUpperLimitStrain << ", "
@@ -941,7 +947,8 @@ public:
 		return Restart_int(out);
 	};
 
-	virtual void Update(const Vec3& Eps, const Vec3& /* EpsPrime */ = Zero3) {
+	using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
+	virtual void Update(const Vec3& Eps, const Vec3& /* EpsPrime */ = Zero3) override {
 		Epsilon = Eps;
 
 		Vec3 PreStrain = Get();
@@ -1031,6 +1038,7 @@ public:
 		return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& /* EpsPrime */ = Zero3) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		T x = ConstitutiveLaw<T, Tder>::Epsilon - ElasticConstitutiveLaw<T, Tder>::Get();
@@ -1170,7 +1178,7 @@ public:
 		NO_OP;
 	};
 
-	virtual ConstitutiveLaw<Vec3, Mat3x3>* pCopy(void) const {
+	virtual ConstitutiveLaw<Vec3, Mat3x3>* pCopy(void) const override {
 		ConstitutiveLaw<Vec3, Mat3x3>* pCL = 0;
 
 		typedef ContactConstitutiveLaw<Vec3, Mat3x3> cl;
@@ -1184,14 +1192,15 @@ public:
 		return pCL;
 	};
 
-	virtual std::ostream& Restart(std::ostream& out) const {
+	virtual std::ostream& Restart(std::ostream& out) const override {
 		out << "contact elastic, "
 			<< dKappa << ", "
 			<< dGamma;
 		return Restart_int(out);
 	};
 
-	virtual void Update(const Vec3& Eps, const Vec3& /* EpsPrime */  = Zero3) {
+	using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
+	virtual void Update(const Vec3& Eps, const Vec3& /* EpsPrime */  = Zero3) override {
 		doublereal dE;
 
 		Epsilon = Eps;
@@ -1255,6 +1264,7 @@ class LinearViscousIsotropicConstitutiveLaw
       return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
    };
 
+   using ConstitutiveLawAd<T, Tder>::Update;
    virtual void Update(const T& /* Eps */ , const T& EpsPrime = mb_zero<T>()) {
       ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
       ConstitutiveLaw<T, Tder>::F = ConstitutiveLaw<T, Tder>::EpsilonPrime*dStiffnessPrime;
@@ -1302,6 +1312,7 @@ class LinearViscousGenericConstitutiveLaw
       return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
    };
 
+   using ConstitutiveLawAd<T, Tder>::Update;
    virtual void Update(const T& /* Eps */ , const T& EpsPrime = mb_zero<T>()) {
       ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
       ConstitutiveLaw<T, Tder>::F = ConstitutiveLaw<T, Tder>::FDEPrime*ConstitutiveLaw<T, Tder>::EpsilonPrime;
@@ -1360,6 +1371,7 @@ class LinearViscoElasticIsotropicConstitutiveLaw
       return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
    };
 
+   using ConstitutiveLawAd<T, Tder>::Update;
    virtual void Update(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
       ConstitutiveLaw<T, Tder>::Epsilon = Eps;
       ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
@@ -1420,6 +1432,7 @@ class LinearViscoElasticGenericConstitutiveLaw
        return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
    };
 
+   using ConstitutiveLawAd<T, Tder>::Update;
    virtual void Update(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
       ConstitutiveLaw<T, Tder>::Epsilon = Eps;
       ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
@@ -1496,6 +1509,7 @@ public:
 		return ElasticConstitutiveLaw<T, Tder>::Restart_int(out);
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
@@ -1610,6 +1624,7 @@ public:
 		return out;
 	};
 
+	using ConstitutiveLawAd<Vec6, Mat6x6>::Update;
 	virtual void Update(const Vec6& Eps, const Vec6& EpsPrime = mb_zero<Vec6>()) {
 		ConstitutiveLaw<Vec6, Mat6x6>::Epsilon = Eps;
 		ConstitutiveLaw<Vec6, Mat6x6>::EpsilonPrime = EpsPrime;
@@ -1759,6 +1774,7 @@ public:
 		return ElasticConstitutiveLaw3D::Restart_int(out);
 	};
 
+	using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
 	virtual void Update(const Vec3& Eps, const Vec3& EpsPrime = Zero3) {
 		ConstitutiveLaw3D::Epsilon = Eps;
 		ConstitutiveLaw3D::EpsilonPrime = EpsPrime;
@@ -2008,6 +2024,7 @@ class DoubleLinearViscoElasticConstitutiveLaw<Vec3, Mat3x3>
       return Restart_int(out);
    };
 
+   using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
    virtual void Update(const Vec3& Eps, const Vec3& EpsPrime = Zero3) {
       Epsilon = Eps;
       EpsilonPrime = EpsPrime;
@@ -2230,6 +2247,7 @@ public:
 		return m_pCL->Restart(out);
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void
 	Update(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;

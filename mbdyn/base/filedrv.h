@@ -63,7 +63,7 @@ public:
 	virtual Drive::Type GetDriveType(void) const override;
 
 	/* Scrive il contributo del DriveCaller al file di restart */
-	virtual std::ostream& Restart(std::ostream& out) const = 0;
+	virtual std::ostream& Restart(std::ostream& out) const override = 0;
 
 	virtual inline integer iGetNumDrives(void) const;
 

@@ -91,6 +91,7 @@ public:
           UpdateElasticTpl(Eps, FTmp);
      }
 
+     using ConstitutiveLawAd<Vec6, Mat6x6>::Update;
      virtual void
      Update(const Vec6& Eps, const Vec6& EpsPrime) override {
           ConstitutiveLaw<Vec6, Mat6x6>::UpdateElasticSparse(this, Eps);
@@ -162,6 +163,7 @@ public:
           return pCL;
      }
 
+     using ConstitutiveLawAd<Vec6, Mat6x6>::Update;
      virtual void
      Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
             const sp_grad::SpColVector<doublereal, iDim>& EpsPrime,
@@ -282,6 +284,7 @@ public:
           UpdateElasticTpl(Eps, FTmp);
      }
 
+     using ConstitutiveLawAd<Vec6, Mat6x6>::Update;
      virtual void
      Update(const Vec6& Eps, const Vec6& EpsPrime) override {
           ConstitutiveLaw<Vec6, Mat6x6>::UpdateElasticSparse(this, Eps);
@@ -565,6 +568,7 @@ public:
           UpdateElasticTpl(Eps, FTmp);
      }
 
+     using ConstitutiveLawAd<Vec6, Mat6x6>::Update;
      virtual void
      Update(const Vec6& Eps, const Vec6& EpsPrime) override {
           ConstitutiveLaw<Vec6, Mat6x6>::UpdateElasticSparse(this, Eps);
@@ -793,6 +797,7 @@ public:
           return pCL;
      }
 
+     using ConstitutiveLawAd<T, Tder>::Update;
      virtual void
      Update(const T& EpsCurr, const T&) override {
           using namespace sp_grad;
@@ -912,6 +917,7 @@ public:
           return pCL;
      }
 
+     using ConstitutiveLawAd<T, Tder>::Update;
      virtual void
      Update(const T& EpsCurr, const T&) override {
           using namespace sp_grad;

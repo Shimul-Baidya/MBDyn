@@ -220,7 +220,7 @@ private:
 		sticked,
 		sticking,
 		sliding};
-	logical converged_sticked;
+	//logical converged_sticked;
 	status_type status;
 	tr_type transition_type;	
 	doublereal converged_v;

@@ -70,7 +70,7 @@ public:
         virtual CompactSparseMatrixHandler *Copy(void) const override;
 
 public:
-	doublereal & operator()(integer i_row, integer i_col) {
+	doublereal & operator()(integer i_row, integer i_col) override {
 		ASSERTMSGBREAK(i_row > 0 && i_row <= this->iGetNumRows(),
 				"Error in CColMatrixHandler::operator(), "
 				"row index out of range");
@@ -87,7 +87,7 @@ public:
 		return this->Ax[idx];
 	};
 
-	const doublereal& operator () (integer i_row, integer i_col) const {
+	const doublereal& operator () (integer i_row, integer i_col) const override {
 		ASSERTMSGBREAK(i_row > 0 && i_row <= this->iGetNumRows(),
 				"Error in CColMatrixHandler::operator(), "
 				"row index out of range");
@@ -105,10 +105,10 @@ public:
 		return this->Ax[idx];
 	};
 
-	void Resize(integer n, integer nn);
+	void Resize(integer n, integer nn) override;
 
 	/* Estrae una colonna da una matrice */
-	VectorHandler& GetCol(integer icol, VectorHandler& out) const;
+	VectorHandler& GetCol(integer icol, VectorHandler& out) const override;
 
         /* Moltiplica per uno scalare e somma a una matrice */
 	MatrixHandler& MulAndSumWithShift(MatrixHandler& out,

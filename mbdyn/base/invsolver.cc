@@ -1842,8 +1842,14 @@ EndOfCycle: /* esce dal ciclo di lettura */
 		MaxTimeStep.Set(pDC);
 	}
 	
-	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(ConstDriveCaller)) {
-		MaxTimeStep.Set(new ConstDriveCaller(dInitialTimeStep));
+// 	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(ConstDriveCaller)) {
+// 		MaxTimeStep.Set(new ConstDriveCaller(dInitialTimeStep));
+// 	}
+	{
+		auto max_ts = MaxTimeStep.pGetDriveCaller();
+		if (dynamic_cast<ConstDriveCaller*>(max_ts) != 0) {
+			MaxTimeStep.Set(new ConstDriveCaller(dInitialTimeStep));
+		}
 	}
 
 	if (pTSC == 0) {

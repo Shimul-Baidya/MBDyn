@@ -75,6 +75,7 @@ protected:
 	doublereal dBankPrev;
 	//doublereal dHeadingPrev;
 
+	using SimulationEntity::Update;
 	void Update(void);
 
 	void normalizeGeoCoordinates(void);

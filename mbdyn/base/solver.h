@@ -97,7 +97,9 @@ public:
   		int EndCode;
   	public:
  		EndOfSimulation(const int e, MBDYN_EXCEPT_ARGS_DECL_NODEF) :
- 		MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU), EndCode(e) {};
+		MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU), EndCode(e) {
+			(void) EndCode; // silence unused warning
+		};
   	};
 
 protected:

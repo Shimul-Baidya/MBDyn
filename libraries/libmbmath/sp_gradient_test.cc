@@ -1419,14 +1419,14 @@ namespace sp_grad_test {
 #endif
           r4 = r1;
           r5 = r4;
-          r6 = move(r4);
+          r6 = std::move(r4);
 
-          SpGradient r7(move(r5));
+          SpGradient r7(std::move(r5));
           SpGradient r8(r7);
 
           r1 = r8;
 
-          cout << fixed << setprecision(3);
+          cout << fixed << std::setprecision(3);
 #ifdef SP_GRAD_DEBUG
           cout << "r=" << r1 << endl;
 
@@ -1497,7 +1497,7 @@ namespace sp_grad_test {
           vector<doublereal> ud, vd, wd, fd, work;
           duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), sp_grad_compr_time(0), sp_grad2_time(0), c_full_time(0);
 
-          decltype(sp_grad_time) sp_grad_s_time(0);
+          // decltype(sp_grad_time) sp_grad_s_time(0);
 
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
                sp_grad_rand_gen(u, randnz, randdof, randval, gen);
@@ -1666,7 +1666,7 @@ namespace sp_grad_test {
           vector<doublereal> ud, vd, wd, fd, work;
           duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), sp_grad2_time(0), c_full_time(0);
 
-          decltype(sp_grad_time) sp_grad_s_time(0);
+          // decltype(sp_grad_time) sp_grad_s_time(0);
 
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
                sp_grad_rand_gen(u, randnz, randdof, randval, gen);
@@ -3685,7 +3685,7 @@ namespace sp_grad_test {
           vector<doublereal> ud, vd, wd, fd, work;
           duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), sp_grad_compr_time(0), c_full_time(0);
 
-          decltype(sp_grad_time) sp_grad_s_time(0);
+          // decltype(sp_grad_time) sp_grad_s_time(0);
 
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
                sp_grad_rand_gen(u, randnz, randdof, randval, gen);
@@ -3829,7 +3829,7 @@ namespace sp_grad_test {
           vector<doublereal> ud, vd, wd, fd, work;
           duration<long long, ratio<1L, 1000000000L> > sp_grad_time(0), c_full_time(0);
 
-          decltype(sp_grad_time) sp_grad_s_time(0);
+          // decltype(sp_grad_time) sp_grad_s_time(0);
 
           for (index_type iloop = 0; iloop < inumloops; ++iloop) {
                sp_grad_rand_gen(u, randnz, randdof, randval, gen);

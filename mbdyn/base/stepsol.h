@@ -217,20 +217,20 @@ public:
  			MyVectorHandler*const pXPrime,
 			integer& EffIter,
 			doublereal& Err,
-			doublereal& SolErr);
+			doublereal& SolErr) override;
 
- 	void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const;
+	void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const override;
 
-	void Jacobian(MatrixHandler* pJac) const;
+	void Jacobian(MatrixHandler* pJac) const override;
 
-	void Jacobian(VectorHandler* pJac, const VectorHandler* pY) const;
+	void Jacobian(VectorHandler* pJac, const VectorHandler* pY) const override;
 	
-	void Update(const VectorHandler* pSol) const;
+	void Update(const VectorHandler* pSol) const override;
 
 	virtual doublereal dGetCoef(unsigned int iDof) const override;
      
 	/* scale factor for tests */
-	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const;
+	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const override;
 };
 
 
@@ -275,17 +275,17 @@ public:
 
 	virtual ~StepNIntegrator(void);
 
-	virtual void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const;
+	virtual void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const override;
 
-	virtual void Jacobian(MatrixHandler* pJac) const;
+	virtual void Jacobian(MatrixHandler* pJac) const override;
 	
         virtual void Jacobian(VectorHandler* pJac, const VectorHandler* pY) const override;
      
-	virtual void Update(const VectorHandler* pSol) const;
+	virtual void Update(const VectorHandler* pSol) const override;
 
 	virtual doublereal dGetCoef(unsigned int iDof) const override;
      
-	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const;
+	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const override;
 
 	virtual void SetCoef(doublereal dT, 
 			doublereal dAlpha,
@@ -330,10 +330,10 @@ public:
 
 	virtual void
 	EvalProd(doublereal Tau, const VectorHandler& f0,
-			const VectorHandler& w, VectorHandler& z) const;
+			const VectorHandler& w, VectorHandler& z) const override;
 
 	/* scale factor for tests */
-	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dCoef) const;
+	virtual doublereal TestScale(const NonlinearSolverTest *pTest, doublereal& dCoef) const override;
 
 	/* Needed for compatibility with class StepIntegrator */
 	virtual doublereal
@@ -347,7 +347,7 @@ public:
  			MyVectorHandler*const pXPrime,
 			integer& EffIter,
 			doublereal& Err,
-			doublereal& SolErr)
+			doublereal& SolErr) override
 	{
 		silent_cerr("InverseDynamicsStepSolver::Advance()");
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
@@ -366,13 +366,13 @@ public:
 			doublereal& Err,
 			doublereal& SolErr);
  	
-	void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const ;
+	void Residual(VectorHandler* pRes, VectorHandler* pAbsRes=0) const override;
 
-	void Jacobian(MatrixHandler* pJac) const ;
+	void Jacobian(MatrixHandler* pJac) const override;
 
         virtual void Jacobian(VectorHandler* pJac, const VectorHandler* pY) const override;
 	
-	void Update(const VectorHandler* pSol) const  ;
+	void Update(const VectorHandler* pSol) const override;
 
         virtual doublereal dGetCoef(unsigned int iDof) const override;
      

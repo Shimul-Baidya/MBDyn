@@ -1482,8 +1482,8 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Gau
      constexpr integer NLVL = NLVLTMP > 0 ? NLVLTMP : 0;
      constexpr integer LIWORK = 3 * MINMN * NLVL + 11 * MINMN;
      constexpr integer LWORK = M >= N
-          ? 12 * N + 2 * N * SMLSIZ + 8 * N * NLVL + N * NRHS + std::pow(SMLSIZ + 1, 2)
-          : 12 * M + 2 * M * SMLSIZ + 8 * M * NLVL + M * NRHS + std::pow(SMLSIZ + 1, 2);
+          ? 12 * N + 2 * N * SMLSIZ + 8 * N * NLVL + N * NRHS + (SMLSIZ + 1)*(SMLSIZ + 1)//std::pow(SMLSIZ + 1, 2)
+          : 12 * M + 2 * M * SMLSIZ + 8 * M * NLVL + M * NRHS + (SMLSIZ + 1)*(SMLSIZ + 1);//std::pow(SMLSIZ + 1, 2);
      doublereal RCOND = -1., WORK[LWORK], S[MINMN];
      integer RANK, IWORK[LIWORK], INFO;
 

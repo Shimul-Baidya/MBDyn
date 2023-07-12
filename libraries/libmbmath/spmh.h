@@ -264,21 +264,21 @@ protected:
 	MatrixHandler&
 	MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 	MatrixHandler&
 	MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 
 	/* Matrix Vector product */
 	virtual VectorHandler&
 	MatVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 	virtual VectorHandler&
 	MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 
 protected:
         CompactSparseMatrixHandler_tpl<off, idx_type>::const_iterator m_end;
@@ -293,7 +293,7 @@ public:
 	};
 
 	/* Restituisce un puntatore all'array di reali della matrice */
-        virtual const doublereal* pdGetMat(void) const;
+        virtual const doublereal* pdGetMat(void) const override;
 
      	virtual void Reset(void) override;
 

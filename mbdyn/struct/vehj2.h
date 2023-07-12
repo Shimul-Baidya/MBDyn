@@ -232,6 +232,7 @@ public:
 		const VectorHandler& XPrimeCurr);
 
 	/* Inverse Dynamics Jacobian matrix assembly */
+	using DeformableDispJoint::AssJac;
 	VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat,
 		const VectorHandler& XCurr);
@@ -402,6 +403,7 @@ public:
 
 class ViscousDispJoint : virtual public Elem, public DeformableDispJoint {
 protected:
+	using Elem::AssMats;
 	void AssMats(FullSubMatrixHandler& WMA,
 		FullSubMatrixHandler& WMB,
 		doublereal dCoef);
@@ -504,6 +506,7 @@ public:
 class ViscoElasticDispJoint
 : virtual public Elem, public DeformableDispJoint {
 protected:
+	using Elem::AssMats;
 	void AssMats(FullSubMatrixHandler& WorkMatA,
 		FullSubMatrixHandler& WorkMatB,
 		doublereal dCoef);

@@ -2394,7 +2394,10 @@ DataManager::ReadNodes(MBDynParser& HP)
 	}
 
 	ASSERT(ni == Nodes.end());
-	ASSERT(iNumNodes == Nodes.size());
+	//ASSERT(iNumNodes == Nodes.size());
+	if (iNumNodes != Nodes.size()) {
+		throw DataManager::ErrMissingNodes(MBDYN_EXCEPT_ARGS);
+	}
 
 	DEBUGLCOUT(MYDEBUG_INPUT, "End of nodes data" << std::endl);
 } /* End of DataManager::ReadNodes() */

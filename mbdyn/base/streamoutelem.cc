@@ -464,6 +464,7 @@ StreamOutEcho::StreamOutEcho(std::string& sOutFileName, int iPrecision, doublere
 iPrecision(iPrecision),
 dShift(dShift)
 {
+	(void) StreamOutEcho::dShift;
 	NO_OP;
 }
 

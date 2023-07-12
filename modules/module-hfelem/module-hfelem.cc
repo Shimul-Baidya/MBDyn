@@ -860,7 +860,7 @@ HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 				m_vDimHFElem);
 
 		std::ostringstream m_sInputName;
-		for (integer i = 0; i < m_Input.size(); i++) {
+		for (size_t i = 0; i < m_Input.size(); i++) {
 			if (m_mInputNames.size()) {
 				m_sInputName << m_mInputNames[i];
 			} else {

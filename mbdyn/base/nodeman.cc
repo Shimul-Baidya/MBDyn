@@ -38,7 +38,7 @@
 
 /* DataManager - begin */
 
-const char sNMClassName[] = "DataManager";
+//const char sNMClassName[] = "DataManager";
 
 void
 DataManager::NodeManager(void)

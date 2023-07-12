@@ -671,7 +671,7 @@ Mat3x3 operator - (const Mat3x3& m)
 }
 
 
-const char sForm[] = "%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e";
+//const char sForm[] = "%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e";
 const char sDefFill[] = " ";
 
 /* output di matrici */

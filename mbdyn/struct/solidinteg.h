@@ -46,10 +46,34 @@
 #include "sp_matrix_base.h"
 #include "solid.h"
 
+#include<limits>
+namespace Detail
+{
+    double constexpr sqrtNewtonRaphson(double x, double curr, double prev)
+    {
+        return curr == prev
+            ? curr
+            : sqrtNewtonRaphson(x, 0.5 * (curr + x / curr), curr);
+    }
+}
+
+/*
+* Constexpr version of the square root
+* Return value:
+*   - For a finite and non-negative value of "x", returns an approximation for the square root of "x"
+*   - Otherwise, returns NaN
+*/
+double constexpr sqrt_ce(double x)
+{
+    return x >= 0 && x < std::numeric_limits<double>::infinity()
+        ? Detail::sqrtNewtonRaphson(x, x, 0)
+        : std::numeric_limits<double>::quiet_NaN();
+}
+
 class Gauss2 {
 public:
      static constexpr sp_grad::index_type iGaussOrder = 2;
-     static constexpr doublereal ri[] = {sqrt(1./3.), -sqrt(1./3.)};
+     static constexpr doublereal ri[] = {sqrt_ce(1./3.), -sqrt_ce(1./3.)};
      static constexpr doublereal alphai[] = {1.0, 1.0};
      static constexpr doublereal ri_lumped[] = {1., -1.};
      static constexpr doublereal alphai_lumped[] = {1.0, 1.0};
@@ -59,7 +83,7 @@ class Gauss3 {
 public:
      static constexpr sp_grad::index_type iGaussOrder = 3;
 
-     static constexpr doublereal ri[] = {sqrt(3./5.), 0., -sqrt(3./5.)};
+     static constexpr doublereal ri[] = {sqrt_ce(3./5.), 0., -sqrt_ce(3./5.)};
      static constexpr doublereal alphai[] = {5./9., 8./9., 5./9.};
      static constexpr doublereal ri_lumped[] = {1., 0., -1.};
      static constexpr doublereal alphai_lumped[] = {2./3., 2./3., 2./3.};
@@ -107,10 +131,10 @@ public:
 
      // https://zhilin.math.ncsu.edu/
      // Chapter 24: Implementation of Iso-P Triangular Elements
-     static constexpr doublereal A = (sqrt(15.) + 6.) / 2.1E+1;
-     static constexpr doublereal B = (6. - sqrt(15.)) / 2.1E+1;
-     static constexpr doublereal P1 = (sqrt(15.) + 155.) / 2.4E+3;
-     static constexpr doublereal P2 = (155. - sqrt(15.)) / 2.4E+3;
+     static constexpr doublereal A = (sqrt_ce(15.) + 6.) / 2.1E+1;
+     static constexpr doublereal B = (6. - sqrt_ce(15.)) / 2.1E+1;
+     static constexpr doublereal P1 = (sqrt_ce(15.) + 155.) / 2.4E+3;
+     static constexpr doublereal P2 = (155. - sqrt_ce(15.)) / 2.4E+3;
      static constexpr doublereal zeta[7] = {1./3., A, 1. - 2. * A, A, B, 1. - 2. * B, B};
      static constexpr doublereal eta[7]  = {1./3., A, A, 1. - 2. * A, B, B, 1. - 2. * B};
      static constexpr doublereal w[7] = {9./80., P1, P1, P1, P2, P2, P2};
@@ -118,7 +142,7 @@ public:
 
 class Gauss2x2x2: private Gauss2 {
 public:
-     static constexpr sp_grad::index_type iNumEvalPointsStiffness = std::pow(iGaussOrder, 3);
+     static constexpr sp_grad::index_type iNumEvalPointsStiffness = iGaussOrder*iGaussOrder*iGaussOrder;//std::pow(iGaussOrder, 3);
      static constexpr sp_grad::index_type iNumEvalPointsMass = iNumEvalPointsStiffness;
      static constexpr sp_grad::index_type iNumEvalPointsMassLumped = iNumEvalPointsStiffness;
 
@@ -152,7 +176,7 @@ private:
 
 class Gauss3x3x3: private Gauss3 {
 public:
-     static constexpr sp_grad::index_type iNumEvalPointsStiffness = std::pow(iGaussOrder, 3);
+     static constexpr sp_grad::index_type iNumEvalPointsStiffness = iGaussOrder*iGaussOrder*iGaussOrder;//std::pow(iGaussOrder, 3);
      static constexpr sp_grad::index_type iNumEvalPointsMass = iNumEvalPointsStiffness;
      static constexpr sp_grad::index_type iNumEvalPointsMassLumped = iNumEvalPointsStiffness;
 
@@ -302,15 +326,15 @@ public:
      static constexpr doublereal w1[] = {d1, e1, e1, e1, e1};
 
      static constexpr doublereal a2 = 0.25;
-     static constexpr doublereal b2_1 = (7. + sqrt(15.)) / 34.;
-     static constexpr doublereal b2_2 = (7. - sqrt(15.)) / 34.;
-     static constexpr doublereal c2_1 = (13. - 3. * sqrt(15.)) / 34.;
-     static constexpr doublereal c2_2 = (13. + 3. * sqrt(15.)) / 34.;
-     static constexpr doublereal d2 = (5. - sqrt(15.)) / 20.;
-     static constexpr doublereal e2 = (5. + sqrt(15.)) / 20.;
+     static constexpr doublereal b2_1 = (7. + sqrt_ce(15.)) / 34.;
+     static constexpr doublereal b2_2 = (7. - sqrt_ce(15.)) / 34.;
+     static constexpr doublereal c2_1 = (13. - 3. * sqrt_ce(15.)) / 34.;
+     static constexpr doublereal c2_2 = (13. + 3. * sqrt_ce(15.)) / 34.;
+     static constexpr doublereal d2 = (5. - sqrt_ce(15.)) / 20.;
+     static constexpr doublereal e2 = (5. + sqrt_ce(15.)) / 20.;
      static constexpr doublereal f2 = 8. / 405.;
-     static constexpr doublereal g2 = (2665. - 14. * sqrt(15.)) / 226800.;
-     static constexpr doublereal h2 = (2665. + 14. * sqrt(15.)) / 226800.;
+     static constexpr doublereal g2 = (2665. - 14. * sqrt_ce(15.)) / 226800.;
+     static constexpr doublereal h2 = (2665. + 14. * sqrt_ce(15.)) / 226800.;
      static constexpr doublereal i2 = 5. / 567.;
      static constexpr sp_grad::index_type N2 = 15;
 
@@ -319,8 +343,8 @@ public:
      static constexpr doublereal t2[] = {a2, b2_1, b2_1, b2_1, c2_1, b2_2, b2_2, b2_2, c2_2, d2, d2, e2, d2, e2, e2};
      static constexpr doublereal w2[] = {f2, g2, g2, g2, g2, h2, h2, h2, h2, i2, i2, i2, i2, i2, i2};
 
-     static constexpr doublereal a3 = (5. - sqrt(5.)) / 20.;
-     static constexpr doublereal b3 = (5. + 3. * sqrt(5)) / 20.;
+     static constexpr doublereal a3 = (5. - sqrt_ce(5.)) / 20.;
+     static constexpr doublereal b3 = (5. + 3. * sqrt_ce(5)) / 20.;
      static constexpr doublereal c3 = 1. / 24.;
      static constexpr sp_grad::index_type N3 = 4;
 

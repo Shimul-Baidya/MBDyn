@@ -58,19 +58,19 @@ public:
 		SAFEDELETE(m_pCL);
 	};
 
-	ConstLawType::Type GetConstLawType(void) const {
+	ConstLawType::Type GetConstLawType(void) const override {
 		return m_pCL->GetConstLawType();
 	};
 
 	void SetValue(DataManager *pDM,
 		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
+		SimulationEntity::Hints *ph = 0) override
 	{
 		m_pCL->SetValue(pDM, X, XP, ph);
 	};
 
 	virtual
-	ConstitutiveLaw<T, Tder>* pCopy(void) const {
+	ConstitutiveLaw<T, Tder>* pCopy(void) const override {
 		ConstitutiveLaw<T, Tder>* pCL = 0;
 
 		typedef DriveCLWrapper<T, Tder> DCLW;
@@ -82,13 +82,15 @@ public:
 	};
 
 	virtual std::ostream&
-	Restart(std::ostream& out) const {
+	Restart(std::ostream& out) const override {
 		out << "drive caller wrap, ", m_pDC->Restart(out) << ", ";
 		return m_pCL->Restart(out);
 	};
 
+	using ConstitutiveLawBase<T, Tder>::Update;
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void
-	Update(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
+	Update(const T& Eps, const T& EpsPrime = mb_zero<T>()) override {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;
 
@@ -106,7 +108,7 @@ public:
 		}
 	};
 
-	virtual void AfterConvergence(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
+	virtual void AfterConvergence(const T& Eps, const T& EpsPrime = mb_zero<T>()) override {
 		m_pCL->AfterConvergence(Eps, EpsPrime);
 	};
 };
