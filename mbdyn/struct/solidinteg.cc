@@ -113,7 +113,11 @@ namespace {
      static_assert(bCollocationTest1D(Gauss2::ri, Gauss2::alphai, 2));
      static_assert(bCollocationTest1D(Gauss3::ri, Gauss3::alphai, 3));
      static_assert(bCollocationTest2D(CollocTria6h::zeta, CollocTria6h::eta, CollocTria6h::w, 7));
-     static_assert(bCollocationTest3D(CollocTet10h::r1, CollocTet10h::s1, CollocTet10h::t1, CollocTet10h::w1, 5));     
+     static_assert(bCollocationTest3D(CollocTet10h::r1, CollocTet10h::s1, CollocTet10h::t1, CollocTet10h::w1, 5));
+
+     // Perform a few tests with sqrtNewtonRaphson
+     static_assert(sqrt_ce(1234.5678 * 1234.5678) == 1234.5678);
+     static_assert(sqrt_ce(87654.321 * 87654.321) == 87654.321);
 }
 
 constexpr sp_grad::index_type Gauss2::iGaussOrder;
