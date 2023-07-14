@@ -88,7 +88,7 @@ fi
 # unset CDPATH
 $ol_unset CDPATH || test "${CDPATH:+set}" != set || CDPATH=: && export CDPATH
 
-AC_INIT([mbdyn],[m4_esyscmd(tr -d '\n' < build/version)])
+AC_INIT([mbdyn],m4_esyscmd(tr -d '\n' < build/version))
 AC_CONFIG_AUX_DIR(build)dnl
 AC_CONFIG_SRCDIR([build/version])
 
@@ -439,14 +439,7 @@ dnl ----------------------------------------------------------------
 dnl
 dnl Checks for header files.
 dnl
-m4_warn([obsolete],
-[The preprocessor macro `STDC_HEADERS' is obsolete.
-  Except in unusual embedded environments, you can safely include all
-  ISO C90 headers unconditionally.])dnl
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT
-AC_PROG_EGREP
+AC_STDC_HEADERS
 
 AC_CHECK_HEADERS(arpa/inet.h)
 AC_CHECK_HEADERS(atomic_ops.h)
