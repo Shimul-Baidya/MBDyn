@@ -115,7 +115,7 @@ AM_INIT_AUTOMAKE([subdir-objects])
 dnl We use autoconf features new to 2.13.
 dnl aclocal.m4 should be built using aclocal from automake 1.4
 dnl libtool 1.3.3 should be installed.
-AC_PREREQ([2.16])dnl Required Autoconf version
+AC_PREREQ([2.69])dnl Required Autoconf version
 
 AC_CONFIG_HEADERS([include/mbconfig.h])
 AH_TOP([
