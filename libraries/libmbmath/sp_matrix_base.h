@@ -137,7 +137,7 @@ namespace sp_grad {
                template <typename Value, typename ExprType>
                constexpr static SpMatElemUniqueExpr<Value, const SpMatElemExprBase<Value, ExprType>&>
                EvalUnique(const SpMatElemExprBase<Value, ExprType>& oExpr) {
-                    static_assert(std::is_same<decltype(oExpr), Expr>::value);
+                    static_assert(std::is_same<decltype(oExpr), Expr>::value, "data type does not match");
                     return decltype(EvalUnique(oExpr)){oExpr};
                }
 
@@ -150,7 +150,7 @@ namespace sp_grad {
                template <typename Value, typename ExprType>
                constexpr static const SpMatElemExprBase<Value, ExprType>&
                EvalUnique(const SpMatElemExprBase<Value, ExprType>& oExpr) {
-                    static_assert(std::is_same<decltype(oExpr), Expr>::value);
+                    static_assert(std::is_same<decltype(oExpr), Expr>::value, "data type does not match");
                     return oExpr;
                }
 
@@ -283,7 +283,7 @@ namespace sp_grad {
 
           template <index_type iSizeStatic>
           struct MatrixDataSizeHelper {
-               static_assert(iSizeStatic > 0);
+               static_assert(iSizeStatic > 0, "invalid static array size");
 
                static constexpr index_type iGetSizeStatic(index_type) {
                     return iSizeStatic;
@@ -292,7 +292,7 @@ namespace sp_grad {
 
           template <>
           struct MatrixDataSizeHelper<SpMatrixSize::DYNAMIC> {
-               static_assert(SpMatrixSize::DYNAMIC < 0);
+               static_assert(SpMatrixSize::DYNAMIC < 0, "invalid constant");
 
                static index_type iGetSizeStatic(index_type iSize) {
                     SP_GRAD_ASSERT(iSize >= 0);
@@ -525,30 +525,30 @@ namespace sp_grad {
                this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
-          constexpr doublereal dGetValue(index_type i, index_type j) const {
+          doublereal dGetValue(index_type i, index_type j) const {
                SP_GRAD_ASSERT(j == 1);
                SP_GRAD_ASSERT(i >= 1);
                SP_GRAD_ASSERT(i <= 3);
 
-               static_assert(sizeof(e1) / sizeof(e1[0]) == 3);
-               static_assert(sizeof(e2) / sizeof(e2[0]) == 3);
-               static_assert(sizeof(e3) / sizeof(e3[0]) == 3);
-               static_assert(sizeof(e4) / sizeof(e4[0]) == 3);
+               static_assert(sizeof(e1) / sizeof(e1[0]) == 3, "invalid array size");
+               static_assert(sizeof(e2) / sizeof(e2[0]) == 3, "invalid array size");
+               static_assert(sizeof(e3) / sizeof(e3[0]) == 3, "invalid array size");
+               static_assert(sizeof(e4) / sizeof(e4[0]) == 3, "invalid array size");
 
                --i;
 
                return u.dGetValue(e1[i], j) * v.dGetValue(e2[i], j) - u.dGetValue(e3[i], j) * v.dGetValue(e4[i], j);
           }
 
-          constexpr index_type iGetSize(index_type i, index_type j) const {
+          index_type iGetSize(index_type i, index_type j) const {
                SP_GRAD_ASSERT(j == 1);
                SP_GRAD_ASSERT(i >= 1);
                SP_GRAD_ASSERT(i <= 3);
 
-               static_assert(sizeof(e1) / sizeof(e1[0]) == 3);
-               static_assert(sizeof(e2) / sizeof(e2[0]) == 3);
-               static_assert(sizeof(e3) / sizeof(e3[0]) == 3);
-               static_assert(sizeof(e4) / sizeof(e4[0]) == 3);
+               static_assert(sizeof(e1) / sizeof(e1[0]) == 3, "invalid array size");
+               static_assert(sizeof(e2) / sizeof(e2[0]) == 3, "invalid array size");
+               static_assert(sizeof(e3) / sizeof(e3[0]) == 3, "invalid array size");
+               static_assert(sizeof(e4) / sizeof(e4[0]) == 3, "invalid array size");
 
                --i;
 
@@ -576,10 +576,10 @@ namespace sp_grad {
                SP_GRAD_ASSERT(i >= 1);
                SP_GRAD_ASSERT(i <= 3);
 
-               static_assert(sizeof(e1) / sizeof(e1[0]) == 3);
-               static_assert(sizeof(e2) / sizeof(e2[0]) == 3);
-               static_assert(sizeof(e3) / sizeof(e3[0]) == 3);
-               static_assert(sizeof(e4) / sizeof(e4[0]) == 3);
+               static_assert(sizeof(e1) / sizeof(e1[0]) == 3, "invalid array size");
+               static_assert(sizeof(e2) / sizeof(e2[0]) == 3, "invalid array size");
+               static_assert(sizeof(e3) / sizeof(e3[0]) == 3, "invalid array size");
+               static_assert(sizeof(e4) / sizeof(e4[0]) == 3, "invalid array size");
 
                --i;
 
@@ -594,10 +594,10 @@ namespace sp_grad {
                SP_GRAD_ASSERT(i >= 1);
                SP_GRAD_ASSERT(i <= 3);
 
-               static_assert(sizeof(e1) / sizeof(e1[0]) == 3);
-               static_assert(sizeof(e2) / sizeof(e2[0]) == 3);
-               static_assert(sizeof(e3) / sizeof(e3[0]) == 3);
-               static_assert(sizeof(e4) / sizeof(e4[0]) == 3);
+               static_assert(sizeof(e1) / sizeof(e1[0]) == 3, "invalid array size");
+               static_assert(sizeof(e2) / sizeof(e2[0]) == 3, "invalid array size");
+               static_assert(sizeof(e3) / sizeof(e3[0]) == 3, "invalid array size");
+               static_assert(sizeof(e4) / sizeof(e4[0]) == 3, "invalid array size");
 
                --i;
 
@@ -612,10 +612,10 @@ namespace sp_grad {
                SP_GRAD_ASSERT(i >= 1);
                SP_GRAD_ASSERT(i <= 3);
 
-               static_assert(sizeof(e1) / sizeof(e1[0]) == 3);
-               static_assert(sizeof(e2) / sizeof(e2[0]) == 3);
-               static_assert(sizeof(e3) / sizeof(e3[0]) == 3);
-               static_assert(sizeof(e4) / sizeof(e4[0]) == 3);
+               static_assert(sizeof(e1) / sizeof(e1[0]) == 3, "invalid array size");
+               static_assert(sizeof(e2) / sizeof(e2[0]) == 3, "invalid array size");
+               static_assert(sizeof(e3) / sizeof(e3[0]) == 3, "invalid array size");
+               static_assert(sizeof(e4) / sizeof(e4[0]) == 3, "invalid array size");
 
                --i;
 
@@ -631,10 +631,10 @@ namespace sp_grad {
                SP_GRAD_ASSERT(i >= 1);
                SP_GRAD_ASSERT(i <= 3);
 
-               static_assert(sizeof(e1) / sizeof(e1[0]) == 3);
-               static_assert(sizeof(e2) / sizeof(e2[0]) == 3);
-               static_assert(sizeof(e3) / sizeof(e3[0]) == 3);
-               static_assert(sizeof(e4) / sizeof(e4[0]) == 3);
+               static_assert(sizeof(e1) / sizeof(e1[0]) == 3, "invalid array size");
+               static_assert(sizeof(e2) / sizeof(e2[0]) == 3, "invalid array size");
+               static_assert(sizeof(e3) / sizeof(e3[0]) == 3, "invalid array size");
+               static_assert(sizeof(e4) / sizeof(e4[0]) == 3, "invalid array size");
 
                --i;
 
@@ -1037,13 +1037,13 @@ namespace sp_grad {
                this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
-          constexpr doublereal dGetValue(index_type i, index_type j) const {
+          doublereal dGetValue(index_type i, index_type j) const {
                SP_GRAD_ASSERT(j == 1);
 
                return u.dGetValue(i, iCol);
           }
 
-          constexpr index_type iGetSize(index_type i, index_type j) const {
+          index_type iGetSize(index_type i, index_type j) const {
                SP_GRAD_ASSERT(j == 1);
 
                return u.iGetSize(i, iCol);
@@ -1160,13 +1160,13 @@ namespace sp_grad {
                this->template ElemAssign<eTransp, eCompr, Func>(A, oDofMap);
           }
 
-          constexpr doublereal dGetValue(index_type i, index_type j) const {
+          doublereal dGetValue(index_type i, index_type j) const {
                SP_GRAD_ASSERT(i == 1);
 
                return u.dGetValue(iRow, j);
           }
 
-          constexpr index_type iGetSize(index_type i, index_type j) const {
+          index_type iGetSize(index_type i, index_type j) const {
                SP_GRAD_ASSERT(i == 1);
 
                return u.iGetSize(iRow, j);
@@ -1407,16 +1407,16 @@ namespace sp_grad {
           static_assert(ExprType::iNumRowsStatic != SpMatrixSize::DYNAMIC, "Operand row size must dynamic");
           static_assert(ExprType::iNumColsStatic != SpMatrixSize::DYNAMIC, "Operand column size must be dynamic");
           static_assert(ExprType::eMatOpType == SpMatOpType::MATRIX, "Operand must be a matrix! A scalar cannot be transposed!");
-          static_assert(iRowStart >= 1);
-          static_assert(iColStart >= 1);
-          static_assert(iRowStart <= ExprType::iNumRowsStatic);
-          static_assert(iColStart <= ExprType::iNumColsStatic);
-          static_assert(iRowStep >= 1);
-          static_assert(iColStep >= 1);
-          static_assert(iNumRows >= 1);
-          static_assert(iNumCols >= 1);
-          static_assert(iRowStart + (iNumRows - 1) * iRowStep <= ExprType::iNumRowsStatic);
-          static_assert(iColStart + (iNumCols - 1) * iColStep <= ExprType::iNumColsStatic);
+          static_assert(iRowStart >= 1, "invalid row index");
+          static_assert(iColStart >= 1, "invalid column index");
+          static_assert(iRowStart <= ExprType::iNumRowsStatic, "invalid row index");
+          static_assert(iColStart <= ExprType::iNumColsStatic, "invalid column index");
+          static_assert(iRowStep >= 1, "invalid row step");
+          static_assert(iColStep >= 1, "invalid column step");
+          static_assert(iNumRows >= 1, "invalid number of rows");
+          static_assert(iNumCols >= 1, "invalid number of columns");
+          static_assert(iRowStart + (iNumRows - 1) * iRowStep <= ExprType::iNumRowsStatic, "row index out of range");
+          static_assert(iColStart + (iNumCols - 1) * iColStep <= ExprType::iNumColsStatic, "column index out of range");
 
           explicit SpSubMatStatExpr(const Expr& u) noexcept
                :u(u)
@@ -1555,10 +1555,10 @@ namespace sp_grad {
           static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = ExprType::eExprEvalFlags;
 
           static_assert(ExprType::eMatOpType == SpMatOpType::MATRIX, "Operand must be a matrix! A scalar cannot be transposed!");
-          static_assert(iNumRows >= 1);
-          static_assert(iNumCols >= 1);
-          static_assert(iNumRows != SpMatrixSize::DYNAMIC);
-          static_assert(iNumCols != SpMatrixSize::DYNAMIC);
+          static_assert(iNumRows >= 1, "invalid number of rows");
+          static_assert(iNumCols >= 1, "invalid number of columns");
+          static_assert(iNumRows != SpMatrixSize::DYNAMIC, "static matrix size required");
+          static_assert(iNumCols != SpMatrixSize::DYNAMIC, "static matrix size required");
 
           explicit SpSubMatStatResExpr(const Expr& u, index_type iRowStart, index_type iRowStep, index_type iColStart, index_type iColStep) noexcept
                :u(u),
@@ -1718,9 +1718,9 @@ namespace sp_grad {
           static_assert(ExprType::iNumRowsStatic >= 1, "Number of rows of operand must be static");
           static_assert(ExprType::iNumColsStatic == iNumColsStatic, "Number of columns of operand must be dynamic");
           static_assert(iNumRows >= 1, "Number of rows must be static");
-          static_assert(iRowStart >= 1);
-          static_assert(iRowStep >= 1);
-          static_assert(iRowStart + (iNumRows - 1) * iRowStep <= ExprType::iNumRowsStatic);
+          static_assert(iRowStart >= 1, "invalid row index");
+          static_assert(iRowStep >= 1, "invalid row step");
+          static_assert(iRowStart + (iNumRows - 1) * iRowStep <= ExprType::iNumRowsStatic, "index out of range");
           static_assert(ExprType::eMatOpType == SpMatOpType::MATRIX, "Operand must be a matrix! A scalar cannot be transposed!");
 
           explicit SpSubMatStatRowExpr(const Expr& u, index_type iColStart, index_type iColStep, index_type iNumCols) noexcept
@@ -2058,8 +2058,8 @@ namespace sp_grad {
 
      template <typename ValueType, index_type NumRows, index_type NumCols>
      class SpMatrixBase: public SpMatElemExprBase<ValueType, SpMatrixBase<ValueType, NumRows, NumCols> > {
-          static_assert(NumRows >= 1 || NumRows == SpMatrixSize::DYNAMIC);
-          static_assert(NumCols >= 1 || NumCols == SpMatrixSize::DYNAMIC);
+          static_assert(NumRows >= 1 || NumRows == SpMatrixSize::DYNAMIC, "invalid number of rows");
+          static_assert(NumCols >= 1 || NumCols == SpMatrixSize::DYNAMIC, "invalid number of columns");
           friend class SpMatrixBase<const ValueType, NumRows, NumCols>;
      public:
           static constexpr index_type iNumElemOps = 0;
@@ -2582,7 +2582,7 @@ namespace sp_grad {
           }
 
           void SpMatrixDataTraits<SpGradient>::Construct(SpMatrixData<SpGradient>& oData, index_type iNumDeriv, void* pExtraMem) {
-               static_assert(alignof(SpDerivData) == alignof(SpDerivRec));
+               static_assert(alignof(SpDerivData) == alignof(SpDerivRec), "alignment does not match");
 
                SP_GRAD_ASSERT(reinterpret_cast<size_t>(pExtraMem) % alignof(SpDerivData) == 0);
 
@@ -2819,7 +2819,9 @@ namespace sp_grad {
      {
           constexpr index_type iNumItems = NumRows * NumCols;
 
-          static_assert(iNumItems > 0);
+          static_assert(NumRows > 0, "invalid number of rows");
+          static_assert(NumCols > 0, "invalid number of columns");
+          static_assert(iNumItems > 0, "invalid matrix size");
 
           for (index_type i = 0; i < iNumItems; ++i) {
                SpGradientTraits<ValueType>::ZeroInit(rgDataExt[i]);
@@ -2974,35 +2976,35 @@ namespace sp_grad {
      namespace util {
           template <MatTranspEvalFlag eTransp, typename Expr, typename ValueType, index_type NumRows, index_type NumCols>
           void MatEvalHelperCompr<SpGradCommon::ExprEvalDuplicate>::ElemEval(const Expr& oExpr, SpMatrixBase<ValueType, NumRows, NumCols>& A) {
-               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalDuplicate);
+               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalDuplicate, "invalid expression flags");
 
                oExpr.template ElemEvalUncompr<eTransp>(A);
           }
 
           template <MatTranspEvalFlag eTransp, typename Expr, typename ValueType, index_type NumRows, index_type NumCols>
           void MatEvalHelperCompr<SpGradCommon::ExprEvalUnique>::ElemEval(const Expr& oExpr, SpMatrixBase<ValueType, NumRows, NumCols>& A) {
-               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalUnique);
+               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalUnique, "invalid expression flags");
 
                oExpr.template ElemEvalCompr<eTransp>(A);
           }
 
           template <MatTranspEvalFlag eTransp, typename Expr, typename ValueType, index_type NumRows, index_type NumCols>
           void MatEvalHelperCompr<SpGradCommon::ExprEvalDuplicate>::ElemEval(const Expr& oExpr, SpMatrixBase<ValueType, NumRows, NumCols>& A, const SpGradExpDofMapHelper<ValueType>&) {
-               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalDuplicate);
+               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalDuplicate, "invalid expression flags");
 
                constexpr bool bIsGradProd = std::is_same<ValueType, GpGradProd>::value;
                constexpr bool bIsDouble = std::is_same<ValueType, doublereal>::value;
                constexpr bool bIsSpGradient = std::is_same<ValueType, SpGradient>::value;
 
-               static_assert(bIsGradProd || bIsDouble);
-               static_assert(!bIsSpGradient); // For efficiency reasons we should always use compressed evaluation if oDofMap is provided
+               static_assert(bIsGradProd || bIsDouble, "data type not supported");
+               static_assert(!bIsSpGradient, "data type not handled by this function"); // For efficiency reasons we should always use compressed evaluation if oDofMap is provided
 
                oExpr.template ElemEvalUncompr<eTransp>(A);
           }
 
           template <MatTranspEvalFlag eTransp, typename Expr, typename ValueType, index_type NumRows, index_type NumCols>
           void MatEvalHelperCompr<SpGradCommon::ExprEvalUnique>::ElemEval(const Expr& oExpr, SpMatrixBase<ValueType, NumRows, NumCols>& A, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
-               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalUnique);
+               static_assert(eExprEvalFlags == SpGradCommon::ExprEvalUnique, "invalid expression flags");
 
                oExpr.template ElemEvalCompr<eTransp>(A, oDofMap);
           }
@@ -3423,7 +3425,7 @@ namespace sp_grad {
                     ElemAssignHelper<ValueA, ValueB>::template ElemAssignCompr<eTransp, Func>(A, B, oDofMap);
                }
           };
-     };
+     }
 
      template <typename ValueType, typename DERIVED>
      template <util::MatTranspEvalFlag eTransp,
@@ -4077,10 +4079,10 @@ namespace sp_grad {
           typename UTmpType::Type utmp{UTmpType::EvalUnique(u)};
           typename VTmpType::Type vtmp{VTmpType::EvalUnique(v)};
 
-          static_assert(utmp.iNumElemOps == 0);
-          static_assert(vtmp.iNumElemOps == 0);
-          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
-          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+          static_assert(utmp.iNumElemOps == 0, "invalid temporary expression");
+          static_assert(vtmp.iNumElemOps == 0, "invalid temporary expression");
+          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "iterators required for temporary expression");
+          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "iterators required for temporary expression");
 
           const index_type iRowOffsetU = utmp.iGetRowOffset();
           const index_type iColOffsetU = utmp.iGetColOffset();
@@ -4098,8 +4100,8 @@ namespace sp_grad {
           constexpr bool bIsSparseRep = !(bIsGradProdLhs || bIsGradProdRhs);
           constexpr bool bSingleDofMap = bIsSparseRep && (bIsGradientLhs && bIsGradientRhs);
 
-          static_assert(!(bIsGradientRhs && bIsGradProdLhs));
-          static_assert(!(bIsGradProdRhs && bIsGradientLhs));
+          static_assert(!(bIsGradientRhs && bIsGradProdLhs), "cannot mix forward mode and sparse mode in the same expression");
+          static_assert(!(bIsGradProdRhs && bIsGradientLhs), "cannot mix forward mode and sparse mode in the same expression");
 
           typedef util::MatMulExprLoop<eTransp, bIsGradOrGradProdLhs, bIsGradOrGradProdRhs, bIsSparseRep, bSingleDofMap> MatMulExprLoop;
 
@@ -4145,10 +4147,10 @@ namespace sp_grad {
           typename UTmpType::Type utmp{u, oDofMap}; // FIXME: should use oDofMap
           typename VTmpType::Type vtmp{v, oDofMap};
 
-          static_assert(utmp.iNumElemOps == 0);
-          static_assert(vtmp.iNumElemOps == 0);
-          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
-          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+          static_assert(utmp.iNumElemOps == 0, "temporary expression must not involve additional operations");
+          static_assert(vtmp.iNumElemOps == 0, "temporary expression must not involve additional operations");
+          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "iterators are required for temporary operations");
+          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "iterators are required for temporary operations");
 
           const index_type iRowOffsetU = utmp.iGetRowOffset();
           const index_type iColOffsetU = utmp.iGetColOffset();
@@ -4162,8 +4164,8 @@ namespace sp_grad {
           constexpr bool bIsGradProdLhs = std::is_same<GpGradProd, LhsValue>::value;
           constexpr bool bIsGradProdRhs = std::is_same<GpGradProd, RhsValue>::value;
 
-          static_assert(!(bIsGradientRhs && bIsGradProdLhs));
-          static_assert(!(bIsGradProdRhs && bIsGradientLhs));
+          static_assert(!(bIsGradientRhs && bIsGradProdLhs), "cannot mix forward mode and sparse mode in a single expression");
+          static_assert(!(bIsGradProdRhs && bIsGradientLhs), "cannot mix forward mode and sparse mode in a single expression");
 
           typedef util::MatMulExprLoop2<eTransp> MatMulExprLoop2;
 
@@ -4215,9 +4217,9 @@ namespace sp_grad {
           constexpr bool bExprIsGradient = std::is_same<ValueTypeExpr, SpGradient>::value;
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
-          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)));
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "data type not supported");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "data type not supported");
+          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)), "cannot mix forward mode and sparse mode in one expression");
           static_assert((bThisIsGradient || bThisIsGradProd) || !bExprIsGradient, "Cannot convert SpGradient to doublereal");
 
           oExpr.template Eval<util::MatTranspEvalFlag::DIRECT, Expr::eExprEvalFlags>(*this);
@@ -4243,9 +4245,9 @@ namespace sp_grad {
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
           constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = bThisIsGradient ? SpGradCommon::ExprEvalUnique : SpGradCommon::ExprEvalDuplicate;
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
-          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)));
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "invalid data type");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "invalid data type");
+          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)), "cannot mix forward mode and sparse mode in the expression");
           static_assert((bThisIsGradient || bThisIsGradProd) || !bExprIsGradient, "Cannot convert SpGradient to doublereal");
 
           oExpr.template Eval<util::MatTranspEvalFlag::DIRECT, eExprEvalFlags>(*this, oDofMap);
@@ -4284,9 +4286,9 @@ namespace sp_grad {
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
           constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = bThisIsGradient ? SpGradCommon::ExprEvalUnique : SpGradCommon::ExprEvalDuplicate;
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
-          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)));
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "invalid data type");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "invalid data type");
+          static_assert(!((bThisIsGradient && bExprIsGradProd) || (bThisIsGradProd && bExprIsGradient)), "cannot mix forward mode and sparse mode in the same expression");
           static_assert((bThisIsGradient || bThisIsGradProd) || !bExprIsGradient, "Cannot convert SpGradient to doublereal");
 
           oExpr.template Eval<util::MatTranspEvalFlag::DIRECT, eExprEvalFlags>(*this, oDofMap);
@@ -4307,8 +4309,8 @@ namespace sp_grad {
      SpMatrixBase<ValueType, NumRows, NumCols>::SpMatrixBase(const std::initializer_list<ValueType>& rgValues)
           :SpMatrixBase(NumRows, NumCols, 0)
      {
-          static_assert(NumRows != SpMatrixSize::DYNAMIC);
-          static_assert(NumCols != SpMatrixSize::DYNAMIC);
+          static_assert(NumRows != SpMatrixSize::DYNAMIC, "matrix size must be known at compile time");
+          static_assert(NumCols != SpMatrixSize::DYNAMIC, "matrix size must be known at compile time");
 
           SP_GRAD_ASSERT(rgValues.size() == static_cast<size_t>(NumRows * NumCols));
 
@@ -4399,11 +4401,11 @@ namespace sp_grad {
           constexpr bool bExprIsGradient = std::is_same<ValueTypeExpr, SpGradient>::value;
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "data type not supported");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "data type not supported");
           static_assert((bThisIsGradient || bThisIsGradProd) || !(bExprIsGradient || bExprIsGradProd), "Cannot convert SpGradient to doublereal in assignment");
-          static_assert(!(bThisIsGradient && bExprIsGradProd));
-          static_assert(!(bThisIsGradProd && bExprIsGradient));
+          static_assert(!(bThisIsGradient && bExprIsGradProd), "cannot mix forward mode and sparse mode within the same expression");
+          static_assert(!(bThisIsGradProd && bExprIsGradient), "cannot mix forward mode and sparse mode within the same expression");
 
           oExpr.template Eval<util::MatTranspEvalFlag::DIRECT, Expr::eExprEvalFlags>(*this);
 
@@ -4428,7 +4430,7 @@ namespace sp_grad {
           constexpr bool bThisIsGradient = std::is_same<ValueType, SpGradient>::value;
 
           static_assert(bThisIsGradient, "Cannot convert SpGradient to doublereal");
-          static_assert(!std::is_same<typename util::remove_all<Expr>::type, SpGradient>::value);
+          static_assert(!std::is_same<typename util::remove_all<Expr>::type, SpGradient>::value, "invalid data type");
 
           const SpMatElemScalarExpr<SpGradient, const SpGradient, NumRows, NumCols> btmp{b};
 
@@ -4497,7 +4499,7 @@ namespace sp_grad {
           constexpr bool bThisIsGradient = std::is_same<ValueType, SpGradient>::value;
 
           static_assert(bThisIsGradient, "Cannot convert SpGradient to doublereal");
-          static_assert(!std::is_same<typename util::remove_all<Expr>::type, SpGradient>::value);
+          static_assert(!std::is_same<typename util::remove_all<Expr>::type, SpGradient>::value, "wrong data type for this function");
 
           const SpMatElemScalarExpr<SpGradient, const SpGradient, NumRows, NumCols> btmp{b};
 
@@ -4569,10 +4571,10 @@ namespace sp_grad {
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
 
-          static_assert(!(bThisIsGradProd && bExprIsGradient));
-          static_assert(!(bThisIsGradient && bExprIsGradProd));
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
+          static_assert(!(bThisIsGradProd && bExprIsGradient), "cannot mix forward mode and sparse mode within the same expression");
+          static_assert(!(bThisIsGradient && bExprIsGradProd), "cannot mix forward mode and sparse mode within the same expression");
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "data type is not supported");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "data type is not supported");
           static_assert((bThisIsGradient || bThisIsGradProd) || !(bExprIsGradient || bExprIsGradProd), "Cannot convert SpGradient to doublereal");
 
           typedef typename util::remove_all<Expr>::type ExprType;
@@ -4601,10 +4603,10 @@ namespace sp_grad {
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
 
-          static_assert(!(bThisIsGradProd && bExprIsGradient));
-          static_assert(!(bThisIsGradient && bExprIsGradProd));
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
+          static_assert(!(bThisIsGradProd && bExprIsGradient), "cannot mix forward mode and sparse mode within the same expression");
+          static_assert(!(bThisIsGradient && bExprIsGradProd), "cannot mix forward mode and sparse mode within the same expression");
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "unsupported data type");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "unsupported data type");
           static_assert((bThisIsGradient || bThisIsGradProd) || !(bExprIsGradient || bExprIsGradProd), "Cannot convert SpGradient to doublereal");
 
           typedef typename util::remove_all<Expr>::type ExprType;
@@ -4633,10 +4635,10 @@ namespace sp_grad {
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
 
-          static_assert(!(bThisIsGradProd && bExprIsGradient));
-          static_assert(!(bThisIsGradient && bExprIsGradProd));
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
+          static_assert(!(bThisIsGradProd && bExprIsGradient), "cannot mix forward mode and sparse mode");
+          static_assert(!(bThisIsGradient && bExprIsGradProd), "cannot mix forward mode and sparse mode");
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "data type not supported");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "data type not supported");
           static_assert((bThisIsGradient || bThisIsGradProd) || !(bExprIsGradient || bExprIsGradProd), "Cannot convert SpGradient to doublereal");
 
           typedef typename util::remove_all<Expr>::type ExprType;
@@ -4666,10 +4668,10 @@ namespace sp_grad {
           constexpr bool bExprIsGradProd = std::is_same<ValueTypeExpr, GpGradProd>::value;
           constexpr bool bExprIsDouble = std::is_same<ValueTypeExpr, doublereal>::value;
 
-          static_assert(!(bThisIsGradProd && bExprIsGradient));
-          static_assert(!(bThisIsGradient && bExprIsGradProd));
-          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble);
-          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble);
+          static_assert(!(bThisIsGradProd && bExprIsGradient), "cannot mix forward mode and sparse mode in the same expression");
+          static_assert(!(bThisIsGradient && bExprIsGradProd), "cannot mix forward mode and sparse mode in the same expression");
+          static_assert(bThisIsGradient || bThisIsGradProd || bThisIsDouble, "data type is not supported");
+          static_assert(bExprIsGradient || bExprIsGradProd || bExprIsDouble, "data type is not supported");
           static_assert((bThisIsGradient || bThisIsGradProd) || !(bExprIsGradient || bExprIsGradProd), "Cannot convert SpGradient to doublereal");
 
           typedef typename util::remove_all<Expr>::type ExprType;
@@ -4798,7 +4800,7 @@ namespace sp_grad {
                     return A.bHaveSameRep(*B.pGetRep());
                }
           };
-     };
+     }
 #endif
 
      template <typename ValueType, typename ScalarExpr, index_type NumRows, index_type NumCols>
@@ -5214,7 +5216,7 @@ namespace sp_grad {
                       const SpMatElemScalarExpr<SpGradient, SpGradient> >
      operator*(const SpMatElemExprBase<LhsValue, LhsExpr>& A,
                const SpGradBase<RhsExpr>& b) noexcept {
-          static_assert(!std::is_same<typename util::remove_all<RhsExpr>::type, SpGradient>::value);
+          static_assert(!std::is_same<typename util::remove_all<RhsExpr>::type, SpGradient>::value, "not the right operator for this data type");
           return decltype(operator*(A, b)){A, SpMatElemScalarExpr<SpGradient, SpGradient>{SpGradient{EvalUnique(b)}}}; // Avoid multiple evaluations of b!
      }
 
@@ -5248,7 +5250,7 @@ namespace sp_grad {
                       const SpMatElemExprBase<RhsValue, RhsExpr>&>
      operator*(const SpGradBase<LhsExpr>& a,
                const SpMatElemExprBase<RhsValue, RhsExpr>& B) noexcept {
-          static_assert(!std::is_same<typename util::remove_all<LhsExpr>::type, SpGradient>::value);
+          static_assert(!std::is_same<typename util::remove_all<LhsExpr>::type, SpGradient>::value, "not the right operator for this data type");
           return decltype(operator*(a, B)){SpMatElemScalarExpr<SpGradient, SpGradient>{SpGradient{EvalUnique(a)}}, B}; // Avoid multiple evaluations of a!
      }
 
@@ -5319,14 +5321,14 @@ namespace sp_grad {
      }
 
      template <typename LhsValue, typename RhsValue, typename LhsExpr, typename RhsExpr>
-     inline constexpr
+     inline
      typename util::ResultType<LhsValue, RhsValue>::Type
      Dot(const SpMatElemExprBase<LhsValue, LhsExpr>& u, const SpMatElemExprBase<RhsValue, RhsExpr>& v) {
           typedef SpMatElemExprBase<LhsValue, LhsExpr> uType;
           typedef SpMatElemExprBase<RhsValue, RhsExpr> vType;
-          static_assert(uType::iNumRowsStatic == vType::iNumRowsStatic);
-          static_assert(uType::iNumColsStatic == 1);
-          static_assert(vType::iNumColsStatic == 1);
+          static_assert(uType::iNumRowsStatic == vType::iNumRowsStatic, "number of rows does not match");
+          static_assert(uType::iNumColsStatic == 1, "u must be a column vector");
+          static_assert(vType::iNumColsStatic == 1, "v must be a column vector");
           SP_GRAD_ASSERT(u.iGetNumRows() == v.iGetNumRows());
 
           typedef const SpMatElemExprBase<LhsValue, LhsExpr>& LhsTmpExpr;
@@ -5346,10 +5348,10 @@ namespace sp_grad {
           typename UTmpType::Type utmp{UTmpType::EvalUnique(u)};
           typename VTmpType::Type vtmp{VTmpType::EvalUnique(v)};
 
-          static_assert(utmp.iNumElemOps == 0);
-          static_assert(vtmp.iNumElemOps == 0);
-          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
-          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+          static_assert(utmp.iNumElemOps == 0, "temporary expression must not involve additional operations");
+          static_assert(vtmp.iNumElemOps == 0, "temporary expression must not involve additional operations");
+          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "support for iterators is required");
+          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "support for iterators is required");
 
           const index_type iRowOffsetU = utmp.iGetRowOffset();
           const index_type iColSizeU = utmp.iGetRowOffset() * utmp.iGetNumRows();
@@ -5370,14 +5372,14 @@ namespace sp_grad {
      }
 
      template <typename LhsValue, typename RhsValue, typename LhsExpr, typename RhsExpr>
-     inline constexpr
+     inline
      typename util::ResultType<LhsValue, RhsValue>::Type
      Dot(const SpMatElemExprBase<LhsValue, LhsExpr>& u, const SpMatElemExprBase<RhsValue, RhsExpr>& v, const SpGradExpDofMapHelper<typename util::ResultType<LhsValue, RhsValue>::Type>& oDofMap) {
           typedef SpMatElemExprBase<LhsValue, LhsExpr> uType;
           typedef SpMatElemExprBase<RhsValue, RhsExpr> vType;
-          static_assert(uType::iNumRowsStatic == vType::iNumRowsStatic);
-          static_assert(uType::iNumColsStatic == 1);
-          static_assert(vType::iNumColsStatic == 1);
+          static_assert(uType::iNumRowsStatic == vType::iNumRowsStatic, "number of rows does not match");
+          static_assert(uType::iNumColsStatic == 1, "u must be a column vector");
+          static_assert(vType::iNumColsStatic == 1, "v must be a column vector");
           SP_GRAD_ASSERT(u.iGetNumRows() == v.iGetNumRows());
 
           typedef const SpMatElemExprBase<LhsValue, LhsExpr>& LhsTmpExpr;
@@ -5397,10 +5399,10 @@ namespace sp_grad {
           typename UTmpType::Type utmp{UTmpType::EvalUnique(u), oDofMap};
           typename VTmpType::Type vtmp{VTmpType::EvalUnique(v), oDofMap};
 
-          static_assert(utmp.iNumElemOps == 0);
-          static_assert(vtmp.iNumElemOps == 0);
-          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
-          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0);
+          static_assert(utmp.iNumElemOps == 0, "temporary expression must not involve additional operations");
+          static_assert(vtmp.iNumElemOps == 0, "temporary expression must not involve additional operations");
+          static_assert((utmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "iterators are required for temporary expressions");
+          static_assert((vtmp.uMatAccess & util::MatAccessFlag::ITERATORS) != 0, "iterators are required for temporary expressions");
 
           const index_type iRowOffsetU = utmp.iGetRowOffset();
           const index_type iColSizeU = utmp.iGetRowOffset() * utmp.iGetNumRows();
@@ -5455,14 +5457,14 @@ namespace sp_grad {
      template <index_type iRowStart, index_type iRowStep, index_type iNumRows, typename ValueType, typename Expr>
      inline constexpr SpSubMatStatExpr<ValueType, const SpMatElemExprBase<ValueType, Expr>&, iRowStart, iRowStep, iNumRows, 1, 1, 1>
      SubColVector(const SpMatElemExprBase<ValueType, Expr>& A) {
-          static_assert(SpMatElemExprBase<ValueType, Expr>::iNumColsStatic == 1);
+          static_assert(SpMatElemExprBase<ValueType, Expr>::iNumColsStatic == 1, "A must be a column vector");
           return decltype(SubColVector<iRowStart, iRowStep, iNumRows>(A))(A);
      }
 
      template <index_type iColStart, index_type iColStep, index_type iNumCols, typename ValueType, typename Expr>
      inline constexpr SpSubMatStatExpr<ValueType, const SpMatElemExprBase<ValueType, Expr>&, 1, 1, 1, iColStart, iColStep, iNumCols>
      SubRowVector(const SpMatElemExprBase<ValueType, Expr>& A) {
-          static_assert(SpMatElemExprBase<ValueType, Expr>::iNumRowsStatic == 1);
+          static_assert(SpMatElemExprBase<ValueType, Expr>::iNumRowsStatic == 1, "A must be a row vector");
           return decltype(SubRowVector<iColStart, iColStep, iNumCols>(A))(A);
      }
 

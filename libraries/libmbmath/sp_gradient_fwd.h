@@ -363,7 +363,7 @@ namespace sp_grad {
           inline void Scale(doublereal dRowScale, const std::vector<doublereal>& oColScale);
 
           template <typename Expr>
-          inline constexpr bool bHaveRefTo(const SpGradBase<Expr>&) const;
+          inline bool bHaveRefTo(const SpGradBase<Expr>&) const;
 
           inline bool bHaveRefTo(const SpGradBase<SpGradient>& g) const;
 

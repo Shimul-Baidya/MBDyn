@@ -1727,10 +1727,10 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 
                 constexpr integer iNumElemTypes = sizeof(sType) / sizeof(sType[0]);
 
-                static_assert(HEXAHEDRON20 - HEXAHEDRON8 < iNumElemTypes);
-                static_assert(HEXAHEDRON20R - HEXAHEDRON8 < iNumElemTypes);
-                static_assert(PENTAHEDRON15 - HEXAHEDRON8 < iNumElemTypes);
-                static_assert(TETRAHEDRON10 - HEXAHEDRON8 < iNumElemTypes);
+                static_assert(HEXAHEDRON20 - HEXAHEDRON8 < iNumElemTypes, "index out of range");
+                static_assert(HEXAHEDRON20R - HEXAHEDRON8 < iNumElemTypes, "index out of range");
+                static_assert(PENTAHEDRON15 - HEXAHEDRON8 < iNumElemTypes, "index out of range");
+                static_assert(TETRAHEDRON10 - HEXAHEDRON8 < iNumElemTypes, "index out of range");
 
                 ASSERT(CurrType - HEXAHEDRON8 < iNumElemTypes);
 

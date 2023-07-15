@@ -497,7 +497,7 @@ void QrDenseSolutionManager::SolveR()
 CholModVectorHandler::CholModVectorHandler(integer iSize, CholModCommon& oCommon)
         :oCommon(oCommon)
 {
-        static_assert(sizeof(doublereal) == sizeof(double));
+        static_assert(sizeof(doublereal) == sizeof(double), "data type does not match");
 
         v = cholmod_l_zeros(iSize, 1, CHOLMOD_REAL, oCommon);
 

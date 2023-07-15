@@ -55,6 +55,7 @@ private:
 	std::vector<std::vector<GiNaC::ex> > gExprDEps;	/* derivatives */
 
 public:
+        using SymbolicElasticConstitutiveLaw<T, Tder>::Update;
 	GiNaCElasticConstitutiveLaw(
 		const TplDriveCaller<T>* pDC,
 		const T& PStress,
@@ -62,8 +63,8 @@ public:
 		std::vector<std::string>& expression);
      	virtual ~GiNaCElasticConstitutiveLaw(void);
      	virtual ConstitutiveLaw<T, Tder>* pCopy(void) const;
-	virtual std::ostream& Restart(std::ostream& out) const;
-	virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.);
+	virtual std::ostream& Restart(std::ostream& out) const override;
+	virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.) override;
 };
 
 typedef GiNaCElasticConstitutiveLaw<doublereal, doublereal> 
@@ -390,6 +391,8 @@ private:
 	std::vector<std::vector<GiNaC::ex> > gExprDEpsPrime;	/* derivatives */
 
 public:
+        using SymbolicViscousConstitutiveLaw<T, Tder>::Update;
+        
 	GiNaCViscousConstitutiveLaw(
 		const T& PStress,
 		std::vector<std::string>& epsilon,
@@ -397,7 +400,7 @@ public:
      	virtual ~GiNaCViscousConstitutiveLaw(void);
      	virtual ConstitutiveLaw<T, Tder>* pCopy(void) const;
 	virtual std::ostream& Restart(std::ostream& out) const;
-	virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.);
+	virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.) override;
 };
 
 typedef GiNaCViscousConstitutiveLaw<doublereal, doublereal> 
@@ -716,6 +719,7 @@ private:
 	std::vector<std::vector<GiNaC::ex> > gExprDEpsPrime;	/* derivatives */
 
 public:
+        using SymbolicViscoElasticConstitutiveLaw<T, Tder>::Update;
 	GiNaCViscoElasticConstitutiveLaw(
 		const TplDriveCaller<T>* pDC,
 		const T& PStress,

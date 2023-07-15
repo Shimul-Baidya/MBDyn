@@ -620,7 +620,7 @@ namespace sp_grad {
      }
 
      template <typename Expr>
-     constexpr bool SpGradient::bHaveRefTo(const SpGradBase<Expr>&) const {
+     bool SpGradient::bHaveRefTo(const SpGradBase<Expr>&) const {
           SP_GRAD_ASSERT(bValid());
 
           return false;

@@ -196,7 +196,7 @@ namespace sp_grad {
           index_type iRefCnt;
 #endif
           SpMatrixData<SpGradient>* pOwner;
-          SpDerivRec rgDer[];
+          SpDerivRec rgDer[0];
      } SP_GRAD_ALIGNMENT(alignof(SpDerivRec));
 
      struct SpGradDofStat {
@@ -299,7 +299,7 @@ namespace sp_grad {
 
           template <>
           struct ExprEvalFlagsHelper<SpGradCommon::ExprEvalDuplicate, SpGradCommon::ExprEvalDuplicate> {
-               static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalDuplicate;;
+               static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalDuplicate;
           };
 
           template <SpGradCommon::ExprEvalFlags EXPR_EVAL_FLAGS>

@@ -205,7 +205,7 @@ void FiniteDifferenceJacobian<N>::JacobianCheckImpl(const NonlinearProblem* cons
           inc.PutCoef(j, pertFD[0] * h);
 
           ASSERT(incsol.size() >= idxFD.size());
-          static_assert(pertFD.size() >= idxFD.size());
+          static_assert(pertFD.size() >= idxFD.size(), "size mismatch");
 
           for (size_t k = 0; k < idxFD.size(); ++k) {
                pNLP->Update(&inc);
@@ -223,7 +223,7 @@ void FiniteDifferenceJacobian<N>::JacobianCheckImpl(const NonlinearProblem* cons
           for (integer i = 1; i <= pJac->iGetNumRows(); ++i) {
                doublereal Jacij = 0.;
 
-               static_assert(idxFD.size() >= coefFD.size());
+               static_assert(idxFD.size() >= coefFD.size(), "size mismatch");
 
                for (size_t k = 0; k < coefFD.size(); ++k) {
                     Jacij -= incsol[idxFD[k]](i) * coefFD[k];

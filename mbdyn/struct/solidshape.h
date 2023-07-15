@@ -318,7 +318,7 @@ Quadrangle4::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1 = r(1);
      const doublereal r2 = r(2);
 
-     static_assert(iNumNodes == 4);
+     static_assert(iNumNodes == 4, "number of nodes does not match");
 
      hd(1,1) = (r2+1)/4.0E+0;
      hd(1,2) = (r1+1)/4.0E+0;
@@ -337,7 +337,7 @@ Quadrangle4::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1 = r(1);
      const doublereal r2 = r(2);
 
-     static_assert(iNumNodes == 4);
+     static_assert(iNumNodes == 4, "number of nodes does not match");
 
      h(1) = ((r1+1)*(r2+1))/4.0E+0;
      h(2) = ((1-r1)*(r2+1))/4.0E+0;
@@ -364,7 +364,7 @@ Quadrangle8::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1_2 = r1 * r1;
      const doublereal r2_2 = r2 * r2;
 
-     static_assert(iNumNodes == 8);
+     static_assert(iNumNodes == 8, "number of nodes does not match");
 
      hd(1,1) = (r2+1)/4.0E+0-((1-r2_2)/2.0E+0-r1*(r2+1))/2.0E+0;
      hd(1,2) = (r1+1)/4.0E+0-((1-r1_2)/2.0E+0-(r1+1)*r2)/2.0E+0;
@@ -393,7 +393,7 @@ Quadrangle8::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1_2 = r1 * r1;
      const doublereal r2_2 = r2 * r2;
 
-     static_assert(iNumNodes == 8);
+     static_assert(iNumNodes == 8, "number of nodes does not match");
 
      h(1) = ((r1+1)*(r2+1))/4.0E+0-(((r1+1)*(1-r2_2))/2.0E+0+((1-r1_2)*(r2+1))/2.0E+0)/2.0E+0;
      h(2) = ((1-r1)*(r2+1))/4.0E+0-(((1-r1)*(1-r2_2))/2.0E+0+((1-r1_2)*(r2+1))/2.0E+0)/2.0E+0;
@@ -422,7 +422,7 @@ Quadrangle8r::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1 = r(1);
      const doublereal r2 = r(2);
 
-     static_assert(iNumNodes == 8);
+     static_assert(iNumNodes == 8, "number of nodes does not match");
 
      hd(1,1) = 2.5E-1*(1.0E+0-r2)*(r2+r1+1.0E+0)+2.5E-1*(r1-1.0E+0)*(1.0E+0-r2);
      hd(1,2) = 2.5E-1*(r1-1.0E+0)*(1.0E+0-r2)-2.5E-1*(r1-1.0E+0)*(r2+r1+1.0E+0);
@@ -449,7 +449,7 @@ Quadrangle8r::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal r1 = r(1);
      const doublereal r2 = r(2);
 
-     static_assert(iNumNodes == 8);
+     static_assert(iNumNodes == 8, "number of nodes does not match");
 
      h(1) = 2.5E-1*(r1-1.0E+0)*(1.0E+0-r2)*(r2+r1+1.0E+0);
      h(2) = 2.5E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(r2-r1+1.0E+0);
@@ -478,7 +478,7 @@ Triangle6h::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal zeta = r(1);
      const doublereal eta = r(2);
 
-     static_assert(iNumNodes == 6);
+     static_assert(iNumNodes == 6, "number of nodes does not match");
 
      hd(1,1) = 2*(zeta+eta-1)-2*((-zeta)-eta+1)+1;
      hd(1,2) = 2*(zeta+eta-1)-2*((-zeta)-eta+1)+1;
@@ -501,7 +501,7 @@ Triangle6h::ShapeFunction(const sp_grad::SpColVector<doublereal, 2>& r,
      const doublereal zeta = r(1);
      const doublereal eta = r(2);
 
-     static_assert(iNumNodes == 6);
+     static_assert(iNumNodes == 6, "number of nodes does not match");
 
      h(1) = (1-2*((-zeta)-eta+1))*(zeta+eta-1);
      h(2) = -(1-2*zeta)*zeta;
@@ -525,7 +525,7 @@ void
 Hexahedron8::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
                                 sp_grad::SpMatrix<doublereal, iNumNodes, 3>& h0d1)
 {
-     static_assert(iNumNodes == 8);
+     static_assert(iNumNodes == 8, "number of nodes does not match");
 
      h0d1(1,1) = ((r(2)+1)*(r(3)+1))/8.0E+0;
      h0d1(1,2) = ((r(1)+1)*(r(3)+1))/8.0E+0;
@@ -557,7 +557,7 @@ void
 Hexahedron8::ShapeFunction(const sp_grad::SpColVector<doublereal, 3>& r,
                            sp_grad::SpColVector<doublereal, iNumNodes>& h)
 {
-     static_assert(iNumNodes == 8);
+     static_assert(iNumNodes == 8, "number of nodes does not match");
 
      h(1) = ((r(1)+1)*(r(2)+1)*(r(3)+1))/8.0E+0;
      h(2) = ((1-r(1))*(r(2)+1)*(r(3)+1))/8.0E+0;
@@ -606,7 +606,7 @@ Hexahedron20::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
      const doublereal r2_2 = r2 * r2;
      const doublereal r3_2 = r3 * r3;
 
-     static_assert(iNumNodes == 20);
+     static_assert(iNumNodes == 20, "number of nodes does not match");
 
      h0d1(1,1) = ((r2+1)*(r3+1))/8.0E+0-(((r2+1)*(1-r3_2))/4.0E+0+((1-r2_2)*(r3+1))/4.0E+0-(r1*(r2+1)*(r3+1))/2.0E+0)/2.0E+0;
      h0d1(1,2) = ((r1+1)*(r3+1))/8.0E+0-(((r1+1)*(1-r3_2))/4.0E+0-((r1+1)*r2*(r3+1))/2.0E+0+((1-r1_2)*(r3+1))/4.0E+0)/2.0E+0;
@@ -681,7 +681,7 @@ Hexahedron20::ShapeFunction(const sp_grad::SpColVector<doublereal, 3>& r,
      const doublereal r2_2 = r2 * r2;
      const doublereal r3_2 = r3 * r3;
 
-     static_assert(iNumNodes == 20);
+     static_assert(iNumNodes == 20, "number of nodes does not match");
 
      h(1) = ((r1+1)*(r2+1)*(r3+1))/8.0E+0-(((r1+1)*(r2+1)*(1-r3_2))/4.0E+0+((r1+1)*(1-r2_2)*(r3+1))/4.0E+0+((1-r1_2)*(r2+1)*(r3+1))/4.0E+0)/2.0E+0;
      h(2) = ((1-r1)*(r2+1)*(r3+1))/8.0E+0-(((1-r1)*(r2+1)*(1-r3_2))/4.0E+0+((1-r1)*(1-r2_2)*(r3+1))/4.0E+0+((1-r1_2)*(r2+1)*(r3+1))/4.0E+0)/2.0E+0;
@@ -717,7 +717,7 @@ void
 Hexahedron20::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumComp>& tauni,
                                  const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune)
 {
-     static_assert(iNumRhs >= iNumNodes);
+     static_assert(iNumRhs >= iNumNodes, "extrapolation is not possible");
      using namespace sp_grad;
 
      for (index_type j = 1; j <= iNumComp; ++j) {
@@ -746,7 +746,7 @@ Hexahedron20r::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
      const doublereal r2 = r(2);
      const doublereal r3 = r(3);
 
-     static_assert(iNumNodes == 20);
+     static_assert(iNumNodes == 20, "invalid number of nodes");
 
      h0d1(1,1) = 1.25E-1*(1.0E+0-r2)*(1.0E+0-r3)*(r3+r2+r1+2.0E+0)+1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3);
      h0d1(1,2) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)-1.25E-1*(r1-1.0E+0)*(1.0E+0-r3)*(r3+r2+r1+2.0E+0);
@@ -818,7 +818,7 @@ Hexahedron20r::ShapeFunction(const sp_grad::SpColVector<doublereal, 3>& r,
      const doublereal r2 = r(2);
      const doublereal r3 = r(3);
 
-     static_assert(iNumNodes == 20);
+     static_assert(iNumNodes == 20, "invalid number of nodes");
 
      h(1) = 1.25E-1*(r1-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)*(r3+r2+r1+2.0E+0);
      h(2) = 1.25E-1*((-r1)-1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3)*(r3+r2-r1+2.0E+0);
@@ -850,7 +850,7 @@ Hexahedron20r::ShapeFunctionExtrap(const sp_grad::SpColVector<doublereal, 3>& r,
      const doublereal r2 = r(2);
      const doublereal r3 = r(3);
 
-     static_assert(iNumNodesExtrap == 8);
+     static_assert(iNumNodesExtrap == 8, "invalid number of nodes");
 
      h(1) = 1.25E-1*(1.0E+0-r1)*(1.0E+0-r2)*(1.0E+0-r3);
      h(2) = 1.25E-1*(r1+1.0E+0)*(1.0E+0-r2)*(1.0E+0-r3);
@@ -869,7 +869,7 @@ Hexahedron20r::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumC
 {
      using namespace sp_grad;
 
-     static_assert(iNumRhs >= iNumNodesExtrap);
+     static_assert(iNumRhs >= iNumNodesExtrap, "invalid number of nodes");
 
      static constexpr struct {
           index_type ico1, ico2, imid;
@@ -921,7 +921,7 @@ Pentahedron15::ShapeFunctionDeriv(const sp_grad::SpColVector<doublereal, 3>& r,
      const doublereal r3 = r(3);
      const doublereal r3_2 = r3 * r3;
 
-     static_assert(iNumNodes == 15);
+     static_assert(iNumNodes == 15, "invalid number of nodes");
 
      h0d1(1,1) = (-((1-r3)*((-r3)-2*r2-2*r1))/2.0E+0)-((-r2)-r1+1)*(1-r3);
      h0d1(1,2) = (-((1-r3)*((-r3)-2*r2-2*r1))/2.0E+0)-((-r2)-r1+1)*(1-r3);
@@ -986,7 +986,7 @@ Pentahedron15::ShapeFunction(const sp_grad::SpColVector<doublereal, 3>& r,
      const doublereal r3 = r(3);
      const doublereal r3_2 = r3 * r3;
 
-     static_assert(iNumNodes == 15);
+     static_assert(iNumNodes == 15, "invalid number of nodes");
 
      h(1) = (((-r2)-r1+1)*(1-r3)*((-r3)-2*r2-2*r1))/2.0E+0;
      h(2) = (r1*(1-r3)*((-r3)+2*r1-2))/2.0E+0;
@@ -1011,7 +1011,7 @@ Pentahedron15::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNumC
                                   const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune) {
      using namespace sp_grad;
 
-     static_assert(iNumRhs >= iNumNodes);
+     static_assert(iNumRhs >= iNumNodes, "invalid number of nodes");
 
      for (index_type j = 1; j <= iNumComp; ++j) {
           for (index_type i = 1; i <= iNumNodes; ++i) {
@@ -1107,7 +1107,7 @@ Tetrahedron10h::GaussToNodalInterp(sp_grad::SpMatrix<doublereal, iNumNodes, iNum
                                    const sp_grad::SpMatrix<doublereal, iNumRhs, iNumComp>& taune) {
      using namespace sp_grad;
 
-     static_assert(iNumRhs >= iNumNodesExtrap);
+     static_assert(iNumRhs >= iNumNodesExtrap, "invalid number of nodes");
 
      static constexpr struct {
           index_type ico1, ico2, imid;

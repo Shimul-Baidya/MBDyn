@@ -430,7 +430,7 @@ extern std::ostream& Write(std::ostream& out, const MatExp& m,
 inline MatExp
 VecExp::Tens(const VecExp &v) const {
 	return MatExp(vec.Tens(v.GetVec()), mom.Tens(v.GetMom()));
-};
+}
 
 
 //M> questi no ho capito a cosa servono

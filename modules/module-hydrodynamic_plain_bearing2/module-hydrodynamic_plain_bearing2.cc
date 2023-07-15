@@ -70,6 +70,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <ac/lapack.h>
+#include <constexpr_math.h>
 #include <dataman.h>
 #include <gauss.h>
 #include <sp_gradient.h>
@@ -264,7 +265,7 @@ namespace {
      class Circle2D: public Geometry2D {
      public:
           Circle2D(const SpColVector<doublereal, 2>& x, doublereal r);
-          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& x) const;
+          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& x) const override;
           virtual bool bPointIsInside(const SpColVector<doublereal, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<SpGradient, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<GpGradProd, 2>& p1) const override;
@@ -277,7 +278,7 @@ namespace {
      class Rectangle2D: public Geometry2D {
      public:
           Rectangle2D(const SpColVector<doublereal, 2>& x, doublereal w, doublereal h);
-          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& x) const;
+          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& x) const override;
           virtual bool bPointIsInside(const SpColVector<doublereal, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<SpGradient, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<GpGradProd, 2>& p1) const override;
@@ -290,7 +291,7 @@ namespace {
      class CompleteSurface2D: public Geometry2D {
      public:
           explicit CompleteSurface2D(const SpColVector<doublereal, 2>& x);
-          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& x) const;
+          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& x) const override;
           virtual bool bPointIsInside(const SpColVector<doublereal, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<SpGradient, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<GpGradProd, 2>& p1) const override;
@@ -307,7 +308,7 @@ namespace {
                                  doublereal tolx,
                                  doublereal tolz,
                                  const std::vector<bool>& status);
-          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& xc) const;
+          virtual std::unique_ptr<Geometry2D> Clone(const SpColVector<doublereal, 2>& xc) const override;
           virtual bool bPointIsInside(const SpColVector<doublereal, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<SpGradient, 2>& p1) const override;
           virtual bool bPointIsInside(const SpColVector<GpGradProd, 2>& p1) const override;
@@ -1244,7 +1245,7 @@ namespace {
           virtual void GetDensityDerTime(doublereal& drho_dt, const doublereal& h, const doublereal& dh_dt) const override;
           virtual void GetDensityDerTime(SpGradient& drho_dt, const SpGradient& h, const SpGradient& dh_dt) const override;
           virtual void GetDensityDerTime(GpGradProd& drho_dt, const GpGradProd& h, const GpGradProd& dh_dt) const override;
-          virtual void Update();
+          virtual void Update() override;
 
      private:
           std::unique_ptr<DriveCaller> pPressDensDrv;
@@ -1276,7 +1277,7 @@ namespace {
           virtual void GetDensityDerTime(doublereal& drho_dt, const doublereal& h, const doublereal& dh_dt) const override;
           virtual void GetDensityDerTime(SpGradient& drho_dt, const SpGradient& h, const SpGradient& dh_dt) const override;
           virtual void GetDensityDerTime(GpGradProd& drho_dt, const GpGradProd& h, const GpGradProd& dh_dt) const override;
-          virtual void Update();
+          virtual void Update() override;
 
      private:
           template <typename G>
@@ -1438,17 +1439,17 @@ namespace {
           virtual void
           Update(const VectorHandler& Y,
                  doublereal dCoef) override;
-          virtual void SetValue(VectorHandler& XCurr, VectorHandler& XPrimeCurr);
-          virtual unsigned int iGetNumDof(void) const;
-          virtual unsigned int iGetInitialNumDof(void) const;
-          virtual DofOrder::Order GetDofType(unsigned int i) const;
-          virtual DofOrder::Order GetEqType(unsigned int i) const;
+          virtual void SetValue(VectorHandler& XCurr, VectorHandler& XPrimeCurr) override;
+          virtual unsigned int iGetNumDof(void) const override;
+          virtual unsigned int iGetInitialNumDof(void) const override;
+          virtual DofOrder::Order GetDofType(unsigned int i) const override;
+          virtual DofOrder::Order GetEqType(unsigned int i) const override;
           virtual SolverBase::StepIntegratorType GetStepIntegrator(unsigned int i) const override;
           virtual std::ostream&
-          DescribeDof(std::ostream& out, const char *prefix, bool bInitial) const;
+          DescribeDof(std::ostream& out, const char *prefix, bool bInitial) const override;
 
           virtual std::ostream&
-          DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const;
+          DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const override;
 
      private:
           sp_grad::SpFunctionCall eCurrFunc;
@@ -1466,16 +1467,16 @@ namespace {
                              ThermalNodeAd* pExtThermNode);
 
           virtual ~ThermalCoupledNode();
-          virtual void GetTemperature(doublereal& T, doublereal = 0.) const;
-          virtual void GetTemperature(SpGradient& T, doublereal dCoef) const;
-          virtual void GetTemperature(GpGradProd& T, doublereal dCoef) const;
-          virtual void GetTemperatureDerTime(doublereal& dT_dt, doublereal=0.) const;
-          virtual void GetTemperatureDerTime(SpGradient& dT_dt, doublereal dCoef) const;
-          virtual void GetTemperatureDerTime(GpGradProd& T, doublereal dCoef) const;
+          virtual void GetTemperature(doublereal& T, doublereal = 0.) const override;
+          virtual void GetTemperature(SpGradient& T, doublereal dCoef) const override;
+          virtual void GetTemperature(GpGradProd& T, doublereal dCoef) const override;
+          virtual void GetTemperatureDerTime(doublereal& dT_dt, doublereal=0.) const override;
+          virtual void GetTemperatureDerTime(SpGradient& dT_dt, doublereal dCoef) const override;
+          virtual void GetTemperatureDerTime(GpGradProd& T, doublereal dCoef) const override;
 
-          virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const;
-          virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const;
-          virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const;
+          virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const override;
+          virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const override;
+          virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const override;
 
           virtual void
           Update(const VectorHandler& XCurr,
@@ -1506,14 +1507,14 @@ namespace {
           Update(const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
                  doublereal dCoef,
-                 SpFunctionCall func);
+                 SpFunctionCall func) override;
 
           virtual void
           Update(const VectorHandler& Y,
                  doublereal dCoef) override;
 
           virtual integer
-          iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const;
+          iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const override;
 
           const ThermalCoupledNode* pGetInletNode() const {
                return &oInletNode;
@@ -1536,8 +1537,8 @@ namespace {
           virtual void GetTemperatureDerTime(doublereal& dT_dt, doublereal=0.) const override;
           virtual void GetTemperatureDerTime(SpGradient& dT_dt, doublereal dCoef) const override;
           virtual void GetTemperatureDerTime(GpGradProd& dT_dt, doublereal dCoef) const override;
-          virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const;
-          virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const;
+          virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const override;
+          virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const override;
           virtual void
           Update(const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
@@ -1823,7 +1824,7 @@ namespace {
           virtual void GetPressure(doublereal& p, doublereal=0.) const override;
           virtual void GetPressure(SpGradient& p, doublereal dCoef=0.) const override;
           virtual void GetPressure(GpGradProd& p, doublereal dCoef=0.) const override;
-          virtual void GetPressureDerTime(doublereal& dp_dt, doublereal=0.) const;
+          virtual void GetPressureDerTime(doublereal& dp_dt, doublereal=0.) const override;
           virtual void GetPressureDerTime(SpGradient& dp_dt, doublereal dCoef=0.) const override;
           virtual void GetPressureDerTime(GpGradProd& dp_dt, doublereal dCoef=0.) const override;
           virtual void GetDensity(doublereal& rho, doublereal=0.) const override;
@@ -2515,8 +2516,24 @@ namespace {
                         SpColVector<doublereal, 3>& v) const=0;
 
           virtual void
+          GetPosition3D(const SpColVector<SpGradient, 2>& x,
+                        SpColVector<SpGradient, 3>& v) const=0;
+
+          virtual void
+          GetPosition3D(const SpColVector<GpGradProd, 2>& x,
+                        SpColVector<GpGradProd, 3>& v) const=0;
+
+          virtual void
           GetTangentCoordSys(const SpColVector<doublereal, 2>& x,
                              SpMatrix<doublereal, 3, 3>& Rt) const=0;
+
+          virtual void
+          GetTangentCoordSys(const SpColVector<SpGradient, 2>& x,
+                             SpMatrix<SpGradient, 3, 3>& Rt) const=0;
+
+          virtual void
+          GetTangentCoordSys(const SpColVector<GpGradProd, 2>& x,
+                             SpMatrix<GpGradProd, 3, 3>& Rt) const=0;
 
           doublereal
           dGetNodeDistance2D(const Node2D* pNode1,
@@ -2642,7 +2659,7 @@ namespace {
      public:
           RigidBodyBearing(HydroRootElement* pParent);
           virtual ~RigidBodyBearing();
-          virtual void ParseInput(DataManager* pDM, MBDynParser& HP);
+          virtual void ParseInput(DataManager* pDM, MBDynParser& HP) override;
           const StructNodeAd* pGetNode1() const { return pNode1; }
           const StructNodeAd* pGetNode2() const { return pNode2; }
           const SpColVector<doublereal, 3>&
@@ -2693,7 +2710,7 @@ namespace {
      public:
           explicit CylindricalBearing(HydroRootElement* pParent);
           virtual ~CylindricalBearing();
-          virtual void ParseInput(DataManager* pDM, MBDynParser& HP);
+          virtual void ParseInput(DataManager* pDM, MBDynParser& HP) override;
           doublereal dGetBearingWidth() const { return b; }
           doublereal dGetShaftRadius() const { return r; }
           doublereal dGetBearingRadius() const { return R; }
@@ -2705,27 +2722,27 @@ namespace {
 
           virtual void
           GetPosition3D(const SpColVector<doublereal, 2>& x,
-                        SpColVector<doublereal, 3>& v) const;
+                        SpColVector<doublereal, 3>& v) const override;
 
           virtual void
           GetPosition3D(const SpColVector<SpGradient, 2>& x,
-                        SpColVector<SpGradient, 3>& v) const;
+                        SpColVector<SpGradient, 3>& v) const override;
 
           virtual void
           GetPosition3D(const SpColVector<GpGradProd, 2>& x,
-                        SpColVector<GpGradProd, 3>& v) const;
+                        SpColVector<GpGradProd, 3>& v) const override;
 
           virtual void
           GetTangentCoordSys(const SpColVector<doublereal, 2>& x,
-                             SpMatrix<doublereal, 3, 3>& Rt) const;
+                             SpMatrix<doublereal, 3, 3>& Rt) const override;
 
           virtual void
           GetTangentCoordSys(const SpColVector<SpGradient, 2>& x,
-                             SpMatrix<SpGradient, 3, 3>& Rt) const;
+                             SpMatrix<SpGradient, 3, 3>& Rt) const override;
 
           virtual void
           GetTangentCoordSys(const SpColVector<GpGradProd, 2>& x,
-                             SpMatrix<GpGradProd, 3, 3>& Rt) const;
+                             SpMatrix<GpGradProd, 3, 3>& Rt) const override;
 
           virtual void
           GetStructNodeOffset(const HydroNode* pHydroNode, SpColVector<doublereal, 3>& v) const override;
@@ -2774,7 +2791,7 @@ namespace {
           GetOrientationMeshNode() const=0;
 
           virtual doublereal
-          dGetPocketHeightMesh(const SpColVector<doublereal, 2>& x) const;
+          dGetPocketHeightMesh(const SpColVector<doublereal, 2>& x) const override;
 
      private:
           template <typename T>
@@ -3023,8 +3040,8 @@ namespace {
      public:
           CylindricalMeshAtBearing(HydroRootElement* pParent);
           virtual ~CylindricalMeshAtBearing();
-          virtual Type GetType() const;
-          virtual void Initialize();
+          virtual Type GetType() const override;
+          virtual void Initialize() override;
 
           virtual void
           GetBoundaryConditions(HydroNode* pNode,
@@ -3563,14 +3580,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -3582,14 +3599,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -3633,14 +3650,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -3652,14 +3669,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -3679,14 +3696,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -3698,14 +3715,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T> inline
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -3719,7 +3736,7 @@ namespace {
                              const SpGradientVectorHandler<T>& XCurr,
                              SpFunctionCall func);
 
-          virtual void Initialize();
+          virtual void Initialize() override;
 
      private:
           template <typename T> inline
@@ -3766,14 +3783,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -3785,14 +3802,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T> inline
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -3801,7 +3818,7 @@ namespace {
                       const SpGradientVectorHandler<T>& XPrimeCurr,
                       SpFunctionCall func);
 
-          virtual void Initialize();
+          virtual void Initialize() override;
 
           void SetFluxNode(int iNode, FluxNode* pFluxNode);
 
@@ -3842,14 +3859,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -3901,14 +3918,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -3963,14 +3980,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -3982,14 +3999,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void InitialAssRes(SpGradientAssVec<T>& WorkVec,
@@ -4023,14 +4040,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -4042,16 +4059,16 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void WorkSpaceDim(integer* piNumRows,
                                     integer* piNumCols,
-                                    sp_grad::SpFunctionCall eFunc) const;
+                                    sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -4065,7 +4082,7 @@ namespace {
                              const SpGradientVectorHandler<T>& XCurr,
                              SpFunctionCall func);
 
-          virtual void Initialize();
+          virtual void Initialize() override;
 
      private:
           const ThermalInletNode* pInletNode;
@@ -4214,14 +4231,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -4233,14 +4250,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkMat,
@@ -4254,7 +4271,7 @@ namespace {
                              const SpGradientVectorHandler<T>& XCurr,
                              SpFunctionCall func);
 
-          virtual void Initialize();
+          virtual void Initialize() override;
 
      private:
           template <typename T>
@@ -4282,14 +4299,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -4301,14 +4318,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkMat,
@@ -4322,7 +4339,7 @@ namespace {
                              const SpGradientVectorHandler<T>& XCurr,
                              SpFunctionCall func);
 
-          virtual void Initialize();
+          virtual void Initialize() override;
 
      protected:
           struct GaussPointDataF: GaussPointData {
@@ -4398,14 +4415,14 @@ namespace {
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(SpGradientSubMatrixHandler& WorkMat,
                  doublereal dCoef,
                  const VectorHandler& XCurr,
                  const VectorHandler& XPrimeCurr,
-                 SpGradientAssVecBase::SpAssMode mode);
+                 SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           AssJac(VectorHandler& JacY,
@@ -4417,14 +4434,14 @@ namespace {
           virtual void
           InitialAssRes(SubVectorHandler& WorkVec,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
           virtual void
           InitialAssJac(SpGradientSubMatrixHandler& WorkMat,
                         const VectorHandler& XCurr,
-                        SpGradientAssVecBase::SpAssMode mode);
+                        SpGradientAssVecBase::SpAssMode mode) override;
 
-          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const;
+          virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkMat,
@@ -4438,7 +4455,7 @@ namespace {
                              const SpGradientVectorHandler<T>& XCurr,
                              SpFunctionCall func);
 
-          virtual void Initialize();
+          virtual void Initialize() override;
 
      private:
           struct GaussPointDataMassFlow: GaussPointData {
@@ -5198,10 +5215,10 @@ namespace {
 
           virtual void
           GetRadialDeformation1(doublereal& w1,
-                                const HydroUpdatedNode* pNode) const;
+                                const HydroUpdatedNode* pNode) const override;
           virtual void
           GetRadialDeformation2(doublereal& w2,
-                                const HydroUpdatedNode* pNode) const;
+                                const HydroUpdatedNode* pNode) const override;
      private:
           enum DEhdFieldType {
                FT_TOTAL_PRESS,
@@ -5269,7 +5286,7 @@ namespace {
                           const SpGradientVectorHandler<T>& XCurr,
                           SpFunctionCall func);
 
-          virtual void Print(std::ostream& os) const;
+          virtual void Print(std::ostream& os) const override;
 
      private:
           inline void UpdateDefMovingInterp(index_type iCompIndex, doublereal wmi);
@@ -5387,21 +5404,21 @@ namespace {
                                doublereal& dw_dt,
                                doublereal dCoef,
                                SpFunctionCall func,
-                               const HydroUpdatedNode* pNode) const;
+                               const HydroUpdatedNode* pNode) const override;
 
           virtual void
           GetRadialDeformation(SpGradient& w,
                                SpGradient& dw_dt,
                                doublereal dCoef,
                                SpFunctionCall func,
-                               const HydroUpdatedNode* pNode) const;
+                               const HydroUpdatedNode* pNode) const override;
 
           virtual void
           GetRadialDeformation(GpGradProd& w,
                                GpGradProd& dw_dt,
                                doublereal dCoef,
                                SpFunctionCall func,
-                               const HydroUpdatedNode* pNode) const;
+                               const HydroUpdatedNode* pNode) const override;
      private:
           inline void
           GetModalDeformation(index_type iMode,
@@ -5457,7 +5474,7 @@ namespace {
                           const SpGradientVectorHandler<T>& XCurr,
                           SpFunctionCall func);
 
-          virtual void Print(std::ostream& os) const;
+          virtual void Print(std::ostream& os) const override;
 
           SpMatrix<doublereal> Phin, RPhiK;
           SpColVector<doublereal> q, dq_dt, qY;
@@ -10994,7 +11011,7 @@ namespace {
                if (bLineSearchControl) {
                     // Take a Newton step in a way that the transition occures just before or just after the cavitation state is changed.
                     // dLamEps defines the difference the threshold.
-                    static constexpr doublereal dLamEps = sqrt(std::numeric_limits<doublereal>::epsilon());
+                    static constexpr doublereal dLamEps = constexpr_math::sqrt(std::numeric_limits<doublereal>::epsilon());
                     static constexpr doublereal rgThetaLimit[iNumDofMax][2] = {{0., std::numeric_limits<doublereal>::max()}, {0., 1.}};
                     static constexpr doublereal rgLambdaFactor[iNumDofMax][2] = {{1. + dLamEps, 0.}, {1. - dLamEps, 1. + dLamEps}};
                     static constexpr doublereal dLambdaMin = 1e-3;
@@ -15013,7 +15030,7 @@ namespace {
                                         }
 
                                         if (pModalNode && pNodeInterface) {
-                                             constexpr doublereal dTolRel = sqrt(std::numeric_limits<doublereal>::epsilon());
+                                             constexpr doublereal dTolRel = constexpr_math::sqrt(std::numeric_limits<doublereal>::epsilon());
 
                                              const Vec3& X0 = pModalNode->GetXCurr();
                                              const Mat3x3& R0 = pModalNode->GetRCurr();

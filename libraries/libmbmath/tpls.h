@@ -47,6 +47,6 @@ template <class T>
 inline T& mb_deye(T&, const doublereal d);
 
 template <class T>
-inline int sign(T val) { return (T(0) < val) - (val < T(0)); };
+inline int sign(T val) { return (T(0) < val) - (val < T(0)); }
 
 #endif // TPLS_H

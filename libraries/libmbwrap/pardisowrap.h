@@ -45,6 +45,7 @@
 
 #include <iostream>
 #include <vector>
+#include <limits>
 
 #include "myassert.h"
 #include "mynewmem.h"
@@ -75,7 +76,9 @@ private:
      typedef PardisoSolverTraits<MKL_INT_TYPE> SolverType;
      typedef typename SolverType::MH_INT_TYPE MH_INT_TYPE;
      
-     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE));
+     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE), "data type does not match");
+     static_assert(std::numeric_limits<MH_INT_TYPE>::is_integer, "invalid data type");
+     static_assert(std::numeric_limits<MKL_INT_TYPE>::is_integer, "invalid data type");
      
      mutable _MKL_DSS_HANDLE_t pt[64];
      mutable MKL_INT_TYPE iparm[64];
@@ -131,9 +134,9 @@ public:
      virtual void MatrInitialize() override;
      virtual void Solve() override;
      void MakeCompressedRowForm();
-     virtual MatrixHandler* pMatHdl() const;
-     virtual VectorHandler* pResHdl() const;
-     virtual VectorHandler* pSolHdl() const;
+     virtual MatrixHandler* pMatHdl() const override;
+     virtual VectorHandler* pResHdl() const override;
+     virtual VectorHandler* pSolHdl() const override;
 };
 
 #endif

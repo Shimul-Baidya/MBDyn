@@ -373,8 +373,8 @@ class Vec3: public sp_grad::SpConstMatElemAdapter<Vec3>
      Vec3& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& v) {
           using namespace sp_grad;
 
-          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumRowsStatic == iNumRowsStatic);
-          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumColsStatic == iNumColsStatic);
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumRowsStatic == iNumRowsStatic, "vector size does not match");
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumColsStatic == iNumColsStatic, "vector size does not match");
           
           for (index_type i = 1; i <= iNumRowsStatic; ++i) {
                (*this)(i) = v.dGetValue(i, 1);
@@ -514,13 +514,15 @@ class Vec3: public sp_grad::SpConstMatElemAdapter<Vec3>
     I coefficienti sono separati dalla stringa sFill (spazio di default).
     */
    std::ostream& Write(std::ostream& out, const char* sFill = " ") const;
-
+     using sp_grad::SpConstMatElemAdapter<Vec3>::iNumElemOps;
+     using sp_grad::SpConstMatElemAdapter<Vec3>::uMatAccess;
+     using sp_grad::SpConstMatElemAdapter<Vec3>::eMatOpType;
      static constexpr sp_grad::index_type iNumRowsStatic = 3;
      static constexpr sp_grad::index_type iNumColsStatic = 1;
-     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
-     inline constexpr sp_grad::index_type iGetColOffset() const noexcept { return iNumRowsStatic; }
-     inline constexpr sp_grad::index_type iGetNumRows() const noexcept { return iNumRowsStatic; }
-     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return iNumColsStatic; }
+     static inline constexpr sp_grad::index_type iGetRowOffset() noexcept { return 1; }
+     static inline constexpr sp_grad::index_type iGetColOffset() noexcept { return iNumRowsStatic; }
+     static inline constexpr sp_grad::index_type iGetNumRows() noexcept { return iNumRowsStatic; }
+     static inline constexpr sp_grad::index_type iGetNumCols() noexcept { return iNumColsStatic; }
      inline const doublereal* begin() const noexcept { return &pdVec[0]; }
      inline const doublereal* end() const noexcept { return &pdVec[iNumRowsStatic]; }
      doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i); }     
@@ -1097,8 +1099,8 @@ class Mat3x3: public sp_grad::SpConstMatElemAdapter<Mat3x3>
      Mat3x3& operator = (const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& m) {
           using namespace sp_grad;
 
-          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumRowsStatic == iNumRowsStatic);
-          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumColsStatic == iNumColsStatic);
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumRowsStatic == iNumRowsStatic, "matrix size does not match");
+          static_assert(SpMatElemExprBase<doublereal, DERIVED>::iNumColsStatic == iNumColsStatic, "matrix size does not match");
 
           for (index_type j = 1; j <= iNumColsStatic; ++j) {
                for (index_type i = 1; i <= iNumRowsStatic; ++i) {
@@ -1419,10 +1421,10 @@ class Mat3x3: public sp_grad::SpConstMatElemAdapter<Mat3x3>
      
      static constexpr sp_grad::index_type iNumRowsStatic = 3;
      static constexpr sp_grad::index_type iNumColsStatic = 3;
-     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
-     inline constexpr sp_grad::index_type iGetColOffset() const noexcept { return iNumRowsStatic; }
-     inline constexpr sp_grad::index_type iGetNumRows() const noexcept { return iNumRowsStatic; }
-     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return iNumColsStatic; }
+     static inline constexpr sp_grad::index_type iGetRowOffset() noexcept { return 1; }
+     static inline constexpr sp_grad::index_type iGetColOffset() noexcept { return iNumRowsStatic; }
+     static inline constexpr sp_grad::index_type iGetNumRows() noexcept { return iNumRowsStatic; }
+     static inline constexpr sp_grad::index_type iGetNumCols() noexcept { return iNumColsStatic; }
      inline const doublereal* begin() const noexcept { return &pdMat[0]; }
      inline const doublereal* end() const noexcept { return &pdMat[iNumRowsStatic * iNumColsStatic]; }
      doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i, j); }

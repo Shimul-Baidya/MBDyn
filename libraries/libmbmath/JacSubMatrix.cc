@@ -42,11 +42,11 @@
 
 static ExpandableRowVector::ExpandableRowElement er_Zero;
 
-ExpandableRowVector::ExpandableRowVector(void) {};
+ExpandableRowVector::ExpandableRowVector(void) {}
 ExpandableRowVector::ExpandableRowVector(const integer n) {
 	ReDim(n);
 }
-ExpandableRowVector::~ExpandableRowVector(void) {};
+ExpandableRowVector::~ExpandableRowVector(void) {}
 void ExpandableRowVector::ReDim(const integer n) {
 	//we have to accept = 0, some elements do ReDim(0,0) (PointForceElement))
 	ASSERTMSGBREAK(n>=0, "ExpandableRowVector:ReDim(), n shold be >= 0");
@@ -54,7 +54,7 @@ void ExpandableRowVector::ReDim(const integer n) {
 }
 integer ExpandableRowVector::GetDim(void) const {
 	return v.size();
-};
+}
 void ExpandableRowVector::Zero(void) {
 	for (std::vector<ExpandableRowElement>::iterator i = v.begin(); i != v.end(); ++i) {
 		i->x = 0.;
@@ -281,11 +281,11 @@ std::ostream & operator << (std::ostream & s, const ExpandableRowVector & z) {
 static ExpandableMatrix::ExpandableColBlock ecb_Zero;
 
 
-ExpandableMatrix::ExpandableMatrix(void) {};
+ExpandableMatrix::ExpandableMatrix(void) {}
 ExpandableMatrix::ExpandableMatrix(const integer n, const integer m) {
 	ReDim(n, m);
 }
-ExpandableMatrix::~ExpandableMatrix(void) {};
+ExpandableMatrix::~ExpandableMatrix(void) {}
 void ExpandableMatrix::ReDim(const integer n, const integer m) {
 	//we have to accept = 0, some elements do ReDim(0,0) (PointForceElement))
 	ASSERTMSGBREAK(n>=0, "ExpandableMatrix:ReDim(), n shold be >= 0");
@@ -316,10 +316,10 @@ integer ExpandableMatrix::GetNRows() const {
 	} else {
 		return 0;
 	}
-};
+}
 integer ExpandableMatrix::GetNBlocks() const {
 	return v.size();
-};
+}
 integer ExpandableMatrix::GetBlockNCols(const integer block) const {
 	ASSERTMSGBREAK(block >= 0, "ExpandableMatrix:GetBlockNCols(), "
 		"block shold be >= 0");
