@@ -62,9 +62,9 @@ public:
 		std::vector<std::string>& epsilon,
 		std::vector<std::string>& expression);
      	virtual ~GiNaCElasticConstitutiveLaw(void);
-     	virtual ConstitutiveLaw<T, Tder>* pCopy(void) const;
-	virtual std::ostream& Restart(std::ostream& out) const override;
-	virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.) override;
+        virtual ConstitutiveLaw<T, Tder>* pCopy(void) const override;
+        virtual std::ostream& Restart(std::ostream& out) const override;
+        virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.) override;
 };
 
 typedef GiNaCElasticConstitutiveLaw<doublereal, doublereal> 
@@ -398,9 +398,9 @@ public:
 		std::vector<std::string>& epsilon,
 		std::vector<std::string>& expression);
      	virtual ~GiNaCViscousConstitutiveLaw(void);
-     	virtual ConstitutiveLaw<T, Tder>* pCopy(void) const;
-	virtual std::ostream& Restart(std::ostream& out) const;
-	virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.) override;
+        virtual ConstitutiveLaw<T, Tder>* pCopy(void) const override;
+        virtual std::ostream& Restart(std::ostream& out) const override;
+        virtual void Update(const T& Eps, const T& /* EpsPrime */ = 0.) override;
 };
 
 typedef GiNaCViscousConstitutiveLaw<doublereal, doublereal> 

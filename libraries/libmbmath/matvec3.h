@@ -514,9 +514,6 @@ class Vec3: public sp_grad::SpConstMatElemAdapter<Vec3>
     I coefficienti sono separati dalla stringa sFill (spazio di default).
     */
    std::ostream& Write(std::ostream& out, const char* sFill = " ") const;
-     using sp_grad::SpConstMatElemAdapter<Vec3>::iNumElemOps;
-     using sp_grad::SpConstMatElemAdapter<Vec3>::uMatAccess;
-     using sp_grad::SpConstMatElemAdapter<Vec3>::eMatOpType;
      static constexpr sp_grad::index_type iNumRowsStatic = 3;
      static constexpr sp_grad::index_type iNumColsStatic = 1;
      static inline constexpr sp_grad::index_type iGetRowOffset() noexcept { return 1; }
@@ -1418,7 +1415,6 @@ class Mat3x3: public sp_grad::SpConstMatElemAdapter<Mat3x3>
    std::ostream& Write(std::ostream& out, 
 		  const char* sFill = " ", 
 		  const char* sFill2 = NULL) const;
-     
      static constexpr sp_grad::index_type iNumRowsStatic = 3;
      static constexpr sp_grad::index_type iNumColsStatic = 3;
      static inline constexpr sp_grad::index_type iGetRowOffset() noexcept { return 1; }

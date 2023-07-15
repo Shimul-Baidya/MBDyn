@@ -67,21 +67,21 @@ public:
         JournalBearing(unsigned uLabel, const DofOwner *pDO,
                        DataManager* pDM, MBDynParser& HP);
         virtual ~JournalBearing(void);
-        virtual unsigned int iGetNumDof(void) const;
-        virtual DofOrder::Order GetDofType(unsigned int i) const;
-        virtual DofOrder::Order GetEqType(unsigned int i) const;
-        virtual std::ostream& DescribeDof(std::ostream& out, const char *prefix, bool bInitial) const;
-        virtual std::ostream& DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const;
-        virtual unsigned int iGetNumPrivData(void) const;
-        virtual unsigned int iGetPrivDataIdx(const char *s) const;
-        virtual doublereal dGetPrivData(unsigned int i) const;
-        virtual void Output(OutputHandler& OH) const;
-        virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
+        virtual unsigned int iGetNumDof(void) const override;
+        virtual DofOrder::Order GetDofType(unsigned int i) const override;
+        virtual DofOrder::Order GetEqType(unsigned int i) const override;
+        virtual std::ostream& DescribeDof(std::ostream& out, const char *prefix, bool bInitial) const override;
+        virtual std::ostream& DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const override;
+        virtual unsigned int iGetNumPrivData(void) const override;
+        virtual unsigned int iGetPrivDataIdx(const char *s) const override;
+        virtual doublereal dGetPrivData(unsigned int i) const override;
+        virtual void Output(OutputHandler& OH) const override;
+        virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
         virtual VariableSubMatrixHandler&
         AssJac(VariableSubMatrixHandler& WorkMat,
                doublereal dCoef,
                const VectorHandler& XCurr,
-               const VectorHandler& XPrimeCurr);
+               const VectorHandler& XPrimeCurr) override;
         virtual void
         AssJac(VectorHandler& JacY,
                const VectorHandler& Y,
@@ -93,7 +93,7 @@ public:
         AssRes(SubVectorHandler& WorkVec,
                doublereal dCoef,
                const VectorHandler& XCurr,
-               const VectorHandler& XPrimeCurr);
+               const VectorHandler& XPrimeCurr) override;
         template <typename T>
         inline void
         AssRes(SpGradientAssVec<T>& WorkVec,
@@ -102,18 +102,18 @@ public:
                const SpGradientVectorHandler<T>& XPrimeCurr,
                enum SpFunctionCall func);
         int iGetNumConnectedNodes(void) const;
-        void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const;
+        void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
         void SetValue(DataManager *pDM, VectorHandler& X, VectorHandler& XP,
-                      SimulationEntity::Hints *ph);
-        std::ostream& Restart(std::ostream& out) const;
-        virtual unsigned int iGetInitialNumDof(void) const;
+                      SimulationEntity::Hints *ph) override;
+        std::ostream& Restart(std::ostream& out) const override;
+        virtual unsigned int iGetInitialNumDof(void) const override;
         virtual void
-        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
+        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
         VariableSubMatrixHandler&
         InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                      const VectorHandler& XCurr);
+                      const VectorHandler& XCurr) override;
         SubVectorHandler&
-        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
+        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
         template <typename T>
         inline void
         InitialAssRes(SpGradientAssVec<T>& WorkVec,

@@ -327,7 +327,7 @@ namespace {
           setJacobianOperatorForSolve(const Teuchos::RCP<const Epetra_Operator>& solveJacOp) override;
 
           virtual bool
-          hasPreconditioner() const;
+          hasPreconditioner() const override;
 
           virtual void
           setPrecOperatorForSolve(const Teuchos::RCP<const Epetra_Operator>& solvePrecOp) override;

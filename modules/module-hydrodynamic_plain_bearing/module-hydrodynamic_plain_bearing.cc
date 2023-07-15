@@ -62,13 +62,13 @@ public:
      HydrodynamicPlainBearing(unsigned uLabel, const DofOwner *pDO,
                               DataManager* pDM, MBDynParser& HP);
      virtual ~HydrodynamicPlainBearing(void);
-     virtual void Output(OutputHandler& OH) const;
-     virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
+     virtual void Output(OutputHandler& OH) const override;
+     virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
      VariableSubMatrixHandler&
      AssJac(VariableSubMatrixHandler& WorkMat,
             doublereal dCoef,
             const VectorHandler& XCurr,
-            const VectorHandler& XPrimeCurr);
+            const VectorHandler& XPrimeCurr) override;
      virtual void
      AssJac(VectorHandler& JacY,
             const VectorHandler& Y,
@@ -89,30 +89,30 @@ public:
                    const sp_grad::SpGradientVectorHandler<T>& XCurr,
                    enum sp_grad::SpFunctionCall func);
 
-     SubVectorHandler&
+     virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
             const VectorHandler& XCurr,
-            const VectorHandler& XPrimeCurr);
-     virtual void AfterPredict(VectorHandler& X, VectorHandler& XP);
+            const VectorHandler& XPrimeCurr) override;
+     virtual void AfterPredict(VectorHandler& X, VectorHandler& XP) override;
      virtual void Update(const VectorHandler& XCurr,
-                         const VectorHandler& XPrimeCurr);
-     unsigned int iGetNumPrivData(void) const;
-     virtual unsigned int iGetPrivDataIdx(const char *s) const;
-     virtual doublereal dGetPrivData(unsigned int i) const;
+                         const VectorHandler& XPrimeCurr) override;
+     unsigned int iGetNumPrivData(void) const override;
+     virtual unsigned int iGetPrivDataIdx(const char *s) const override;
+     virtual doublereal dGetPrivData(unsigned int i) const override;
      int iGetNumConnectedNodes(void) const;
-     void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const;
+     void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
      void SetValue(DataManager *pDM, VectorHandler& X, VectorHandler& XP,
-                   SimulationEntity::Hints *ph);
-     std::ostream& Restart(std::ostream& out) const;
-     virtual unsigned int iGetInitialNumDof(void) const;
+                   SimulationEntity::Hints *ph) override;
+     std::ostream& Restart(std::ostream& out) const override;
+     virtual unsigned int iGetInitialNumDof(void) const override;
      virtual void
-     InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
+     InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
      VariableSubMatrixHandler&
      InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                   const VectorHandler& XCurr);
+                   const VectorHandler& XCurr) override;
      SubVectorHandler&
-     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
+     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
 
 private:
      template <typename T>

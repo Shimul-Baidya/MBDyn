@@ -60,6 +60,7 @@ extern "C" {
 #include "spmapmh.h"
 #include "task2cpu.h"
 
+#ifdef USE_NAIVE_MULTITHREAD
 static inline void
 do_lock(volatile AO_TS_t *p)
 {
@@ -72,7 +73,6 @@ do_unlock(AO_TS_t *p)
         AO_CLEAR(p);
 }
 
-#ifdef USE_NAIVE_MULTITHREAD
 static void
 naivepsad(doublereal **ga, integer **gri,
                 integer *gnzr, integer **gci, integer *gnzc, char **gnz,
