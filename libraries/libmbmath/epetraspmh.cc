@@ -179,6 +179,11 @@ void EpetraSparseMatrixHandler::ExtractCrsDataPointers(integer*& rowptr, integer
      ASSERT(rowptr != nullptr);
      ASSERT(colind != nullptr);
      ASSERT(values != nullptr);
+
+     if (!rowptr) {
+          // Suppress all null pointer warnings reported by clang analyzer
+          throw ErrNotAvailableYet(MBDYN_EXCEPT_ARGS);
+     }
 }
 
 CSCMatrixHandlerTpl<doublereal, integer, 0>& EpetraSparseMatrixHandler::GetTransposedCSC() const

@@ -390,7 +390,9 @@ NonlinearSolverTestSepNorm::MakeTest(Solver *pS, const integer &Size,
 		}
 	}
 
-	*pTestDiff = *max_element(testDiffsVector.begin(), testDiffsVector.end());
+        if (pTestDiff) { // Suppress null pointer warnings reported by clang analyzer
+             *pTestDiff = *max_element(testDiffsVector.begin(), testDiffsVector.end());
+        }
 
 	/* returning the maximum error */
 	return *max_element(testsVector.begin(), testsVector.end());;
