@@ -195,6 +195,9 @@ protected:
 	mutable Vec3 S;
 	mutable Mat3x3 J;
 
+private:
+	using AutomaticStructDispElem::ComputeAccelerations;
+protected:
 	virtual void ComputeAccelerations(Vec3& XPP, Vec3& WP) const;
 
 public:
@@ -210,6 +213,7 @@ public:
 	/* Scrive il contributo dell'elemento al file di restart */
 	virtual std::ostream& Restart(std::ostream& out) const;
 
+	using AutomaticStructDispElem::AddInertia;
 	virtual void AddInertia(const doublereal& dm, const Vec3& dS,
 		const Mat3x3& dJ);
 

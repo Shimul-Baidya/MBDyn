@@ -61,6 +61,7 @@ public:
 	virtual ConstitutiveLaw<T, Tder>* pCopy(void) const;
 	virtual std::ostream& Restart(std::ostream& out) const;
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& EpsPrime = mb_zero<T>());
 
 	virtual void AfterConvergence(const T& Eps, const T& EpsPrime = mb_zero<T>());

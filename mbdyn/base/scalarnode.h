@@ -48,6 +48,7 @@
 class ScalarNode : public Node {
 protected:
 	/* scrive l'output */
+	using ToBeOutput::Output;
 	virtual std::ostream& Output(std::ostream& out) const;
 
 public:
@@ -138,6 +139,7 @@ protected:
 #endif // USE_NETCDF
 
 	/* Initializes output (must be called by specialized classes) */
+	using ScalarNode::OutputPrepare_int;
 	virtual void OutputPrepare_int(OutputHandler& OH,
 		const std::string& var_name,
 		const OutputHandler::Dimensions var_dim,
@@ -288,6 +290,7 @@ protected:
 #endif // USE_NETCDF
 
 	/* Initializes output (must be called by specialized classes) */
+	using ScalarNode::OutputPrepare_int;
 	virtual void OutputPrepare_int(OutputHandler& OH,
 		const std::string& var_name,
 		const OutputHandler::Dimensions var_dim,

@@ -699,7 +699,7 @@ ScrewJoint::AssMat(FullSubMatrixHandler& WM, doublereal dCoef,
 			 //variation of reaction force
 		dF0.ReDim(1);
 // 		if ((modF[0] == 0.) or (F.Norm() < preF)) {
-		if ((modF == 0.)) {
+		if (modF == 0.) {
 			 dF0.Set(0., 1, 12+1);
 		} else {
 			 dF0.Set(dLambda > 0 ? 1. : -1., 1, 12+1);

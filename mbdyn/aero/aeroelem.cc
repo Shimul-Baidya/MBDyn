@@ -76,8 +76,7 @@ AerodynamicOutput::SetOutputFlag(flag f, int iNP)
 void
 AerodynamicOutput::ResetIterator(void)
 {
-	if (IsOutput()) {
-		ASSERT(!OutputData.empty());
+	if (!OutputData.empty()) {
 		OutputIter = OutputData.begin();
 	}
 }

@@ -42,6 +42,10 @@
 
 #include "solidinteg.h"
 
+constexpr doublereal fabs_ce(doublereal x) {
+	return x>=0.?x:-x;
+}
+
 namespace {
      constexpr doublereal dCollocationFunction1D(const doublereal x) {
           return x + 3. * x * x + 2.;
@@ -60,7 +64,8 @@ namespace {
      static constexpr doublereal dTol1D = 0.;
      
      constexpr bool bCollocationTest1D(const doublereal r[], const doublereal alpha[], const int N) {
-          return std::fabs(dCollocationTest1DRec(r, alpha, N) / dCollocationFunction1DRes() - 1.) <= dTol1D;
+          //return std::fabs(dCollocationTest1DRec(r, alpha, N) / dCollocationFunction1DRes() - 1.) <= dTol1D;
+          return fabs_ce(dCollocationTest1DRec(r, alpha, N) / dCollocationFunction1DRes() - 1.) <= dTol1D;
      }
 
      constexpr doublereal dCollocationFunction2D(const doublereal x, const doublereal y) {
@@ -80,7 +85,8 @@ namespace {
      static constexpr doublereal dTol2D = 0.;
      
      constexpr bool bCollocationTest2D(const doublereal r[], const doublereal s[], const doublereal alpha[], const int N) {
-          return std::fabs(dCollocationTest2DRec(r, s, alpha, N) / dCollocationFunction2DRes() - 1.) <= dTol2D;
+          //return std::fabs(dCollocationTest2DRec(r, s, alpha, N) / dCollocationFunction2DRes() - 1.) <= dTol2D;
+          return fabs_ce(dCollocationTest2DRec(r, s, alpha, N) / dCollocationFunction2DRes() - 1.) <= dTol2D;
      }
 
      constexpr doublereal dCollocationFunction3D(const doublereal x, const doublereal y, const double z) {
@@ -100,13 +106,14 @@ namespace {
      static constexpr doublereal dTol3D = 0.;
      
      constexpr bool bCollocationTest3D(const doublereal r[], const doublereal s[], const doublereal t[], const doublereal alpha[], const int N) {
-          return std::fabs(dCollocationTest3DRec(r, s, t, alpha, N) / dCollocationFunction3DRes() - 1.) <= dTol3D;
+          //return std::fabs(dCollocationTest3DRec(r, s, t, alpha, N) / dCollocationFunction3DRes() - 1.) <= dTol3D;
+          return fabs_ce(dCollocationTest3DRec(r, s, t, alpha, N) / dCollocationFunction3DRes() - 1.) <= dTol3D;
      }
      
-     static_assert(bCollocationTest1D(Gauss2::ri, Gauss2::alphai, 2));
-     static_assert(bCollocationTest1D(Gauss3::ri, Gauss3::alphai, 3));
-     static_assert(bCollocationTest2D(CollocTria6h::zeta, CollocTria6h::eta, CollocTria6h::w, 7));
-     static_assert(bCollocationTest3D(CollocTet10h::r1, CollocTet10h::s1, CollocTet10h::t1, CollocTet10h::w1, 5));     
+     static_assert(bCollocationTest1D(Gauss2::ri, Gauss2::alphai, 2), "unit test for collocation rule failed");
+     static_assert(bCollocationTest1D(Gauss3::ri, Gauss3::alphai, 3), "unit test for collocation rule failed");
+     static_assert(bCollocationTest2D(CollocTria6h::zeta, CollocTria6h::eta, CollocTria6h::w, 7), "unit test for collocation rule failed");
+     static_assert(bCollocationTest3D(CollocTet10h::r1, CollocTet10h::s1, CollocTet10h::t1, CollocTet10h::w1, 5), "unit test for collocation rule failed");
 }
 
 constexpr sp_grad::index_type Gauss2::iGaussOrder;

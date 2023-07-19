@@ -59,6 +59,8 @@ A2min(area_max*loss_area),
 A3min(2.*area_max*loss_area),
 A4min(area_max*loss_area)
 {
+   (void) s_max; //silence unused warning;
+
    ASSERT(pNode1 != NULL);
    ASSERT(pNode1->GetNodeType() == Node::HYDRAULIC);
    ASSERT(pNode2 != NULL);
@@ -356,6 +358,8 @@ HydraulicElem(uL, pDO, hf, fOut),
 DriveOwner(pDC),
 area_max(A_max), loss_area(Loss_A), area_min(area_max*loss_area)
 {
+	(void) s_max; //silence unused warning;
+
 	pNode[N1] = p1;
 	pNode[N2] = p2;
 	pNode[N3] = p3;
@@ -1168,6 +1172,10 @@ valve_diameter(Valve_d),
 valve_density(Valve_rho),
 s_max(s_mx)
 {
+   (void) c_spost; //silence unused warning;
+   (void) c_vel;   //silence unused warning;
+   (void) c_acc;   //silence unused warning;
+
    ASSERT(pNode1 != NULL);
    ASSERT(pNode1->GetNodeType() == Node::HYDRAULIC);
    ASSERT(pNode2 != NULL);

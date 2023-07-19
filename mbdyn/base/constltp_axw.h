@@ -79,6 +79,7 @@ public:
 		return m_pCL->Restart(out);
 	};
 
+	using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
 	virtual void
 	Update(const Vec3& Eps, const Vec3& EpsPrime = mb_zero<Vec3>()) {
 		ConstitutiveLaw<Vec3, Mat3x3>::Epsilon = Eps;

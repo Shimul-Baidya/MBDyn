@@ -248,18 +248,6 @@ Beam::~Beam(void)
 	}
 }
 
-static const unsigned int iNumPrivData =
-		+3		//  0 ( 1 ->  3) - "e" strain
-		+3		//  3 ( 4 ->  6) - "k" curvature
-		+3		//  6 ( 7 ->  9) - "F" force
-		+3		//  9 (10 -> 12) - "M" moment
-		+3		// 12 (13 -> 15) - "X" position
-		+3		// 15 (16 -> 18) - "Phi" orientation vector
-		+3		// 18 (19 -> 21) - "Omega" angular velocity
-		+3		// 21 (22 -> 24) - "eP" strain rate
-		+3		// 24 (25 -> 27) - "kP" curvature rate
-	;
-
 /* Accesso ai dati privati */
 unsigned int
 Beam::iGetNumPrivData(void) const

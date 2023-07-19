@@ -67,6 +67,8 @@ extforce.cc \
 extforce.h \
 extsocket.cc \
 extsocket.h \
+fdjac.h \
+fdjac.cc \
 filedrv.cc \
 filedrv.h \
 fixedstep.cc \

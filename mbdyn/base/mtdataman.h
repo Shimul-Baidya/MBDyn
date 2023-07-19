@@ -182,7 +182,7 @@ public:
         virtual ~MultiThreadDataManager(void);
 
         /* Assembla lo jacobiano */
-        virtual void AssJac(MatrixHandler& JacHdl, doublereal dCoef);
+        virtual void AssJac(MatrixHandler& JacHdl, doublereal dCoef) override;
 
 #ifdef MBDYN_X_MT_ASSRES
         /* Assembla il residuo */

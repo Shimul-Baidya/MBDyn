@@ -145,7 +145,7 @@ public:
  		MyVectorHandler*const pXPrime,
 		integer& EffIter,
 		doublereal& Err,
-		doublereal& SolErr);
+		doublereal& SolErr) override;
 
         virtual void
         SetSolution(std::deque<VectorHandler*>& qX,
@@ -185,7 +185,7 @@ protected:
 
 	virtual void SetCoef(doublereal dT, 
 		doublereal dAlpha,
-		enum StepChange NewStep) = 0;
+		enum StepChange NewStep) override = 0;
 };
 
 template <unsigned N>

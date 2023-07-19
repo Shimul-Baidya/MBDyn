@@ -39,6 +39,7 @@ extern "C" {
 }
 
 #include "dataman.h"
+#include "fdjac.h"
 #include "friction.h"
 
 #if defined(USE_RUNTIME_LOADING) && defined(HAVE_LTDL_H)
@@ -145,7 +146,7 @@ solArrFileName(0),
 pOutputMeter(0),
 bOutputNextStep(false),
 iOutputCount(0),
-pFDJacMeter(0),
+pFDJac(nullptr),
 ResMode(RES_TEXT),
 #ifdef USE_NETCDF
 // NetCDF stuff
@@ -643,9 +644,9 @@ DataManager::~DataManager(void)
 		pOutputMeter = 0;
 	}
 
-	if (pFDJacMeter) {
-		SAFEDELETE(pFDJacMeter);
-		pFDJacMeter = 0;
+	if (pFDJac) {
+		SAFEDELETE(pFDJac);
+		pFDJac = nullptr;
 	}
 
 	if (pRBK) {

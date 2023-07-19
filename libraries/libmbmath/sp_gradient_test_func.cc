@@ -106,6 +106,127 @@ namespace sp_grad_test {
           return u + v >= e * (v - w);
      }
 
+     template <typename T>
+     void func_scalar3(const T& u, const T& v, const T& w, doublereal e, T& f) {
+          using namespace std;
+          using namespace sp_grad;
+          f = (e * copysign(u / min(e + u, v / (e + 1.)) + e * max(u, w) / (e * u * v * w), 2 * fabs(e * sinh(e * u / (v + 1.))) + e * fabs(cosh(2. * w / (u + 1.))) * tanh(e / w) / (e * sinh(u / (v + 1.)) / 2.) * cosh(e * w / (u + v / (e + 1.))) * e * asin(cos(e / (w + 1.))) * atan2(e / (w + 1.) + u / (e + 1.), u / (e + 1.) + v) / (e * acos(sin((u + e) * w / (e + 4.))) + e * asinh(e * u + w / (v + e + 1.)) / acosh(1. + fabs((e + u) / (w + 1. + e))) / atanh(0.9 * fabs(sin((u + e / (w + 1.)) / (e / (v + 1.) - w / (e + 2.))))))));
+     }
+
+     template
+     void func_scalar3<doublereal>(const doublereal& u, const doublereal& v, const doublereal& w, doublereal e, doublereal& f);
+
+     template
+     void func_scalar3<SpGradient>(const SpGradient& u, const SpGradient& v, const SpGradient& w, doublereal e, SpGradient& f);
+
+     template
+     void func_scalar3<GpGradProd>(const GpGradProd& u, const GpGradProd& v, const GpGradProd& w, doublereal e, GpGradProd& f);
+
+     template <typename T>
+     void func_scalar3_compressed(const T& u, const T& v, const T& w, doublereal e, T& f) {
+          using namespace std;
+          using namespace sp_grad;
+          f = EvalUnique((e * copysign(u / min(e + u, v / (e + 1.)) + e * max(u, w) / (e * u * v * w), 2 * fabs(e * sinh(e * u / (v + 1.))) + e * fabs(cosh(2. * w / (u + 1.))) * tanh(e / w) / (e * sinh(u / (v + 1.)) / 2.) * cosh(e * w / (u + v / (e + 1.))) * e * asin(cos(e / (w + 1.))) * atan2(e / (w + 1.) + u / (e + 1.), u / (e + 1.) + v) / (e * acos(sin((u + e) * w / (e + 4.))) + e * asinh(e * u + w / (v + e + 1.)) / acosh(1. + fabs((e + u) / (w + 1. + e))) / atanh(0.9 * fabs(sin((u + e / (w + 1.)) / (e / (v + 1.) - w / (e + 2.)))))))));
+     }
+
+     void func_scalar3_dv(index_type nbdirs, const doublereal u, const doublereal ud[], const doublereal v,
+                          const doublereal vd[], const doublereal w, const doublereal wd[],
+                          const doublereal e, doublereal& f,
+                          doublereal fd[], doublereal work[]) {
+
+          f=(e*abs((abs(w-u)+w+u)/(2*u*v*w)+(2*u)/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e))
+             *((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+               /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                  *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                +e*acos(sin(((u+e)*w)/(e+4)))))
+               +2*abs(e)*abs(sinh((e*u)/(v+1)))))
+               /abs((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                     *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+                    /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                     /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                       *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                     +e*acos(sin(((u+e)*w)/(e+4)))))
+                    +2*abs(e)*abs(sinh((e*u)/(v+1))));
+
+
+
+          const doublereal df_du=(e*((-(abs(w-u)+w+u)/(2*pow(u,2)*v*w))+(1-(w-u)/abs(w-u))/(2*u*v*w)
+                                     +2/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e)
+                                     -(2*u*((v/(e+1)-u-e)/abs(v/(e+1)-u-e)+1))
+                                     /pow(((-abs(v/(e+1)-u-e))+v/(e+1)+u+e),2))
+                                  *((abs(w-u)+w+u)/(2*u*v*w)+(2*u)/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e))
+                                  *((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                                     *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+                                    /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                                     /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                                       *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                                     +e*acos(sin(((u+e)*w)/(e+4)))))
+                                    +2*abs(e)*abs(sinh((e*u)/(v+1)))))
+               /(abs((abs(w-u)+w+u)/(2*u*v*w)+(2*u)/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e))
+                 *abs((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                       *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+                      /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                       /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                         *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                       +e*acos(sin(((u+e)*w)/(e+4)))))
+                      +2*abs(e)*abs(sinh((e*u)/(v+1)))));
+
+          const doublereal df_dv = (e*((-(abs(w-u)+w+u)/(2*u*pow(v,2)*w))-(2*u
+                                                                           *(1/(e+1)
+                                                                             -(v/(e+1)-u-e)/((e+1)*abs(v/(e+1)-u-e))))
+                                       /pow(((-abs(v/(e+1)-u-e))+v/(e+1)+u+e),2))
+                                    *((abs(w-u)+w+u)/(2*u*v*w)+(2*u)/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e))
+                                    *((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                                       *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+                                      /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                                       /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                                         *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                                       +e*acos(sin(((u+e)*w)/(e+4)))))
+                                      +2*abs(e)*abs(sinh((e*u)/(v+1)))))
+               /(abs((abs(w-u)+w+u)/(2*u*v*w)+(2*u)/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e))
+                 *abs((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                       *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+                      /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                       /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                         *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                       +e*acos(sin(((u+e)*w)/(e+4)))))
+                      +2*abs(e)*abs(sinh((e*u)/(v+1)))));
+
+
+          const doublereal df_dw=(e*(((w-u)/abs(w-u)+1)/(2*u*v*w)-(abs(w-u)+w+u)/(2*u*v*pow(w,2)))
+                                  *((abs(w-u)+w+u)/(2*u*v*w)+(2*u)/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e))
+                                  *((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                                     *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+                                    /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                                     /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                                       *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                                     +e*acos(sin(((u+e)*w)/(e+4)))))
+                                    +2*abs(e)*abs(sinh((e*u)/(v+1)))))
+               /(abs((abs(w-u)+w+u)/(2*u*v*w)+(2*u)/((-abs(v/(e+1)-u-e))+v/(e+1)+u+e))
+                 *abs((2*e*tanh(e/w)*cosh((2*w)/(u+1))*cosh((e*w)/(v/(e+1)+u))
+                       *atan2(e/(w+1)+u/(e+1),v+u/(e+1))*asin(cos(e/(w+1))))
+                      /(sinh(u/(v+1))*((e*asinh(w/(v+e+1)+e*u))
+                                       /(acosh(abs(u+e)/abs(w+e+1)+1)
+                                         *atanh(0.9*abs(sin((e/(w+1)+u)/(e/(v+1)-w/(e+2))))))
+                                       +e*acos(sin(((u+e)*w)/(e+4)))))
+                      +2*abs(e)*abs(sinh((e*u)/(v+1)))));
+
+          for (index_type i = 0; i < nbdirs; ++i) {
+               fd[i] = df_du * ud[i] + df_dv * vd[i] + df_dw * wd[i];
+          }
+     }
+
+     template
+     void func_scalar3_compressed<doublereal>(const doublereal& u, const doublereal& v, const doublereal& w, doublereal e, doublereal& f);
+
+     template
+     void func_scalar3_compressed<SpGradient>(const SpGradient& u, const SpGradient& v, const SpGradient& w, doublereal e, SpGradient& f);
+
+     template
+     void func_scalar3_compressed<GpGradProd>(const GpGradProd& u, const GpGradProd& v, const GpGradProd& w, doublereal e, GpGradProd& f);
+
      template
      bool func_bool1(const SpGradient& u, const SpGradient& v, const SpGradient& w, doublereal e);
 

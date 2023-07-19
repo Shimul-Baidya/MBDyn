@@ -198,8 +198,8 @@ namespace sp_grad {
      public:
           friend class SpMatrixDataHandler<ValueType, NumRows, NumCols>;
 
-          static_assert(NumRows > 0);
-          static_assert(NumCols > 0);
+          static_assert(NumRows > 0, "invalid static size");
+          static_assert(NumCols > 0, "invalid static size");
 
           using SpMatrixData<ValueType>::pGetData;
 
@@ -231,8 +231,8 @@ namespace sp_grad {
      template <typename ValueType, index_type NumRows, index_type NumCols>
      class SpMatrixDataHandler {
      public:
-          static_assert(NumRows > 0);
-          static_assert(NumCols > 0);
+          static_assert(NumRows > 0, "invalid static size");
+          static_assert(NumCols > 0, "invalid static size");
 
           typedef SpMatrixDataStatic<ValueType, NumRows, NumCols> SpMatrixDataType;
 
@@ -374,14 +374,14 @@ namespace sp_grad {
                ITERATORS = 0x2,
                MATRIX_WISE = 0x4
           };
-     };
+     }
 
      template <typename VALUE, typename DERIVED>
      class SpMatElemExprBase
      {
           static_assert(std::is_same<VALUE, doublereal>::value ||
                         std::is_same<VALUE, SpGradient>::value ||
-                        std::is_same<VALUE, GpGradProd>::value);
+                        std::is_same<VALUE, GpGradProd>::value, "data type not supported");
 
      protected:
           constexpr SpMatElemExprBase() noexcept {}
@@ -461,7 +461,7 @@ namespace sp_grad {
                return pGetRep()->iGetNumCols();
           }
 
-          constexpr doublereal dGetValue(index_type i, index_type j) const {
+          doublereal dGetValue(index_type i, index_type j) const {
                SP_GRAD_ASSERT(i >= 1);
                SP_GRAD_ASSERT(i <= iGetNumRows() || iGetNumRows() == SpMatrixSize::DYNAMIC);
                SP_GRAD_ASSERT(j >= 1);
@@ -564,11 +564,11 @@ namespace sp_grad {
           inline constexpr index_type iGetSize(index_type i, index_type j) const noexcept { return 0; }
           inline constexpr index_type iGetMaxSize() const noexcept { return 0; }
           template <typename ValueType_B>
-          inline constexpr void InsertDeriv(ValueType_B& g, doublereal dCoef, index_type i, index_type j) const noexcept {}
-          inline constexpr void GetDofStat(SpGradDofStat& s, index_type i, index_type j) const noexcept {}
-          inline constexpr void InsertDof(SpGradExpDofMap& oExpDofMap, index_type i, index_type j) const noexcept {};
+          inline void InsertDeriv(ValueType_B& g, doublereal dCoef, index_type i, index_type j) const noexcept {}
+          inline void GetDofStat(SpGradDofStat& s, index_type i, index_type j) const noexcept {}
+          inline void InsertDof(SpGradExpDofMap& oExpDofMap, index_type i, index_type j) const noexcept {};
           template <typename ValueTypeB>
-          inline constexpr void AddDeriv(ValueTypeB& g, doublereal dCoef, const SpGradExpDofMap& oExpDofMap, index_type i, index_type j) const noexcept {}
+          inline void AddDeriv(ValueTypeB& g, doublereal dCoef, const SpGradExpDofMap& oExpDofMap, index_type i, index_type j) const noexcept {}
 #ifdef SP_GRAD_DEBUG
           template <typename ExprType, typename Expr>
           inline constexpr bool bHaveRefTo(const SpMatElemExprBase<ExprType, Expr>& A) const noexcept { return false; }

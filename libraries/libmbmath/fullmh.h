@@ -161,13 +161,13 @@ public:
 	virtual ~FullMatrixHandler(void);
 
 	/* ridimensiona la matrice (se possiede la memoria) */
-	virtual void Resize(integer iNewRows, integer iNewCols);
+	virtual void Resize(integer iNewRows, integer iNewCols) override;
 
 	/* si stacca dalla memoria a cui e' associato */
 	void Detach(void);
 	
 	/* zero the matrix */
-	void Reset(void);
+	void Reset(void) override;
 
 	/* Attacca un nuovo array, con n. righe, n. colonne e dim. massima;
 	 * se assente, assunta = nrighe*ncolonne */
@@ -181,12 +181,12 @@ public:
 #endif /* DEBUG */
 
 	/* Used to access raw data by c functions */
-	const doublereal* pdGetMat(void) const {
+	const doublereal* pdGetMat(void) const override {
 		ASSERT(pdRaw != NULL);
 		return pdRaw;
 	};
 
-	doublereal* pdGetMat(void) {
+	doublereal* pdGetMat(void) override {
 		ASSERT(pdRaw != NULL);
 		return pdRaw;
 	};
@@ -215,7 +215,7 @@ public:
 
 	/* Inserisce un coefficiente */
 	virtual inline void
-	PutCoef(integer iRow, integer iCol, const doublereal& dCoef) {
+	PutCoef(integer iRow, integer iCol, const doublereal& dCoef) override {
 #ifdef DEBUG
 		IsValid();
 		ASSERT(iRow > 0 && iRow <= iNumRows);
@@ -227,7 +227,7 @@ public:
 
 	/* Incrementa un coefficiente - se non esiste lo crea */
 	virtual inline void
-	IncCoef(integer iRow, integer iCol, const doublereal& dCoef) {
+	IncCoef(integer iRow, integer iCol, const doublereal& dCoef) override {
 #ifdef DEBUG
 		IsValid();
 		ASSERT(iRow > 0 && iRow <= iNumRows);
@@ -239,7 +239,7 @@ public:
 
 	/* Incrementa un coefficiente - se non esiste lo crea */
 	virtual inline void
-	DecCoef(integer iRow, integer iCol, const doublereal& dCoef) {
+	DecCoef(integer iRow, integer iCol, const doublereal& dCoef) override {
 #ifdef DEBUG
 		IsValid();
 		ASSERT(iRow > 0 && iRow <= iNumRows);
@@ -251,7 +251,7 @@ public:
 
 	/* Restituisce un coefficiente - zero se non e' definito */
 	virtual inline const doublereal&
-	dGetCoef(integer iRow, integer iCol) const {
+	dGetCoef(integer iRow, integer iCol) const override {
 #ifdef DEBUG
 		IsValid();
 		ASSERT(iRow > 0 && iRow <= iNumRows);
@@ -262,16 +262,16 @@ public:
 	};
 
 	/* dimensioni */
-	virtual integer iGetNumRows(void) const {
+	virtual integer iGetNumRows(void) const override {
 		return iNumRows;
 	};
 
-	virtual integer iGetNumCols(void) const {
+	virtual integer iGetNumCols(void) const override {
 		return iNumCols;
 	};
 
 	virtual doublereal&
-	operator () (integer iRow, integer iCol) {
+	operator () (integer iRow, integer iCol) override {
 #ifdef DEBUG
 		IsValid();
 		ASSERT(iRow > 0);
@@ -284,7 +284,7 @@ public:
 	};
 
 	virtual const doublereal&
-	operator () (integer iRow, integer iCol) const {
+	operator () (integer iRow, integer iCol) const override {
 #ifdef DEBUG
 		IsValid();
 		ASSERT(iRow > 0);
@@ -297,16 +297,16 @@ public:
 	};
 
 	/* Overload di += usato per l'assemblaggio delle matrici */
-	virtual MatrixHandler& operator +=(const SubMatrixHandler& SubMH);
+	virtual MatrixHandler& operator +=(const SubMatrixHandler& SubMH) override;
 
 	/* Overload di -= usato per l'assemblaggio delle matrici */
-	virtual MatrixHandler& operator -=(const SubMatrixHandler& SubMH);
+	virtual MatrixHandler& operator -=(const SubMatrixHandler& SubMH) override;
 
 	/* Overload di += usato per l'assemblaggio delle matrici */
-	virtual MatrixHandler& operator +=(const VariableSubMatrixHandler& SubMH);
+	virtual MatrixHandler& operator +=(const VariableSubMatrixHandler& SubMH) override;
 
 	/* Overload di -= usato per l'assemblaggio delle matrici */
-	virtual MatrixHandler& operator -=(const VariableSubMatrixHandler& SubMH);
+	virtual MatrixHandler& operator -=(const VariableSubMatrixHandler& SubMH) override;
 
 	/* Esegue il prodotto tra due matrici e se lo memorizza */
 	void MatMul(const FullMatrixHandler& m1, const FullMatrixHandler& m2);
@@ -315,20 +315,20 @@ protected:
 	MatrixHandler&
 	MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 	MatrixHandler&
 	MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 
 	virtual VectorHandler&
 	MatVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 	virtual VectorHandler&
 	MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 
 public:
 	void Add(integer iRow,  integer iCol,

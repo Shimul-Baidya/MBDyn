@@ -2220,9 +2220,9 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 
 	} else {
 		if (pStrNode) {
-			const DynamicStructNode* pDynamicStructNode = dynamic_cast<const DynamicStructNode*>(pDynamicDispNode);
-			const ModalNode* pModalNode = dynamic_cast<const ModalNode*>(pDynamicDispNode);
-			const RigidBodyKinematics* pRBK = pDynamicStructNode->pGetRBK();
+			const DynamicStructNode* const pDynamicStructNode = dynamic_cast<const DynamicStructNode*>(pStrNode);
+			const ModalNode* const pModalNode = dynamic_cast<const ModalNode*>(pStrNode);
+			const RigidBodyKinematics* const pRBK = pStrNode->pGetRBK();
 
 			if (pModalNode && pRBK) {
 				silent_cerr("Body(" << uLabel << ") "
@@ -2235,7 +2235,7 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 			if (pModalNode) {
                                 if (pDM->bUseAutoDiff()) {
                                         SAFENEWWITHCONSTRUCTOR(pEl, ModalBodyAd,
-                                                               ModalBodyAd(uLabel, dynamic_cast<const ModalNodeAd*>(pModalNode), dm, Xgc, J, fOut));                                        
+                                                               ModalBodyAd(uLabel, dynamic_cast<const ModalNodeAd*>(pModalNode), dm, Xgc, J, fOut));
                                 } else {
                                         SAFENEWWITHCONSTRUCTOR(pEl, ModalBody,
                                                                ModalBody(uLabel, pModalNode, dm, Xgc, J, fOut));
@@ -2244,7 +2244,7 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 			} else {
                                 if (pDM->bUseAutoDiff()) {
                                         SAFENEWWITHCONSTRUCTOR(pEl, DynamicBodyAd,
-                                                               DynamicBodyAd(uLabel, dynamic_cast<const DynamicStructNodeAd*>(pDynamicStructNode), dm, Xgc, J, fOut));                                        
+                                                               DynamicBodyAd(uLabel, dynamic_cast<const DynamicStructNodeAd*>(pDynamicStructNode), dm, Xgc, J, fOut));
                                 } else {
                                         SAFENEWWITHCONSTRUCTOR(pEl, DynamicBody,
                                                                DynamicBody(uLabel, pDynamicStructNode, dm, Xgc, J, fOut));

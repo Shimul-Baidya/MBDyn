@@ -1059,6 +1059,7 @@ DataManager::IDDofInit(void)
 		break;
 	}
 
+	(void) iPrescribedMotionJointIndex; // silence set but not used warning
 	iTotDofs = iJointIndex;
 
 	DEBUGLCOUT(MYDEBUG_INIT, "iTotDofs = " << iTotDofs << std::endl);

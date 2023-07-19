@@ -307,6 +307,7 @@ public:
 
      virtual void DerivativesUpdate(const VectorHandler& X, const VectorHandler& XP) override;
 
+     using StructNodeAd::AfterConvergence;
      virtual void AfterConvergence(const VectorHandler& X, const VectorHandler& XP) override;
 
      using StructNode::GetXPPCurr;

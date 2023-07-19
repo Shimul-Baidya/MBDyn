@@ -151,20 +151,14 @@ namespace sp_grad {
           template <index_type iNumRows, index_type iNumCols>
           static inline void InsertDof(const SpMatrixBase<GpGradProd, iNumRows, iNumCols>& A) {}
 
-          template <typename Expr>
-          static inline GpGradProd& MapAssign(GpGradProd& g, const GpGradProdBase<Expr>& expr) {
-               g = expr;
-               return g;
-          }
+          static inline GpGradProd& MapAssign(GpGradProd& g, const GpGradProd& expr);
 
-          template <typename Func, typename Expr>
-          static inline GpGradProd& MapAssignOper(GpGradProd& g, const GpGradProdBase<Expr>& expr);
+          template <typename Func>
+          static inline GpGradProd& MapAssignOper(GpGradProd& g, const GpGradProd& expr);
 
-          template <typename Expr>
-          static inline GpGradProd& Add(GpGradProd& g, const GpGradProdBase<Expr>& expr);
+          static inline GpGradProd& Add(GpGradProd& g, const GpGradProd& expr);
 
-          template <typename Expr>
-          static inline GpGradProd& Sub(GpGradProd& g, const GpGradProdBase<Expr>& expr);
+          static inline GpGradProd& Sub(GpGradProd& g, const GpGradProd& expr);
      };
 
      template <>
@@ -217,7 +211,7 @@ namespace sp_grad {
      };
 
      template <typename T>
-     class SpGradientTraits;
+     struct SpGradientTraits;
 
      template <>
      struct SpGradientTraits<doublereal> {
@@ -369,7 +363,7 @@ namespace sp_grad {
           inline void Scale(doublereal dRowScale, const std::vector<doublereal>& oColScale);
 
           template <typename Expr>
-          inline constexpr bool bHaveRefTo(const SpGradBase<Expr>&) const;
+          inline bool bHaveRefTo(const SpGradBase<Expr>&) const;
 
           inline bool bHaveRefTo(const SpGradBase<SpGradient>& g) const;
 
@@ -536,8 +530,10 @@ namespace sp_grad {
           static SpDerivData oNullData;
      };
 
-     class GpGradProd: public GpGradProdBase<GpGradProd> {
+     class GpGradProd {
      public:
+          static constexpr SpGradCommon::ExprEvalFlags eExprEvalFlags = SpGradCommon::ExprEvalDuplicate;
+
           constexpr explicit GpGradProd(doublereal dVal = 0., doublereal dDer = 0.)
                :dVal(dVal), dDer(dDer) {
           }
@@ -546,9 +542,6 @@ namespace sp_grad {
                dVal = dNewVal;
                dDer = dNewDer;
           }
-
-          template <typename Expr>
-          inline constexpr GpGradProd(const GpGradProdBase<Expr>& oExpr);
 
           template <typename AITER, typename BITER>
           inline void
@@ -601,17 +594,13 @@ namespace sp_grad {
                return *this;
           }
 
-          template <typename Expr>
-          inline GpGradProd& operator+=(const GpGradProdBase<Expr>& oExpr);
+          inline GpGradProd& operator+=(const GpGradProd& oExpr);
 
-          template <typename Expr>
-          inline GpGradProd& operator-=(const GpGradProdBase<Expr>& oExpr);
+          inline GpGradProd& operator-=(const GpGradProd& oExpr);
 
-          template <typename Expr>
-          inline GpGradProd& operator*=(const GpGradProdBase<Expr>& oExpr);
+          inline GpGradProd& operator*=(const GpGradProd& oExpr);
 
-          template <typename Expr>
-          inline GpGradProd& operator/=(const GpGradProdBase<Expr>& oExpr);
+          inline GpGradProd& operator/=(const GpGradProd& oExpr);
 
           static constexpr bool bIsScalarConst = false;
 
@@ -622,8 +611,8 @@ namespace sp_grad {
                return false;
           }
 
-          template <typename BinFunc, typename Expr>
-          inline GpGradProd& AssignOper(const GpGradProdBase<Expr>& oExpr);
+          template <typename BinFunc>
+          inline GpGradProd& AssignOper(const GpGradProd& oExpr);
 
 #ifdef SP_GRAD_DEBUG
           inline bool bValid() const;

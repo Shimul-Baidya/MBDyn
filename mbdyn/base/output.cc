@@ -647,7 +647,7 @@ OutputHandler::Open(const int out, const std::string& postfix)
 		std::string sCurrFileName = sGet();
 		std::stringstream fname_ss;
 
-		unsigned uExtIdx = sCurrFileName.find_last_of(EXT_SEP);
+		auto uExtIdx = sCurrFileName.find_last_of(EXT_SEP);
 
 		if (uExtIdx != std::string::npos) {
 			fname_ss << sCurrFileName.substr(0, uExtIdx);

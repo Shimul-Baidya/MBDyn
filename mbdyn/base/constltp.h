@@ -285,8 +285,8 @@ typedef ConstitutiveLaw<Vec6, Mat6x6> ConstitutiveLaw6D;
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                   sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+                                   sp_grad::SpColVector<doublereal, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -304,8 +304,8 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, Consti
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+                                   sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -338,8 +338,8 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradien
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+                                   sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -357,9 +357,9 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradPro
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 const sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& EpsPrime,
-                                 sp_grad::SpColVector<doublereal, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, iDim>& Eps,
+                                 const sp_grad::SpColVector<doublereal, iDim>& EpsPrime,
+                                 sp_grad::SpColVector<doublereal, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -376,9 +376,9 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<doublereal, Consti
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 const sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& EpsPrime,
-                                 sp_grad::SpColVector<sp_grad::SpGradient, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& Eps,
+                                   const sp_grad::SpColVector<sp_grad::SpGradient, iDim>& EpsPrime,
+                                   sp_grad::SpColVector<sp_grad::SpGradient, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -420,9 +420,9 @@ ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::SpGradien
 
 template <typename T, typename Tder>
 void
-ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& Eps,
-                                 const sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& EpsPrime,
-                                 sp_grad::SpColVector<sp_grad::GpGradProd, ConstitutiveLawAd<T, Tder>::iDim>& FTmp)
+ConstitutiveLawAd<T, Tder>::Update(const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& Eps,
+                                   const sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& EpsPrime,
+                                   sp_grad::SpColVector<sp_grad::GpGradProd, iDim>& FTmp)
 {
      using namespace sp_grad;
 
@@ -544,11 +544,13 @@ public:
                 return pConstLaw;
         };
 
+	using SimulationEntity::Update;
         inline void Update(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
                 ASSERT(pConstLaw != NULL);
                 pConstLaw->Update(Eps, EpsPrime);
         };
 
+	using SimulationEntity::AfterConvergence;
         inline void AfterConvergence(const T& Eps, const T& EpsPrime = mb_zero<T>()) {
                 ASSERT(pConstLaw != NULL);
                 pConstLaw->AfterConvergence(Eps, EpsPrime);
@@ -570,20 +572,20 @@ public:
         };
 
         /* simentity */
-        virtual unsigned int iGetNumDof(void) const {
+        virtual unsigned int iGetNumDof(void) const override {
                 ASSERT(pConstLaw != NULL);
                 return pConstLaw->iGetNumDof();
         };
 
         virtual std::ostream& DescribeDof(std::ostream& out,
                         const char *prefix = "",
-                        bool bInitial = false) const
+                        bool bInitial = false) const override
         {
                 return out;
         };
 
         virtual void DescribeDof(std::vector<std::string>& desc,
-                        bool bInitial = false, int i = -1) const
+                        bool bInitial = false, int i = -1) const override
         {
                 ASSERT(i <= 0);
                 desc.resize(0);
@@ -591,19 +593,19 @@ public:
 
         virtual std::ostream& DescribeEq(std::ostream& out,
                         const char *prefix = "",
-                        bool bInitial = false) const
+                        bool bInitial = false) const override
         {
                 return out;
         };
 
         virtual void DescribeEq(std::vector<std::string>& desc,
-                        bool bInitial = false, int i = -1) const
+                        bool bInitial = false, int i = -1) const override
         {
                 ASSERT(i <= 0);
                 desc.resize(0);
         };
 
-        virtual DofOrder::Order GetDofType(unsigned int i) const {
+        virtual DofOrder::Order GetDofType(unsigned int i) const override {
                 ASSERT(pConstLaw != NULL);
                 return pConstLaw->GetDofType(i);
         };
@@ -613,7 +615,7 @@ public:
          * Si suppone che l'estrattore li sappia interpretare.
          * Come default non ci sono dati privati estraibili
          */
-        virtual unsigned int iGetNumPrivData(void) const {
+        virtual unsigned int iGetNumPrivData(void) const override {
                 return pConstLaw->iGetNumPrivData();
         };
 
@@ -622,7 +624,7 @@ public:
          * returns a valid index ( > 0 && <= iGetNumPrivData()) or 0
          * in case of unrecognized data; error must be handled by caller
          */
-        virtual unsigned int iGetPrivDataIdx(const char *s) const {
+        virtual unsigned int iGetPrivDataIdx(const char *s) const override {
                 return pConstLaw->iGetPrivDataIdx(s);
         };
 
@@ -630,19 +632,19 @@ public:
          * Returns the current value of a private data
          * with 0 < i <= iGetNumPrivData()
          */
-        virtual doublereal dGetPrivData(unsigned int i) const {
+        virtual doublereal dGetPrivData(unsigned int i) const override {
                 return pConstLaw->dGetPrivData(i);
         };
 
-        virtual std::ostream& OutputAppend(std::ostream& out) const {
+        virtual std::ostream& OutputAppend(std::ostream& out) const override {
                 return pConstLaw->OutputAppend(out);
         };
 
-        virtual void NetCDFOutputAppend(OutputHandler& OH) const {
+        virtual void NetCDFOutputAppend(OutputHandler& OH) const override {
                 return pConstLaw->NetCDFOutputAppend(OH);
         };
 
-        virtual void OutputAppendPrepare(OutputHandler& OH, const std::string& name) {
+        virtual void OutputAppendPrepare(OutputHandler& OH, const std::string& name) override {
                 pConstLaw->OutputAppendPrepare(OH, name);
         };
 

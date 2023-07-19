@@ -301,7 +301,7 @@ class Mat3xN: public sp_grad::SpConstMatElemAdapter<Mat3xN>
      static constexpr sp_grad::index_type iNumRowsStatic = 3;
      static constexpr sp_grad::index_type iNumColsStatic = sp_grad::SpMatrixSize::DYNAMIC;
      inline sp_grad::index_type iGetRowOffset() const noexcept { return iGetNumCols(); }
-     inline constexpr sp_grad::index_type iGetColOffset() const noexcept { return 1; }
+     static inline constexpr sp_grad::index_type iGetColOffset() noexcept { return 1; }
      inline const doublereal* begin() const noexcept { return &pdRows[0][0]; }
      inline const doublereal* end() const noexcept { return &pdRows[0][iGetNumRows() * iGetNumCols()]; }
      doublereal inline dGetValue(sp_grad::index_type i, sp_grad::index_type j) const noexcept { return (*this)(i, j); }
@@ -446,8 +446,8 @@ class MatNx3: public sp_grad::SpConstMatElemAdapter<MatNx3>
 
      static constexpr sp_grad::index_type iNumRowsStatic = sp_grad::SpMatrixSize::DYNAMIC;
      static constexpr sp_grad::index_type iNumColsStatic = 3;
-     inline constexpr sp_grad::index_type iGetNumCols() const noexcept { return 3; }
-     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
+     static inline constexpr sp_grad::index_type iGetNumCols() noexcept { return 3; }
+     static inline constexpr sp_grad::index_type iGetRowOffset() noexcept { return 1; }
      inline sp_grad::index_type iGetColOffset() const noexcept { return iGetNumRows(); }
      inline const doublereal* begin() const noexcept { return &pdCols[0][0]; }
      inline const doublereal* end() const noexcept { return &pdCols[0][iGetNumRows() * iGetNumCols()]; }
@@ -594,7 +594,7 @@ class MatNxN: public sp_grad::SpConstMatElemAdapter<MatNxN>
 
      static constexpr sp_grad::index_type iNumRowsStatic = sp_grad::SpMatrixSize::DYNAMIC;
      static constexpr sp_grad::index_type iNumColsStatic = sp_grad::SpMatrixSize::DYNAMIC;
-     inline constexpr sp_grad::index_type iGetRowOffset() const noexcept { return 1; }
+     static inline constexpr sp_grad::index_type iGetRowOffset() noexcept { return 1; }
      inline sp_grad::index_type iGetColOffset() const noexcept { return iGetNumRows(); }
      inline const doublereal* begin() const noexcept { return &pdMat[0][0]; }
      inline const doublereal* end() const noexcept { return &pdMat[0][iGetNumRows() * iGetNumCols()]; }

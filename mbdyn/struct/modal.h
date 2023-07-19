@@ -127,7 +127,7 @@ public:
         template <unsigned N>
         class StressStiffIndex {
         public:
-             static_assert(N > 0);
+             static_assert(N > 0, "invalid array size");
 
              StressStiffIndex()
                   :uSize(0u) {

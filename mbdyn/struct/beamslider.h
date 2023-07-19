@@ -151,7 +151,7 @@ private:
    Vec3 v_rel;
    doublereal sRef_dot;
    doublereal v_rel_scalar;
-   doublereal displ;
+   //doublereal displ;
    const unsigned int NumSelfDof;
    /* end of friction related data */
    

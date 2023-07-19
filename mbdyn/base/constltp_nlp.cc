@@ -123,6 +123,7 @@ public:
 #endif
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& EpsPrime = 0.) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		ConstitutiveLaw<T, Tder>::EpsilonPrime = EpsPrime;

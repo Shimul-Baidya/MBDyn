@@ -1889,7 +1889,7 @@ void MCPNewtonMinFB::Solve(const NonlinearProblem *pNLP,
 
           const bool bSolConverged = MakeSolTest(pS, DeltaZ, SolTol, dSolErr);
 
-          doublereal dThetaCurr = ComputeFMerit(zH, FH, FMeritH);
+          ComputeFMerit(zH, FH, FMeritH);
 
           ComputeH(zH, FH, nablaFMCPH);
 
@@ -1898,7 +1898,7 @@ void MCPNewtonMinFB::Solve(const NonlinearProblem *pNLP,
 
           ComputeFMCP(FH);
 
-          dThetaCurr = ComputeFMerit(zH, FH, FMeritH);
+          doublereal dThetaCurr = ComputeFMerit(zH, FH, FMeritH);
 
           CheckLineSearch(dThetaCurr, dThetaPrev, JacThetaFMeritH, zH, FH, FMeritH, DeltaZ, iIterCnt);
 

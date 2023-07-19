@@ -125,9 +125,13 @@ public:
 			const integer& iIndex, doublereal dCoef) const;
 	virtual void TestMerge(doublereal& dResCurr,
 			const doublereal& dResNew) const;
-	virtual doublereal MakeTest(Solver *pS, integer Size,
+	virtual doublereal MakeTest(Solver *pS, const integer& Size,
 			const VectorHandler& Vec, bool bResidual = false,
+			doublereal dScaleAlgEqu = 1.,
 			doublereal* pTestDiff=0);
+// 	virtual doublereal MakeTest(Solver *pS, integer Size,
+// 			const VectorHandler& Vec, bool bResidual = false,
+// 			doublereal* pTestDiff=0);
 };
 
 class NonlinearSolverTestNorm : virtual public NonlinearSolverTest {

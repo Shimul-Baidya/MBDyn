@@ -150,6 +150,7 @@ public:
 	void CreatePartition(void);
 
 	/* Assembla il residuo */
+	using DataManager::AssRes;
 	void AssRes(VectorHandler& ResHdl, doublereal dCoef) 
 		/*throw(ChangedEquationStructure)*/;
 
@@ -166,6 +167,7 @@ public:
 	void AfterConvergence(void) const;
 
 	/* stampa i risultati */
+	using DataManager::Output;
 	void Output(bool force = false) const;
 
 	enum DofType { TOTAL = 1, LOCAL = 2, INTERNAL = 3, MYINTERNAL = 4 };

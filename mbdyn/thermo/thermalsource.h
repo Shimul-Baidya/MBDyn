@@ -7,7 +7,7 @@
 class ThermalSource : virtual public Thermal, public DriveOwner {
  private:
    const ThermalNode* pNode1;
-   doublereal thermalcapacitance;
+   //doublereal thermalcapacitance;
  public:
    ThermalSource(unsigned int uL, 
    	const DofOwner* pDO,

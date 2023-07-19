@@ -174,6 +174,7 @@ protected:
 	doublereal dThetaRef;
 	doublereal dThetaCurr;
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssMat(FullSubMatrixHandler& WM, doublereal dCoef);
 	virtual void AssVec(SubVectorHandler& WorkVec);
@@ -293,6 +294,7 @@ class ViscousAxialJoint : virtual public Elem, public DeformableAxialJoint {
 protected:
 	doublereal dOmega;
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssMats(FullSubMatrixHandler& WMA,
 			FullSubMatrixHandler& WMB,
@@ -410,6 +412,7 @@ protected:
 			FullSubMatrixHandler& WMB,
 			doublereal dCoef);
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssVec(SubVectorHandler& WorkVec);
 

@@ -1439,13 +1439,13 @@ namespace {
           static constexpr int value = std::numeric_limits<int>::min();
      };
 
-     static_assert(log2int<0>::value < 0);
-     static_assert(log2int<1>::value == 0);
-     static_assert(log2int<2>::value == 1);
-     static_assert(log2int<4>::value == 2);
-     static_assert(log2int<8>::value == 3);
-     static_assert(log2int<16>::value == 4);
-     static_assert(log2int<1024>::value == 10);
+     static_assert(log2int<0>::value < 0, "logarithm unit test failed");
+     static_assert(log2int<1>::value == 0, "logarithm unit test failed");
+     static_assert(log2int<2>::value == 1, "logarithm unit test failed");
+     static_assert(log2int<4>::value == 2, "logarithm unit test failed");
+     static_assert(log2int<8>::value == 3, "logarithm unit test failed");
+     static_assert(log2int<16>::value == 4, "logarithm unit test failed");
+     static_assert(log2int<1024>::value == 10, "logarithm unit test failed");
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>
@@ -1456,8 +1456,8 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Gau
 {
      using namespace sp_grad;
 
-     static_assert(iNumNodesExtrap <= iNumNodes);
-     static_assert(iNumNodesExtrap <= iNumEvalPointsStiffness);
+     static_assert(iNumNodesExtrap <= iNumNodes, "invalid number of nodes");
+     static_assert(iNumNodesExtrap <= iNumEvalPointsStiffness, "invalid number of nodes");
 
      SpMatrixA<doublereal, iNumEvalPointsStiffness, iNumNodesExtrap> H;
      SpColVectorA<doublereal, 3> r;
@@ -1482,8 +1482,8 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Gau
      constexpr integer NLVL = NLVLTMP > 0 ? NLVLTMP : 0;
      constexpr integer LIWORK = 3 * MINMN * NLVL + 11 * MINMN;
      constexpr integer LWORK = M >= N
-          ? 12 * N + 2 * N * SMLSIZ + 8 * N * NLVL + N * NRHS + std::pow(SMLSIZ + 1, 2)
-          : 12 * M + 2 * M * SMLSIZ + 8 * M * NLVL + M * NRHS + std::pow(SMLSIZ + 1, 2);
+          ? 12 * N + 2 * N * SMLSIZ + 8 * N * NLVL + N * NRHS + (SMLSIZ + 1)*(SMLSIZ + 1)//std::pow(SMLSIZ + 1, 2)
+          : 12 * M + 2 * M * SMLSIZ + 8 * M * NLVL + M * NRHS + (SMLSIZ + 1)*(SMLSIZ + 1);//std::pow(SMLSIZ + 1, 2);
      doublereal RCOND = -1., WORK[LWORK], S[MINMN];
      integer RANK, IWORK[LIWORK], INFO;
 

@@ -626,13 +626,52 @@ See Section~\ref{sec:IVP:TOLERANCE} for further details.
 
 \subsection{Finite Difference Jacobian Meter}\label{sec:CONTROLDATA:FDJAC_METER}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{card} ::= \kw{finite difference jacobian meter} : (\hty{DriveCaller}) \bnt{compute_finite_difference};
+  \bnt{card} ::= \{ \kw{finite difference jacobian meter} | \kw{jacobian check} \} :
+                    (\hty{DriveCaller}) \bnt{compute_finite_difference_time}
+      [ , \kw{iterations}, (\hty{DriveCaller}) \bnt{compute_finite_difference_iteration} ]
+      [ , \{ \kw{forward mode automatic differentiation} | [ \kw{coefficient}, (\ty{real}) \bnt{delta}, ]
+                                                     [ \kw{order}, (\ty{integer}) \bnt{k} , ] \} ]
+      [ , \kw{output}
+          [ , \{ \kw{none} | \kw{all} \} ]
+          [ , \kw{matrices}, \{ \kw{yes} | \kw{no} \}  ]
+          [ , \kw{statistics}, \{ \kw{yes} | \kw{no} \} ]
+          [ , \kw{statistics iteration}, \{ \kw{yes} | \kw{no} \} ]
+      ]
 \end{Verbatim}
 
 \noindent
-When \nt{compute\_finite\_difference} is true computes the problem Jacobian matrix by means of finite differences, 
+When \nt{compute\_finite\_difference\_time} and \nt{compute\_finite\_difference\_iteration} are true,
+compute the problem Jacobian matrix by means of finite differences,
 and write on standard output both the analytic and finite difference Jacobian matrices.
+It is possible to tune the accuracy of the finite difference approximation by means of
+the finite difference perturbation parameter \nt{delta} and the finite difference order \nt{k}.
+Those options can be used to check if the implementation of the residual vector and the Jacobian matrix
+are consistent. However, in order to check if the implementation of the Jacobian matrix
+and the implementation of the matrix free Jacobian vector product are consistent,
+the keyword \kw{forward mode automatic differentiation} should be used instead.
+By default, all output options are enabled and the sparse matrices are printed in triplet format.
+If it is desired to print only the maximum difference between the analytical Jacobian
+and the finite difference Jacobian matrix, then the keywords \kw{statistics} and/or \kw{statistics iteration} may be used.
 This option makes sense only for debugging, and may lead to really cumbersome screen output.
+
+\paragraph{Examples}
+\begin{Verbatim}
+  ## Output the finite difference Jacobian and the analytical Jacobian matrix
+  ## every 1e-3 seconds and always at the third iteration of each time step,
+  ## using a 6th order accurate finite difference formula and a perturbation
+  ## parameter of delta=1e-5.
+  finite difference jacobian meter: closest next, 0., forever, 1e-3,
+                                    iterations, string, "Var == 3",
+                                    coefficient, 1e-5,
+                                    order, 6,
+                                    output, none, matrices, yes;
+
+  ## Output the maximum difference between the Jacobian free matrix vector product and the
+  ## analytical Jacobian matrix over every iteration and every step at the end of the simulation.
+  jacobian check: one, one,
+                  forward mode automatic differentiation,
+                  output, none, statistics, yes;
+\end{Verbatim}
 
 \subsection{Model}
 \label{sec:CONTROLDATA:MODEL}

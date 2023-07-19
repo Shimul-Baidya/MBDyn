@@ -180,8 +180,9 @@ NonlinearSolverTest::Type NonlinearSolverTestNone::GetType() const
 }
 
 doublereal
-NonlinearSolverTestNone::MakeTest(Solver *pS, integer Size, 
+NonlinearSolverTestNone::MakeTest(Solver *pS, const integer& Size,
 		const VectorHandler& Vec, bool bResidual,
+		doublereal dScaleAlgEqu,
 		doublereal* pTestDiff)
 {
    	DEBUGCOUTFNAME("NonlinearSolverTestNone::MakeTest");
@@ -389,7 +390,9 @@ NonlinearSolverTestSepNorm::MakeTest(Solver *pS, const integer &Size,
 		}
 	}
 
-	*pTestDiff = *max_element(testDiffsVector.begin(), testDiffsVector.end());
+        if (pTestDiff) { // Suppress null pointer warnings reported by clang analyzer
+             *pTestDiff = *max_element(testDiffsVector.begin(), testDiffsVector.end());
+        }
 
 	/* returning the maximum error */
 	return *max_element(testsVector.begin(), testsVector.end());;
@@ -781,6 +784,9 @@ NonlinearSolver::MakeResTest(Solver *pS,
 		// f = c * dScaleAlgebraic
 		dScaleAlgEqu *= dScaleAlgebraic;
 	}
+
+        DEBUGCERR("NonlinearSolver::MakeResTest: dScaleAlgebraic = " << dScaleAlgebraic << "\n");
+        DEBUGCERR("NonlinearSolver::MakeResTest: dScaleAlgEqu = " << dScaleAlgEqu << "\n");
 
 	dTest = pResTest->MakeTest(pS, Size, Vec, true, dScaleAlgEqu, &dTestDiff) * dTestScale;
 	return ((dTest <= dTol) && pS->pGetDataManager()->IsConverged()); // operator <= will work also for NonlinearSolverTestNone

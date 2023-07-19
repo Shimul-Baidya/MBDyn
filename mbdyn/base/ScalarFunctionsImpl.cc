@@ -287,6 +287,8 @@ LogScalarFunction::LogScalarFunction(
 	if (b != 1.) {
 		mul_const /= log(b);
 	}
+	(void) mul_input; // silence unused warning
+	(void) base; // silence unused warning
 }
 
 LogScalarFunction::~LogScalarFunction()
@@ -1381,6 +1383,7 @@ public:
 		return out << "# not implemented!";
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& /* EpsPrime */  = 0.) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		for (int i = 1; i <= n; i++) {
@@ -1532,6 +1535,7 @@ public:
 		return out << "# not implemented!";
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& /* EpsPrime */  = 0.) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		for (unsigned i = 1; i <= n; i++) {

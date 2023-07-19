@@ -1967,6 +1967,7 @@ ReadStructMappingExtForce(DataManager* pDM,
 	std::map<unsigned, bool> Got;
 
 	for (unsigned n = 0, p = 0; p < unsigned(nPoints); n++) {
+		(void) n; //silence set but not used warning
 		const StructDispNode *pNode = pDM->ReadNode<const StructDispNode, Node::STRUCTURAL>(HP);
 		unsigned uL(pNode->GetLabel());
 		if (Got[uL]) {

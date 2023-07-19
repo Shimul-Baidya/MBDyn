@@ -255,6 +255,7 @@ public:
 	AfterConvergence(const VectorHandler& X, const VectorHandler& XP);
 
 	/* assemblaggio jacobiano */
+	using Elem::AssMats;
 	virtual void
 	AssMats(VariableSubMatrixHandler& WorkMatA,
 		VariableSubMatrixHandler& WorkMatB,
@@ -262,6 +263,7 @@ public:
 		const VectorHandler& XPrimeCurr);
 
 	/* Inverse Dynamics Jacobian matrix assembly */
+	using DeformableJoint::AssJac;
 	VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat,
 		const VectorHandler& XCurr);
@@ -416,6 +418,7 @@ class ViscousJoint : virtual public Elem, public DeformableJoint {
 protected:
 	Mat6x6 FDEPrime;
 
+	using Elem::AssMats;
 	void AssMats(FullSubMatrixHandler& WMA,
 		FullSubMatrixHandler& WMB,
 		doublereal dCoef);
@@ -503,6 +506,7 @@ protected:
 	Mat6x6 FDE;
 	Mat6x6 FDEPrime;
 
+	using Elem::AssMats;
 	void AssMats(FullSubMatrixHandler& WorkMatA,
 		FullSubMatrixHandler& WorkMatB,
 		doublereal dCoef);

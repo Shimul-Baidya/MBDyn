@@ -88,7 +88,7 @@ fi
 # unset CDPATH
 $ol_unset CDPATH || test "${CDPATH:+set}" != set || CDPATH=: && export CDPATH
 
-AC_INIT(mbdyn, m4_esyscmd([tr -d '\n' < build/version]))
+AC_INIT([mbdyn],m4_esyscmd(tr -d '\n' < build/version))
 AC_CONFIG_AUX_DIR(build)dnl
 AC_CONFIG_SRCDIR([build/version])
 
@@ -108,14 +108,14 @@ echo "Configuring MBDyn $MB_VERSION ..."
 
 dnl Determine host platform
 dnl             we try not to use this for much
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
 dnl We use autoconf features new to 2.13.
 dnl aclocal.m4 should be built using aclocal from automake 1.4
 dnl libtool 1.3.3 should be installed.
-AC_PREREQ(2.13)dnl Required Autoconf version
+AC_PREREQ([2.69])dnl Required Autoconf version
 
 AC_CONFIG_HEADERS([include/mbconfig.h])
 AH_TOP([
@@ -345,14 +345,10 @@ if test "$GCC" = "yes" ; then
 	AC_MSG_CHECKING(for gcc version = 3.3)
 	AC_CACHE_VAL(ac_cv_gcc33,
 	AC_LANG_SAVE
-	AC_LANG_CPLUSPLUS
-	[AC_TRY_COMPILE(
-	[#if !(__GNUC__ == 3 && __GNUC_MINOR__ == 3)
+	AC_LANG([C++])
+	[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !(__GNUC__ == 3 && __GNUC_MINOR__ == 3)
 	#error GCC is not 3.3 (good news ;)
-	#endif],
-	[return 0;],
-	[ac_cv_gcc33=yes],
-	[ac_cv_gcc33=no])]
+	#endif]], [[return 0;]])],[ac_cv_gcc33=yes],[ac_cv_gcc33=no])]
 	AC_LANG_RESTORE)
 	if [[ $ac_cv_gcc33 = no ]]; then
 		AC_MSG_RESULT([no])
@@ -361,14 +357,10 @@ if test "$GCC" = "yes" ; then
 		AC_MSG_CHECKING(for gcc version = 3.2)
 		AC_CACHE_VAL(ac_cv_gcc32,
 		AC_LANG_SAVE
-		AC_LANG_CPLUSPLUS
-		[AC_TRY_COMPILE(
-		[#if !(__GNUC__ == 3 && __GNUC_MINOR__ == 2)
+		AC_LANG([C++])
+		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !(__GNUC__ == 3 && __GNUC_MINOR__ == 2)
 		#error GCC is not 3.2 (good news ;)
-		#endif],
-		[return 0;],
-		[ac_cv_gcc32=yes],
-		[ac_cv_gcc32=no])]
+		#endif]], [[return 0;]])],[ac_cv_gcc32=yes],[ac_cv_gcc32=no])]
 		AC_LANG_RESTORE)
 		if [[ $ac_cv_gcc32 = no ]]; then
 			AC_MSG_RESULT([no])
@@ -382,8 +374,8 @@ if test "$GCC" = "yes" ; then
 	fi
 fi
 
-dnl AM_DISABLE_SHARED dnl Remove when you want to build shared libs also
-AM_PROG_LIBTOOL
+dnl AC_DISABLE_SHARED([]) dnl Remove when you want to build shared libs also
+LT_INIT
 
 dnl ----------------------------------------------------------------
 dnl
@@ -438,7 +430,7 @@ dnl ----------------------------------------------------------------
 dnl
 dnl MBDyn requires STDC features
 dnl
-AM_PROG_CC_STDC
+AC_PROG_CC
 if test "X${am_cv_prog_cc_stdc}" = "Xno" ; then
 	AC_MSG_ERROR([I'm afraid MBDyn requires compiler to support STDC constructs.])
 fi
@@ -448,6 +440,7 @@ dnl
 dnl Checks for header files.
 dnl
 AC_STDC_HEADERS
+
 AC_CHECK_HEADERS(arpa/inet.h)
 AC_CHECK_HEADERS(atomic_ops.h)
 AC_CHECK_HEADERS(cxxabi.h)
@@ -490,11 +483,11 @@ dnl ----------------------------------------------------------------
 dnl
 dnl Checks for C++ header files (takes care of ANSI/pre-ANSI naming)
 dnl
-AC_LANG_CPLUSPLUS
+AC_LANG([C++])
 
 AC_CHECK_HEADERS(exception)
 AC_CHECK_HEADERS(stdexcept)
-AC_LANG_C
+AC_LANG([C])
 
 dnl ----------------------------------------------------------------
 dnl
@@ -528,37 +521,37 @@ if test "$ol_enable_debug" != no -o "$ol_enable_debug_mpi" != no ; then
 fi
 
 have_environ=no
-AC_TRY_COMPILE([
-],[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+]], [[
 	environ;
-], [have_environ=yes], [have_environ=no])
+]])],[have_environ=yes],[have_environ=no])
 if test $have_environ != yes ; then
-	AC_TRY_COMPILE([
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <unistd.h>
-	],[
+	]], [[
 	environ;
-	], [have_environ=yes], [have_environ=no])
+	]])],[have_environ=yes],[have_environ=no])
 	if test $have_environ = yes ; then
 		AC_DEFINE(ENVIRON_NEEDS_UNISTD_H,1,[define if variable environ needs unistd.h])
 	fi
 fi
 if test $have_environ != yes ; then
-	AC_TRY_COMPILE([
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #define _GNU_SOURCE
 #include <unistd.h>
-	],[
+	]], [[
 	environ;
-	], [have_environ=yes], [have_environ=no])
+	]])],[have_environ=yes],[have_environ=no])
 	if test $have_environ = yes ; then
 		AC_DEFINE(ENVIRON_NEEDS_GNU_SOURCE_AND_UNISTD_H,1,[define if variable environ needs _GNU_SOURCE and unistd.h])
 	fi
 fi
 if test $have_environ != yes ; then
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 extern char **environ;
-	],[
+	]], [[
 	environ;
-	],[have_environ=yes],[have_environ=no])
+	]])],[have_environ=yes],[have_environ=no])
 	if test $have_environ = yes ; then
 		AC_DEFINE(ENVIRON_NEEDS_DECLARATION,1,[define if variable environ needs to be declared])
 	fi
@@ -596,68 +589,68 @@ dnl
 if test "$ol_enable_netcdf" != no ; then
         have_netcdf4=no
         have_libnetcdf4=no
-        AC_LANG_CPLUSPLUS
+        AC_LANG([C++])
         dnl checks for netcdf header file (for netcdf4 c++):
         AC_CHECK_HEADER(netcdf,[have_netcdf4=yes],[have_netcdf4=no])
-        AC_LANG_C
+        AC_LANG([C])
         if test $have_netcdf4 = "yes" ; then
                 save_LIBS="$LIBS"
                 try_NETCDF_LIBS="-lnetcdf-cxx4 -lnetcdf"
                 LIBS="$try_NETCDF_LIBS $LIBS"
-                AC_LANG_CPLUSPLUS
-                AC_TRY_LINK([
+                AC_LANG([C++])
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                         #include <netcdf>
-                ],[
+                ]], [[
                         /* test for netcdf */
                         netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-                ],[
+                ]])],[
                         have_libnetcdf4=yes
                         NETCDF_LIBS="$try_NETCDF_LIBS"
-                ])
+                ],[])
 
                 if test $have_libnetcdf4 != "yes"; then
                       try_NETCDF_LIBS="-lnetcdf_c++4 -lnetcdf"
                       LIBS="$try_NETCDF_LIBS $save_LIBS"
-                      AC_TRY_LINK([
+                      AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                            #include <netcdf>
-                      ],[
+                      ]], [[
                            /* test for netcdf */
                            netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-                      ],[
+                      ]])],[
                            have_libnetcdf4=yes
                            NETCDF_LIBS="$try_NETCDF_LIBS"
-                      ])
+                      ],[])
                 fi
 
                 if test $have_libnetcdf4 != "yes"; then
                       try_NETCDF_LIBS="-lnetcdf_cxx4 -lnetcdf"
                       LIBS="$try_NETCDF_LIBS $save_LIBS"
-                      AC_TRY_LINK([
+                      AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                            #include <netcdf>
-                      ],[
+                      ]], [[
                            /* test for netcdf */
                            netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
-                      ],[
+                      ]])],[
                            have_libnetcdf4=yes
                            NETCDF_LIBS="$try_NETCDF_LIBS"
-                      ])
+                      ],[])
                 fi
 
-                AC_TRY_LINK([
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                         #include <netcdf>
-                ],[
+                ]], [[
                         /* test for netcdf sync */
                                 netCDF::NcFile nc("foobar", netCDF::NcFile::replace); // Create and leave in define mode
                                 nc.sync(); // test for sync option (comes in later version, >=4.3.0)
                                 nc.close(); // test for close (appears in 4.3.0)
-                ],[
+                ]])],[
                         have_libnetcdf4=yes
-                ], [
+                ],[
                         have_libnetcdf4=no
                         AC_MSG_WARN([netcdf-cxx4 version too old, link version 4.3.0 or more recent])
                 ])
 
-                AC_LANG_C
+                AC_LANG([C])
                 LIBS="$save_LIBS"
         fi
 
@@ -763,7 +756,7 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
     	try_OCTAVE_INCLUDE=
 	fi
 
-	AC_LANG_CPLUSPLUS
+	AC_LANG([C++])
 	save_CPPFLAGS="$CPPFLAGS"
 	CPPFLAGS="$CPPFLAGS $try_OCTAVE_INCLUDE"
 	AC_CHECK_HEADER(octave/oct.h,[have_octave_oct_h=yes],[have_octave_oct_h=no])
@@ -780,7 +773,7 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
 #include <octave/oct.h>
 		])
 	CPPFLAGS="$save_CPPFLAGS"
-	AC_LANG_C
+	AC_LANG([C])
 
 	link_octave="no"
         have_clean_up_and_exit="no"
@@ -798,34 +791,34 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
 		try_LIBS="$try_OCTAVE_LIBS"
 		LIBS="$try_LIBS $LIBS"
 		CPPFLAGS="$CPPFLAGS $OCTAVE_INCLUDE"
-		AC_LANG_CPLUSPLUS
-		AC_TRY_LINK([
+		AC_LANG([C++])
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <octave/oct.h>
 #include <octave/parse.h>
 #include <octave/toplev.h>
 #include <octave/octave.h>
-			],[
+			]], [[
 		octave_main(0, NULL, 1);
-			],[link_octave="yes"])
-		AC_LANG_CPLUSPLUS
-		AC_TRY_LINK([
+			]])],[link_octave="yes"],[])
+		AC_LANG([C++])
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <octave/oct.h>
 #include <octave/parse.h>
 #include <octave/toplev.h>
 #include <octave/octave.h>
-			],[
+			]], [[
 		do_octave_atexit();
-			],[have_do_octave_atexit="yes"])
-		AC_LANG_CPLUSPLUS
-		AC_TRY_LINK([
+			]])],[have_do_octave_atexit="yes"],[])
+		AC_LANG([C++])
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <octave/oct.h>
 #include <octave/parse.h>
 #include <octave/toplev.h>
 #include <octave/octave.h>
-			],[
+			]], [[
 		clean_up_and_exit(0, true);
-			],[have_clean_up_and_exit="yes"])
-		AC_LANG_C
+			]])],[have_clean_up_and_exit="yes"],[])
+		AC_LANG([C])
 		LIBS="$save_LIBS"
 		CPPFLAGS="$save_CPPFLAGS"
 		OCTAVE_LIBS="$try_LIBS"
@@ -843,18 +836,18 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
 		try_LIBS="$try_OCTAVE_LIBS"
 		LIBS="$try_LIBS $LIBS"
 		CPPFLAGS="$CPPFLAGS $OCTAVE_INCLUDE"
-		AC_LANG_CPLUSPLUS
-		AC_TRY_LINK([
+		AC_LANG([C++])
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <octave/oct.h>
 #include <octave/parse.h>
 #include <octave/interpreter.h>
 #include <octave/octave.h>
-			],[
+			]], [[
                         octave::interpreter interpreter;
                         int status = interpreter.execute();
                         octave_value_list out = octave::feval ("cos", octave_value(0.), 1);
-			],[link_octave="yes"])
-		AC_LANG_C
+			]])],[link_octave="yes"],[])
+		AC_LANG([C])
 		LIBS="$save_LIBS"
 		CPPFLAGS="$save_CPPFLAGS"
 		OCTAVE_LIBS="$try_LIBS"                        
@@ -887,12 +880,12 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
 fi
 
 	AC_MSG_CHECKING([for _aligned_malloc and _aligned_free])
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
-				],[
+				]], [[
 void* p = _aligned_malloc(1024, 32);
 _aligned_free(p);
-				],[have_aligned_malloc="yes"])
+				]])],[have_aligned_malloc="yes"],[])
 
 	if test "$have_aligned_malloc" == "yes"; then
 		AC_DEFINE(HAVE_ALIGNED_MALLOC, 1, [define if _aligned_malloc and _aligned_free can be used])
@@ -902,12 +895,12 @@ _aligned_free(p);
 	fi
 
 	AC_MSG_CHECKING([for posix_memalign])
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
-				],[
+				]], [[
 void *p;
 posix_memalign(&p, 32, 1024);
-			],[have_posix_memalign="yes"])
+			]])],[have_posix_memalign="yes"],[])
 
 	if test "$have_posix_memalign" == "yes"; then
 		AC_DEFINE(HAVE_POSIX_MEMALIGN, 1, [define if posix_memalign can be used])
@@ -917,11 +910,11 @@ posix_memalign(&p, 32, 1024);
 	fi
 
 	AC_MSG_CHECKING([for memalign])
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
-				],[
+				]], [[
 void* p = memalign(32, 1024);
-				],[have_memalign="yes"])
+				]])],[have_memalign="yes"],[])
 
 	if test "$have_memalign" == "yes"; then
 		AC_DEFINE(HAVE_MEMALIGN, 1, [define if memalign can be used])
@@ -931,12 +924,12 @@ void* p = memalign(32, 1024);
 	fi
 
 	AC_MSG_CHECKING([for aligned_alloc])
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
-				],[
+				]], [[
 void* p = aligned_alloc(32, 1024);
 free(p);
-				],[have_aligned_alloc="yes"])
+				]])],[have_aligned_alloc="yes"],[])
 
 	if test "$have_aligned_alloc" == "yes"; then
 		AC_DEFINE(HAVE_ALIGNED_ALLOC, 1, [define if aligned_alloc can be used])
@@ -965,12 +958,12 @@ if test $ol_with_rt != no ; then
         dnl
         dnl Check for clock_gettime()
         dnl
-        AC_TRY_LINK([
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([[
         #include <time.h>
-                    ],[
+                    ]], [[
             struct timespec tp;
             clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
-                    ],[use_clock_gettime=yes],[use_clock_gettime=no])
+                    ]])],[use_clock_gettime=yes],[use_clock_gettime=no])
 
         if test $use_clock_gettime = yes; then
             AC_DEFINE(HAVE_CLOCK_GETTIME, 1, [define if clock_gettime can be used])
@@ -1045,10 +1038,10 @@ dnl ----------------------------------------------------------------
 dnl
 dnl Checks for noexcept
 dnl
-AC_LANG_CPLUSPLUS
+AC_LANG([C++])
 have_noexcept=no
 AC_MSG_CHECKING([for noexcept])
-AC_TRY_COMPILE([int pippo() noexcept {return 1;}],[],[have_noexcept=yes],[have_noexcept=no])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[int pippo() noexcept {return 1;}]], [[]])],[have_noexcept=yes],[have_noexcept=no])
 if test $have_noexcept != no ; then
 	AC_DEFINE(HAVE_NOEXCEPT,1, [define if the compiler accept noexcept])
 	AC_MSG_RESULT([yes])
@@ -1056,7 +1049,7 @@ else
 	dnl AC_MSG_RESULT([no])
 	AC_MSG_ERROR([The C++ compiler does not support the noexcept keyword. You should upgrade to a more recent compiler supporting c++11.])
 fi
-AC_LANG_C
+AC_LANG([C])
 
 dnl ----------------------------------------------------------------
 dnl
@@ -1064,10 +1057,10 @@ dnl Checks for working offsetof
 dnl
 have_offsetof=no
 AC_MSG_CHECKING([for offsetof])
-AC_TRY_COMPILE([#include <stddef.h>],[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stddef.h>]], [[
 	struct dummy_t { int dummy; };
 	(void)offsetof(struct dummy_t, dummy);
-],[have_offsetof=yes],[have_offsetof=no])
+]])],[have_offsetof=yes],[have_offsetof=no])
 if test $have_offsetof != no ; then
 	AC_DEFINE(HAVE_OFFSETOF,1, [define if offsetof() works])
 	AC_MSG_RESULT([yes])
@@ -1089,14 +1082,14 @@ if test "$have_socket" = "yes" ; then
 
 	if test $have_socket != no ; then
 		AC_MSG_CHECKING([for socklen_t])
-		AC_TRY_COMPILE([#include <sys/socket.h>],[
+		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>]], [[
 			socklen_t l;
-		],[have_socklen_t=yes],[have_socklen_t=no])
+		]])],[have_socklen_t=yes],[have_socklen_t=no])
 
 		if test "$have_socklen_t" = "no" ; then
-			AC_TRY_COMPILE([#include <ws2tcpip.h>],[
+			AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <ws2tcpip.h>]], [[
 				socklen_t l;
-			],[have_socklen_t=yes],[have_socklen_t=no])
+			]])],[have_socklen_t=yes],[have_socklen_t=no])
 		fi
 
 		if test $have_socklen_t != no ; then
@@ -1114,9 +1107,9 @@ dnl
 dnl Check for sig_atomic_t
 dnl
 AC_MSG_CHECKING([for sig_atomic_t])
-AC_TRY_COMPILE([#include <signal.h>],[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <signal.h>]], [[
 	sig_atomic_t	atom;
-	],[
+	]])],[
 		AC_DEFINE(HAVE_SIG_ATOMIC_T,1,[define if sig_atomic_t is available])
 		AC_MSG_RESULT([yes])
 	],[
@@ -1127,21 +1120,21 @@ dnl ----------------------------------------------------------------
 dnl
 dnl Check for bool
 dnl
-AC_LANG_CPLUSPLUS
+AC_LANG([C++])
 AC_MSG_CHECKING([whether bool is defined])
-AC_TRY_COMPILE([],[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
 	bool b;
-],[have_bool=yes],[have_bool=no])
+]])],[have_bool=yes],[have_bool=no])
 if test $have_bool != no ; then
 	AC_DEFINE(HAVE_BOOL,1,[define if bool is defined])
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
 	AC_MSG_CHECKING([whether bool needs bool.h])
-	AC_TRY_COMPILE([],[
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
 	#include <bool.h>
 	bool b;
-	],[need_bool_h=yes],[need_bool_h=no])
+	]])],[need_bool_h=yes],[need_bool_h=no])
 	if test $need_bool_h != no ; then
 	        AC_DEFINE(NEED_BOOL_H,1,[define if bool needs bool.h])
 		AC_MSG_RESULT([yes])
@@ -1149,49 +1142,49 @@ else
 	        AC_MSG_RESULT([no])
 	fi
 fi
-AC_LANG_C
+AC_LANG([C])
 
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for exceptions
 dnl
-AC_LANG_CPLUSPLUS
+AC_LANG([C++])
 AC_MSG_CHECKING([whether the C++ compiler handles exceptions])
-AC_TRY_COMPILE([],[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
 	try {
 		(void *)0;
 	}
 	catch (...) {
 		(void *)0;
 	}
-],[have_exceptions=yes],[have_exceptions=no])
+]])],[have_exceptions=yes],[have_exceptions=no])
 if test "$have_exceptions" = "yes" ; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_ERROR([C++ compiler does not handle exceptions])
 fi
-AC_LANG_C
+AC_LANG([C])
 
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for std namespace
 dnl
 
-AC_LANG_CPLUSPLUS
+AC_LANG([C++])
 AC_MSG_CHECKING([whether the C++ compiler allows to use namespace std])
-AC_TRY_COMPILE([
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 	#include <math.h>
 	using namespace std;
-],[
+]], [[
 	sqrt(2.);
-],[allow_std=yes],[allow_std=no])
+]])],[allow_std=yes],[allow_std=no])
 if test $allow_std != no ; then
 	AC_DEFINE(USING_STD,1,[define if C++ compiler allows namespace std])
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
 fi
-AC_LANG_C
+AC_LANG([C])
 
 dnl ----------------------------------------------------------------
 dnl
@@ -1216,12 +1209,12 @@ if test "$ol_with_threads" != "no" ; then
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 		LDFLAGS="$LDFLAGS  $PTHREAD_CFLAGS"
 		CC="$PTHREAD_CC"
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 				/* Check whether threads really works */
 				#include <pthread.h>
-			],[
+			]], [[
 			return pthread_create(0, 0, 0, 0);
-			],[
+			]])],[
 			],[
 				LIBS="$save_LIBS"
 				CXXFLAGS="$save_CXXFLAGS"
@@ -1238,11 +1231,11 @@ if test "$ol_with_threads" != "no" ; then
 		fi
 
 		AC_MSG_CHECKING([for usable pthread_setaffinity_np])
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 				#define _GNU_SOURCE
 				#include <pthread.h>
 				#include <sched.h>
-			],[
+			]], [[
 				cpu_set_t cpuset;
 				pthread_attr_t attr;
 
@@ -1252,7 +1245,7 @@ if test "$ol_with_threads" != "no" ; then
 				pthread_getattr_np(pthread_self(), &attr);
 				pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
 				return pthread_getaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
-			],[
+			]])],[
 				AC_DEFINE(USE_PTHREAD_SETAFFINITY_NP,1,[define to use pthread_setaffinity_np])
 				AC_MSG_RESULT([yes])
 			],[
@@ -1260,15 +1253,15 @@ if test "$ol_with_threads" != "no" ; then
 		])
 
 		AC_MSG_CHECKING([for usable pthread_sigmask])
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 				#include <pthread.h>
 				#include <signal.h>
-			],[
+			]], [[
 				sigset_t newset;
 				sigemptyset(&newset);
 				sigaddset(&newset, SIGTERM);
 				pthread_sigmask(SIG_BLOCK, &newset, NULL);
-			],[
+			]])],[
 				AC_DEFINE(HAVE_PTHREAD_SIGMASK,1,[define to use pthread_sigmask])
 				AC_MSG_RESULT([yes])
 			],[
@@ -1481,7 +1474,7 @@ fi
 if test "$ol_link_multithread" = "yes" -o "$ol_link_multithread_naive" = "yes" ; then
 	SAVE_LIBS="$LIBS"
 	LIBS="$LIBS -latomic_ops_gpl -latomic_ops"
-	AC_TRY_LINK([#include <atomic_ops.h>], [AO_t t; AO_TS_t tt; AO_compare_and_swap_full(&t, t, t); AO_test_and_set_full(&tt)],[have_atomic_ops=yes],[have_atomic_ops=no],[-latomic_ops])	LIBS="$SAVE_LIBS"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <atomic_ops.h>]], [[AO_t t; AO_TS_t tt; AO_compare_and_swap_full(&t, t, t); AO_test_and_set_full(&tt)]])],[have_atomic_ops=yes],[have_atomic_ops=no])	LIBS="$SAVE_LIBS"
 	if test $have_atomic_ops = "yes" ; then
 		AC_DEFINE(HAVE_ATOMIC_OPS,1,[define to use HP's atomic_ops library])
 	else
@@ -1497,7 +1490,7 @@ dnl Check for BOOST
 dnl
 ol_link_boost=no
 if test $ol_with_boost != no ; then
-	AC_LANG_CPLUSPLUS
+	AC_LANG([C++])
 	AC_CHECK_HEADERS(boost/config.hpp)
 	if test "$ac_cv_header_boost_config_hpp" = "yes" ; then
 		AC_DEFINE(USE_BOOST,1,[define to use BOOST])
@@ -1514,7 +1507,7 @@ if test $ol_with_boost != no ; then
 			AC_MSG_ERROR([BOOST library headers not available])
 		fi
 	fi
-	AC_LANG_C
+	AC_LANG([C])
 fi
 
 dnl ----------------------------------------------------------------
@@ -1523,7 +1516,7 @@ dnl Check for bullet <http://bulletphysics.com>
 dnl
 ol_link_bullet=no
 if test "$ol_with_bullet" != "no" ; then
-	AC_LANG_CPLUSPLUS
+	AC_LANG([C++])
 	have_libbullet=no
 	AC_CHECK_HEADER(BulletCollision/CollisionShapes/btCollisionShape.h,[have_bullet_h=yes],[have_bullet_h=no])
 	if test "$have_bullet_h" = "yes" ; then
@@ -1544,7 +1537,7 @@ if test "$ol_with_bullet" != "no" ; then
 			AC_MSG_ERROR([bullet not available])
 		fi
 	fi
-	AC_LANG_C
+	AC_LANG([C])
 fi
 
 dnl ----------------------------------------------------------------
@@ -1570,15 +1563,15 @@ if test $ol_with_blas != no ; then
 		if test "$ol_with_blas" = "auto" -o "$ol_with_blas" = "goto" ; then
 			LIBS="$try_blas_LIBS $LIBS"
 
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* FIXME: some architectures might use different
 	 * naming conventions, e.g. uppercase, no underscore
 	 */
 	extern int dgemm_(void);
-			],[
+			]], [[
 	/* test for blas */
 	return dgemm_();
-			],[have_blas="goto"],[
+			]])],[have_blas="goto"],[
 				have_blas="no"
 				if test "$ol_with_blas" = "goto" ; then
 					AC_MSG_ERROR([Goto blas implementation not available])
@@ -1599,15 +1592,15 @@ if test $ol_with_blas != no ; then
 		if test "$ol_with_blas" = "auto" -o "$ol_with_blas" = "openblas" ; then
 			LIBS="$try_blas_LIBS $LIBS"
 
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* FIXME: some architectures might use different
 	 * naming conventions, e.g. uppercase, no underscore
 	 */
 	extern int dgemm_(void);
-			],[
+			]], [[
 	/* test for blas */
 	return dgemm_();
-			],[have_blas="openblas"],[
+			]])],[have_blas="openblas"],[
 				have_blas="no"
 				if test "$ol_with_blas" = "openblas" ; then
 					AC_MSG_ERROR([OpenBLAS implementation not available])
@@ -1622,20 +1615,20 @@ if test $ol_with_blas != no ; then
 		if test "$ol_with_blas" = "auto" -o "$ol_with_blas" = "atlas" ; then
 			LIBS="$try_blas_LIBS $LIBS"
 
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern int cblas_dgemm(void);
-			],[
+			]], [[
 	/* test for blas */
 	return cblas_dgemm();
-			],[have_blas="atlas"
+			]])],[have_blas="atlas"
 				have_cblas="yes"
 				LIBS="-lcblas -lf77blas -latlas $FCLIBS $F77LIBS -lm $LIBS"
-				AC_TRY_LINK([
+				AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 					/* FIXME: some architectures might use different
 					 * naming conventions, e.g. uppercase, no underscore
 					 */
-					extern int dgemm_(void);],[return dgemm_();
-				],[try_blas_LIBS="-lcblas -lf77blas -latlas $FCLIBS $F77LIBS -lm"],[])
+					extern int dgemm_(void);]], [[return dgemm_();
+				]])],[try_blas_LIBS="-lcblas -lf77blas -latlas $FCLIBS $F77LIBS -lm"],[])
 			],[
 				have_blas="no"
 				if test "$ol_with_blas" = "atlas" ; then
@@ -1651,13 +1644,13 @@ if test $ol_with_blas != no ; then
 		if test "$ol_with_blas" = "auto" -o "$ol_with_blas" = "cblas" ; then
 			LIBS="$try_blas_LIBS $LIBS"
 
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	#include<cblas.h>
-			],[
+			]], [[
 	/* test for blas */
 	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, 1, 1, 1, 1, NULL, 1, NULL, 1, 0., NULL, 1);
 	return 0;
-			],[have_blas="cblas"
+			]])],[have_blas="cblas"
 				have_cblas="yes"
 			],[
 				have_blas="no"
@@ -1674,15 +1667,15 @@ if test $ol_with_blas != no ; then
 		if test "$ol_with_blas" = "auto" -o "$ol_with_blas" = "blas" ; then
 			LIBS="$try_blas_LIBS $LIBS"
 
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* FIXME: some architectures might use different
 	 * naming conventions, e.g. uppercase, no underscore
 	 */
 	extern int dgemm_(void);
-			],[
+			]], [[
 	/* test for blas */
 	return dgemm_();
-			],[have_blas="blas"],[
+			]])],[have_blas="blas"],[
 				have_blas="no"
 				if test "$ol_with_blas" = "blas" ; then
 					AC_MSG_ERROR([BLAS not available])
@@ -1729,7 +1722,7 @@ if test "$ol_with_metis" != "no" ; then
 		if test "$ol_link_metis" != "no" ; then
 			AC_DEFINE(USE_METIS,1,
 				[define if you want to use Metis])
-			AC_TRY_COMPILE([#include "metis.h"], [idx_t i;], [new_metis_interface=yes],[new_metis_interface=no] )
+			AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include "metis.h"]], [[idx_t i;]])],[new_metis_interface=yes],[new_metis_interface=no ])
 			if test "$new_metis_interface" != "no" ; then
 				AC_DEFINE(NEW_METIS_INTERFACE,1,[define if you want to use new Metis API])
 			else
@@ -1789,19 +1782,19 @@ if test $ol_with_lapack != no ; then
         try_lapack_LIBS="$BLAS_LIBS"
 
         LIBS="$try_lapack_LIBS $save_LIBS"
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgesvd(double *);
-		],[
+		]], [[
 	double i = 1., o;
 	o = dgesvd(&i);
-		],[have_lapack=yes
+		]])],[have_lapack=yes
 		   have_lapack_=no],[
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgesvd_(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dgesvd_(&i);
-		],[have_lapack=yes
+		]])],[have_lapack=yes
 		   have_lapack_=yes],[have_lapack=no
 				      have_lapack_=no])])
 
@@ -1809,19 +1802,19 @@ if test $ol_with_lapack != no ; then
             LIBS=$save_LIBS
             try_lapack_LIBS="-llapack"
             LIBS="$try_lapack_LIBS $BLAS_LIBS $FCLIBS $F77LIBS $save_LIBS"
-            AC_TRY_LINK([
+            AC_LINK_IFELSE([AC_LANG_PROGRAM([[
             extern double dgesvd(double *);
-                ],[
+                ]], [[
             double i = 1., o;
             o = dgesvd(&i);
-                ],[have_lapack=yes
+                ]])],[have_lapack=yes
                    have_lapack_=no],[
-                AC_TRY_LINK([
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
             extern double dgesvd_(double *);
-                    ],[
+                    ]], [[
             double i = 1., o;
             o = dgesvd_(&i);
-                ],[have_lapack=yes
+                ]])],[have_lapack=yes
                    have_lapack_=yes],[have_lapack=no
                               have_lapack_=no])])
 	fi
@@ -1833,101 +1826,101 @@ if test $ol_with_lapack != no ; then
     fi
 
 	if test "$have_lapack_" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dggev_(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dggev_(&i);
-			],[AC_DEFINE(HAVE_DGGEV,1,[define to use LAPACK's dggev in Eig])])
+			]])],[AC_DEFINE(HAVE_DGGEV,1,[define to use LAPACK's dggev in Eig])],[])
 	elif test "$have_lapack" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dggev(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dggev(&i);
-                        ],[AC_DEFINE(HAVE_DGGEV,1,[define to use LAPACK's dggev in Eig])])
+                        ]])],[AC_DEFINE(HAVE_DGGEV,1,[define to use LAPACK's dggev in Eig])],[])
 	fi
 
 	if test "$have_lapack_" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgecon_(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dgecon_(&i);
-                        ],[AC_DEFINE(HAVE_DGECON,1,[define to use LAPACK's dgecon in newton raphson solver])])
+                        ]])],[AC_DEFINE(HAVE_DGECON,1,[define to use LAPACK's dgecon in newton raphson solver])],[])
 	elif test "$have_lapack" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgecon(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dgecon(&i);
-			],[AC_DEFINE(HAVE_DGECON,1,[define to use LAPACK's dgecon in newton raphson solver])])
+			]])],[AC_DEFINE(HAVE_DGECON,1,[define to use LAPACK's dgecon in newton raphson solver])],[])
 	fi
 
 	if test "$have_lapack_" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dlamch_(const char *);
-			],[
+			]], [[
 	double o;
 	o = dlamch_("S");
-                        ],[AC_DEFINE(HAVE_DLAMCH,1,[define to use LAPACK's dlamch in dgeequ])])
+                        ]])],[AC_DEFINE(HAVE_DLAMCH,1,[define to use LAPACK's dlamch in dgeequ])],[])
 	elif test "$have_lapack" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dlamch(const char *);
-			],[
+			]], [[
 	double o;
 	o = dlamch("S");
-			],[AC_DEFINE(HAVE_DLAMCH,1,[define to use LAPACK's dlamch in dgeequ])])
+			]])],[AC_DEFINE(HAVE_DLAMCH,1,[define to use LAPACK's dlamch in dgeequ])],[])
 	fi
 
 	if test "$have_lapack_" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgetrf_(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dgetrf_(&i);
-                        ],[AC_DEFINE(HAVE_DGETRF,1,[define to use LAPACK's dgetrf in newton raphson solver])])
+                        ]])],[AC_DEFINE(HAVE_DGETRF,1,[define to use LAPACK's dgetrf in newton raphson solver])],[])
 	elif test "$have_lapack" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgetrf(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dgetrf(&i);
-			],[AC_DEFINE(HAVE_DGETRF,1,[define to use LAPACK's dgetrf in newton raphson solver])])
+			]])],[AC_DEFINE(HAVE_DGETRF,1,[define to use LAPACK's dgetrf in newton raphson solver])],[])
 	fi
 
 	if test "$have_lapack_" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgegv_(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dgegv_(&i);
-			],[AC_DEFINE(HAVE_DGEGV,1,[define to use LAPACK's dgegv in Eig])])
+			]])],[AC_DEFINE(HAVE_DGEGV,1,[define to use LAPACK's dgegv in Eig])],[])
 	elif test "$have_lapack" = "yes" ; then
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dgegv(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dgegv(&i);
-                        ],[AC_DEFINE(HAVE_DGEGV,1,[define to use LAPACK's dgegv in Eig])])
+                        ]])],[AC_DEFINE(HAVE_DGEGV,1,[define to use LAPACK's dgegv in Eig])],[])
         fi
 
         if test "$have_lapack_" = "yes" ; then
-                AC_TRY_LINK([
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
         extern double dtrtrs_(double *);
-                        ],[
+                        ]], [[
         double i = 1., o;
         o = dtrtrs_(&i);
-                        ],[have_dtrtrs=yes
-                           AC_DEFINE(HAVE_DTRTRS,1,[define to use LAPACK's dtrtrs in SPQR])])
+                        ]])],[have_dtrtrs=yes
+                           AC_DEFINE(HAVE_DTRTRS,1,[define to use LAPACK's dtrtrs in SPQR])],[])
         elif test "$have_lapack" = "yes" ; then
-                AC_TRY_LINK([
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
         extern double dtrtrs(double *);
-                        ],[
+                        ]], [[
         double i = 1., o;
         o = dtrtrs(&i);
-                        ],[have_dtrtrs=yes
-                           AC_DEFINE(HAVE_DTRTRS,1,[define to use LAPACK's dtrtrs in SPQR])])
+                        ]])],[have_dtrtrs=yes
+                           AC_DEFINE(HAVE_DTRTRS,1,[define to use LAPACK's dtrtrs in SPQR])],[])
 	fi
 
 	if test "$have_lapack" = "yes" ; then
@@ -1971,12 +1964,12 @@ if test "$ol_with_umfpack" != "no" ; then
 		try_suitesparseconfig_LIBS="-lsuitesparseconfig -lm $RT_LIBS"
 		LIBS="$try_suitesparseconfig_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for suitesparseconfig */
 	return 0;
-		],[have_suitesparseconfig="yes"],[have_suitesparseconfig="no"])
+		]])],[have_suitesparseconfig="yes"],[have_suitesparseconfig="no"])
 		if test "$have_suitesparseconfig" = "yes" ; then
 			try_umfpack_LIBS="$try_suitesparseconfig_LIBS"
 			AC_MSG_RESULT([yes])
@@ -1992,12 +1985,12 @@ if test "$ol_with_umfpack" != "no" ; then
 		try_amd_LIBS="-lamd -lm"
 		LIBS="$try_amd_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for amd */
 	return 0;
-		],[have_amd="yes"],[have_amd="no"])
+		]])],[have_amd="yes"],[have_amd="no"])
 		if test "$have_amd" = "yes" ; then
 			try_umfpack_LIBS="$try_amd_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2013,12 +2006,12 @@ if test "$ol_with_umfpack" != "no" ; then
 		try_colamd_LIBS="-lcolamd -lm"
 		LIBS="$try_colamd_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for colamd */
 	return 0;
-		],[have_colamd="yes"],[have_colamd="no"])
+		]])],[have_colamd="yes"],[have_colamd="no"])
 		if test "$have_colamd" = "yes" ; then
 			try_umfpack_LIBS="$try_colamd_LIBS $try_umfpack_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2033,12 +2026,12 @@ if test "$ol_with_umfpack" != "no" ; then
 		try_ccolamd_LIBS="-lccolamd -lm"
 		LIBS="$try_ccolamd_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for ccolamd */
 	return 0;
-		],[have_ccolamd="yes"],[have_ccolamd="no"])
+		]])],[have_ccolamd="yes"],[have_ccolamd="no"])
 		if test "$have_ccolamd" = "yes" ; then
 			try_umfpack_LIBS="$try_ccolamd_LIBS $try_umfpack_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2053,12 +2046,12 @@ if test "$ol_with_umfpack" != "no" ; then
 		try_camd_LIBS="-lcamd -lm"
 		LIBS="$try_camd_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for camd */
 	return 0;
-		],[have_camd="yes"],[have_camd="no"])
+		]])],[have_camd="yes"],[have_camd="no"])
 		if test "$have_camd" = "yes" ; then
 			try_umfpack_LIBS="$try_camd_LIBS $try_umfpack_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2073,12 +2066,12 @@ if test "$ol_with_umfpack" != "no" ; then
 		try_cholmod_LIBS="-lcholmod $METIS_LIBS -lm"
 		LIBS="$try_cholmod_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for cholmod */
 	return 0;
-		],[have_cholmod="yes"],[have_cholmod="no"])
+		]])],[have_cholmod="yes"],[have_cholmod="no"])
 		if test "$have_cholmod" = "yes" ; then
 			try_umfpack_LIBS="$try_cholmod_LIBS $try_umfpack_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2090,7 +2083,7 @@ if test "$ol_with_umfpack" != "no" ; then
 		have_umfpack_version="no"
 		have_umfpack="no"
 		AC_MSG_CHECKING([for umfpack library version])
-		AC_TRY_COMPILE([
+		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 #elif defined(HAVE_SYS_TYPES_H)
@@ -2099,14 +2092,14 @@ if test "$ol_with_umfpack" != "no" ; then
 #error "need int32_t"
 #endif
 #include <umfpack.h>
-		],[
+		]], [[
 #ifndef UMFPACK_MAIN_VERSION
 #error "UMFPACK_MAIN_VERSION not defined (less than 5?)"
 #endif // UMFPACK_MAIN_VERSION
 #if UMFPACK_MAIN_VERSION < 5
 #error "UMFPACK_MAIN_VERSION less than 5?"
 #endif // UMFPACK_MAIN_VERSION
-		],[
+		]])],[
 			have_umfpack_version="yes"
 			AC_MSG_RESULT([5 or greater])
 		],[
@@ -2116,15 +2109,15 @@ if test "$ol_with_umfpack" != "no" ; then
 		if test "$have_umfpack_version" = "yes" ; then
 			umfpack_use_long="no"
 			AC_MSG_CHECKING([if umfpack library needs long])
-			AC_LANG_CPLUSPLUS
-			AC_TRY_COMPILE([
+			AC_LANG([C++])
+			AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 #elif defined(HAVE_SYS_TYPES_H)
 #include <sys/types.h>
 #endif
 #include <umfpack.h>
-			],[
+			]], [[
 #define SIZE 2
 	int32_t sys;
 	int32_t Ap[SIZE], Ai[SIZE];
@@ -2133,15 +2126,15 @@ if test "$ol_with_umfpack" != "no" ; then
 	double Control[UMFPACK_CONTROL];
 	double Info[UMFPACK_INFO];
 	umfpack_di_solve(sys, Ap, Ai, Ax, X, B, &Numeric, Control, Info);
-			],[],[
-				AC_TRY_COMPILE([
+			]])],[],[
+				AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 #elif defined(HAVE_SYS_TYPES_H)
 #include <sys/types.h>
 #endif
 #include <umfpack.h>
-				],[
+				]], [[
 #define SIZE 2
 	int32_t sys;
 	int32_t Ap[SIZE], Ai[SIZE];
@@ -2150,26 +2143,26 @@ if test "$ol_with_umfpack" != "no" ; then
 	double Control[UMFPACK_CONTROL];
 	double Info[UMFPACK_INFO];
 	umfpack_dl_solve(sys, Ap, Ai, Ax, X, B, &Numeric, Control, Info);
-				],[
+				]])],[
 					AC_DEFINE(USE_UMFPACK_LONG,1,[define if need to use umfpack_dl_* calls])
 					umfpack_use_long="yes"
 				],[
 					AC_MSG_ERROR([umfpack might be broken])
 				])
 			])
-			AC_LANG_C
+			AC_LANG([C])
 
 			AC_MSG_RESULT([$umfpack_use_long])
 
 			try_umfpack_LIBS="-lumfpack $try_umfpack_LIBS"
 			LIBS="$try_umfpack_LIBS $BLAS_LIBS $save_LIBS"
 			AC_MSG_CHECKING([for umfpack library])
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <umfpack.h>
-			],[
+			]], [[
 	double t;
 	t = umfpack_timer();
-			],[
+			]])],[
 				have_umfpack="yes"
 				AC_MSG_RESULT([yes])
 			],[
@@ -2223,12 +2216,12 @@ if test "$ol_with_klu" != "no" ; then
 		try_suitesparseconfig_LIBS="-lsuitesparseconfig $RT_LIBS -lm"
 		LIBS="$try_suitesparseconfig_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for suitesparseconfig */
 	return 0;
-		],[have_suitesparseconfig="yes"],[have_suitesparseconfig="no"])
+		]])],[have_suitesparseconfig="yes"],[have_suitesparseconfig="no"])
 		if test "$have_suitesparseconfig" = "yes" ; then
 			try_umfpack_LIBS="$try_suitesparseconfig_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2244,12 +2237,12 @@ if test "$ol_with_klu" != "no" ; then
 		try_amd_LIBS="-lamd"
 		LIBS="$try_amd_LIBS $LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for amd */
 	return 0;
-		],[have_amd="yes"],[have_amd="no"])
+		]])],[have_amd="yes"],[have_amd="no"])
 		if test "$have_amd" = "yes" ; then
 			try_klu_LIBS="$try_amd_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2264,12 +2257,12 @@ if test "$ol_with_klu" != "no" ; then
 		try_colamd_LIBS="-lcolamd"
 		LIBS="$try_colamd_LIBS $save_LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for colamd */
 	return 0;
-		],[have_colamd="yes"],[have_colamd="no"])
+		]])],[have_colamd="yes"],[have_colamd="no"])
 		if test "$have_colamd" = "yes" ; then
 			try_klu_LIBS="$try_klu_LIBS $try_colamd_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2284,12 +2277,12 @@ if test "$ol_with_klu" != "no" ; then
 		try_btf_LIBS="-lbtf"
 		LIBS="$try_btf_LIBS $save_LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for btf */
 	return 0;
-		],[have_btf="yes"],[have_btf="no"])
+		]])],[have_btf="yes"],[have_btf="no"])
 		if test "$have_btf" = "yes" ; then
 			try_klu_LIBS="$try_klu_LIBS $try_btf_LIBS"
 			AC_MSG_RESULT([yes])
@@ -2304,12 +2297,12 @@ if test "$ol_with_klu" != "no" ; then
 		try_klu_LIBS="-lklu $try_klu_LIBS"
 		LIBS="$try_klu_LIBS $save_LIBS"
 
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	/* no test: the library must exist, then we trust it */
-		],[
+		]], [[
 	/* test for klu */
 	return 0;
-		],[have_klu="yes"],[have_klu="no"])
+		]])],[have_klu="yes"],[have_klu="no"])
 		if test "$have_klu" = "yes" ; then
 			AC_MSG_RESULT([yes])
 		else
@@ -2364,26 +2357,26 @@ if test $ol_with_superlu != no ; then
 		have_superlu_mt="no"
 		if test "$ac_cv_header_pdsp_defs_h" = "yes" ; then
 			LIBS="$try_superlu_LIBS $save_LIBS $BLAS_LIBS $THREAD_LIBS -lm"
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <pdsp_defs.h>
 #include <util.h>
-],[
+]], [[
 	SuperMatrix	AC, L, U;
 	(void)pdgstrf_thread_init(&AC, &L, &U,
 			(void *)0, (void *)0, (void *)0, (void *)0);
-			],[have_superlu_mt="yes"])
+			]])],[have_superlu_mt="yes"],[])
 		fi
 		have_superlu="no"
 		if test "$ac_cv_header_dsp_defs_h" = "yes" ; then
 			LIBS="$try_superlu_LIBS $save_LIBS $BLAS_LIBS -lm"
-			AC_TRY_LINK([
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <dsp_defs.h>
 #include <util.h>
-],[
+]], [[
 	SuperMatrix	B;
 	dCreate_Dense_Matrix(&B, 1, 1, (void *)0, 0,
 			SLU_DN, SLU_D, SLU_GE);
-			],[have_superlu="yes"])
+			]])],[have_superlu="yes"],[])
 		fi
 		LIBS="$save_LIBS"
 
@@ -2551,22 +2544,22 @@ if test $ol_with_qrupdate != no ; then
    save_LIBS="$LIBS"
    have_qrupdate="no"
    LIBS="$try_qrupdate_LIBS $save_LIBS -lm"
-   AC_TRY_LINK([
+   AC_LINK_IFELSE([AC_LANG_PROGRAM([[
         extern int dqr1up(double*);
-   ],[
+   ]], [[
         double i = 1;
         int o;
         o = dqr1up(&i);
-   ],[have_qrupdate="yes"])
+   ]])],[have_qrupdate="yes"],[])
 
    if test "$have_qrupdate" = "no"; then
-      AC_TRY_LINK([
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([[
         extern int dqr1up_(double*);
-      ],[
+      ]], [[
         double i = 1;
         int o;
         o = dqr1up_(&i);
-      ],[have_qrupdate="yes"])
+      ]])],[have_qrupdate="yes"],[])
    fi
 
    LIBS="$save_LIBS"
@@ -2587,7 +2580,7 @@ dnl Check for SuiteSparseQr
 dnl
 ol_link_suitesparseqr=no
 if test $ol_with_suitesparseqr != no ; then
-        AC_LANG_CPLUSPLUS
+        AC_LANG([C++])
         AC_CHECK_HEADERS(SuiteSparseQR.hpp)
 
         if test "$ac_cv_header_SuiteSparseQR_hpp" = "yes" ; then
@@ -2596,9 +2589,9 @@ if test $ol_with_suitesparseqr != no ; then
                 save_LIBS="$LIBS"
                 have_suitesparseqr="no"
                 LIBS="$try_suitesparseqr_LIBS $save_LIBS -lm"
-                AC_TRY_LINK([
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                         #include <SuiteSparseQR.hpp>
-                        ],[
+                        ]], [[
                         cholmod_sparse *A, *Q, *R;
                         SuiteSparse_long *E;
                         cholmod_common oCommon;
@@ -2617,7 +2610,7 @@ if test $ol_with_suitesparseqr != no ; then
                         cholmod_l_free_sparse(&R, &oCommon);
                         cholmod_l_free(A->nrow, sizeof(*E), E, &oCommon);
                         cholmod_l_finish(&oCommon);
-                ],[have_suitesparseqr="yes"])
+                ]])],[have_suitesparseqr="yes"],[])
 
                 LIBS="$save_LIBS"
 
@@ -2641,7 +2634,7 @@ dnl Check for STRUMPACK
 dnl
 ol_link_strumpack=no
 if test $ol_with_strumpack != no ; then
-        AC_LANG_CPLUSPLUS
+        AC_LANG([C++])
         AC_CHECK_HEADERS(StrumpackSparseSolver.hpp)
 
         if test "$ac_cv_header_StrumpackSparseSolver_hpp" = "yes" ; then
@@ -2650,9 +2643,9 @@ if test $ol_with_strumpack != no ; then
                 save_LIBS="$LIBS"
                 have_strumpack="no"
                 LIBS="$try_strumpack_LIBS $save_LIBS"
-                AC_TRY_LINK([
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                         #include <StrumpackSparseSolver.hpp>
-			 ],[
+			 ]], [[
 			   double Ax[] = {1., 2., 3., 4.};
   			   int Ar[] = {0, 1, 2, 3, 4};
 			   int Ac[] = {0, 1, 2, 3};
@@ -2668,7 +2661,7 @@ if test $ol_with_strumpack != no ; then
 			   sp.reorder();
 			   sp.factor();
 			   sp.solve(b, x);
-                ],[have_strumpack="yes"])
+                ]])],[have_strumpack="yes"],[])
 
                 LIBS="$save_LIBS"
 
@@ -2683,7 +2676,7 @@ if test $ol_with_strumpack != no ; then
         fi
 fi
 
-AC_LANG_C
+AC_LANG([C])
 if test "$have_fc_f77" = "no" ; then
    	if test $ol_with_y12 = yes ; then
            	AC_MSG_ERROR([Y12 sparse LU library needs Fortran compiler])
@@ -2725,7 +2718,7 @@ ol_link_trilinos=no
 if test $ol_with_trilinos != no ; then
         have_trilinos=no
         
-        AC_LANG_CPLUSPLUS
+        AC_LANG([C++])
         AC_CHECK_HEADERS([Epetra_Comm.h Epetra_SerialComm.h Epetra_Vector.h Epetra_Operator.h Epetra_CrsMatrix.h AztecOO.h Amesos.h Amesos_BaseSolver.h NOX.H NOX_Epetra.H NOX_Solver_Generic.H NOX_Epetra_Vector.H NOX_Epetra_Interface_Required.H NOX_Epetra_Interface_Jacobian.H NOX_Epetra_Interface_Preconditioner.H NOX_Epetra_LinearSystem_AztecOO.H],[have_trilinos_h=yes],[have_trilinos_h=no])
         
         AC_MSG_CHECKING([for Trilinos library])
@@ -2746,7 +2739,7 @@ if test $ol_with_trilinos != no ; then
                        esac
                        save_LIBS="$LIBS"
                        LIBS="$try_trilinos_LIBS $save_LIBS"
-                       AC_TRY_LINK([
+                       AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                                 #undef HAVE_BLAS
                                 #undef HAVE_BOOL
                                 #include <NOX.H>
@@ -2781,7 +2774,7 @@ if test $ol_with_trilinos != no ; then
                                                return true;
                                        }
                                 };
-			],[
+			]], [[
                                 int N = 100;
 
                                 Epetra_SerialComm Comm;
@@ -2827,7 +2820,7 @@ if test $ol_with_trilinos != no ; then
 
                                 Teuchos::RCP<NOX::Solver::Generic> nonlinSolver =  NOX::Solver::buildSolver(grpPtr, combo, noxParam);
                                 NOX::StatusTest::StatusType solvStatus = nonlinSolver->solve();
-                       ],[have_trilinos="yes"])
+                       ]])],[have_trilinos="yes"],[])
 
                        LIBS="$save_LIBS"
                     fi
@@ -2845,7 +2838,7 @@ if test $ol_with_trilinos != no ; then
            fi                
            AC_MSG_RESULT([no])
         fi        
-        AC_LANG_C        
+        AC_LANG([C])
 fi
 
 dnl ----------------------------------------------------------------
@@ -2856,7 +2849,7 @@ ol_link_siconos=no
 if test $ol_with_siconos != no ; then
         have_siconos=no
 
-        AC_LANG_CPLUSPLUS
+        AC_LANG([C++])
         AC_CHECK_HEADERS([numerics/NumericsMatrix.h numerics/SolverOptions.h numerics/MCP_cst.h numerics/NumericsVerbose.h numerics/NonSmoothDrivers.h numerics/MixedComplementarityProblem.h numerics/Newton_methods.h],[have_siconos_h=yes],[have_siconos_h=no])
 
         AC_MSG_CHECKING([for Siconos library])
@@ -2865,7 +2858,7 @@ if test $ol_with_siconos != no ; then
                 try_siconos_LIBS="-lsiconos_numerics"
                 save_LIBS="$LIBS"
                 LIBS="$try_siconos_LIBS $save_LIBS"
-                AC_TRY_LINK([
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                              #include <math.h>
                              #include <numerics/SolverOptions.h>
                              #include <numerics/MCP_cst.h>
@@ -2902,7 +2895,7 @@ if test $ol_with_siconos != no ; then
                                      }
                                  }
                              }
-                        ],[
+                        ]], [[
                              MixedComplementarityProblem* pMCP = mixedComplementarityProblem_new();
                              SolverOptions* pOptions = solver_options_create(SICONOS_MCP_NEWTON_MIN_FBLSA);
 
@@ -2923,7 +2916,7 @@ if test $ol_with_siconos != no ; then
                              mixedComplementarityProblem_free(pMCP);
                              solver_options_delete(pOptions);
                              free(pOptions);
-                       ],[have_siconos="yes"])
+                       ]])],[have_siconos="yes"],[])
 
                        LIBS="$save_LIBS"
         fi
@@ -2939,7 +2932,7 @@ if test $ol_with_siconos != no ; then
            fi
            AC_MSG_RESULT([no])
         fi
-        AC_LANG_C
+        AC_LANG([C])
 fi
 
 dnl ----------------------------------------------------------------
@@ -2953,19 +2946,19 @@ if test $ol_with_arpack != no ; then
 	save_LIBS="$LIBS"
 	try_arpack_LIBS="-larpack"
 	LIBS="$try_arpack_LIBS $LAPACK_LIBS $BLAS_LIBS $FCLIBS $F77LIBS $save_LIBS"
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dnaupd(double *);
-		],[
+		]], [[
 	double i = 1., o;
 	o = dnaupd(&i);
-		],[have_arpack=yes
+		]])],[have_arpack=yes
 		   have_arpack_=no],[
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	extern double dnaupd_(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = dnaupd_(&i);
-		],[have_arpack=yes
+		]])],[have_arpack=yes
 		   have_arpack_=yes],[have_arpack=no
 				      have_arpack_=no])])
 
@@ -2997,25 +2990,25 @@ if test $ol_with_jdqz != no ; then
 	save_LIBS="$LIBS"
 	try_jdqz_LIBS="-ljdqz"
 	LIBS="$try_jdqz_LIBS $LAPACK_LIBS $BLAS_LIBS $FCLIBS $F77LIBS $save_LIBS"
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	double amul(double *x) { return 0.; }
 	double bmul(double *x) { return 0.; }
 	double precon(double *x) { return 0.; }
 	extern double jdqz(double *);
-		],[
+		]], [[
 	double i = 1., o;
 	o = jdqz(&i);
-		],[have_jdqz=yes
+		]])],[have_jdqz=yes
 		   have_jdqz_=no],[
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	double amul_(double *x) { return 0.; }
 	double bmul_(double *x) { return 0.; }
 	double precon_(double *x) { return 0.; }
 	extern double jdqz_(double *);
-			],[
+			]], [[
 	double i = 1., o;
 	o = jdqz_(&i);
-		],[have_jdqz=yes
+		]])],[have_jdqz=yes
 		   have_jdqz_=yes],[have_jdqz=no
 				      have_jdqz_=no])])
 
@@ -3057,7 +3050,7 @@ dnl
 ol_link_ann=no
 if test "$ol_with_ann" != "no" ; then
 	ol_have_ann=no
-	AC_LANG_CPLUSPLUS
+	AC_LANG([C++])
 	ANN_H=
 	ANN_ANN_H=
 	AC_CHECK_HEADERS(ANN.h, [ANN_H="ANN.h"])
@@ -3065,11 +3058,10 @@ if test "$ol_with_ann" != "no" ; then
 	if test "$ac_cv_header_ANN_h" = "yes" -o "$ac_cv_header_ANN_ANN_h" = "yes" ; then
 		SAVE_LIBS="$LIBS"
 		LIBS="$LIBS -lann"
-		AC_TRY_LINK(
-	#include <$ANN_H>
-			,[
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <$ANN_H>
+			]], [[
 	ANNkd_tree x(0,0);
-			],[have_ann=yes],[have_ann=no])
+			]])],[have_ann=yes],[have_ann=no])
 		LIBS="$save_LIBS"
 		if test "$have_ann" != "no" ; then
 			ANN_LIBS="-lann"
@@ -3088,7 +3080,7 @@ if test "$ol_with_ann" != "no" ; then
 		fi
 		LIBS="$SAVE_LIBS"
 	fi
-	AC_LANG_C
+	AC_LANG([C])
 
 	if test "$ol_have_ann" = "yes" ; then
 		ol_link_ann="yes"
@@ -3172,12 +3164,12 @@ if test "$ol_enable_crypt" != no ; then
 	for i in $crypt_pool ; do
 		save_LIBS=$LIBS
 		LIBS="$LIBS $i"
-		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <unistd.h>
 #include <pwd.h>
-		],[
+		]], [[
 	crypt(NULL,NULL);
-		],[crypt_ok=yes],[crypt_ok=no])
+		]])],[crypt_ok=yes],[crypt_ok=no])
 		LIBS=$save_LIBS
 
 		if test $crypt_ok = yes ; then
@@ -3211,10 +3203,10 @@ dnl
 ol_link_mpi=no
 if test $ol_with_mpi != no ; then
 	AC_CHECK_HEADERS(mpi.h)
-	AC_LANG_CPLUSPLUS
+	AC_LANG([C++])
 	AC_CHECK_HEADERS(mpi++.h)
 	AC_CHECK_HEADERS(mpicxx.h)
-	AC_LANG_C
+	AC_LANG([C])
 
 	have_mpi_cxx_header=no
  	try_mpi_LIBS=
@@ -3236,27 +3228,27 @@ if test $ol_with_mpi != no ; then
 
 	if test $ac_cv_header_mpi_h = yes -a $have_mpi_cxx_header = yes ; then
 		AC_MSG_CHECKING([for mpi libraries])
-		AC_LANG_CPLUSPLUS
+		AC_LANG([C++])
 		save_LIBS=$LIBS
- 		AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <$mpi_cxx_header>
-		],[
+		]], [[
  	int argc = 0;
  	char **argv = 0;
  	MPI::Init(argc, argv);
- 		],[have_mpi=yes],[have_mpi=no])
+		]])],[have_mpi=yes],[have_mpi=no])
                 if test $have_mpi = no ; then
 		        LIBS="$LIBS $try_mpi_LIBS"
-		        AC_TRY_LINK([
+		        AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <$mpi_cxx_header>
-			],[
+			]], [[
 	int argc = 0;
 	char **argv = 0;
 	MPI::Init(argc, argv);
-        		],[have_mpi=yes],[have_mpi=no])
+			]])],[have_mpi=yes],[have_mpi=no])
 	        	LIBS=$save_LIBS
                 fi
-		AC_LANG_C
+		AC_LANG([C])
 
 		if test $have_mpi != no ; then
 			MPI_LIBS=$try_mpi_LIBS
@@ -3331,8 +3323,8 @@ if test $ol_with_taucs != no ; then
 		save_LIBS="$LIBS"
 		try_taucs_LIBS="-ltaucs"
 		LIBS="$try_taucs_LIBS $METIS_LIBS $LAPACK_LIBS $BLAS_LIBS $LIBS"
-		AC_TRY_LINK([#include "taucs.h"
-			],[
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include "taucs.h"
+			]], [[
 			taucs_ccs_matrix* A;
 			void**            F;
 			int		  nrhs;
@@ -3341,7 +3333,7 @@ if test $ol_with_taucs != no ; then
 			char**		  options;
 			void**		  opt_arg;
 			int taucs_linsolve(A, F, nrhs, X, B, options, opt_arg);
-		],[have_taucs=yes],[have_taucs=no])
+		]])],[have_taucs=yes],[have_taucs=no])
 		LIBS="$save_LIBS"
 	fi
 	if test $have_taucs != no ; then
@@ -3372,8 +3364,8 @@ dnl Use GiNaC?
 dnl
 ol_link_ginac=no
 if test $ol_with_ginac != no ; then
-	AC_LANG_CPLUSPLUS
-	AC_LANG_C
+	AC_LANG([C++])
+	AC_LANG([C])
 	AC_MSG_CHECKING([for GiNaC library])
 	have_ginac=no
 
@@ -3457,16 +3449,16 @@ dnl Checks if we can detect how many processors can be used on smp arch
 dnl
 if test "$ac_cv_func_get_nprocs" = "no" ; then
 	if test "$ac_cv_header_sys_sysinfo_h" = "yes" ; then
-	        AC_TRY_LINK([
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <sys/sysinfo.h>
-       		],[
+		]], [[
         return get_nprocs();
-       		],[have_get_nprocs=yes],[have_get_nprocs=no])
+		]])],[have_get_nprocs=yes],[have_get_nprocs=no])
 	else
-	        AC_TRY_LINK([
-       		],[
+	        AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+		]], [[
         return get_nprocs();
-       		],[have_get_nprocs=yes],[have_get_nprocs=no])
+		]])],[have_get_nprocs=yes],[have_get_nprocs=no])
 	fi
 
 	if test "$have_get_nprocs" = "yes" ; then
@@ -3479,16 +3471,16 @@ dnl
 dnl Make sure we can use sleep with C++
 dnl
 if test "$ac_cv_func_sleep" = "yes" ; then
-	AC_LANG_CPLUSPLUS
-	AC_TRY_LINK([
+	AC_LANG([C++])
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <unistd.h>
-       	],[
+       	]], [[
         sleep(1);
-       	],[use_sleep=yes],[use_sleep=no])
+       	]])],[use_sleep=yes],[use_sleep=no])
 	if test "$use_sleep" = "yes" ; then
 		AC_DEFINE(USE_SLEEP,1,[define if sleep is usable with C++ (issue with MinGW)])
 	fi
-	AC_LANG_C
+	AC_LANG([C])
 fi
 
 dnl ----------------------------------------------------------------
@@ -3496,20 +3488,20 @@ dnl
 dnl Checks whether ios has fmtflags type
 dnl
 
-AC_LANG_CPLUSPLUS
+AC_LANG([C++])
 AC_MSG_CHECKING([whether class ios has fmtflags type])
-AC_TRY_COMPILE([#include <iostream>],[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <iostream>]], [[
 	std::ios::fmtflags f;
-],[have_fmtflags=yes],[have_fmtflags=no])
+]])],[have_fmtflags=yes],[have_fmtflags=no])
 
 if test $have_fmtflags != no ; then
 	AC_DEFINE(HAVE_FMTFLAGS_IN_IOS,1,
 		[define if class ios has 'fmtflags' type])
 	AC_MSG_RESULT([yes])
 else
-	AC_TRY_COMPILE([#include <iostream.h>],[
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <iostream.h>]], [[
 		std::ios::fmtflags f;
-],[have_fmtflags=yes],[have_fmtflags=no])
+]])],[have_fmtflags=yes],[have_fmtflags=no])
 
 	if test $have_fmtflags != no ; then
 		AC_DEFINE(HAVE_FMTFLAGS_IN_IOS,1,
@@ -3519,7 +3511,7 @@ else
 		AC_MSG_RESULT([no])
 	fi
 fi
-AC_LANG_C
+AC_LANG([C])
 
 dnl ----------------------------------------------------------------
 dnl Add EXPORT_DYNAMIC_FLAG_SPEC to LDFLAGS immediately before exit
@@ -3531,9 +3523,9 @@ if test "$ol_enable_Werror" != no ; then
 	CFLAGS="$CFLAGS -Werror -Wno-error=cpp"
 	CXXFLAGS="$CXXFLAGS -Werror -Wno-error=cpp"
 	AX_CHECK_COMPILE_FLAG([-Wformat-truncation],[CFLAGS="$CFLAGS -Wno-error=format-truncation"], , [-Werror])
-	AC_LANG_CPLUSPLUS
+	AC_LANG([C++])
 	AX_CHECK_COMPILE_FLAG([-Wformat-truncation],CXXFLAGS="$CXXFLAGS -Wno-error=format-truncation", , [-Werror])
-	AC_LANG_C
+	AC_LANG([C])
 	FFLAGS="$FFLAGS"
 fi
 

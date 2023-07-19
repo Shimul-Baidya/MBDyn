@@ -198,6 +198,7 @@ public:
 	};
 
 	/* Output specifico dei vincoli */
+	using ToBeOutput::Output;
 	std::ostream&
 	Output(std::ostream& out, const char* sJointName,
 		unsigned int uLabel,

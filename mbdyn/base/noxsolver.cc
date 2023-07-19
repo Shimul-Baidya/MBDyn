@@ -327,7 +327,7 @@ namespace {
           setJacobianOperatorForSolve(const Teuchos::RCP<const Epetra_Operator>& solveJacOp) override;
 
           virtual bool
-          hasPreconditioner() const;
+          hasPreconditioner() const override;
 
           virtual void
           setPrecOperatorForSolve(const Teuchos::RCP<const Epetra_Operator>& solvePrecOp) override;
@@ -799,8 +799,8 @@ namespace {
 
           pNonlinearSolver->reset(*pSolutionView);
 
-          if (!bKeepJacAcrossSteps) {
-               ForcePrecondRebuild();
+          if (!bKeepJacAcrossSteps || bInDerivativeSolver) {
+               ForcePrecondRebuild(); // Will be useful for automatic derivative solver
           }
 
           iIterCnt = 0;
@@ -827,7 +827,7 @@ namespace {
                dResErr = oResTest.dGetTest();
                dSolErr = oSolTest.getStatus() != NOX::StatusTest::Unevaluated
                     ? oSolTest.dGetTest()
-                    : 0.;
+                    : -1.;
 
                if (solvStatus == NOX::StatusTest::Converged) {
                     break;
@@ -881,6 +881,12 @@ namespace {
           Teuchos::RCP<NOX::Abstract::PrePostOperator> pPrePost = Teuchos::rcpFromRef(oPrePost);
           oSolverParam.sublist("Solver Options").set("User Defined Pre/Post Operator", pPrePost);
 
+          if (bInDerivativeSolver) {
+               // In case of automatic estimation of the derivatives coefficient it is necessary
+               // to enforce a complete check! Otherwise SolErr might not be evaluated at all.
+               oSolverParam.sublist("Solver Options").set("Status Test Check Type", "Complete");
+          }
+          
           int iSolverOutput = 0;
 
           if (outputIters()) {

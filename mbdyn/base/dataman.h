@@ -78,8 +78,8 @@
 struct LoadableCalls;
 class Solver;
 
+class FiniteDifferenceJacobianBase;
 #include "datamanforward.h"
-
 /* DataManager - begin */
 
 class DataManager : public SolutionDataManager, public SolverDiagnostics,
@@ -182,11 +182,10 @@ protected:
 	mutable integer iOutputCount;
 
 protected:
-	DriveCaller *pFDJacMeter;
+        FiniteDifferenceJacobianBase* pFDJac;
 
 public:
-	bool bFDJac(void) const;
-
+        void FDJacCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac);
 	/* specialized output stuff */
 public:
 	enum ResType {

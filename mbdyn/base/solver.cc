@@ -6976,9 +6976,9 @@ Solver::Eig(bool bNewLine)
 
 	integer iSize = iNumDofs;
 	
-        SolutionManager *pSM = 0;
-	MatrixHandler *pMatA = 0;
-	MatrixHandler *pMatB = 0;
+        SolutionManager *pSM = nullptr;
+	MatrixHandler *pMatA = nullptr;
+	MatrixHandler *pMatB = nullptr;
 
 	if (EigAn.uFlags & EigenAnalysis::EIG_USE_LAPACK) {
 		SAFENEWWITHCONSTRUCTOR(pMatA, FullMatrixHandler,
@@ -7027,6 +7027,7 @@ Solver::Eig(bool bNewLine)
          * Call AssRes before AssJac in order to be sure that all
          * the elements have updated the internal data
          */
+        if (pMatA && pMatB) // Suppress null pointer warnings reported by clang analyzer
         {
              MyVectorHandler Res(iNumDofs);
 
@@ -7120,7 +7121,7 @@ Solver::Eig(bool bNewLine)
 	pDM->OutputEigClose();
 
 	if (pSM) {
-		pMatB = 0;
+                pMatB = nullptr; // pMatB will be deleted when deleting pSM
 		SAFEDELETE(pSM);
 	}
 
@@ -7135,8 +7136,14 @@ Solver::Eig(bool bNewLine)
 
 doublereal Solver::dGetInitialMaxTimeStep() const
 {
-	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(PostponedDriveCaller)) {
-		return ::dDefaultMaxTimeStep;
+// 	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(PostponedDriveCaller)) {
+// 		return ::dDefaultMaxTimeStep;
+// 	}
+	{
+		auto ts_drv = MaxTimeStep.pGetDriveCaller();
+		if (dynamic_cast<PostponedDriveCaller*>(ts_drv) != 0) {
+			return ::dDefaultMaxTimeStep;
+		}
 	}
 
 	// The same behavior like in previous releases

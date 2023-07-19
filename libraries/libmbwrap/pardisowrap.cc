@@ -53,6 +53,7 @@
 
 #include "pardisowrap.h"
 #include "cscmhtpl.h"
+#include "constexpr_math.h"
 
 template <typename MKL_INT_TYPE>
 PardisoSolver<MKL_INT_TYPE>::PardisoSolver(SolutionManager* pSM, integer iDim, doublereal dPivot, integer iNumThreads, integer iNumIter, integer iVerbose)
@@ -104,7 +105,7 @@ void PardisoSolver<MKL_INT_TYPE>::Solve(void) const
     const MKL_INT_TYPE iNumNzA = pAp[n] - pAp[0];
 
     MKL_INT_TYPE ierror = 0;
-    constexpr doublereal dTolBW = sqrt(std::numeric_limits<doublereal>::epsilon());
+    constexpr doublereal dTolBW = constexpr_math::sqrt(std::numeric_limits<doublereal>::epsilon());
     doublereal dErrBW = std::numeric_limits<doublereal>::max();
     bool bSymbolicFactor = iNumNzA != iNumNz;
     bool bRepeatFactor = false;
@@ -185,9 +186,9 @@ MKL_INT_TYPE PardisoSolver<MKL_INT_TYPE>::MakeCompactForm(SparseMatrixHandler& m
 
      pAx = &Ax.front();
 
-     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE));
-     static_assert(std::numeric_limits<MH_INT_TYPE>::is_integer);
-     static_assert(std::numeric_limits<MKL_INT_TYPE>::is_integer);
+     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE), "data type does not match");
+     static_assert(std::numeric_limits<MH_INT_TYPE>::is_integer, "invalid data type");
+     static_assert(std::numeric_limits<MKL_INT_TYPE>::is_integer, "invalid data type");
      
      pAi = reinterpret_cast<MKL_INT_TYPE*>(&Ai.front());
      pAp = reinterpret_cast<MKL_INT_TYPE*>(&Ap.front());

@@ -188,6 +188,7 @@ protected:
 	Vec3 ThetaRef;
 	Vec3 ThetaCurr;
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssMat(FullSubMatrixHandler& WM, doublereal dCoef);
 	virtual void AssVec(SubVectorHandler& WorkVec);
@@ -204,6 +205,9 @@ public:
 			flag fOut);
 
 	virtual ~ElasticHingeJoint(void);
+
+	virtual void
+	AfterPredict(VectorHandler& X, VectorHandler& XP);
 
 	virtual void
 	AfterConvergence(const VectorHandler& X, const VectorHandler& XP);
@@ -312,6 +316,7 @@ protected:
 	/* AssMatMDE is OK as MDE is updated fine by AfterPredict();
 	 * AssMatMDEPrime is not needed */
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssVec(SubVectorHandler& WorkVec);
 
@@ -371,6 +376,7 @@ class ViscousHingeJoint : virtual public Elem, public DeformableHingeJoint {
 protected:
 	Vec3 Omega;
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssMats(FullSubMatrixHandler& WMA,
 			FullSubMatrixHandler& WMB,
@@ -486,6 +492,7 @@ protected:
 	AssMatMDEPrime(FullSubMatrixHandler& WMA,
 		FullSubMatrixHandler& WMB, doublereal dCoef);
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssVec(SubVectorHandler& WorkVec);
 
@@ -553,6 +560,7 @@ protected:
 			FullSubMatrixHandler& WMB,
 			doublereal dCoef);
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssVec(SubVectorHandler& WorkVec);
 
@@ -664,6 +672,7 @@ protected:
 	AssMatMDEPrime(FullSubMatrixHandler& WMA,
 		FullSubMatrixHandler& WMB, doublereal dCoef);
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssVec(SubVectorHandler& WorkVec);
 

@@ -107,40 +107,40 @@ public:
 
         virtual ~NaiveMatrixHandler(void);
 
-        integer iGetNumRows(void) const {
+        integer iGetNumRows(void) const override {
                 return iSize;
         };
 
-        integer iGetNumCols(void) const {
+        integer iGetNumCols(void) const override {
                 return iSize;
         };
 
-        void Reset(void);
+        void Reset(void) override;
 
         /* Ridimensiona la matrice */
-        virtual void Resize(integer, integer) {
+        virtual void Resize(integer, integer) override {
                 throw ErrGeneric(MBDYN_EXCEPT_ARGS);
         };
 
         virtual inline const doublereal&
-        operator () (integer iRow, integer iCol) const;
+        operator () (integer iRow, integer iCol) const override;
 
         virtual inline doublereal&
-        operator () (integer iRow, integer iCol);
+        operator () (integer iRow, integer iCol) override;
 
         /* Overload di += usato per l'assemblaggio delle matrici */
-        virtual MatrixHandler& operator += (const SubMatrixHandler& SubMH);
+        virtual MatrixHandler& operator += (const SubMatrixHandler& SubMH) override;
 
         /* Overload di -= usato per l'assemblaggio delle matrici */
-        virtual MatrixHandler& operator -= (const SubMatrixHandler& SubMH);
+        virtual MatrixHandler& operator -= (const SubMatrixHandler& SubMH) override;
 
         /* Overload di += usato per l'assemblaggio delle matrici
          * questi li vuole ma non so bene perche'; force per la doppia
          * derivazione di VariableSubMatrixHandler */
         virtual MatrixHandler&
-        operator += (const VariableSubMatrixHandler& SubMH);
+        operator += (const VariableSubMatrixHandler& SubMH) override;
         virtual MatrixHandler&
-        operator -= (const VariableSubMatrixHandler& SubMH);
+        operator -= (const VariableSubMatrixHandler& SubMH) override;
 
         void MakeCCStructure(std::vector<integer>& Ai,
                 std::vector<integer>& Ap);
@@ -154,21 +154,21 @@ protected:
         virtual MatrixHandler&
         MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
         virtual MatrixHandler&
         MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
 
         /* Matrix Vector product */
         virtual VectorHandler&
         MatVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
         virtual VectorHandler&
         MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
         virtual NaiveMatrixHandler* Copy() const override;
 };
 
@@ -275,7 +275,7 @@ public:
         const std::vector<integer>& GetInvPerm(void) const;
 
         virtual inline const doublereal&
-        operator () (integer iRow, integer iCol) const {
+        operator () (integer iRow, integer iCol) const override {
                 ASSERT(iRow > 0);
                 ASSERT(iRow <= iGetNumRows());
                 ASSERT(iCol > 0);
@@ -290,7 +290,7 @@ public:
         };
 
         virtual inline doublereal&
-        operator () (integer iRow, integer iCol) {
+        operator () (integer iRow, integer iCol) override {
                 ASSERT(iRow > 0);
                 ASSERT(iRow <= iGetNumRows());
                 ASSERT(iCol > 0);
@@ -311,21 +311,21 @@ protected:
         virtual MatrixHandler&
         MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
         virtual MatrixHandler&
         MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
 
         /* Matrix Vector product */
         virtual VectorHandler&
         MatVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
         virtual VectorHandler&
         MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
 };
 
 

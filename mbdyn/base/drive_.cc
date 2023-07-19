@@ -2141,6 +2141,7 @@ SineCosineDCR::Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred, boo
 }
 
 struct SineDCR : public DriveCallerRead, protected SineCosineDCR {
+	using SineCosineDCR::Read;
 	DriveCaller *
 	Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred);
 };
@@ -2154,6 +2155,7 @@ SineDCR::Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred)
 }
 
 struct CosineDCR : public DriveCallerRead, protected SineCosineDCR {
+	using SineCosineDCR::Read;
 	DriveCaller *
 	Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred);
 };

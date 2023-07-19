@@ -645,7 +645,7 @@ const Param_Manip Param;
 const MatR_Manip MatR;
 const MatG_Manip MatG;
 const MatGm1_Manip MatGm1;
-};
+}
 
 
 Vec3 operator - (const Vec3& v)
@@ -671,7 +671,7 @@ Mat3x3 operator - (const Mat3x3& m)
 }
 
 
-const char sForm[] = "%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e";
+//const char sForm[] = "%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e";
 const char sDefFill[] = " ";
 
 /* output di matrici */
@@ -1033,7 +1033,7 @@ EulerAngles123_2MatR(const Vec3& v)
 		dSinBeta,
 		-dSinAlpha*dCosBeta,
 		dCosAlpha*dCosBeta);
-};
+}
 
 Mat3x3
 EulerAngles313_2MatR(const Vec3& v)
