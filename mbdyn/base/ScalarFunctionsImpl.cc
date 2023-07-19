@@ -1387,13 +1387,8 @@ public:
 	virtual void Update(const T& Eps, const T& /* EpsPrime */  = 0.) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		for (int i = 1; i <= n; i++) {
-#if defined(MBDYN_X_WORKAROUND_GCC_3_2) || defined(MBDYN_X_WORKAROUND_GCC_3_3)
-			ConstitutiveLaw<T, Tder>::F.Put(i, (*pSF)(Eps(i)));
-			ConstitutiveLaw<T, Tder>::FDE.Put(i, i, pSF->ComputeDiff(Eps(i)));
-#else // !MBDYN_X_WORKAROUND_GCC_3_2 && ! MBDYN_X_WORKAROUND_GCC_3_3
 			ConstitutiveLaw<T, Tder>::F(i) = (*pSF)(Eps(i));
 			ConstitutiveLaw<T, Tder>::FDE(i, i) = pSF->ComputeDiff(Eps(i));
-#endif // !MBDYN_X_WORKAROUND_GCC_3_3 && ! MBDYN_X_WORKAROUND_GCC_3_3
 		}
 	};
 };
@@ -1544,13 +1539,8 @@ public:
 				continue;
 			}
 
-#if defined(MBDYN_X_WORKAROUND_GCC_3_2) || defined(MBDYN_X_WORKAROUND_GCC_3_3)
-			ConstitutiveLaw<T, Tder>::F.Put(i, (*SF[i - 1])(Eps(i)));
-			ConstitutiveLaw<T, Tder>::FDE.Put(i, i, SF[i - 1]->ComputeDiff(Eps(i)));
-#else // !MBDYN_X_WORKAROUND_GCC_3_2 && ! MBDYN_X_WORKAROUND_GCC_3_3
 			ConstitutiveLaw<T, Tder>::F(i) = (*SF[i - 1])(Eps(i));
 			ConstitutiveLaw<T, Tder>::FDE(i, i) = SF[i - 1]->ComputeDiff(Eps(i));
-#endif // !MBDYN_X_WORKAROUND_GCC_3_2 && ! MBDYN_X_WORKAROUND_GCC_3_3
 		}
 	};
 };

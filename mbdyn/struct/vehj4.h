@@ -199,21 +199,6 @@ public:
 		return ConstLawType::ELASTIC;
 	};
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0)
-	{
-		DeformableAxialJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableAxialJoint::ParseHint(pDM, s);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
-
 	/* assemblaggio jacobiano */
 	virtual VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat,
@@ -321,21 +306,6 @@ public:
 		return ConstLawType::VISCOUS;
 	};
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0)
-	{
-		DeformableAxialJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableAxialJoint::ParseHint(pDM, s);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
-
 	/* assemblaggio jacobiano */
 	virtual VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat,
@@ -435,21 +405,6 @@ public:
 	virtual ConstLawType::Type GetConstLawType(void) const {
 		return ConstLawType::VISCOELASTIC;
 	};
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0)
-	{
-		DeformableAxialJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableAxialJoint::ParseHint(pDM, s);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 
 	/* assemblaggio jacobiano */
 	virtual VariableSubMatrixHandler&

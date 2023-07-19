@@ -268,31 +268,6 @@ public:
 	virtual SubVectorHandler&
 	InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableDispJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableDispJoint::ParseHint(pDM, s);
-	};
-	virtual unsigned int iGetNumPrivData(void) const {
-		return DeformableDispJoint::iGetNumPrivData();
-	};
-	virtual unsigned int iGetPrivDataIdx(const char *s) const {
-		return DeformableDispJoint::iGetPrivDataIdx(s);
-	};
-	virtual doublereal dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
-
-
 };
 
 /* ElasticDispJoint - end */
@@ -368,31 +343,6 @@ public:
 	/* Contributo al residuo durante l'assemblaggio iniziale */
 	virtual SubVectorHandler&
 	InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableDispJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableDispJoint::ParseHint(pDM, s);
-	};
-	virtual unsigned int iGetNumPrivData(void) const {
-		return DeformableDispJoint::iGetNumPrivData();
-	};
-	virtual unsigned int iGetPrivDataIdx(const char *s) const {
-		return DeformableDispJoint::iGetPrivDataIdx(s);
-	};
-	virtual doublereal dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
-
 
 };
 
@@ -471,30 +421,6 @@ public:
 	/* Contributo al residuo durante l'assemblaggio iniziale */
 	virtual SubVectorHandler&
 	InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableDispJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableDispJoint::ParseHint(pDM, s);
-	};
-	virtual unsigned int iGetNumPrivData(void) const {
-		return DeformableDispJoint::iGetNumPrivData();
-	};
-	virtual unsigned int iGetPrivDataIdx(const char *s) const {
-		return DeformableDispJoint::iGetPrivDataIdx(s);
-	};
-	virtual doublereal dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 
 };
 
@@ -575,29 +501,6 @@ public:
 	virtual SubVectorHandler&
 	InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableDispJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableDispJoint::ParseHint(pDM, s);
-	};
-	virtual unsigned int iGetNumPrivData(void) const {
-		return DeformableDispJoint::iGetNumPrivData();
-	};
-	virtual unsigned int iGetPrivDataIdx(const char *s) const {
-		return DeformableDispJoint::iGetPrivDataIdx(s);
-	};
-	virtual doublereal dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 };
 
 /* ViscoElasticDispJoint - end */
