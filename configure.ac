@@ -343,6 +343,44 @@ fi
 dnl AC_DISABLE_SHARED([]) dnl Remove when you want to build shared libs also
 LT_INIT
 
+dnl
+dnl check for c++17
+dnl
+AC_LANG([C++])
+AC_MSG_CHECKING(for c++ >= c++17)
+AC_RUN_IFELSE(
+	[AC_LANG_PROGRAM([], 
+		[
+			if (__cplusplus == 202101L || __cplusplus == 202002L|| __cplusplus == 201703L) {
+				return 0;
+			}
+			return 1;
+		])
+	],
+	[AC_MSG_RESULT([yes])],
+	[
+		save_CXXFlAGS="$CXXFLAGS"
+		CXXFLAGS="$CXXFLAGS -std=c++17"
+
+		AC_RUN_IFELSE(
+			[AC_LANG_PROGRAM([], 
+				[
+					if (__cplusplus == 202101L || __cplusplus == 202002L|| __cplusplus == 201703L) {
+						return 0;
+					}
+					return 1;
+				])],
+			[AC_MSG_RESULT([yes])],
+			[
+				AC_MSG_RESULT([no])
+				CXXFLAGS="$save_CXXFLAGS"
+				AC_MSG_ERROR([I'm afraid MBDyn now requires compiler to support	at least c++17.])
+			])
+	]
+)
+AC_LANG([C])
+
+
 dnl ----------------------------------------------------------------
 dnl
 dnl Initialize vars
