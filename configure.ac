@@ -2721,21 +2721,24 @@ dnl
 ol_link_trilinos=no
 if test $ol_with_trilinos != no ; then
         have_trilinos=no
-        
+
         AC_LANG([C++])
         AC_CHECK_HEADERS([Epetra_Comm.h Epetra_SerialComm.h Epetra_Vector.h Epetra_Operator.h Epetra_CrsMatrix.h AztecOO.h Amesos.h Amesos_BaseSolver.h NOX.H NOX_Epetra.H NOX_Solver_Generic.H NOX_Epetra_Vector.H NOX_Epetra_Interface_Required.H NOX_Epetra_Interface_Jacobian.H NOX_Epetra_Interface_Preconditioner.H NOX_Epetra_LinearSystem_AztecOO.H],[have_trilinos_h=yes],[have_trilinos_h=no])
-        
+
         AC_MSG_CHECKING([for Trilinos library])
         if test "$have_trilinos_h" = "yes" ; then
                 have_trilinos="no"
-                for trilinos_lib_config in prefix_none_without_mpi prefix_trilinos_with_mpi prefix_user ; do
+                for trilinos_lib_config in prefix_none_without_mpi_minimal prefix_none_without_mpi prefix_trilinos_with_mpi prefix_user ; do
                     if test $have_trilinos = no; then
                        case $trilinos_lib_config in
-                         prefix_none_without_mpi)
+                         prefix_none_without_mpi_minimal)
                            try_trilinos_LIBS="-lamesos -laztecoo -lepetra -lnoxepetra -lnox -lteuchoscore -lteuchosparameterlist"
                            ;;
+                         prefix_none_without_mpi)
+                           try_trilinos_LIBS="-lamd -lamesos -lamesos2 -lanasazi -lanasaziepetra -lanasazitpetra -laztecoo -lbelos -lbelosepetra -lbelostpetra -lbelosxpetra -lcmumps -ldl -ldmumps -lepetra -lepetraext -lgaleri-epetra -lgaleri-xpetra -lgtest -lifpack -lifpack2 -lifpack2-adapters -lisorropia -lkokkosalgorithms -lkokkoscontainers -lkokkoscore -lkokkoskernels -lkokkostsqr -lloca -llocaepetra -llocalapack -llocathyra -lm -lml -lModeLaplace -lmumps_common -lnox -lnoxepetra -lnoxlapack -lopenblas -lpamgen -lpamgen_extras -lpord -lpthread -lrtop -lshylu_nodehts -lshylu_nodetacho -lsimpi -lsmumps -lstratimikos -lstratimikosamesos -lstratimikosamesos2 -lstratimikosaztecoo -lstratimikosbelos -lstratimikosifpack -lstratimikosml -lteko -lteuchoscomm -lteuchoscore -lteuchoskokkoscomm -lteuchoskokkoscompat -lteuchosnumerics -lteuchosparameterlist -lteuchosparser -lteuchosremainder -lthyracore -lthyraepetra -lthyraepetraext -lthyratpetra -ltpetra -ltpetraclassic -ltpetraclassiclinalg -ltpetraclassicnodeapi -ltpetraext -ltpetrainout -ltrilinosss -ltriutils -lumfpack -lxpetra -lxpetra-sup -lzmumps -lzoltan -lzoltan2"
+                           ;;
                          prefix_trilinos_with_mpi)
-                           try_trilinos_LIBS="-ltrilinos_amesos -ltrilinos_aztecoo -ltrilinos_epetra -ltrilinos_noxepetra -ltrilinos_nox -ltrilinos_teuchoscore -ltrilinos_teuchosparameterlist"
+                           try_trilinos_LIBS="-lblas -lcmumps -ldl -ldmumps -lhdf5 -llapack -lm -lmpi -lmpi++ -lmumps_common -lpord -lptscotch -lptscotcherr -lscotch -lscotcherr -lsmumps -ltbb -ltrilinos_amesos -ltrilinos_amesos2 -ltrilinos_anasazi -ltrilinos_anasaziepetra -ltrilinos_anasazitpetra -ltrilinos_aztecoo -ltrilinos_belos -ltrilinos_belosepetra -ltrilinos_belostpetra -ltrilinos_belosxpetra -ltrilinos_dpliris -ltrilinos_epetra -ltrilinos_epetraext -ltrilinos_galeri-epetra -ltrilinos_galeri-xpetra -ltrilinos_globipack -ltrilinos_ifpack -ltrilinos_ifpack2 -ltrilinos_ifpack2-adapters -ltrilinos_intrepid -ltrilinos_intrepid2 -ltrilinos_isorropia -ltrilinos_kokkosalgorithms -ltrilinos_kokkoscontainers -ltrilinos_kokkoscore -ltrilinos_kokkoskernels -ltrilinos_kokkostsqr -ltrilinos_komplex -ltrilinos_loca -ltrilinos_locaepetra -ltrilinos_localapack -ltrilinos_locathyra -ltrilinos_ml -ltrilinos_ModeLaplace -ltrilinos_moertel -ltrilinos_muelu -ltrilinos_muelu-adapters -ltrilinos_muelu-interface -ltrilinos_nox -ltrilinos_noxepetra -ltrilinos_noxlapack -ltrilinos_optipack -ltrilinos_pamgen -ltrilinos_pamgen_extras -ltrilinos_phalanx -ltrilinos_pike-blackbox -ltrilinos_piro -ltrilinos_rol -ltrilinos_rtop -ltrilinos_rythmos -ltrilinos_sacado -ltrilinos_shards -ltrilinos_shylu_ddcommon -ltrilinos_shylu_ddfrosch -ltrilinos_shylu_nodehts -ltrilinos_shylu_nodetacho -ltrilinos_stokhos -ltrilinos_stokhos_amesos2 -ltrilinos_stokhos_ifpack2 -ltrilinos_stokhos_muelu -ltrilinos_stokhos_sacado -ltrilinos_stokhos_tpetra -ltrilinos_stratimikos -ltrilinos_stratimikosamesos -ltrilinos_stratimikosamesos2 -ltrilinos_stratimikosaztecoo -ltrilinos_stratimikosbelos -ltrilinos_stratimikosifpack -ltrilinos_stratimikosml -ltrilinos_teko -ltrilinos_teuchoscomm -ltrilinos_teuchoscore -ltrilinos_teuchoskokkoscomm -ltrilinos_teuchoskokkoscompat -ltrilinos_teuchosnumerics -ltrilinos_teuchosparameterlist -ltrilinos_teuchosparser -ltrilinos_teuchosremainder -ltrilinos_thyracore -ltrilinos_thyraepetra -ltrilinos_thyraepetraext -ltrilinos_thyratpetra -ltrilinos_tpetra -ltrilinos_tpetraclassic -ltrilinos_tpetraclassiclinalg -ltrilinos_tpetraclassicnodeapi -ltrilinos_tpetraext -ltrilinos_tpetrainout -ltrilinos_trilinoscouplings -ltrilinos_trilinosss -ltrilinos_triutils -ltrilinos_xpetra -ltrilinos_xpetra-sup -ltrilinos_zoltan -ltrilinos_zoltan2 -lz -lzmumps"
                            ;;
                          *)
                            trilinos_LIBS=""
@@ -2755,7 +2758,7 @@ if test $ol_with_trilinos != no ; then
                                 #include <NOX_Epetra_Interface_Preconditioner.H>
                                 #include <NOX_Epetra_LinearSystem_AztecOO.H>
                                 #include <Epetra_Comm.h>
-                                #include <Epetra_SerialComm.h>                        
+                                #include <Epetra_SerialComm.h>
                                 #include <Epetra_Map.h>
                                 #include <Epetra_Vector.h>
                                 #include <Epetra_Operator.h>
@@ -2778,7 +2781,7 @@ if test $ol_with_trilinos != no ; then
                                                return true;
                                        }
                                 };
-			]], [[
+                        ]], [[
                                 int N = 100;
 
                                 Epetra_SerialComm Comm;
@@ -2830,7 +2833,7 @@ if test $ol_with_trilinos != no ; then
                     fi
                 done
         fi
-        
+
         if test "$have_trilinos" = "yes"; then
            AC_MSG_RESULT([yes])
            ol_link_trilinos=yes
@@ -2839,9 +2842,9 @@ if test $ol_with_trilinos != no ; then
         else
            if test "$ol_with_trilinos" = "yes" ; then
                AC_MSG_ERROR([Could not locate trilinos])
-           fi                
+           fi
            AC_MSG_RESULT([no])
-        fi        
+        fi
         AC_LANG([C])
 fi
 
