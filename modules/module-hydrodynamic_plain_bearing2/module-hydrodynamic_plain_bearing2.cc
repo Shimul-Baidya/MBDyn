@@ -5723,8 +5723,12 @@ namespace {
 
           inline void UnivWorkSpaceDim(integer* piNumRows, integer* piNumCols, SpFunctionCall func) const;
           inline void AddDofOwner(HydroDofOwner* pDofOwner);
+          static index_type iGetNumDofNode(const Node* const pNode, const sp_grad::SpFunctionCall eFunc);
+          static index_type iGetNumDofElem(const Elem* const pElem, const sp_grad::SpFunctionCall eFunc);
+
           void RebuildDofMap();
-          void RebuildDofMapGeometry();
+          void RebuildDofMapGeometry(sp_grad::SpFunctionCall eFunc);
+
           inline void InitPrivData();
           inline const HydroDofOwner* pFindDofOwner(unsigned int i, sp_grad::SpFunctionCall eFunc) const;
           void PrintNodeHeader(const Node2D* pNode, Node2D::NodeType eType, std::ostream& out) const;
@@ -6272,6 +6276,68 @@ namespace {
           rgDofOwner.push_back(pDofOwner);
      }
 
+     index_type HydroRootElement::iGetNumDofNode(const Node* const pNode, const sp_grad::SpFunctionCall eFunc)
+     {
+          const Node::Type eNodeType = pNode->GetNodeType();
+          index_type iNumDof = -1;
+
+          switch (eNodeType) {
+          case Node::STRUCTURAL:
+               switch (eFunc) {
+               case sp_grad::SpFunctionCall::REGULAR_FLAG:
+                    iNumDof = std::min(6u, pNode->iGetNumDof()); // Save us some overhead because we will access only position and rotation parameters
+                    break;
+               case sp_grad::SpFunctionCall::INITIAL_ASS_FLAG:
+                    iNumDof = dynamic_cast<const StructDispNode*>(pNode)->iGetInitialNumDof();
+                    break;
+               default:
+                    HYDRO_ASSERT(0);
+               }
+               break;
+          default:
+               switch (eFunc) {
+               case sp_grad::SpFunctionCall::REGULAR_FLAG:
+                    iNumDof = pNode->iGetNumDof();
+                    break;
+               case sp_grad::SpFunctionCall::INITIAL_ASS_FLAG:
+                    iNumDof = 0;
+                    break;
+               default:
+                    HYDRO_ASSERT(0);
+               }
+          }
+
+          ASSERT(iNumDof >= 0);
+
+          return iNumDof;
+     }
+
+     index_type HydroRootElement::iGetNumDofElem(const Elem* const pElem, const sp_grad::SpFunctionCall eFunc)
+     {
+          index_type iNumDof = -1;
+
+          switch (eFunc) {
+          case sp_grad::SpFunctionCall::REGULAR_FLAG:
+               iNumDof = pElem->iGetNumDof();
+               break;
+          case sp_grad::SpFunctionCall::INITIAL_ASS_FLAG: {
+               auto pInitAssElem = dynamic_cast<const InitialAssemblyElem*>(pElem);
+
+               if (pInitAssElem) {
+                    iNumDof = pInitAssElem->iGetInitialNumDof();
+               } else {
+                    iNumDof = 0;
+               }
+          } break;
+          default:
+               HYDRO_ASSERT(0);
+          }
+
+          ASSERT(iNumDof >= 0);
+
+          return iNumDof;
+     }
+
      void HydroRootElement::RebuildDofMap()
      {
           const index_type iNumDofMaps = 2;
@@ -6307,7 +6373,7 @@ namespace {
           }
      }
 
-     void HydroRootElement::RebuildDofMapGeometry()
+     void HydroRootElement::RebuildDofMapGeometry(const sp_grad::SpFunctionCall eFunc)
      {
           HYDRO_ASSERT(pMesh != nullptr);
 
@@ -6319,7 +6385,8 @@ namespace {
 
           auto& oDofMapGeo = pGeometry->GetDofMap();
 
-          const unsigned uNumDofTot = iGetNumDof();
+          const index_type iNumDofTot = iGetNumDofElem(this, eFunc);
+
           const index_type iFirstIndex = iGetFirstIndex();
 
           std::vector<const Node*> rgNodes;
@@ -6332,7 +6399,7 @@ namespace {
 
           oDofMapGeo.ResetDofStat();
 
-          for (unsigned i = 1; i <= uNumDofTot; ++i) {
+          for (index_type i = 1; i <= iNumDofTot; ++i) {
                oGradDof.Reset(0., iFirstIndex + i, 1.);
 
                oDofMapGeo.GetDofStat(oGradDof);
@@ -6341,13 +6408,7 @@ namespace {
           for (const Node* pNode: rgNodes) {
                const index_type iFirstIndexNode = pNode->iGetFirstIndex();
                const Node::Type eNodeType = pNode->GetNodeType();
-               index_type iNumDof = pNode->iGetNumDof();
-
-               switch (eNodeType) {
-               case Node::STRUCTURAL:
-                    iNumDof = std::min(iNumDof, 6); // Save some overhead because we will access only X and g
-                    break;
-               }
+               const index_type iNumDof = iGetNumDofNode(pNode, eFunc);
 
                for (index_type i = 1; i <= iNumDof; ++i) {
                     oGradDof.Reset(0., iFirstIndexNode + i, 1.);
@@ -6358,7 +6419,7 @@ namespace {
 
           for (const ElemWithDofs* pElem: rgElem) {
                const index_type iFirstIndexElem = pElem->iGetFirstIndex();
-               const index_type iNumDof = pElem->iGetNumDof();
+               const index_type iNumDof = iGetNumDofElem(pElem, eFunc);
 
                for (index_type i = 1; i <= iNumDof; ++i) {
                     oGradDof.Reset(0., iFirstIndexElem + i, 1.);
@@ -6369,7 +6430,7 @@ namespace {
 
           oDofMapGeo.Reset();
 
-          for (unsigned i = 1; i <= uNumDofTot; ++i) {
+          for (index_type i = 1; i <= iNumDofTot; ++i) {
                oGradDof.Reset(0., iFirstIndex + i, 1.);
 
                oDofMapGeo.InsertDof(oGradDof);
@@ -6378,13 +6439,7 @@ namespace {
           for (const Node* pNode: rgNodes) {
                const index_type iFirstIndexNode = pNode->iGetFirstIndex();
                const Node::Type eNodeType = pNode->GetNodeType();
-               index_type iNumDof = pNode->iGetNumDof();
-
-               switch (eNodeType) {
-               case Node::STRUCTURAL:
-                    iNumDof = std::min(iNumDof, 6); // Save some overhead because we will access only X and g
-                    break;
-               }
+               const index_type iNumDof = iGetNumDofNode(pNode, eFunc);
 
                for (index_type i = 1; i <= iNumDof; ++i) {
                     oGradDof.Reset(0., iFirstIndexNode + i, 1.);
@@ -6395,7 +6450,7 @@ namespace {
 
           for (const ElemWithDofs* pElem: rgElem) {
                const index_type iFirstIndexElem = pElem->iGetFirstIndex();
-               const index_type iNumDof = pElem->iGetNumDof();
+               const index_type iNumDof = iGetNumDofElem(pElem, eFunc);
 
                for (index_type i = 1; i <= iNumDof; ++i) {
                     oGradDof.Reset(0., iFirstIndexElem + i, 1.);
@@ -6871,7 +6926,7 @@ namespace {
 
      void HydroRootElement::SetInitialValue(VectorHandler& X)
      {
-          RebuildDofMapGeometry();
+          RebuildDofMapGeometry(sp_grad::SpFunctionCall::INITIAL_ASS_FLAG);
      }
 
      void
@@ -6883,7 +6938,7 @@ namespace {
                (*i)->SetValue(X, XP);
           }
 
-          RebuildDofMapGeometry();
+          RebuildDofMapGeometry(sp_grad::SpFunctionCall::REGULAR_FLAG);
      }
 
      std::ostream&
