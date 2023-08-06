@@ -2395,7 +2395,8 @@ namespace {
                                 std::unique_ptr<FrictionModel>&& pFrictionModel,
                                 PressureNodeAd* pExtNode);
           virtual ~HydroCoupledComprNode();
-
+          virtual int GetNumConnectedNodes() const override;
+          virtual void GetConnectedNodes(std::vector<const Node*>& rgNodes) const override;
           virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const override;
           virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const override;
           virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const override;
@@ -6385,29 +6386,20 @@ namespace {
 
           auto& oDofMapGeo = pGeometry->GetDofMap();
 
-          const index_type iNumDofTot = iGetNumDofElem(this, eFunc);
-
-          const index_type iFirstIndex = iGetFirstIndex();
-
           std::vector<const Node*> rgNodes;
           std::vector<const ElemWithDofs*> rgElem;
 
           GetConnectedNodes(rgNodes);
 
-          rgElem.reserve(pMesh->GetNumConnectedElements());
+          rgElem.reserve(pMesh->GetNumConnectedElements() + 1);
+          rgElem.push_back(this);
+
           pMesh->GetConnectedElements(rgElem);
 
           oDofMapGeo.ResetDofStat();
 
-          for (index_type i = 1; i <= iNumDofTot; ++i) {
-               oGradDof.Reset(0., iFirstIndex + i, 1.);
-
-               oDofMapGeo.GetDofStat(oGradDof);
-          }
-
           for (const Node* pNode: rgNodes) {
                const index_type iFirstIndexNode = pNode->iGetFirstIndex();
-               const Node::Type eNodeType = pNode->GetNodeType();
                const index_type iNumDof = iGetNumDofNode(pNode, eFunc);
 
                for (index_type i = 1; i <= iNumDof; ++i) {
@@ -6430,15 +6422,8 @@ namespace {
 
           oDofMapGeo.Reset();
 
-          for (index_type i = 1; i <= iNumDofTot; ++i) {
-               oGradDof.Reset(0., iFirstIndex + i, 1.);
-
-               oDofMapGeo.InsertDof(oGradDof);
-          }
-
           for (const Node* pNode: rgNodes) {
                const index_type iFirstIndexNode = pNode->iGetFirstIndex();
-               const Node::Type eNodeType = pNode->GetNodeType();
                const index_type iNumDof = iGetNumDofNode(pNode, eFunc);
 
                for (index_type i = 1; i <= iNumDof; ++i) {
@@ -12129,6 +12114,16 @@ namespace {
 
      HydroCoupledComprNode::~HydroCoupledComprNode()
      {
+     }
+
+     int HydroCoupledComprNode::GetNumConnectedNodes() const
+     {
+          return 1;
+     }
+
+     void HydroCoupledComprNode::GetConnectedNodes(std::vector<const Node*>& rgNodes) const
+     {
+          rgNodes.push_back(pExtNode);
      }
 
      integer HydroCoupledComprNode::iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const
