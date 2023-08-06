@@ -2087,6 +2087,7 @@ namespace sp_grad {
           inline SpMatrixBase(const std::initializer_list<ValueType>& rgValues);
           inline ~SpMatrixBase();
           inline void ResizeReset(index_type iNumRows, index_type iNumCols, index_type iNumDeriv);
+          inline void ResizeReset(index_type iNumRows, index_type iNumCols, const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpMatrixBase& operator=(SpMatrixBase&& oMat);
           template <typename ValueTypeExpr, typename Expr>
           inline SpMatrixBase& operator=(const SpMatElemExprBase<ValueTypeExpr, Expr>& oExpr);
@@ -2259,6 +2260,7 @@ namespace sp_grad {
                              const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpColVector(const std::initializer_list<ValueType>& rgValues);
           inline void ResizeReset(index_type iNumRows, index_type iNumDeriv);
+          inline void ResizeReset(index_type iNumRows, const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpColVector& operator=(const SpColVector& oVec)=default;
           inline SpColVector& operator=(SpColVector&& oVec)=default;
           inline SpColVector& operator=(const Vec3& oVec);
@@ -2294,6 +2296,7 @@ namespace sp_grad {
                              const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpRowVector(const std::initializer_list<ValueType>& rgValues);
           inline void ResizeReset(index_type iNumCols, index_type iNumDeriv);
+          inline void ResizeReset(index_type iNumCols, const SpGradExpDofMapHelper<ValueType>& oDofMap);
           inline SpRowVector& operator=(const SpRowVector& oVec)=default;
           inline SpRowVector& operator=(SpRowVector&& oVec)=default;
           template <typename ValueTypeExpr, typename Expr>
@@ -2341,6 +2344,10 @@ namespace sp_grad {
 
           inline void ResizeReset(index_type iNumDer) {
                SpMatrix<ValueType, NumRows, NumCols>::ResizeReset(NumRows, NumCols, iNumDer);
+          }
+
+          inline void ResizeReset(const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+               SpMatrix<ValueType, NumRows, NumCols>::ResizeReset(NumRows, NumCols, oDofMap);
           }
 
           inline SpMatrixA& operator=(SpMatrixA&& oMat)=default;
@@ -2394,6 +2401,10 @@ namespace sp_grad {
                SpColVector<ValueType, NumRows>::ResizeReset(NumRows, iNumDeriv);
           }
 
+          inline void ResizeReset(const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+               SpColVector<ValueType, NumRows>::ResizeReset(NumRows, oDofMap);
+          }
+
           inline SpColVectorA& operator=(SpColVectorA&& oMat)=default;
           inline SpColVectorA& operator=(const SpColVectorA& oMat)=default;
           inline SpColVectorA& operator=(const Mat3x3& oMat) {
@@ -2445,6 +2456,10 @@ namespace sp_grad {
 
           inline void ResizeReset(index_type iNumDeriv) {
                SpRowVector<ValueType, NumCols>::ResizeReset(NumCols, iNumDeriv);
+          }
+
+          inline void ResizeReset(const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+               SpRowVector<ValueType, NumCols>::ResizeReset(NumCols, oDofMap);
           }
 
           inline SpRowVectorA& operator=(SpRowVectorA&& oMat)=default;
@@ -4347,6 +4362,19 @@ namespace sp_grad {
      }
 
      template <typename ValueType, index_type NumRows, index_type NumCols>
+     void SpMatrixBase<ValueType, NumRows, NumCols>::ResizeReset(index_type iNumRows, index_type iNumCols, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+          SP_GRAD_ASSERT(bValid());
+
+          ResizeReset(iNumRows, iNumCols, oDofMap.iGetLocalSize()); // FIXME: Check if it is more efficient without pre-allocation
+
+          for (ValueType& g: *this) {
+               oDofMap.InitDofMap(g);
+          }
+
+          SP_GRAD_ASSERT(bValid());
+     }
+
+     template <typename ValueType, index_type NumRows, index_type NumCols>
      SpMatrixBase<ValueType, NumRows, NumCols>::SpMatrixBase(SpMatrixBase&& oMat) {
 #ifdef SP_GRAD_DEBUG
           if (!(NumRows == SpMatrixSize::DYNAMIC || NumCols == SpMatrixSize::DYNAMIC)) {
@@ -5047,6 +5075,11 @@ namespace sp_grad {
      }
 
      template <typename ValueType, index_type NumRows>
+     void SpColVector<ValueType, NumRows>::ResizeReset(index_type iNumRows, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+          SpMatrixBase<ValueType, NumRows, 1>::ResizeReset(iNumRows, 1, oDofMap);
+     }
+
+     template <typename ValueType, index_type NumRows>
      ValueType& SpColVector<ValueType, NumRows>::operator()(index_type iRow) {
           return this->GetElem(iRow);
      }
@@ -5094,6 +5127,11 @@ namespace sp_grad {
      template <typename ValueType, index_type NumCols>
      void SpRowVector<ValueType, NumCols>::ResizeReset(index_type iNumCols, index_type iNumDeriv) {
           SpMatrixBase<ValueType, 1, NumCols>::ResizeReset(1, iNumCols, iNumDeriv);
+     }
+
+     template <typename ValueType, index_type NumCols>
+     void SpRowVector<ValueType, NumCols>::ResizeReset(index_type iNumCols, const SpGradExpDofMapHelper<ValueType>& oDofMap) {
+          SpMatrixBase<ValueType, 1, NumCols>::ResizeReset(1, iNumCols, oDofMap);
      }
 
      template <typename ValueType, index_type NumCols>
