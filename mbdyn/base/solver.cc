@@ -5411,10 +5411,27 @@ Solver::ReadData(MBDynParser& HP)
 
 EndOfCycle: /* esce dal ciclo di lettura */
 
-	if (pTSC == 0) {
-		pedantic_cout("No time step control strategy defined; defaulting to NoChange time step control" );
-		pTSC = new NoChange(this);
-	}
+        switch (RegularType) {
+        case StepIntegratorType::INT_IMPLICITEULER:
+        case StepIntegratorType::INT_CRANKNICOLSON:
+        case StepIntegratorType::INT_MS2:
+        case StepIntegratorType::INT_HOPE:
+        case StepIntegratorType::INT_HYBRID:
+                // TODO: Add all solvers with variable time step capabilities here ...
+                break;
+        default:
+                if (pTSC && !dynamic_cast<NoChange*>(pTSC)) {
+                        silent_cerr("warning: time step control strategy is not applicable for the selected step integrator; defaulting to NoChange time step control\n" );
+
+                        SAFEDELETE(pTSC);
+                        SAFENEWWITHCONSTRUCTOR(pTSC, NoChange, NoChange(this));
+                }
+        }
+
+        if (pTSC == 0) {
+                pedantic_cout("No time step control strategy defined; defaulting to NoChange time step control\n" );
+                SAFENEWWITHCONSTRUCTOR(pTSC, NoChange, NoChange(this));
+        }
 
 	if (dFinalTime < dInitialTime) {
 		eAbortAfter = AFTER_ASSEMBLY;
