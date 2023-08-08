@@ -35,6 +35,7 @@
 #define SINGLESTEPSOL_TPL_H
 
 #include <unistd.h>
+#include <array>
 #include <cfloat>
 #include <cmath>
 #include <deque>
@@ -106,14 +107,14 @@ public:
 protected:
 	const VectorHandler *m_pXPrev;
 	const VectorHandler *m_pXPrimePrev[2];		// need XP of step k-1 and k-2 to update intermediate varibales XPI of step k-1
-	VectorHandler *m_pXPrimeIntePrevReal[N - 1];    // store real part of intermediate variables of last step
-	VectorHandler *m_pXPrimeIntePrevImag[N - 1];	// store imaginary part of intermediate variables of last step
+	std::array<VectorHandler*, N - 1> m_pXPrimeIntePrevReal;    // store real part of intermediate variables of last step
+	std::array<VectorHandler*, N - 1> m_pXPrimeIntePrevImag;	// store imaginary part of intermediate variables of last step
 
-	doublereal m_b[N + 1][2][2];
-	doublereal m_c[N - 1][2];
-    doublereal m_d[N - 1][2];
-    doublereal m_e[N - 1][2];
-    // add as needed
+        std::array<doublereal[2][2], N + 1> m_b;
+        std::array<doublereal[2], N - 1> m_c;
+        std::array<doublereal[2], N - 1> m_d;
+        std::array<doublereal[2], N - 1> m_e;
+        // add as needed
 
 public:
 	tplSingleStepIntegrator(const integer MaxIt,
@@ -181,12 +182,14 @@ tplSingleStepIntegrator<N>::tplSingleStepIntegrator(const integer MaxIt,
 		const doublereal dT,
 		const doublereal dSolutionTol,
 		const bool bmod_res_test)
-: StepNIntegrator(MaxIt, dT, dSolutionTol, 2, bmod_res_test)
+: StepNIntegrator(MaxIt, dT, dSolutionTol, 2, bmod_res_test),
+  m_pXPrimeIntePrevReal{nullptr},
+  m_pXPrimeIntePrevImag{nullptr},
+  m_b{0.}, // Fix use of initialized memory reported by valgrind if DEBUG was enabled
+  m_c{0.},
+  m_d{0.},
+  m_e{0.}
 {
-	for (unsigned S = 0; S < N - 1; S++) {
-		m_pXPrimeIntePrevReal[S] = 0;
-		m_pXPrimeIntePrevImag[S] = 0;
-	}
 }
 
 template <unsigned N>
@@ -355,7 +358,10 @@ tplSingleStepIntegrator<N>::Advance(Solver* pS,
                     m_pXPrimeIntePrevImag[S]->PutCoef(i, 0.);
                 }
 		}
+
+                auto pXN = qX.back();
 		qX.pop_back();	// 	To distinguish ssn, which needs BeforePredict() to achieve different function
+                SAFEDELETE(pXN);
 	}
 	else
 	{
