@@ -98,11 +98,11 @@ begin: initial value;
 end: initial value;
 
 begin: control data;
-       #print: dof stats, to file;
+       print: dof stats, to file;
        print: dof description, to file;
        print: equation description, to file;
-       #print: element connection, to file;
-       #print: node connection, to file;
+       print: element connection, to file;
+       print: node connection, to file;
 
        ##finite difference jacobian meter: one, coefficient, 1e-5, order, 1, output, none, matrices, no, statistics iteration, yes, statistics, yes;
        ##finite difference jacobian meter: one, forward mode automatic differentiation, output, none, statistics, yes, statistics iteration, yes, matrices, no;
