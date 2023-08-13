@@ -1694,13 +1694,9 @@ namespace {
 
           template <typename G>
           struct NodeDataHydr {
-               G p, h, eta;
+               G p, h, eta, rho;
                SpColVectorA<G, 2, 12> U;
-          };
-
-          template <typename G>
-          struct NodeDataTherm {
-               G T;
+               G T, Pfc;
                SpColVectorA<G, 2, 12> U1, U2;
           };
 
@@ -9522,100 +9518,149 @@ namespace {
           std::array<NodeDataHydr<G>, iNumNodes> rgNDH;
           const BearingGeometry* const pGeometry = pGetMesh()->pGetGeometry();
 
+          SpGradExpDofMapHelper<G> oDofMap;
+
           for (index_type i = 0; i < iNumNodes; ++i) {
                rgNodes[i]->GetClearance(rgNDH[i].h);
+
                pGeometry->GetNonNegativeClearance(rgNDH[i].h, rgNDH[i].h);
+
+               oDofMap.GetDofStat(rgNDH[i].h);
+
                rgNodes[i]->GetViscosity(rgNDH[i].eta, dCoef);
+
+               oDofMap.GetDofStat(rgNDH[i].eta);
+
                rgNodes[i]->GetHydraulicVelocity(rgNDH[i].U);
+
+               oDofMap.GetDofStat(rgNDH[i].U(iDirection));
+
+               rgNodes[i]->GetDensity(rgNDH[i].rho, dCoef);
+
+               oDofMap.GetDofStat(rgNDH[i].rho);
+
+               rgNodes[i]->GetPressure(rgNDH[i].p, dCoef);
+
+               oDofMap.GetDofStat(rgNDH[i].p);
+
+               if (uNodeDataReq & ND_THERMAL) {
+                    rgNodes[i]->GetTemperature(rgNDH[i].T, dCoef);
+
+                    oDofMap.GetDofStat(rgNDH[i].T);
+
+                    rgNodes[i]->GetVelocity(rgNDH[i].U1, rgNDH[i].U2);
+
+                    oDofMap.GetDofStat(rgNDH[i].U1(iDirection));
+                    oDofMap.GetDofStat(rgNDH[i].U2(iDirection));
+               }
+
+               if (uNodeDataReq & ND_THERMAL_WALL) {
+                    rgNodes[i]->GetContactFrictionLossDens(rgNDH[i].Pfc);
+
+                    oDofMap.GetDofStat(rgNDH[i].Pfc);
+               }
           }
 
-          const G h = 0.5 * (rgNDH[iNodeDown].h + rgNDH[iNodeUp].h);
+          oDofMap.Reset();
+
+          for (index_type i = 0; i < iNumNodes; ++i) {
+               oDofMap.InsertDof(rgNDH[i].h);
+               oDofMap.InsertDof(rgNDH[i].eta);
+               oDofMap.InsertDof(rgNDH[i].U(iDirection));
+               oDofMap.InsertDof(rgNDH[i].rho);
+               oDofMap.InsertDof(rgNDH[i].p);
+
+               if (uNodeDataReq & ND_THERMAL) {
+                    oDofMap.InsertDof(rgNDH[i].T);
+                    oDofMap.InsertDof(rgNDH[i].U1(iDirection));
+                    oDofMap.InsertDof(rgNDH[i].U2(iDirection));
+               }
+
+               if (uNodeDataReq & ND_THERMAL_WALL) {
+                    oDofMap.InsertDof(rgNDH[i].Pfc);
+               }
+          }
+
+          oDofMap.InsertDone();
+
+          G h, U, a0;
+
+          oDofMap.MapAssign(h, 0.5 * (rgNDH[iNodeDown].h + rgNDH[iNodeUp].h));
+          oDofMap.MapAssign(U, 0.5 * (rgNDH[iNodeDown].U(iDirection) + rgNDH[iNodeUp].U(iDirection)));
+
           const G eta = 0.5 * (rgNDH[iNodeDown].eta + rgNDH[iNodeUp].eta);
-          const G U = 0.5 * (rgNDH[iNodeDown].U(iDirection) + rgNDH[iNodeUp].U(iDirection));
 
           for (index_type j = 0; j <= ePressSource; ++j) {
-               for (index_type i = 0; i < iNumNodes; ++i) {
-                    switch (j) {
-                    case PRESSURE_FROM_NODE:
-                         rgNodes[i]->GetPressure(rgNDH[i].p, dCoef);
-                         break;
-
-                    case PRESSURE_FROM_MESH:
-                         pGetMesh()->GetPressure(rgNodes[i], rgNDH[i].p, dCoef);
-                         break;
-                    };
+               switch (j) {
+               case PRESSURE_FROM_MESH:
+                    for (index_type i = 0; i < iNumNodes; ++i) {
+                         rgNodes[i]->pGetFluid()->Cavitation(rgNDH[i].p);
+                    }
+                    break;
                }
 
                const G dp_du = (rgNDH[iNodeUp].p - rgNDH[iNodeDown].p) / du;
 
-               const G a0 = h * h / (12. * eta) * dp_du;
+               oDofMap.MapAssign(a0, h * h / (12. * eta) * dp_du);
 
-               rgFlux[j].wu = EvalUnique(U - a0);
-               rgFlux[j].qu = EvalUnique(h * rgFlux[j].wu);
+               oDofMap.MapAssign(rgFlux[j].wu, U - a0);
+               oDofMap.MapAssign(rgFlux[j].qu, h * rgFlux[j].wu);
 
                const index_type iUpwindu = rgFlux[j].qu >= 0. ? iNodeDown : iNodeUp;
 
-               G rho;
+               oDofMap.MapAssign(rgFlux[j].mdotu, rgNDH[iUpwindu].rho * rgFlux[j].qu);
 
-               rgNodes[iUpwindu]->GetDensity(rho, dCoef);
+               switch (j) {
+               case PRESSURE_FROM_NODE:
+                    if (uNodeDataReq & ND_THERMAL) {
+                         G dU;
 
-               rgFlux[j].mdotu = EvalUnique(rho * rgFlux[j].qu);
+                         oDofMap.MapAssign(dU, 0.5 * (rgNDH[iNodeDown].U1(iDirection) + rgNDH[iNodeUp].U1(iDirection)
+                                                      - rgNDH[iNodeDown].U2(iDirection) - rgNDH[iNodeUp].U2(iDirection)));
 
-               if ((uNodeDataReq & ND_THERMAL) && j == PRESSURE_FROM_NODE) {
-                    std::array<NodeDataTherm<G>, iNumNodes> rgNDT;
+                         doublereal beta = 0.;
 
-                    for (index_type i = 0; i < iNumNodes; ++i) {
-                         rgNodes[i]->GetTemperature(rgNDT[i].T, dCoef);
-                         rgNodes[i]->GetVelocity(rgNDT[i].U1, rgNDT[i].U2);
-                    }
+                         if (rgNDH[iNodeUp].p > pGetFluid()->dGetRefPressure() &&
+                             rgNDH[iNodeDown].p > pGetFluid()->dGetRefPressure()) {
+                              doublereal rhoc, drhoc_dT;
 
-                    const G dU = 0.5 * (rgNDT[iNodeDown].U1(iDirection) + rgNDT[iNodeUp].U1(iDirection)
-                                        - rgNDT[iNodeDown].U2(iDirection) - rgNDT[iNodeUp].U2(iDirection));
+                              pGetFluid()->GetDensity(pGetFluid()->dGetRefPressure(),
+                                                      pGetFluid()->dGetRefTemperature(),
+                                                      rhoc,
+                                                      nullptr,
+                                                      &drhoc_dT);
 
-                    doublereal beta = 0.;
-
-                    if (rgNDH[iNodeUp].p > pGetFluid()->dGetRefPressure() &&
-                        rgNDH[iNodeDown].p > pGetFluid()->dGetRefPressure()) {
-                         doublereal rhoc, drhoc_dT;
-
-                         pGetFluid()->GetDensity(pGetFluid()->dGetRefPressure(),
-                                                 pGetFluid()->dGetRefTemperature(),
-                                                 rhoc,
-                                                 nullptr,
-                                                 &drhoc_dT);
-
-                         beta = -drhoc_dT / rhoc;
-                    }
-
-                    G cp;
-
-                    pGetFluid()->GetSpecificHeat(rgNDH[iUpwindu].p,
-                                                 rgNDT[iUpwindu].T,
-                                                 rho,
-                                                 cp,
-                                                 HydroFluid::SPEC_HEAT_TRUE);
-
-                    oNode.Qu = EvalUnique(rgFlux[j].qu * (beta * rgNDT[iUpwindu].T * dp_du
-                                                          - rho * cp * (rgNDT[iNodeUp].T - rgNDT[iNodeDown].T) / du)
-                                          + h * a0 * dp_du + eta * dU * dU / h);
-
-                    if (uNodeDataReq & ND_THERMAL_WALL) {
-                         std::array<G, iNumNodes> Pfci;
-
-                         for (index_type i = 0; i < iNumNodes; ++i) {
-                              rgNodes[i]->GetContactFrictionLossDens(Pfci[i]);
+                              beta = -drhoc_dT / rhoc;
                          }
 
-                         const G a1 = 0.5 * h / eta * dp_du;
+                         G cp;
 
-                         const G Psi0 = dU / h - a1;
-                         const G Psih = dU / h + a1;
+                         pGetFluid()->GetSpecificHeat(rgNDH[iUpwindu].p,
+                                                      rgNDH[iUpwindu].T,
+                                                      rgNDH[iUpwindu].rho,
+                                                      cp,
+                                                      HydroFluid::SPEC_HEAT_TRUE);
 
-                         oNode.A0 = EvalUnique(eta * Psi0 * Psi0);
-                         oNode.Ah = EvalUnique(eta * Psih * Psih);
-                         oNode.Ac = EvalUnique(0.5 * (Pfci[iNodeUp] + Pfci[iNodeDown]) / h);
+                         oDofMap.MapAssign(oNode.Qu, rgFlux[j].qu * (beta * rgNDH[iUpwindu].T * dp_du
+                                                                     - rgNDH[iUpwindu].rho * cp * (rgNDH[iNodeUp].T - rgNDH[iNodeDown].T) / du)
+                                           + h * a0 * dp_du + eta * dU * dU / h);
+
+                         if (uNodeDataReq & ND_THERMAL_WALL) {
+                              G a1, Psi0, Psih;
+
+                              oDofMap.MapAssign(a1, 0.5 * h / eta * dp_du);
+
+                              oDofMap.MapAssign(Psi0, dU / h - a1);
+                              oDofMap.MapAssign(Psih, dU / h + a1);
+
+                              oDofMap.MapAssign(oNode.A0, eta * Psi0 * Psi0);
+                              oDofMap.MapAssign(oNode.Ah, eta * Psih * Psih);
+                              oDofMap.MapAssign(oNode.Ac, 0.5 * (rgNDH[iNodeUp].Pfc + rgNDH[iNodeDown].Pfc) / h);
+                         }
                     }
+                    break;
                }
+
           }
      }
 
