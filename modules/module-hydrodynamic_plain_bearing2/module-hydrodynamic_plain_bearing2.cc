@@ -18959,47 +18959,92 @@ namespace {
      {
           const bool bUpdateFriction = pGetMesh()->pGetParent()->bUpdateFrictionLoss();
 
-          std::array<T, iNumNodes> pi, hi;
-          std::array<SpColVectorA<T, 2, 12>, iNumNodes> U1i, U2i;
-          T eta(0.), eta_tmp; // Note: viscosity could depend on density and temperature
+          std::array<T, iNumNodes> pi, paspi, hi, etai;
+          std::array<SpColVectorA<T, 2, 12>, iNumNodes> U1i, U2i, tauc_0i;
+          std::array<bool, iNumNodes> rgContactStatus;
+          doublereal dPfc = 0.;
+          index_type iNumNodesContact = 0;
+          SpGradExpDofMapHelper<T> oDofMap;
 
-          for (integer i = 0; i < iNumNodes; ++i) {
+          for (index_type i = 0; i < iNumNodes; ++i) {
                pGetMesh()->GetPressure(rgHydroNodes[i], pi[i], dCoef);
+
+               oDofMap.GetDofStat(pi[i]);
+
                rgHydroNodes[i]->GetClearance(hi[i]);
+
+               oDofMap.GetDofStat(hi[i]);
+
                rgHydroNodes[i]->GetVelocity(U1i[i], U2i[i]);
-               rgHydroNodes[i]->GetViscosity(eta_tmp, dCoef);
-               eta += eta_tmp;
+
+               oDofMap.GetDofStat(U1i[i]);
+               oDofMap.GetDofStat(U2i[i]);
+
+               rgHydroNodes[i]->GetViscosity(etai[i], dCoef);
+
+               oDofMap.GetDofStat(etai[i]);
+
+               rgContactStatus[i] = rgHydroNodes[i]->GetContactPressure(paspi[i]);
+               
+               if (rgContactStatus[i]) {
+                    oDofMap.GetDofStat(paspi[i]);
+
+                    rgHydroNodes[i]->GetContactStress(tauc_0i[i]);
+
+                    oDofMap.GetDofStat(tauc_0i[i]);
+
+                    doublereal Pfc_tmp;
+
+                    rgHydroNodes[i]->GetContactFrictionLossDens(Pfc_tmp);
+
+                    dPfc += Pfc_tmp;
+
+                    ++iNumNodesContact;
+               }
           }
 
-          eta /= iNumNodes;
+          dPfc *= dA / iNumNodes;
+
+          oDofMap.Reset();
+
+          for (index_type i = 0; i < iNumNodes; ++i) {
+               oDofMap.InsertDof(pi[i]);
+               oDofMap.InsertDof(hi[i]);
+               oDofMap.InsertDof(U1i[i]);
+               oDofMap.InsertDof(U2i[i]);
+               oDofMap.InsertDof(etai[i]);
+
+               if (rgContactStatus[i]) {
+                    oDofMap.InsertDof(paspi[i]);
+                    oDofMap.InsertDof(tauc_0i[i]);
+               }
+          }
+
+          oDofMap.InsertDone();
+
+          const T eta = 0.25 * (etai[iNode1NE] + etai[iNode2NW] + etai[iNode3SW] + etai[iNode4SE]);
 
           // use fluid pressure only for pressure gradient
           const T dp_dx = ((pi[iNode1NE] - pi[iNode2NW]) + (pi[iNode4SE] - pi[iNode3SW])) * (0.5 / dx);
           const T dp_dz = ((pi[iNode1NE] - pi[iNode4SE]) + (pi[iNode2NW] - pi[iNode3SW])) * (0.5 / dz);
 
-          SpColVectorA<T, 2, 12> tauc_0, tauc_0_tmp;
-          T dPfc{0.}, Pfc_tmp, pasp_tmp;
-          index_type iNumNodesWithContact = 0;
+          const SpColVector<T, 2> U((U1i[iNode1NE] - U2i[iNode1NE] + U1i[iNode2NW] - U2i[iNode2NW]
+                                     + U1i[iNode3SW] - U2i[iNode3SW] + U1i[iNode4SE] - U2i[iNode4SE]) * 0.25, oDofMap);
 
-          for (integer i = 0; i < iNumNodes; ++i) {
-               if (rgHydroNodes[i]->GetContactPressure(pasp_tmp)) {
-                    rgHydroNodes[i]->GetContactStress(tauc_0_tmp);
-                    rgHydroNodes[i]->GetContactFrictionLossDens(Pfc_tmp);
-                    pi[i] += pasp_tmp;
-                    tauc_0 += tauc_0_tmp;
-                    dPfc += Pfc_tmp;
-                    ++iNumNodesWithContact;
-               }
+          T h;
+
+          oDofMap.MapAssign(h, 0.25 * (hi[iNode1NE] + hi[iNode2NW] + hi[iNode3SW] + hi[iNode4SE]));
+
+
+          const T p = 0.25 * (pi[iNode1NE] + pi[iNode2NW] + pi[iNode3SW] + pi[iNode4SE]);
+
+          T ptot;
+
+          if (iNumNodesContact) {
+               oDofMap.MapAssign(ptot, p + 0.25 * (paspi[iNode1NE] + paspi[iNode2NW] + paspi[iNode3SW] + paspi[iNode4SE]));
+          } else {
+               ptot = p;
           }
-
-          tauc_0 /= iNumNodes;
-          dPfc *= dA / iNumNodes;
-
-          const SpColVector<T, 2> U = (U1i[iNode1NE] - U2i[iNode1NE] + U1i[iNode2NW] - U2i[iNode2NW]
-                                       + U1i[iNode3SW] - U2i[iNode3SW] + U1i[iNode4SE] - U2i[iNode4SE]) * 0.25;
-
-          const T h = 0.25 * (hi[iNode1NE] + hi[iNode2NW] + hi[iNode3SW] + hi[iNode4SE]);
-          const T ptot = 0.25 * (pi[iNode1NE] + pi[iNode2NW] + pi[iNode3SW] + pi[iNode4SE]);
 
           BearingGeometry* const pGeometry = pGetMesh()->pGetGeometry();
 
@@ -19007,18 +19052,39 @@ namespace {
 
           pGeometry->GetNonNegativeClearance(h, hx);
 
-          const T tau_xy_p_h = 0.5 * hx * dp_dx;
-          const T tau_xy_U_h = eta * U(1) / hx;
-          const T tau_yz_p_h = 0.5 * hx * dp_dz;
-          const T tau_yz_U_h = eta * U(2) / hx;
+          T tau_xy_p_h;
 
-          const T tau_xy_0 = (-tau_xy_p_h + tau_xy_U_h);
-          const T tau_yz_0 = (-tau_yz_p_h + tau_yz_U_h);
+          oDofMap.MapAssign(tau_xy_p_h, 0.5 * hx * dp_dx);
 
-          const T tau_xy_h = (tau_xy_p_h + tau_xy_U_h);
-          const T tau_yz_h = (tau_yz_p_h + tau_yz_U_h);
+          T tau_xy_U_h;
 
-          for (int i = 0; i < iNumNodes; ++i) {
+          oDofMap.MapAssign(tau_xy_U_h, eta * U(1) / hx);
+
+          T tau_yz_p_h;
+
+          oDofMap.MapAssign(tau_yz_p_h, 0.5 * hx * dp_dz);
+
+          T tau_yz_U_h;
+
+          oDofMap.MapAssign(tau_yz_U_h, eta * U(2) / hx);
+
+          T tau_xy_0;
+
+          oDofMap.MapAssign(tau_xy_0, (-tau_xy_p_h + tau_xy_U_h));
+
+          T tau_yz_0;
+
+          oDofMap.MapAssign(tau_yz_0, (-tau_yz_p_h + tau_yz_U_h));
+
+          T tau_xy_h;
+
+          oDofMap.MapAssign(tau_xy_h, (tau_xy_p_h + tau_xy_U_h));
+
+          T tau_yz_h;
+
+          oDofMap.MapAssign(tau_yz_h, (tau_yz_p_h + tau_yz_U_h));
+
+          for (index_type i = 0; i < iNumNodes; ++i) {
                SetStress(rgHydroNodes[i], tau_xy_0, tau_yz_0, tau_xy_h, tau_yz_h);
           }
 
@@ -19030,22 +19096,31 @@ namespace {
                                     ptot * dA,
                                     -tau_yz_h * dA};
 
-          const SpColVector<T, 2> dM_h_Rt{(dA * dz / 24) * (pi[iNode3SW] - pi[iNode2NW] + pi[iNode4SE] - pi[iNode1NE]),
-                                          T{}};
+          const T dM_h_Rt1_p = (dA * dz / 24.) * (pi[iNode3SW] - pi[iNode2NW] + pi[iNode4SE] - pi[iNode1NE]);
+          
+          SpColVectorA<T, 2> dM_h_Rt;
+
+          if (iNumNodesContact) {
+               oDofMap.MapAssign(dM_h_Rt(1), dM_h_Rt1_p + (dA * dz / 24.) * (paspi[iNode3SW] - paspi[iNode2NW] + paspi[iNode4SE] - paspi[iNode1NE]));
+          } else {
+               dM_h_Rt(1) = dM_h_Rt1_p;
+          }
 
           if (bUpdateFriction) {
                AddFrictionLoss(HydroRootBase::FLUID_FRICTION, U2i, dF_0_Rt(1), dF_0_Rt(3));
                AddFrictionLoss(HydroRootBase::FLUID_FRICTION, U1i, dF_h_Rt(1), dF_h_Rt(3));
           }
+          
+          if (iNumNodesContact) {
+               const SpColVector<T, 2> tauc_0(0.25 * (tauc_0i[iNode1NE] + tauc_0i[iNode2NW] + tauc_0i[iNode3SW] + tauc_0i[iNode4SE]), oDofMap);
 
-          if (iNumNodesWithContact) {
-               if (bUpdateFriction) {
+               if (bUpdateFriction && std::is_same<T, doublereal>::value) {
                     AddFrictionLoss(HydroRootBase::CONTACT_FRICTION, -dPfc);
                }
 
-               static const int iReactionIdx[2] = {1, 3};
+               static constexpr index_type iReactionIdx[2] = {1, 3};
 
-               for (int i = 1; i <= 2; ++i) {
+               for (index_type i = 1; i <= 2; ++i) {
                     // Note: The contact pressure will be always
                     //               normal to the surface of each part
                     //           but the angle between the surface
@@ -19059,8 +19134,8 @@ namespace {
                     //               as long as the relative clearance is small
                     //               in case of a cylindrical bearing.
 
-                    dF_0_Rt(iReactionIdx[i - 1]) += tauc_0(i) * dA;
-                    dF_h_Rt(iReactionIdx[i - 1]) -= tauc_0(i) * dA;
+                    oDofMap.Add(dF_0_Rt(iReactionIdx[i - 1]), tauc_0(i) * dA);
+                    oDofMap.Sub(dF_h_Rt(iReactionIdx[i - 1]), tauc_0(i) * dA);
                }
           }
 
