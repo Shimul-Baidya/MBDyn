@@ -15591,7 +15591,7 @@ namespace {
      {
           rgNodes.clear();
           rgNodes.reserve(pParent->iGetNumNodes());
-          
+
           const index_type iNumElements = pParent->iGetNumElements();
 
           for (index_type iElem = 0; iElem < iNumElements; ++iElem) {
@@ -15613,7 +15613,7 @@ namespace {
                }
           }
      }
-     
+
      void BearingGeometry::RebuildDofMap()
      {
           oDofMapSpGradient.ResetDofStat();
@@ -16279,7 +16279,7 @@ namespace {
      void CylindricalMeshAtShaft::Initialize()
      {
           CylindricalBearing::Initialize();
-          
+
           oBound.Initialize();
           oBound_grad.Initialize();
           oBound_gradp.Initialize();
@@ -16419,7 +16419,7 @@ namespace {
           oDofMap.InsertDof(dw_dt);
 
           oDofMap.InsertDone();
-          
+
           const SpColVector<T, 3> a0(R1 * (o1 + Rb1_v1), oDofMap);
           const SpColVector<T, 3> a2(X1 - X2 + a0, oDofMap);
           const SpColVector<T, 3> a1(X1P + Cross(omega1, a0, oDofMap)
@@ -16443,7 +16443,7 @@ namespace {
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a5);
 
-          const T a3 = oDofMap.MapEval(sqrt(a5));
+          const T a3 = sqrt(a5);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a3);
 
@@ -16488,11 +16488,11 @@ namespace {
           HYDRO_TRACE("db_dt=[" << db_dt << "].';\n");
 
           const T dx2_dt = oDofMap.MapEval(R * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a5);
-          
+
           const T& dz2_dt = db_dt(3);
-          
+
           const T dDeltay2_dt = oDofMap.MapEval(dDeltay2_dx2 * dx2_dt + dDeltay2_dz2 * dz2_dt);
-          
+
           oDofMap.MapAssign(dh_dt, dDeltay2_dt - (b(1) * db_dt(1) + b(2) * db_dt(2)) / a3 + dw_dt);
 
           HYDRO_TRACE("dh_dt=" << dh_dt << ";\n");
@@ -17010,7 +17010,7 @@ namespace {
      void CylindricalMeshAtBearing::Initialize()
      {
           CylindricalBearing::Initialize();
-          
+
           oBound.Initialize();
           oBound_grad.Initialize();
           oBound_gradp.Initialize();
@@ -17484,18 +17484,50 @@ namespace {
           const auto& Rb1 = rParent.GetOrientationNode1();
           const auto& Rb2_v2 = pNode->GetPosition3D();
 
-          const SpColVector<T, 3> a3 = R2 * (o2 + Rb2_v2);
-          const SpColVector<T, 3> a1 = EvalUnique(X2 + a3 - X1);
-          const SpColVector<T, 3> b = Rb1T_R1T * a1 - Rb1T_o1;
+          T w, dw_dt;
+
+          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
+
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(X1);
+          oDofMap.GetDofStat(R1);
+          oDofMap.GetDofStat(X1P);
+          oDofMap.GetDofStat(omega1);
+          oDofMap.GetDofStat(X2);
+          oDofMap.GetDofStat(R2);
+          oDofMap.GetDofStat(X2P);
+          oDofMap.GetDofStat(omega2);
+          oDofMap.GetDofStat(w);
+          oDofMap.GetDofStat(dw_dt);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(X1);
+          oDofMap.InsertDof(R1);
+          oDofMap.InsertDof(X1P);
+          oDofMap.InsertDof(omega1);
+          oDofMap.InsertDof(X2);
+          oDofMap.InsertDof(R2);
+          oDofMap.InsertDof(X2P);
+          oDofMap.InsertDof(omega2);
+          oDofMap.InsertDof(w);
+          oDofMap.InsertDof(dw_dt);
+
+          oDofMap.InsertDone();
+
+          const SpColVector<T, 3> a3(R2 * (o2 + Rb2_v2), oDofMap);
+          const SpColVector<T, 3> a1(X2 + a3 - X1, oDofMap);
+          const SpColVector<T, 3> b(Rb1T_R1T * a1 - Rb1T_o1, oDofMap);
           const doublereal r = rParent.dGetShaftRadius();
-          const T a4 = EvalUnique(b(1) * b(1) + b(2) * b(2));
+          const T a4 = oDofMap.MapEval(b(1) * b(1) + b(2) * b(2));
           const T a0 = sqrt(a4);
 
-          const T cos_Phi1 = b(1) / a0;
-          const T sin_Phi1 = b(2) / a0;
+          const T cos_Phi1 = oDofMap.MapEval(b(1) / a0);
+          const T sin_Phi1 = oDofMap.MapEval(b(2) / a0);
           const T& z1 = b(3);
 
-          T Phi1 = atan2(sin_Phi1, cos_Phi1);
+          T Phi1 = oDofMap.MapEval(atan2(sin_Phi1, cos_Phi1));
 
           if (Phi1 < 0.) {
                // Attention: pFindShaftPockets assumes that Phi1 is in range 0 ... 2 * pi
@@ -17517,42 +17549,38 @@ namespace {
                pPocket1->GetHeightDerZ(x1, dDeltay1_dz1);
           }
 
-          T w, dw_dt;
+          const T h0 = oDofMap.MapEval(a0 - r - Deltay1);
+          h = h0 + w;
 
-          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
-
-          const T h0 = a0 - r - Deltay1;
-          h = EvalUnique(h0 + w);
-
-          const SpColVector<T, 3> v1{EvalUnique((r + Deltay1) * cos_Phi1),
-                                     EvalUnique((r + Deltay1) * sin_Phi1),
+          const SpColVector<T, 3> v1{oDofMap.MapEval((r + Deltay1) * cos_Phi1),
+                                     oDofMap.MapEval((r + Deltay1) * sin_Phi1),
                                      z1};
 
-          const SpColVector<T, 3> db_dt = Rb1T_R1T * (X2P + Cross(omega2, a3)
-                                                      - X1P - Cross(omega1, a1));
+          const SpColVector<T, 3> db_dt(Rb1T_R1T * (X2P + Cross(omega2, a3, oDofMap)
+                                                    - X1P - Cross(omega1, a1, oDofMap)), oDofMap);
 
-          const T dx1_dt = r * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a4;
+          const T dx1_dt = oDofMap.MapEval(r * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a4);
           const T& dz1_dt = db_dt(3);
-          const T dDeltay1_dt = dDeltay1_dx1 * dx1_dt + dDeltay1_dz1 * dz1_dt;
+          const T dDeltay1_dt = oDofMap.MapEval(dDeltay1_dx1 * dx1_dt + dDeltay1_dz1 * dz1_dt);
 
-          dh_dt = EvalUnique((b(1) * db_dt(1) + b(2) * db_dt(2)) / a0 - dDeltay1_dt + dw_dt);
+          dh_dt = oDofMap.MapEval((b(1) * db_dt(1) + b(2) * db_dt(2)) / a0 - dDeltay1_dt + dw_dt);
 
-          const SpColVector<T, 3> vh{EvalUnique(h0 * cos_Phi1),
-                                     EvalUnique(h0 * sin_Phi1),
+          const SpColVector<T, 3> vh{oDofMap.MapEval(h0 * cos_Phi1),
+                                     oDofMap.MapEval(h0 * sin_Phi1),
                                      T{}};
 
-          const SpColVector<T, 3> dP1_dt = X1P + Cross(omega1, (R1 * (o1 + Rb1 * v1))) + Cross(omega2, (R1 * (Rb1 * vh)));
-          const SpColVector<T, 3> dP2_dt = X2P + Cross(omega2, a3);
+          const SpColVector<T, 3> dP1_dt(X1P + Cross(omega1, (R1 * (o1 + Rb1 * v1)), oDofMap) + Cross(omega2, (R1 * (Rb1 * vh)), oDofMap), oDofMap);
+          const SpColVector<T, 3> dP2_dt(X2P + Cross(omega2, a3, oDofMap), oDofMap);
 
           const auto& Rbt2 = pNode->GetTangentCoordSys();
 
-          const SpColVector<T, 3> dP1_dt_R2 = Transpose(R2) * dP1_dt;
-          const SpColVector<T, 3> dP2_dt_R2 = Transpose(R2) * dP2_dt;
+          const SpColVector<T, 3> dP1_dt_R2(Transpose(R2) * dP1_dt, oDofMap);
+          const SpColVector<T, 3> dP2_dt_R2(Transpose(R2) * dP2_dt, oDofMap);
 
-          U1 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP1_dt_R2;
-          U2 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP2_dt_R2;
+          U1.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP1_dt_R2, oDofMap);
+          U2.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP2_dt_R2, oDofMap);
 
-          U = EvalUnique((U1 - U2) * 0.5);
+          U.MapAssign((U1 - U2) * 0.5, oDofMap);
      }
 
      template <typename T>
