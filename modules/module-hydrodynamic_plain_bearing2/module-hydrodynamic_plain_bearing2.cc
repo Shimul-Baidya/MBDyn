@@ -2588,11 +2588,11 @@ namespace {
           virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const=0;
           virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const=0;
 
-          virtual void
-          Update(doublereal dCoef,
-                 SpFunctionCall func)=0;
+          virtual void Update(doublereal dCoef, SpFunctionCall func)=0;
 
           virtual void Update(const VectorHandler& Y, doublereal dCoef)=0;
+
+          virtual void Reset(SpFunctionCall func)=0;
 
           virtual void
           AssRes(SubVectorHandler& WorkVec,
@@ -2661,6 +2661,8 @@ namespace {
                return oDofMapGpGradProd;
           }
 
+          void RebuildDofMap();
+
 #if MBDYN_ENABLE_PROFILE
           enum { PROF_RES = 0, PROF_JAC = 1};
           struct {
@@ -2671,7 +2673,10 @@ namespace {
           static constexpr SpGradExpDofMapHelper<doublereal> oDofMapDoublereal{};
           static constexpr SpGradExpDofMapHelper<GpGradProd> oDofMapGpGradProd{};
           SpGradExpDofMapHelper<SpGradient> oDofMapSpGradient;
+
      private:
+          inline void ElemUpdateDofMap(void (SpGradExpDofMapHelper<SpGradient>::*pFunc)(const SpGradient&));
+
           template <typename T> inline void
           GetNonNegativeClearanceTpl(const T& h,
                                      T& hn,
@@ -2915,6 +2920,8 @@ namespace {
           virtual void
           Update(const VectorHandler& Y, doublereal dCoef) override;
 
+          virtual void Reset(SpFunctionCall func) override;
+
           virtual void
           AssRes(SubVectorHandler& WorkVec,
                  doublereal dCoef,
@@ -3140,6 +3147,8 @@ namespace {
 
           virtual void
           Update(const VectorHandler& Y, doublereal dCoef) override;
+
+          virtual void Reset(SpFunctionCall func) override;
 
           virtual void
           AssRes(SubVectorHandler& WorkVec,
@@ -4549,6 +4558,8 @@ namespace {
           virtual void
           Update(const VectorHandler& Y, doublereal dCoef);
 
+          inline void Reset(SpFunctionCall func);
+
           inline doublereal dGetMaxPressureGradient() const;
 
      protected:
@@ -5623,7 +5634,6 @@ namespace {
           virtual doublereal dGetPrivData(unsigned int i) const override;
           int GetNumConnectedNodes(void) const override;
           virtual void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
-          virtual void SetInitialValue(VectorHandler& X) override;
           virtual void SetValue(DataManager *pDM, VectorHandler& X, VectorHandler& XP,
                         SimulationEntity::Hints *ph) override;
           std::ostream& Restart(std::ostream& out) const override;
@@ -5720,11 +5730,8 @@ namespace {
 
           inline void UnivWorkSpaceDim(integer* piNumRows, integer* piNumCols, SpFunctionCall func) const;
           inline void AddDofOwner(HydroDofOwner* pDofOwner);
-          static index_type iGetNumDofNode(const Node* const pNode, const sp_grad::SpFunctionCall eFunc);
-          static index_type iGetNumDofElem(const Elem* const pElem, const sp_grad::SpFunctionCall eFunc);
 
           void RebuildDofMap();
-          void RebuildDofMapGeometry(sp_grad::SpFunctionCall eFunc);
 
           inline void InitPrivData();
           inline const HydroDofOwner* pFindDofOwner(unsigned int i, sp_grad::SpFunctionCall eFunc) const;
@@ -6273,68 +6280,6 @@ namespace {
           rgDofOwner.push_back(pDofOwner);
      }
 
-     index_type HydroRootElement::iGetNumDofNode(const Node* const pNode, const sp_grad::SpFunctionCall eFunc)
-     {
-          const Node::Type eNodeType = pNode->GetNodeType();
-          index_type iNumDof = -1;
-
-          switch (eNodeType) {
-          case Node::STRUCTURAL:
-               switch (eFunc) {
-               case sp_grad::SpFunctionCall::REGULAR_FLAG:
-                    iNumDof = std::min(6u, pNode->iGetNumDof()); // Save us some overhead because we will access only position and rotation parameters
-                    break;
-               case sp_grad::SpFunctionCall::INITIAL_ASS_FLAG:
-                    iNumDof = dynamic_cast<const StructDispNode*>(pNode)->iGetInitialNumDof();
-                    break;
-               default:
-                    HYDRO_ASSERT(0);
-               }
-               break;
-          default:
-               switch (eFunc) {
-               case sp_grad::SpFunctionCall::REGULAR_FLAG:
-                    iNumDof = pNode->iGetNumDof();
-                    break;
-               case sp_grad::SpFunctionCall::INITIAL_ASS_FLAG:
-                    iNumDof = 0;
-                    break;
-               default:
-                    HYDRO_ASSERT(0);
-               }
-          }
-
-          ASSERT(iNumDof >= 0);
-
-          return iNumDof;
-     }
-
-     index_type HydroRootElement::iGetNumDofElem(const Elem* const pElem, const sp_grad::SpFunctionCall eFunc)
-     {
-          index_type iNumDof = -1;
-
-          switch (eFunc) {
-          case sp_grad::SpFunctionCall::REGULAR_FLAG:
-               iNumDof = pElem->iGetNumDof();
-               break;
-          case sp_grad::SpFunctionCall::INITIAL_ASS_FLAG: {
-               auto pInitAssElem = dynamic_cast<const InitialAssemblyElem*>(pElem);
-
-               if (pInitAssElem) {
-                    iNumDof = pInitAssElem->iGetInitialNumDof();
-               } else {
-                    iNumDof = 0;
-               }
-          } break;
-          default:
-               HYDRO_ASSERT(0);
-          }
-
-          ASSERT(iNumDof >= 0);
-
-          return iNumDof;
-     }
-
      void HydroRootElement::RebuildDofMap()
      {
           const index_type iNumDofMaps = 2;
@@ -6368,79 +6313,6 @@ namespace {
                     iOffsetIndex += iNumDof;
                }
           }
-     }
-
-     void HydroRootElement::RebuildDofMapGeometry(const sp_grad::SpFunctionCall eFunc)
-     {
-          HYDRO_ASSERT(pMesh != nullptr);
-
-          CylindricalBearing* const pGeometry = pMesh->pGetGeometry();
-
-          HYDRO_ASSERT(pGeometry != nullptr);
-
-          SpGradient oGradDof;
-
-          auto& oDofMapGeo = pGeometry->GetDofMap();
-
-          std::vector<const Node*> rgNodes;
-          std::vector<const ElemWithDofs*> rgElem;
-
-          GetConnectedNodes(rgNodes);
-
-          rgElem.reserve(pMesh->GetNumConnectedElements() + 1);
-          rgElem.push_back(this);
-
-          pMesh->GetConnectedElements(rgElem);
-
-          oDofMapGeo.ResetDofStat();
-
-          for (const Node* pNode: rgNodes) {
-               const index_type iFirstIndexNode = pNode->iGetFirstIndex();
-               const index_type iNumDof = iGetNumDofNode(pNode, eFunc);
-
-               for (index_type i = 1; i <= iNumDof; ++i) {
-                    oGradDof.Reset(0., iFirstIndexNode + i, 1.);
-
-                    oDofMapGeo.GetDofStat(oGradDof);
-               }
-          }
-
-          for (const ElemWithDofs* pElem: rgElem) {
-               const index_type iFirstIndexElem = pElem->iGetFirstIndex();
-               const index_type iNumDof = iGetNumDofElem(pElem, eFunc);
-
-               for (index_type i = 1; i <= iNumDof; ++i) {
-                    oGradDof.Reset(0., iFirstIndexElem + i, 1.);
-
-                    oDofMapGeo.GetDofStat(oGradDof);
-               }
-          }
-
-          oDofMapGeo.Reset();
-
-          for (const Node* pNode: rgNodes) {
-               const index_type iFirstIndexNode = pNode->iGetFirstIndex();
-               const index_type iNumDof = iGetNumDofNode(pNode, eFunc);
-
-               for (index_type i = 1; i <= iNumDof; ++i) {
-                    oGradDof.Reset(0., iFirstIndexNode + i, 1.);
-
-                    oDofMapGeo.InsertDof(oGradDof);
-               }
-          }
-
-          for (const ElemWithDofs* pElem: rgElem) {
-               const index_type iFirstIndexElem = pElem->iGetFirstIndex();
-               const index_type iNumDof = iGetNumDofElem(pElem, eFunc);
-
-               for (index_type i = 1; i <= iNumDof; ++i) {
-                    oGradDof.Reset(0., iFirstIndexElem + i, 1.);
-
-                    oDofMapGeo.InsertDof(oGradDof);
-               }
-          }
-
-          oDofMapGeo.InsertDone();
      }
 
      HydroRootElement::~HydroRootElement(void)
@@ -6650,8 +6522,10 @@ namespace {
           profile.dtUpdateNodes[PROF_JAC] += high_resolution_clock::now() - start;
           start = high_resolution_clock::now();
 #endif
+          pMesh->Reset(SpFunctionCall::REGULAR_JAC);
 
           SpGradientSubMatrixHandler& WorkMat = WorkMatVar.SetSparseGradient();
+
           WorkMat.Reset();
 
           for (auto i = rgElements.begin(); i != rgElements.end(); ++i) {
@@ -6732,6 +6606,8 @@ namespace {
           for (auto i = rgNodes.begin(); i != rgNodes.end(); ++i) {
                (*i)->Update(XCurr, XPrimeCurr, dCoef, SpFunctionCall::REGULAR_RES);
           }
+
+          pMesh->Reset(SpFunctionCall::REGULAR_RES);
 
 #if MBDYN_ENABLE_PROFILE
           profile.dtUpdateNodes[PROF_RES] += high_resolution_clock::now() - start;
@@ -6905,11 +6781,6 @@ namespace {
           }
      }
 
-     void HydroRootElement::SetInitialValue(VectorHandler& X)
-     {
-          RebuildDofMapGeometry(sp_grad::SpFunctionCall::INITIAL_ASS_FLAG);
-     }
-
      void
      HydroRootElement::SetValue(DataManager *pDM,
                                 VectorHandler& X, VectorHandler& XP,
@@ -6918,8 +6789,6 @@ namespace {
           for (auto i = rgDofOwner.cbegin(); i != rgDofOwner.cend(); ++i) {
                (*i)->SetValue(X, XP);
           }
-
-          RebuildDofMapGeometry(sp_grad::SpFunctionCall::REGULAR_FLAG);
      }
 
      std::ostream&
@@ -6971,7 +6840,10 @@ namespace {
                     (*i)->Update(XCurr, *pXPrimeCurr, 1., SpFunctionCall::INITIAL_ASS_JAC);
                }
 
+               pMesh->Reset(SpFunctionCall::INITIAL_ASS_JAC);
+
                SpGradientSubMatrixHandler& WorkMat = WorkMatVar.SetSparseGradient();
+
                WorkMat.Reset();
 
                for (auto i = rgElements.begin(); i != rgElements.end(); ++i) {
@@ -7007,6 +6879,8 @@ namespace {
                for (auto i = rgNodes.begin(); i != rgNodes.end(); ++i) {
                     (*i)->Update(XCurr, *pXPrimeCurr, 1., SpFunctionCall::INITIAL_ASS_RES);
                }
+
+               pMesh->Reset(SpFunctionCall::INITIAL_ASS_RES);
 
 #if HYDRO_DEBUG > 0
                integer iSizeCurr = WorkVec.iGetSize();
@@ -15711,6 +15585,77 @@ namespace {
 #endif
      }
 
+     void BearingGeometry::RebuildDofMap()
+     {
+          oDofMapSpGradient.ResetDofStat();
+
+          ElemUpdateDofMap(&SpGradExpDofMapHelper<SpGradient>::GetDofStat);
+
+          oDofMapSpGradient.Reset();
+
+          ElemUpdateDofMap(&SpGradExpDofMapHelper<SpGradient>::InsertDof);
+
+          oDofMapSpGradient.InsertDone();
+     }
+
+     void BearingGeometry::ElemUpdateDofMap(void (SpGradExpDofMapHelper<SpGradient>::*pFunc)(const SpGradient&))
+     {
+          constexpr doublereal dCoef = 1.;
+
+          SpGradient oGradDof;
+          SpColVectorA<SpGradient, 2, 12> oGradVec1, oGradVec2;
+          const index_type iNumElements = pParent->iGetNumElements();
+
+          for (index_type iElem = 0; iElem < iNumElements; ++iElem) {
+               const HydroElement* const pElem = pParent->pGetElement(iElem);
+
+               switch (pElem->GetElementType()) {
+               case HydroElement::FRICTION_ELEM:
+                    break;
+               default:
+                    continue;
+               }
+
+               const index_type iNumNodes = pElem->iGetNumNodes();
+
+               for (index_type iNode = 0; iNode < iNumNodes; ++iNode) {
+                    const HydroNode* const pNode = pElem->pGetNode(iNode);
+
+                    pNode->GetPressure(oGradDof, dCoef);
+
+                    (oDofMapSpGradient.*pFunc)(oGradDof);
+
+                    pNode->GetContactPressure(oGradDof);
+
+                    (oDofMapSpGradient.*pFunc)(oGradDof);
+
+                    pNode->GetContactStress(oGradVec1);
+
+                    for (auto& g: oGradVec1) {
+                         (oDofMapSpGradient.*pFunc)(g);
+                    }
+
+                    pNode->GetClearance(oGradDof);
+
+                    (oDofMapSpGradient.*pFunc)(oGradDof);
+
+                    pNode->GetViscosity(oGradDof);
+
+                    (oDofMapSpGradient.*pFunc)(oGradDof);
+
+                    pNode->GetVelocity(oGradVec1, oGradVec2);
+
+                    for (auto& g: oGradVec1) {
+                         (oDofMapSpGradient.*pFunc)(g);
+                    }
+
+                    for (auto& g: oGradVec2) {
+                         (oDofMapSpGradient.*pFunc)(g);
+                    }
+               }
+          }
+     }
+
      void
      BearingGeometry::GetNonNegativeClearance(const doublereal& h,
                                               doublereal& hn,
@@ -16747,14 +16692,12 @@ namespace {
           case SpFunctionCall::INITIAL_DER_RES:
           case SpFunctionCall::INITIAL_ASS_RES:
                oBound.Update(dCoef, func);
-               oReaction.Reset(oDofMapDoublereal);
                break;
 
           case SpFunctionCall::REGULAR_JAC:
           case SpFunctionCall::INITIAL_DER_JAC:
           case SpFunctionCall::INITIAL_ASS_JAC:
                oBound_grad.Update(dCoef, func);
-               oReaction_grad.Reset(oDofMapSpGradient);
                break;
 
           default:
@@ -16767,6 +16710,28 @@ namespace {
      {
           oBound_gradp.Update(dCoef, SpFunctionCall::REGULAR_JAC);
           oReaction_gradp.Reset(oDofMapGpGradProd);
+     }
+
+     void
+     CylindricalMeshAtShaft::Reset(SpFunctionCall func)
+     {
+          switch (func) {
+          case SpFunctionCall::REGULAR_RES:
+          case SpFunctionCall::INITIAL_DER_RES:
+          case SpFunctionCall::INITIAL_ASS_RES:
+               oReaction.Reset(oDofMapDoublereal);
+               break;
+
+          case SpFunctionCall::REGULAR_JAC:
+          case SpFunctionCall::INITIAL_DER_JAC:
+          case SpFunctionCall::INITIAL_ASS_JAC:
+               RebuildDofMap();
+               oReaction_grad.Reset(oDofMapSpGradient);
+               break;
+
+          default:
+               HYDRO_ASSERT(0);
+          }
      }
 
      void
@@ -17064,14 +17029,12 @@ namespace {
           case SpFunctionCall::INITIAL_DER_RES:
           case SpFunctionCall::INITIAL_ASS_RES:
                oBound.Update(dCoef, func);
-               oReaction.Reset(oDofMapDoublereal);
                break;
 
           case SpFunctionCall::REGULAR_JAC:
           case SpFunctionCall::INITIAL_DER_JAC:
           case SpFunctionCall::INITIAL_ASS_JAC:
                oBound_grad.Update(dCoef, func);
-               oReaction_grad.Reset(oDofMapSpGradient);
                break;
 
           default:
@@ -17084,6 +17047,28 @@ namespace {
      {
           oBound_gradp.Update(dCoef, SpFunctionCall::REGULAR_JAC);
           oReaction_gradp.Reset(oDofMapGpGradProd);
+     }
+
+     void
+     CylindricalMeshAtBearing::Reset(SpFunctionCall func)
+     {
+          switch (func) {
+          case SpFunctionCall::REGULAR_RES:
+          case SpFunctionCall::INITIAL_DER_RES:
+          case SpFunctionCall::INITIAL_ASS_RES:
+               oReaction.Reset(oDofMapDoublereal);
+               break;
+
+          case SpFunctionCall::REGULAR_JAC:
+          case SpFunctionCall::INITIAL_DER_JAC:
+          case SpFunctionCall::INITIAL_ASS_JAC:
+               RebuildDofMap();
+               oReaction_grad.Reset(oDofMapSpGradient);
+               break;
+
+          default:
+               HYDRO_ASSERT(0);
+          }
      }
 
      void
@@ -23233,6 +23218,11 @@ namespace {
           if (pCompliance) {
                pCompliance->Update(Y, dCoef);
           }
+     }
+
+     void HydroMesh::Reset(SpFunctionCall func)
+     {
+          pGetGeometry()->Reset(func);
      }
 
      doublereal HydroMesh::dGetMaxPressureGradient() const
