@@ -63,6 +63,7 @@
 #include <memory>
 #include <set>
 #include <sstream>
+#include <unordered_set>
 #include <vector>
 
 #ifdef HAVE_CONFIG_H
@@ -2469,7 +2470,7 @@ namespace {
           virtual void
           ParseInput(DataManager* pDM, MBDynParser& HP)=0;
 
-          virtual void Initialize() = 0;
+          virtual void Initialize();
 
           virtual void
           GetClosestDistance2D(const SpColVector<doublereal, 2>& x1,
@@ -2684,6 +2685,7 @@ namespace {
                                      T* dhn_dt) const;
 
           HydroRootElement* pParent;
+          std::unordered_set<const HydroNode*> rgNodes;
      };
 
      class RigidBodyBearing: public BearingGeometry {
@@ -15585,6 +15587,33 @@ namespace {
 #endif
      }
 
+     void BearingGeometry::Initialize()
+     {
+          rgNodes.clear();
+          rgNodes.reserve(pParent->iGetNumNodes());
+          
+          const index_type iNumElements = pParent->iGetNumElements();
+
+          for (index_type iElem = 0; iElem < iNumElements; ++iElem) {
+               const HydroElement* const pElem = pParent->pGetElement(iElem);
+
+               switch (pElem->GetElementType()) {
+               case HydroElement::FRICTION_ELEM:
+                    break;
+               default:
+                    continue;
+               }
+
+               const index_type iNumNodes = pElem->iGetNumNodes();
+
+               for (index_type iNode = 0; iNode < iNumNodes; ++iNode) {
+                    const HydroNode* const pNode = pElem->pGetNode(iNode);
+
+                    rgNodes.insert(pNode);
+               }
+          }
+     }
+     
      void BearingGeometry::RebuildDofMap()
      {
           oDofMapSpGradient.ResetDofStat();
@@ -15604,29 +15633,13 @@ namespace {
 
           SpGradient oGradDof;
           SpColVectorA<SpGradient, 2, 12> oGradVec1, oGradVec2;
-          const index_type iNumElements = pParent->iGetNumElements();
 
-          for (index_type iElem = 0; iElem < iNumElements; ++iElem) {
-               const HydroElement* const pElem = pParent->pGetElement(iElem);
+          for (const HydroNode* pNode: rgNodes) {
+               pNode->GetPressure(oGradDof, dCoef);
 
-               switch (pElem->GetElementType()) {
-               case HydroElement::FRICTION_ELEM:
-                    break;
-               default:
-                    continue;
-               }
+               (oDofMapSpGradient.*pFunc)(oGradDof);
 
-               const index_type iNumNodes = pElem->iGetNumNodes();
-
-               for (index_type iNode = 0; iNode < iNumNodes; ++iNode) {
-                    const HydroNode* const pNode = pElem->pGetNode(iNode);
-
-                    pNode->GetPressure(oGradDof, dCoef);
-
-                    (oDofMapSpGradient.*pFunc)(oGradDof);
-
-                    pNode->GetContactPressure(oGradDof);
-
+               if (pNode->GetContactPressure(oGradDof)) {
                     (oDofMapSpGradient.*pFunc)(oGradDof);
 
                     pNode->GetContactStress(oGradVec1);
@@ -15634,24 +15647,24 @@ namespace {
                     for (auto& g: oGradVec1) {
                          (oDofMapSpGradient.*pFunc)(g);
                     }
+               }
 
-                    pNode->GetClearance(oGradDof);
+               pNode->GetClearance(oGradDof);
 
-                    (oDofMapSpGradient.*pFunc)(oGradDof);
+               (oDofMapSpGradient.*pFunc)(oGradDof);
 
-                    pNode->GetViscosity(oGradDof);
+               pNode->GetViscosity(oGradDof);
 
-                    (oDofMapSpGradient.*pFunc)(oGradDof);
+               (oDofMapSpGradient.*pFunc)(oGradDof);
 
-                    pNode->GetVelocity(oGradVec1, oGradVec2);
+               pNode->GetVelocity(oGradVec1, oGradVec2);
 
-                    for (auto& g: oGradVec1) {
-                         (oDofMapSpGradient.*pFunc)(g);
-                    }
+               for (auto& g: oGradVec1) {
+                    (oDofMapSpGradient.*pFunc)(g);
+               }
 
-                    for (auto& g: oGradVec2) {
-                         (oDofMapSpGradient.*pFunc)(g);
-                    }
+               for (auto& g: oGradVec2) {
+                    (oDofMapSpGradient.*pFunc)(g);
                }
           }
      }
@@ -16265,6 +16278,8 @@ namespace {
 
      void CylindricalMeshAtShaft::Initialize()
      {
+          CylindricalBearing::Initialize();
+          
           oBound.Initialize();
           oBound_grad.Initialize();
           oBound_gradp.Initialize();
@@ -16963,6 +16978,8 @@ namespace {
 
      void CylindricalMeshAtBearing::Initialize()
      {
+          CylindricalBearing::Initialize();
+          
           oBound.Initialize();
           oBound_grad.Initialize();
           oBound_gradp.Initialize();
