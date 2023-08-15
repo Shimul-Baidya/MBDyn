@@ -16388,16 +16388,48 @@ namespace {
           HYDRO_TRACE("X2P=[" << X2P << "].';\n");
           HYDRO_TRACE("omega2=[" << omega2 << "].';\n");
 
-          const SpColVector<T, 3> a0 = R1 * (o1 + Rb1_v1);
-          const SpColVector<T, 3> a2 = EvalUnique(X1 - X2 + a0);
-          const SpColVector<T, 3> a1 = EvalUnique(X1P + Cross(omega1, a0)
-                                                  - X2P - Cross(omega2, a2));
+          T w, dw_dt;
+
+          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
+
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(X1);
+          oDofMap.GetDofStat(R1);
+          oDofMap.GetDofStat(X1P);
+          oDofMap.GetDofStat(omega1);
+          oDofMap.GetDofStat(X2);
+          oDofMap.GetDofStat(R2);
+          oDofMap.GetDofStat(X2P);
+          oDofMap.GetDofStat(omega2);
+          oDofMap.GetDofStat(w);
+          oDofMap.GetDofStat(dw_dt);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(X1);
+          oDofMap.InsertDof(R1);
+          oDofMap.InsertDof(X1P);
+          oDofMap.InsertDof(omega1);
+          oDofMap.InsertDof(X2);
+          oDofMap.InsertDof(R2);
+          oDofMap.InsertDof(X2P);
+          oDofMap.InsertDof(omega2);
+          oDofMap.InsertDof(w);
+          oDofMap.InsertDof(dw_dt);
+
+          oDofMap.InsertDone();
+          
+          const SpColVector<T, 3> a0(R1 * (o1 + Rb1_v1), oDofMap);
+          const SpColVector<T, 3> a2(X1 - X2 + a0, oDofMap);
+          const SpColVector<T, 3> a1(X1P + Cross(omega1, a0, oDofMap)
+                                     - X2P - Cross(omega2, a2, oDofMap), oDofMap);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a0);
           HYDRO_DUMP_VAR(rParent.pGetParent(), a1);
           HYDRO_DUMP_VAR(rParent.pGetParent(), a2);
 
-          const SpColVector<T, 3> b = EvalUnique(Rb2T_R2T * a2 - Rb2T_o2);
+          const SpColVector<T, 3> b(Rb2T_R2T * a2 - Rb2T_o2, oDofMap);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), b);
 
@@ -16407,19 +16439,19 @@ namespace {
 
           HYDRO_TRACE("R=" << R << ";\n");
 
-          const T a5 = EvalUnique(b(1) * b(1) + b(2) * b(2));
+          const T a5 = oDofMap.MapEval(b(1) * b(1) + b(2) * b(2));
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a5);
 
-          const T a3 = sqrt(a5);
+          const T a3 = oDofMap.MapEval(sqrt(a5));
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a3);
 
-          const T cos_Phi2 = b(1) / a3;
-          const T sin_Phi2 = b(2) / a3;
+          const T cos_Phi2 = oDofMap.MapEval(b(1) / a3);
+          const T sin_Phi2 = oDofMap.MapEval(b(2) / a3);
           const T& z2 = b(3);
 
-          T Phi2 = atan2(sin_Phi2, cos_Phi2);
+          T Phi2 = oDofMap.MapEval(atan2(sin_Phi2, cos_Phi2));
 
           if (Phi2 < 0.) {
                // Attention: pFindBearingPockets assumes that Phi1 is in range 0 ... 2 * pi
@@ -16441,54 +16473,53 @@ namespace {
                SpGradientTraits<T>::ResizeReset(dDeltay2_dz2, 0., 0);
           }
 
-          T w, dw_dt;
-
-          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
-
-          const T h0 = R + Deltay2 - a3;
+          const T h0 = oDofMap.MapEval(R + Deltay2 - a3);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), h0);
 
-          h = EvalUnique(h0 + w);
+          oDofMap.MapAssign(h, h0 + w);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), h);
 
           HYDRO_TRACE("h=" << h << ";\n");
 
-          const SpColVector<T, 3> db_dt = Rb2T_R2T * a1;
+          const SpColVector<T, 3> db_dt(Rb2T_R2T * a1, oDofMap);
 
           HYDRO_TRACE("db_dt=[" << db_dt << "].';\n");
 
-          const T dx2_dt = R * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a5;
+          const T dx2_dt = oDofMap.MapEval(R * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a5);
+          
           const T& dz2_dt = db_dt(3);
-          const T dDeltay2_dt = dDeltay2_dx2 * dx2_dt + dDeltay2_dz2 * dz2_dt;
-          dh_dt = EvalUnique(dDeltay2_dt - (b(1) * db_dt(1) + b(2) * db_dt(2)) / a3 + dw_dt);
+          
+          const T dDeltay2_dt = oDofMap.MapEval(dDeltay2_dx2 * dx2_dt + dDeltay2_dz2 * dz2_dt);
+          
+          oDofMap.MapAssign(dh_dt, dDeltay2_dt - (b(1) * db_dt(1) + b(2) * db_dt(2)) / a3 + dw_dt);
 
           HYDRO_TRACE("dh_dt=" << dh_dt << ";\n");
 
-          const SpColVector<T, 3> v2{EvalUnique((R + Deltay2) * cos_Phi2),
-                                     EvalUnique((R + Deltay2) * sin_Phi2),
+          const SpColVector<T, 3> v2{oDofMap.MapEval((R + Deltay2) * cos_Phi2),
+                                     oDofMap.MapEval((R + Deltay2) * sin_Phi2),
                                      z2};
 
-          const SpColVector<T, 3> vh{EvalUnique(h0 * cos_Phi2),
-                                     EvalUnique(h0 * sin_Phi2),
+          const SpColVector<T, 3> vh{oDofMap.MapEval(h0 * cos_Phi2),
+                                     oDofMap.MapEval(h0 * sin_Phi2),
                                      T{}};
 
           HYDRO_TRACE("v2=[" << v2 << "].';\n");
           HYDRO_TRACE("vh=[" << vh << "].';\n");
 
-          const SpColVector<T, 3> P1Dot = EvalUnique(X1P + Cross(omega1, a0));
-          const SpColVector<T, 3> P2Dot = EvalUnique(X2P + Cross(omega2, (R2 * (o2 + Rb2 * v2))) - Cross(omega1, (R2 * (Rb2 * vh))));
+          const SpColVector<T, 3> P1Dot(X1P + Cross(omega1, a0, oDofMap), oDofMap);
+          const SpColVector<T, 3> P2Dot(X2P + Cross(omega2, (R2 * (o2 + Rb2 * v2)), oDofMap) - Cross(omega1, R2 * (Rb2 * vh), oDofMap), oDofMap);
 
           const auto& Rbt1 = pNode->GetTangentCoordSys();
 
-          const SpColVector<T, 3> P1Dot_R1 = Transpose(R1) * P1Dot;
-          const SpColVector<T, 3> P2Dot_R1 = Transpose(R1) * P2Dot;
+          const SpColVector<T, 3> P1Dot_R1(Transpose(R1) * P1Dot, oDofMap);
+          const SpColVector<T, 3> P2Dot_R1(Transpose(R1) * P2Dot, oDofMap);
 
-          U1 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P1Dot_R1;
-          U2 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P2Dot_R1;
+          U1.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P1Dot_R1, oDofMap);
+          U2.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P2Dot_R1, oDofMap);
 
-          U = EvalUnique((U2 - U1) * 0.5);
+          U.MapAssign((U2 - U1) * 0.5, oDofMap);
 
 #if HYDRO_DEBUG > 1
           std::cout.precision(prec1);

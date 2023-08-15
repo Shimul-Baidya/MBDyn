@@ -48,125 +48,106 @@
 #include "sp_matrix_base_fwd.h"
 
 namespace sp_grad {
+     namespace util {
+          struct SpGradExpDofMapHelperBase {
+               static inline void Reset() {}
+
+               static inline void ResetDofStat() {}
+
+               static inline void InsertDone() {}
+          };
+
+          template <typename T, typename Base = SpGradExpDofMapHelperBase>
+          class SpGradExpDofMapHelperGeneric: public Base {
+          public:
+               // Allow us to reuse a SpGradExpDofMap accross multiple expressions.
+               // For some elements this may reduce the overhead of compressed
+               // evaluation of expressions significantly.
+               //
+               // Usage:
+               // SpGradient var1, var2, var3;
+               // var1 = ...
+               // var2 = ...
+               // SpGradExpDofMapHelper<SpGradient> oDofMap;
+               // oDofMap.ResetDofStat();
+               // oDofMap.GetDofStat(var1);
+               // oDofMap.GetDofStat(var2);
+               // oDofMap.Reset();
+               // oDofMap.InsertDof(var1);
+               // oDofMap.InsertDof(var2);
+               // oDofMap.InsertDone();
+               // oDofMap.MapAssign(var3, var1 + var2); /* equivalent to var3 = var1 + var2 */
+
+               static inline void GetDofStat(const T&) {}
+
+               static inline void GetDofStat(const T*, const T*) {}
+
+               template <index_type iNumRows, index_type iNumCols>
+               static inline void GetDofStat(const SpMatrixBase<T, iNumRows, iNumCols>& A) {}
+
+               static inline void InsertDof(const T&) {}
+
+               static inline void InsertDof(const T*, const T*) {}
+
+               template <index_type iNumRows, index_type iNumCols>
+               static inline void InsertDof(const SpMatrixBase<T, iNumRows, iNumCols>& A) {}
+
+               static inline void InitDofMap(T&) {}
+
+               static inline T& MapAssign(T& g, const T& expr) {
+                    g = expr;
+
+                    return g;
+               }
+
+               static inline const T& MapEval(const T& expr) {
+                    return expr;
+               }
+
+               template <typename Func>
+               static inline T& MapAssignOper(T& g, const T& expr) {
+                    g = Func::f(g, expr);
+
+                    return g;
+               }
+
+               static inline T& Add(T& g, const T& expr) {
+                    g += expr;
+
+                    return g;
+               }
+
+               static inline T& Sub(T& g, const T& expr) {
+                    g -= expr;
+
+                    return g;
+               }
+
+               static inline void GetDofStat() = delete;
+               static inline void GetDofMap() = delete;
+          };
+     }
+
      template <typename T>
-     class SpGradExpDofMapHelper {
+     class SpGradExpDofMapHelper;
+
+     template <>
+     class SpGradExpDofMapHelper<doublereal>: public util::SpGradExpDofMapHelperGeneric<doublereal> {
      public:
-          // Allow us to reuse a SpGradExpDofMap accross multiple expressions.
-          // For some elements this may reduce the overhead of compressed
-          // evaluation of expressions significantly.
-          //
-          // Usage:
-          // SpGradient var1, var2, var3;
-          // var1 = ...
-          // var2 = ...
-          // SpGradExpDofMapHelper<SpGradient> oDofMap;
-          // oDofMap.ResetDofStat();
-          // oDofMap.GetDofStat(var1);
-          // oDofMap.GetDofStat(var2);
-          // oDofMap.Reset();
-          // oDofMap.InsertDof(var1);
-          // oDofMap.InsertDof(var2);
-          // oDofMap.InsertDone();
-          // oDofMap.MapAssign(var3, var1 + var2); /* equivalent to var3 = var1 + var2 */
-
-          static inline void Reset() {}
-
-          static inline void ResetDofStat() {}
-
-          static inline void InsertDone() {}
-
-          static inline void GetDofStat(const T&) {}
-
-          static inline void InsertDof(const T&) {}
-
-          static inline void GetDofStat(const T*, const T*) {}
-
-          static inline void InsertDof(const T*, const T*) {}
-
-          static inline void InitDofMap(T&) {}
-
           static inline index_type iGetLocalSize() { return 0; }
-
-          template <index_type iNumRows, index_type iNumCols>
-          static inline void GetDofStat(const SpMatrixBase<T, iNumRows, iNumCols>&) {}
-
-          template <index_type iNumRows, index_type iNumCols>
-          static inline void InsertDof(const SpMatrixBase<T, iNumRows, iNumCols>&) {}
-
-          template <typename Expr>
-          static inline T& MapAssign(T& g, const SpGradBase<Expr>& expr) {
-               g = expr;
-
-               return g;
-          }
-
-          static inline T& MapAssign(T& g, const T& expr) {
-               g = expr;
-
-               return g;
-          }
-
-          template <typename Func>
-          static inline T& MapAssignOper(T& g, const T& expr) {
-               g = Func::f(g, expr);
-
-               return g;
-          }
-
-          static inline T& Add(T& g, const T& expr) {
-               g += expr;
-
-               return g;
-          }
-
-          static inline T& Sub(T& g, const T& expr) {
-               g -= expr;
-
-               return g;
-          }
      };
 
      template <>
-     class SpGradExpDofMapHelper<GpGradProd>: public SpGradExpDofMapHelper<doublereal> {
+     class SpGradExpDofMapHelper<GpGradProd>: public util::SpGradExpDofMapHelperGeneric<GpGradProd, SpGradExpDofMapHelper<doublereal> >  {
      public:
-          using SpGradExpDofMapHelper<doublereal>::GetDofStat; // Required for expressions with operand types including GpGradProd and doublereal
-          using SpGradExpDofMapHelper<doublereal>::InsertDof;
-          using SpGradExpDofMapHelper<doublereal>::MapAssign;
-
           static inline index_type iGetLocalSize() { return 1; }
-
-          static inline void GetDofStat(const GpGradProd& g) {}
-
-          static inline void InsertDof(const GpGradProd& g) {}
-
-          static inline void GetDofStat(const GpGradProd* pFirst, const GpGradProd* const pLast) {}
-
-          static inline void InsertDof(const GpGradProd* pFirst, const GpGradProd* const pLast) {}
-
-          static inline void InitDofMap(GpGradProd&) {}
-
-          template <index_type iNumRows, index_type iNumCols>
-          static inline void GetDofStat(const SpMatrixBase<GpGradProd, iNumRows, iNumCols>& A) {}
-
-          template <index_type iNumRows, index_type iNumCols>
-          static inline void InsertDof(const SpMatrixBase<GpGradProd, iNumRows, iNumCols>& A) {}
-
-          static inline GpGradProd& MapAssign(GpGradProd& g, const GpGradProd& expr);
-
-          template <typename Func>
-          static inline GpGradProd& MapAssignOper(GpGradProd& g, const GpGradProd& expr);
-
-          static inline GpGradProd& Add(GpGradProd& g, const GpGradProd& expr);
-
-          static inline GpGradProd& Sub(GpGradProd& g, const GpGradProd& expr);
      };
 
      template <>
      class SpGradExpDofMapHelper<SpGradient>: public SpGradExpDofMapHelper<doublereal> {
      public:
           using SpGradExpDofMapHelper<doublereal>::GetDofStat; // Required for expressions with operand types including SpGradient and doublereal
-          using SpGradExpDofMapHelper<doublereal>::InsertDof;
-          using SpGradExpDofMapHelper<doublereal>::MapAssign;
+          using SpGradExpDofMapHelper<doublereal>::InsertDof; // Required for expressions with operand types including SpGradient and doublereal
 
           inline void ResetDofStat();
           inline void Reset();
@@ -194,6 +175,9 @@ namespace sp_grad {
           template <typename Expr>
           inline SpGradient& MapAssign(SpGradient& g, const SpGradBase<Expr>& expr) const;
 
+          template <typename Expr>
+          inline SpGradient MapEval(const SpGradBase<Expr>& expr) const;
+
           template <typename Func, typename Expr>
           inline SpGradient& MapAssignOper(SpGradient& g, const SpGradBase<Expr>& expr) const;
 
@@ -205,6 +189,7 @@ namespace sp_grad {
 
           const SpGradDofStat& GetDofStat() const { return oDofStat; }
           const SpGradExpDofMap& GetDofMap() const { return oDofMap; }
+
      private:
           SpGradDofStat oDofStat;
           SpGradExpDofMap oDofMap;

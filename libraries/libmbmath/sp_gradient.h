@@ -53,24 +53,6 @@
 #include "sp_matrix_base.h"
 
 namespace sp_grad {
-     template <typename Func>
-     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::MapAssignOper(GpGradProd& g, const GpGradProd& expr) {
-          return g.template AssignOper<Func>(expr);
-     }
-
-     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Add(GpGradProd& g, const GpGradProd& expr) {
-          return MapAssignOper<SpGradBinPlus>(g, expr);
-     }
-
-     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::Sub(GpGradProd& g, const GpGradProd& expr) {
-          return MapAssignOper<SpGradBinMinus>(g, expr);
-     }
-
-     inline GpGradProd& SpGradExpDofMapHelper<GpGradProd>::MapAssign(GpGradProd& g, const GpGradProd& expr) {
-          g = expr;
-          return g;
-     }
-
      inline void SpGradExpDofMapHelper<SpGradient>::ResetDofStat() {
           oDofStat = SpGradDofStat{};
      }
@@ -126,6 +108,11 @@ namespace sp_grad {
      template <typename Expr>
      inline SpGradient& SpGradExpDofMapHelper<SpGradient>::MapAssign(SpGradient& g, const SpGradBase<Expr>& expr) const {
           return g.MapAssign(expr, oDofMap);
+     }
+
+     template <typename Expr>
+     inline SpGradient SpGradExpDofMapHelper<SpGradient>::MapEval(const SpGradBase<Expr>& expr) const {
+          return SpGradient(expr, *this);
      }
 
      template <typename Func, typename Expr>
@@ -345,7 +332,7 @@ namespace sp_grad {
      SpGradient::SpGradient(const SpGradBase<Expr>& g, const SpGradExpDofMapHelper<SpGradient>& oDofMap)
           :SpGradient() {
 
-          oDofMap.MapAssign(this, g);
+          oDofMap.MapAssign(*this, g);
      }
 
      SpGradient::SpGradient(const SpGradExpDofMap& oDofMap)
