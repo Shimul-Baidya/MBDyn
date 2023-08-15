@@ -99,10 +99,10 @@ public:
 
      virtual void Solve() const override;
 
-     MKL_INT_TYPE MakeCompactForm(SparseMatrixHandler& mh,
-                                  std::vector<doublereal>& Ax,
-                                  std::vector<MH_INT_TYPE>& Ai,
-                                  std::vector<MH_INT_TYPE>& Ap) const;
+     MKL_INT_TYPE PardisoMakeCompactForm(SparseMatrixHandler& mh,
+                                         std::vector<doublereal>& Ax,
+                                         std::vector<MH_INT_TYPE>& Ai,
+                                         std::vector<MH_INT_TYPE>& Ap) const;
 };
 
 template <typename MatrixHandlerType, typename MKL_INT_TYPE>

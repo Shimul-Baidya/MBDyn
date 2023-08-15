@@ -175,10 +175,10 @@ void PardisoSolver<MKL_INT_TYPE>::Solve(void) const
 }
 
 template <typename MKL_INT_TYPE>
-MKL_INT_TYPE PardisoSolver<MKL_INT_TYPE>::MakeCompactForm(SparseMatrixHandler& mh,
-                                                          std::vector<doublereal>& Ax,
-                                                          std::vector<MH_INT_TYPE>& Ai,
-                                                          std::vector<MH_INT_TYPE>& Ap) const
+MKL_INT_TYPE PardisoSolver<MKL_INT_TYPE>::PardisoMakeCompactForm(SparseMatrixHandler& mh,
+                                                                 std::vector<doublereal>& Ax,
+                                                                 std::vector<MH_INT_TYPE>& Ai,
+                                                                 std::vector<MH_INT_TYPE>& Ap) const
 {
      MH_INT_TYPE iNumNzA = mh.MakeCompressedRowForm(Ax, Ai, Ap, 1);
 
@@ -238,7 +238,7 @@ void PardisoSolutionManager<MatrixHandlerType, MKL_INT_TYPE>::MatrInitialize(voi
 template <typename MatrixHandlerType, typename MKL_INT_TYPE>
 void PardisoSolutionManager<MatrixHandlerType, MKL_INT_TYPE>::MakeCompressedRowForm(void)
 {
-    pGetSolver()->MakeCompactForm(A, Ax, Ai, Ap);
+    pGetSolver()->PardisoMakeCompactForm(A, Ax, Ai, Ap);
 }
 
 template <typename MatrixHandlerType, typename MKL_INT_TYPE>

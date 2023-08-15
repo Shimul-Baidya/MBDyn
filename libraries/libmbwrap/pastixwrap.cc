@@ -259,7 +259,7 @@ void PastixSolver::Solve(void) const
     }
 }
 
-PastixSolver::SpMatrix& PastixSolver::MakeCompactForm(SparseMatrixHandler& mh)
+PastixSolver::SpMatrix& PastixSolver::PastixMakeCompactForm(SparseMatrixHandler& mh)
 {
     ASSERT(mh.iGetNumRows() == mh.iGetNumCols());
 
@@ -327,7 +327,7 @@ void PastixSolutionManager<MatrixHandlerType>::MatrInitialize(void)
 template <typename MatrixHandlerType>
 void PastixSolutionManager<MatrixHandlerType>::MakeCompressedColumnForm(void)
 {
-     auto& spm = pGetSolver()->MakeCompactForm(A);
+     auto& spm = pGetSolver()->PastixMakeCompactForm(A);
 
      // Attention: Do not use spm.Nz() because we are calling spmSymmetrize!
      CSCMatrixHandlerTpl<doublereal, pastix_int_t, PastixArrayBase> Acsc(spm.pAx(), spm.pAi(), spm.pAp(), A.iGetNumCols(), spm.nnz);

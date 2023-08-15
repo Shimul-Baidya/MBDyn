@@ -106,7 +106,7 @@ public:
 
      void Initialize() { bDoOrdering = true; }
      virtual void Solve(void) const;
-     SpMatrix& MakeCompactForm(SparseMatrixHandler& mh);
+     SpMatrix& PastixMakeCompactForm(SparseMatrixHandler& mh);
 };
 
 template <typename MatrixHandlerType>

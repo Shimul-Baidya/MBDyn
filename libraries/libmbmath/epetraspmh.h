@@ -155,7 +155,9 @@ public:
           const integer* const rowptr;
           const integer* const colind;
           const doublereal* const values;
+#ifdef DEBUG
           const integer NRows;
+#endif
           const integer NZ;
 	  integer iIdx;
 	  SparseMatrixHandler::SparseMatrixElement elem;
@@ -198,7 +200,9 @@ public:
 	       :rowptr(rowptr),
                 colind(colind),
                 values(values),
+#ifdef DEBUG
                 NRows(NRows),
+#endif
                 NZ(rowptr[NRows] - rowptr[0]),
                 iIdx(iIdx) {
 
@@ -296,7 +300,6 @@ private:
           return const_cast<EpetraSparseMatrixHandler*>(this)->PacMat();
      }
      
-     const Epetra_Comm& oComm;
      mutable Epetra_CrsMatrix oEPM;
      const integer iNumColsAlloc;
      mutable CSCMatrixHandlerTpl<doublereal, integer, 0> oCscT;
