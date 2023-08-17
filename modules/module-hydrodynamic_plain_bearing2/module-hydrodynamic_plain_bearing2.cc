@@ -15633,9 +15633,10 @@ namespace {
 
           SpGradient oGradDof;
           SpColVectorA<SpGradient, 2, 12> oGradVec1, oGradVec2;
+          const HydroMesh* const pMesh = pParent->pGetMesh();
 
           for (const HydroNode* pNode: rgNodes) {
-               pNode->GetPressure(oGradDof, dCoef);
+               pMesh->GetPressure(pNode, oGradDof, dCoef);
 
                (oDofMapSpGradient.*pFunc)(oGradDof);
 
