@@ -2686,6 +2686,7 @@ namespace {
 
           HydroRootElement* pParent;
           std::unordered_set<const HydroNode*> rgNodes;
+          bool bDofMapUseInactiveNodes;
      };
 
      class RigidBodyBearing: public BearingGeometry {
@@ -15569,7 +15570,8 @@ namespace {
      constexpr SpGradExpDofMapHelper<GpGradProd> BearingGeometry::oDofMapGpGradProd;
 
      BearingGeometry::BearingGeometry(HydroRootElement* pParent)
-          :pParent(pParent)
+          :pParent(pParent),
+           bDofMapUseInactiveNodes(false)
      {
 #if MBDYN_ENABLE_PROFILE
           memset(&profile, 0, sizeof(profile));
@@ -15611,6 +15613,9 @@ namespace {
 
                     rgNodes.insert(pNode);
                }
+
+               bDofMapUseInactiveNodes = (bDofMapUseInactiveNodes ||
+                                          dynamic_cast<const QuadFeIso9FrictionElem*>(pElem) != nullptr);
           }
      }
 
@@ -15636,7 +15641,12 @@ namespace {
           const HydroMesh* const pMesh = pParent->pGetMesh();
 
           for (const HydroNode* pNode: rgNodes) {
-               pMesh->GetPressure(pNode, oGradDof, dCoef);
+               if (bDofMapUseInactiveNodes) {
+                    // Because QuadFeIso9FrictionElem is cutting the negative pressure at integration points instead of nodes
+                    pNode->GetPressure(oGradDof, dCoef);
+               } else {
+                    pMesh->GetPressure(pNode, oGradDof, dCoef);
+               }
 
                (oDofMapSpGradient.*pFunc)(oGradDof);
 
