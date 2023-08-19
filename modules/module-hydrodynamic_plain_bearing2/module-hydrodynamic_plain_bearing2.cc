@@ -20852,12 +20852,28 @@ namespace {
                }
           }
 
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(pe);
+          oDofMap.GetDofStat(he);
+          oDofMap.GetDofStat(hdote);
+          oDofMap.GetDofStat(Ue);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(pe);
+          oDofMap.InsertDof(he);
+          oDofMap.InsertDof(hdote);
+          oDofMap.InsertDof(Ue);
+
+          oDofMap.InsertDone();
+
           const index_type iIntegRule = iSelectIntegrationRule(pe);
           const doublereal dEquationScale = pGetMesh()->pGetParent()->dGetScale(HydroRootElement::SCALE_REYNOLDS_EQU) / dCoef;
 
           if (iNumActiveNodes > 0) {
                const index_type iNumGauss = iGetNumGaussPoints(iIntegRule);
-               SpColVectorA<T, iNumNodes> fe;
+               SpColVector<T, iNumNodes> fe(iNumNodes, oDofMap);
 
                for (index_type i = 1; i <= iNumGauss; ++i) {
                     for (index_type j = 1; j <= iNumGauss; ++j) {
@@ -20870,20 +20886,22 @@ namespace {
                          const SpMatrix<doublereal, 2, iNumNodes>& B = rgGaussPntDat[idxGauss].B;
                          const SpMatrix<doublereal, iNumNodes, iNumNodes>& BTB = rgGaussPntDat[idxGauss].BTB;
 
-                         T h = Dot(N, he);
-                         T a0 = Dot(N, hdote);
+                         T h = Dot(N, he, oDofMap);
+                         T a0 = Dot(N, hdote, oDofMap);
 
                          pGeometry->GetNonNegativeClearance(h, h, &a0, &a0);
 
-                         fe += (BTB * pe) * EvalUnique(pow(h, 3) * alpha);
+                         const SpColVector<T, iNumNodes> BTBpe(BTB * pe, oDofMap);
+
+                         fe.Add(BTBpe * oDofMap.MapEval(pow(h, 3) * alpha), oDofMap);
 
                          for (index_type k = 1; k <= 2; ++k) {
-                              a0 += EvalUnique(Dot(N, Ue.GetCol(k)) * Dot(Transpose(B.GetRow(k)), he));
+                              a0 += oDofMap.MapEval(Dot(N, Ue.GetCol(k), oDofMap) * Dot(Transpose(B.GetRow(k)), he, oDofMap));
                          }
 
-                         a0 *= 12. * Dot(N, etae) * alpha;
+                         a0 = oDofMap.MapEval(12. * alpha * Dot(N, etae, oDofMap) * a0);
 
-                         fe += N * a0;
+                         fe.Add(N * a0, oDofMap);
                     }
                }
 
@@ -21122,6 +21140,26 @@ namespace {
                rgNodes[i - 1]->GetViscosity(etae(i));
           }
 
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(pe);
+          oDofMap.GetDofStat(paspe);
+          oDofMap.GetDofStat(he);
+          oDofMap.GetDofStat(U1e);
+          oDofMap.GetDofStat(U2e);
+          oDofMap.GetDofStat(tauc_0e);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(pe);
+          oDofMap.InsertDof(paspe);
+          oDofMap.InsertDof(he);
+          oDofMap.InsertDof(U1e);
+          oDofMap.InsertDof(U2e);
+          oDofMap.InsertDof(tauc_0e);
+
+          oDofMap.InsertDone();
+
           const index_type iIntegRule = iSelectIntegrationRule(pe, &paspe);
           const index_type iNumGaussPnt = iGetNumGaussPoints(iIntegRule);
 
@@ -21133,17 +21171,17 @@ namespace {
                     const SpColVector<doublereal, iNumNodes>& N = rgGaussPntDat[iGaussIdx].N;
                     const SpMatrix<doublereal, 2, iNumNodes>& B = rgGaussPntDat[iGaussIdx].B;
                     const doublereal detJ = rgGaussPntDat[iGaussIdx].detJ;
-                    T p = Dot(N, pe), dp_dx, dp_dz;
+                    T p = Dot(N, pe, oDofMap), dp_dx, dp_dz;
 
                     if (HydroFluid::CAVITATION_REGION == pGetFluid()->Cavitation(p)) {
                          SpGradientTraits<T>::ResizeReset(dp_dx, 0., 0); // set pressure gradient to zero if pressure is negative according to Guembel boundary condition
                          SpGradientTraits<T>::ResizeReset(dp_dz, 0., 0);
                     } else {
-                         dp_dx = Dot(Transpose(B.GetRow(1)), pe);
-                         dp_dz = Dot(Transpose(B.GetRow(2)), pe);
+                         dp_dx = Dot(Transpose(B.GetRow(1)), pe, oDofMap);
+                         dp_dz = Dot(Transpose(B.GetRow(2)), pe, oDofMap);
                     }
 
-                    T h = Dot(N, he);
+                    T h = Dot(N, he, oDofMap);
 
                     pGeometry->GetNonNegativeClearance(h, h);
 
@@ -21152,38 +21190,38 @@ namespace {
                     SpColVectorA<T, 2, 13> U1, U2, tauc_0;
 
                     for (index_type k = 1; k <= 2; ++k) {
-                         U1(k) = Dot(N, U1e.GetCol(k));
-                         U2(k) = Dot(N, U2e.GetCol(k));
+                         U1(k) = Dot(N, U1e.GetCol(k), oDofMap);
+                         U2(k) = Dot(N, U2e.GetCol(k), oDofMap);
                     }
 
                     T pasp{0.};
 
                     if (bContact) {
-                         pasp = Dot(N, paspe);
+                         pasp = Dot(N, paspe, oDofMap);
 
                          if (pasp < 0.) { // Could happen in the transition region
                               SpGradientTraits<T>::ResizeReset(pasp, 0., 0);
                          }
 
                          for (index_type k = 1; k <= 2; ++k) {
-                              tauc_0(k) = Dot(N, tauc_0e.GetCol(k));
+                              tauc_0(k) = Dot(N, tauc_0e.GetCol(k), oDofMap);
                          }
                     }
 
                     const T ptot = p + pasp;
 
-                    const SpColVector<T, 2> dU = EvalUnique(U1 - U2);
+                    const SpColVector<T, 2> dU(U1 - U2, oDofMap);
 
-                    const T tau_xy_p_h = 0.5 * h * dp_dx;
-                    const T tau_xy_U_h = eta * dU(1) / h;
-                    const T tau_yz_p_h = 0.5 * h * dp_dz;
-                    const T tau_yz_U_h = eta * dU(2) / h;
+                    const T tau_xy_p_h = oDofMap.MapEval(0.5 * h * dp_dx);
+                    const T tau_xy_U_h = oDofMap.MapEval(eta * dU(1) / h);
+                    const T tau_yz_p_h = oDofMap.MapEval(0.5 * h * dp_dz);
+                    const T tau_yz_U_h = oDofMap.MapEval(eta * dU(2) / h);
 
-                    const T tau_xy_0 = EvalUnique(-tau_xy_p_h + tau_xy_U_h);
-                    const T tau_yz_0 = EvalUnique(-tau_yz_p_h + tau_yz_U_h);
+                    const T tau_xy_0 = oDofMap.MapEval(-tau_xy_p_h + tau_xy_U_h);
+                    const T tau_yz_0 = oDofMap.MapEval(-tau_yz_p_h + tau_yz_U_h);
 
-                    const T tau_xy_h = EvalUnique(tau_xy_p_h + tau_xy_U_h);
-                    const T tau_yz_h = EvalUnique(tau_yz_p_h + tau_yz_U_h);
+                    const T tau_xy_h = oDofMap.MapEval(tau_xy_p_h + tau_xy_U_h);
+                    const T tau_yz_h = oDofMap.MapEval(tau_yz_p_h + tau_yz_U_h);
 
                     SetStress(r, s, tau_xy_0, tau_yz_0, tau_xy_h, tau_yz_h);
 
@@ -21223,8 +21261,8 @@ namespace {
                               //               as long as the relative clearance is small
                               //               in case of a cylindrical bearing.
 
-                              dF_0_Rt(iReactionIdx[i - 1]) += EvalUnique(tauc_0(i) * dA);
-                              dF_h_Rt(iReactionIdx[i - 1]) -= EvalUnique(tauc_0(i) * dA);
+                              dF_0_Rt(iReactionIdx[i - 1]) += tauc_0(i) * dA;
+                              dF_h_Rt(iReactionIdx[i - 1]) -= tauc_0(i) * dA;
                          }
                     }
 
