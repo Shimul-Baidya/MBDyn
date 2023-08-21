@@ -217,15 +217,15 @@ namespace {
                 const doublereal& SolTol,
                 doublereal& dSolErr) override;
 
-          bool MakeSolTest(const VectorHandler& XPrev,
-                           const VectorHandler& XCurr,
-                           const doublereal& dTol,
-                           doublereal& dTest);
+          bool NoxMakeSolTest(const VectorHandler& XPrev,
+                              const VectorHandler& XCurr,
+                              const doublereal& dTol,
+                              doublereal& dTest);
 
-          bool MakeResTest(const VectorHandler& oResVec,
-                           const doublereal& dTol,
-                           doublereal& dTest,
-                           doublereal& dTestDiff);
+          bool NoxMakeResTest(const VectorHandler& oResVec,
+                              const doublereal& dTol,
+                              doublereal& dTest,
+                              doublereal& dTestDiff);
      private:
           struct CPUTimeGuard
           {
@@ -422,7 +422,7 @@ namespace {
           // According to "Numerical recipes in C the art of scientific computing" / William H. Press [et al.]. – 2nd ed.
           const doublereal dFirstResFact = problem.getNumIterations() == 0 ? 1e-2 : 1.;
 
-          eStatus = oNoxSolver.MakeResTest(oResVec, dFirstResFact * dTolRes, dErrRes, dErrResDiff)
+          eStatus = oNoxSolver.NoxMakeResTest(oResVec, dFirstResFact * dTolRes, dErrRes, dErrResDiff)
                ? NOX::StatusTest::Converged
                : NOX::StatusTest::Unconverged;
 
@@ -528,7 +528,7 @@ namespace {
           const MyVectorHandler XPrev(XPrevE.GlobalLength(), XPrevE.Values());
           const MyVectorHandler XCurr(XCurrE.GlobalLength(), XCurrE.Values());
 
-          eStatus = oNoxSolver.MakeSolTest(XPrev, XCurr, dTolSol, dErrSol)
+          eStatus = oNoxSolver.NoxMakeSolTest(XPrev, XCurr, dTolSol, dErrSol)
                ? NOX::StatusTest::Converged
                : NOX::StatusTest::Unconverged;
 
@@ -844,20 +844,20 @@ namespace {
           }
      }
 
-     bool NoxNonlinearSolver::MakeSolTest(const VectorHandler& XPrev,
-                                          const VectorHandler& XCurr,
-                                          const doublereal& dTol,
-                                          doublereal& dTest)
+     bool NoxNonlinearSolver::NoxMakeSolTest(const VectorHandler& XPrev,
+                                             const VectorHandler& XCurr,
+                                             const doublereal& dTol,
+                                             doublereal& dTest)
      {
           DeltaX.ScalarAddMul(XCurr, XPrev, -1.);
 
           return NonlinearSolver::MakeSolTest(pSolver, DeltaX, dTol, dTest);
      }
 
-     bool NoxNonlinearSolver::MakeResTest(const VectorHandler& oResVec,
-                                          const doublereal& dTol,
-                                          doublereal& dTest,
-                                          doublereal& dTestDiff)
+     bool NoxNonlinearSolver::NoxMakeResTest(const VectorHandler& oResVec,
+                                             const doublereal& dTol,
+                                             doublereal& dTest,
+                                             doublereal& dTestDiff)
      {
           bool bStatus = NonlinearSolver::MakeResTest(pSolver, pNonlinearProblem, oResVec, dTol, dTest, dTestDiff);
 
@@ -886,7 +886,7 @@ namespace {
                // to enforce a complete check! Otherwise SolErr might not be evaluated at all.
                oSolverParam.sublist("Solver Options").set("Status Test Check Type", "Complete");
           }
-          
+
           int iSolverOutput = 0;
 
           if (outputIters()) {
@@ -934,7 +934,7 @@ namespace {
                } else if (uFlags & SUFFICIENT_DEC_COND_ARED_PRED) {
                     oLineSearchParam.sublist(strLineSearchMethod).set("Sufficient Decrease Condition", "Ared/Pred");
                }
-               
+
                Teuchos::ParameterList& oLineSearchMethod = oLineSearchParam.sublist(strLineSearchMethod);
                oLineSearchMethod.set("Max Iters", iMaxIterLineSearch);
                oLineSearchMethod.set("Minimum Step", dMinStep);
@@ -1178,10 +1178,10 @@ namespace {
                pNonlinearProblem->Residual(pRes, pAbsRes);
           } catch (const SolutionDataManager::ChangedEquationStructure& oErr) {
                DEBUGCERR("Caught exception change equation structure ...\n");
-               
+
                if (bHonorJacRequest) {
                     DEBUGCERR("Force update of preconditioner ...\n");
-                    
+
                     ForcePrecondRebuild();
                }
           }

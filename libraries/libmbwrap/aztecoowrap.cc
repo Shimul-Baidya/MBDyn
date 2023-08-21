@@ -331,13 +331,13 @@ const char* AmesosSolver::GetSolverName(unsigned uFlags)
 
      case LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_MUMPS:
           return "Mumps";
-          
+
      case LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_SCALAPACK:
           return "Scalapack";
 
      case LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_DSCPACK:
           return "Dscpack";
-          
+
      case LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_PARDISO:
           return "Pardiso";
 
@@ -346,10 +346,10 @@ const char* AmesosSolver::GetSolverName(unsigned uFlags)
 
      case LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_TAUCS:
           return "Taucs";
-          
+
      case LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_CSPARSE:
           return "CSparse";
-          
+
      default:
           throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
      }
@@ -648,31 +648,49 @@ pAllocateAztecOOSolutionManager(
 
      switch (uPrecondFlag) {
      case LinSol::SOLVER_FLAGS_ALLOWS_PRECOND_ILUT:
+#ifdef USE_MPI
           SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                  AztecOOSolutionManager,
                                  AztecOOSolutionManager(
-#ifdef USE_MPI
                                       oComm,
-#endif
                                       iNLD,
                                       iMaxIter,
                                       dTolRes,
                                       iVerbose,
                                       uPrecondFlag));
+#else
+          SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                 AztecOOSolutionManager,
+                                 AztecOOSolutionManager(
+                                      iNLD,
+                                      iMaxIter,
+                                      dTolRes,
+                                      iVerbose,
+                                      uPrecondFlag));
+#endif
           break;
 
      default:
+#ifdef USE_MPI
           SAFENEWWITHCONSTRUCTOR(pCurrSM,
                                  AztecOOPrecondSolutionManager,
                                  AztecOOPrecondSolutionManager(
-#ifdef USE_MPI
                                       oComm,
-#endif
                                       iNLD,
                                       iMaxIter,
                                       dTolRes,
                                       iVerbose,
                                       uPrecondFlag));
+#else
+          SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                                 AztecOOPrecondSolutionManager,
+                                 AztecOOPrecondSolutionManager(
+                                      iNLD,
+                                      iMaxIter,
+                                      dTolRes,
+                                      iVerbose,
+                                      uPrecondFlag));
+#endif
      }
 
      return pCurrSM;
@@ -690,16 +708,23 @@ pAllocateAmesosSolutionManager(
      SolutionManager* pCurrSM = nullptr;
 
      unsigned uSolverFlag = uSolverFlags & LinSol::SOLVER_FLAGS_PRECOND_MASK;
-
+#ifdef USE_MPI
      SAFENEWWITHCONSTRUCTOR(pCurrSM,
                             AmesosSolutionManager,
                             AmesosSolutionManager(
-#ifdef USE_MPI
                                  oComm,
-#endif
                                  iNLD,
                                  iVerbose,
                                  uSolverFlag));
+#else
+     SAFENEWWITHCONSTRUCTOR(pCurrSM,
+                            AmesosSolutionManager,
+                            AmesosSolutionManager(
+                                 iNLD,
+                                 iVerbose,
+                                 uSolverFlag));
+#endif
+
      return pCurrSM;
 }
 

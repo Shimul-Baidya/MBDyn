@@ -185,10 +185,10 @@ tplSingleStepIntegrator<N>::tplSingleStepIntegrator(const integer MaxIt,
 : StepNIntegrator(MaxIt, dT, dSolutionTol, 2, bmod_res_test),
   m_pXPrimeIntePrevReal{nullptr},
   m_pXPrimeIntePrevImag{nullptr},
-  m_b{0.}, // Fix use of not initialized memory reported by valgrind if DEBUG was enabled
-  m_c{0.},
-  m_d{0.},
-  m_e{0.}
+  m_b{{{{0.}}}}, // Fix use of not initialized memory reported by valgrind if DEBUG was enabled
+  m_c{{{0.}}},
+  m_d{{{0.}}},
+  m_e{{{0.}}}
 {
 }
 

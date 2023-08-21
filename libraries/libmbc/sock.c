@@ -84,7 +84,7 @@ ssize_t recvn(int fd, char *vptr, size_t n, int flags) {
 	ptr += nread;
     }
     return (n - nleft); 	/* return >= 0 */
-};
+}
 
 ssize_t sendn(int fd, const char* vptr, size_t n, int flags) {
     size_t nleft;
@@ -103,7 +103,7 @@ ssize_t sendn(int fd, const char* vptr, size_t n, int flags) {
         ptr += nwritten;
     }
     return n;
-};
+}
 
 int
 mbdyn_make_inet_socket(SOCKET* sock, struct sockaddr_in *name, const char *hostname,

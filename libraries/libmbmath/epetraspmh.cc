@@ -53,7 +53,6 @@
 
 EpetraSparseMatrixHandler::EpetraSparseMatrixHandler(const integer& iNumRows, const integer& iNumCols, integer iNumColsAlloc, const Epetra_Comm& oComm)
      :SparseMatrixHandler(iNumRows, iNumCols),
-      oComm(oComm),
       oEPM(::Copy, Epetra_Map(NRows, 1, oComm), Epetra_Map(NCols, 1, oComm), iNumColsAlloc),
       iNumColsAlloc(iNumColsAlloc)
 {
