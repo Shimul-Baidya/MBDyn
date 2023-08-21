@@ -63,6 +63,7 @@
 #include <memory>
 #include <set>
 #include <sstream>
+#include <unordered_set>
 #include <vector>
 
 #ifdef HAVE_CONFIG_H
@@ -592,6 +593,16 @@ namespace {
           ThermWallBoundCond();
           virtual ~ThermWallBoundCond();
 
+          int GetNumConnectedNodes() const {
+               return rgNodes.size();
+          }
+
+          void GetConnectedNodes(std::vector<const Node*>& rgConnectedNodes) const {
+               for (auto pNode: rgNodes) {
+                    rgConnectedNodes.push_back(pNode);
+               }
+          }
+
           void ParseInput(DataManager* pDM, MBDynParser& HP, const HydroRootElement* pParent);
 
           template <typename G>
@@ -1110,6 +1121,8 @@ namespace {
           virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const=0;
           virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const=0;
           virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const;
+          virtual int GetNumConnectedNodes() const;
+          virtual void GetConnectedNodes(std::vector<const Node*>& rgNodes) const;
 
           virtual void
           Update(const VectorHandler& XCurr,
@@ -1467,6 +1480,8 @@ namespace {
                              ThermalNodeAd* pExtThermNode);
 
           virtual ~ThermalCoupledNode();
+          virtual int GetNumConnectedNodes() const override;
+          virtual void GetConnectedNodes(std::vector<const Node*>& rgNodes) const override;
           virtual void GetTemperature(doublereal& T, doublereal = 0.) const override;
           virtual void GetTemperature(SpGradient& T, doublereal dCoef) const override;
           virtual void GetTemperature(GpGradProd& T, doublereal dCoef) const override;
@@ -1680,13 +1695,9 @@ namespace {
 
           template <typename G>
           struct NodeDataHydr {
-               G p, h, eta;
+               G p, h, eta, rho;
                SpColVectorA<G, 2, 12> U;
-          };
-
-          template <typename G>
-          struct NodeDataTherm {
-               G T;
+               G T, Pfc;
                SpColVectorA<G, 2, 12> U1, U2;
           };
 
@@ -2076,7 +2087,8 @@ namespace {
                            std::unique_ptr<FrictionModel>&& pFrictionModel,
                            const PressureNodeAd* pNode);
           virtual ~HydroCoupledNode();
-
+          virtual int GetNumConnectedNodes() const override;
+          virtual void GetConnectedNodes(std::vector<const Node*>& rgNodes) const override;
           virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const override;
           virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const override;
           virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const override;
@@ -2380,7 +2392,8 @@ namespace {
                                 std::unique_ptr<FrictionModel>&& pFrictionModel,
                                 PressureNodeAd* pExtNode);
           virtual ~HydroCoupledComprNode();
-
+          virtual int GetNumConnectedNodes() const override;
+          virtual void GetConnectedNodes(std::vector<const Node*>& rgNodes) const override;
           virtual integer iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const override;
           virtual integer iGetFirstDofIndex(sp_grad::SpFunctionCall eFunc) const override;
           virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const override;
@@ -2457,7 +2470,7 @@ namespace {
           virtual void
           ParseInput(DataManager* pDM, MBDynParser& HP)=0;
 
-          virtual void Initialize() = 0;
+          virtual void Initialize();
 
           virtual void
           GetClosestDistance2D(const SpColVector<doublereal, 2>& x1,
@@ -2516,24 +2529,8 @@ namespace {
                         SpColVector<doublereal, 3>& v) const=0;
 
           virtual void
-          GetPosition3D(const SpColVector<SpGradient, 2>& x,
-                        SpColVector<SpGradient, 3>& v) const=0;
-
-          virtual void
-          GetPosition3D(const SpColVector<GpGradProd, 2>& x,
-                        SpColVector<GpGradProd, 3>& v) const=0;
-
-          virtual void
           GetTangentCoordSys(const SpColVector<doublereal, 2>& x,
                              SpMatrix<doublereal, 3, 3>& Rt) const=0;
-
-          virtual void
-          GetTangentCoordSys(const SpColVector<SpGradient, 2>& x,
-                             SpMatrix<SpGradient, 3, 3>& Rt) const=0;
-
-          virtual void
-          GetTangentCoordSys(const SpColVector<GpGradProd, 2>& x,
-                             SpMatrix<GpGradProd, 3, 3>& Rt) const=0;
 
           doublereal
           dGetNodeDistance2D(const Node2D* pNode1,
@@ -2550,8 +2547,7 @@ namespace {
                            const SpColVector<doublereal, 3>& dF_0_Rt,
                            const SpColVector<doublereal, 3>& dF_h_Rt,
                            const SpColVector<doublereal, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func)=0;
+                           const SpGradExpDofMapHelper<doublereal>& oDofMapElem)=0;
 
           virtual void
           AddReactionForce(const SpColVector<doublereal, 2>& x,
@@ -2560,8 +2556,7 @@ namespace {
                            const SpColVector<SpGradient, 3>& dF_0_Rt,
                            const SpColVector<SpGradient, 3>& dF_h_Rt,
                            const SpColVector<SpGradient, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func)=0;
+                           const SpGradExpDofMapHelper<SpGradient>& oDofMapElem)=0;
 
           virtual void
           AddReactionForce(const SpColVector<doublereal, 2>& x,
@@ -2570,17 +2565,16 @@ namespace {
                            const SpColVector<GpGradProd, 3>& dF_0_Rt,
                            const SpColVector<GpGradProd, 3>& dF_h_Rt,
                            const SpColVector<GpGradProd, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func)=0;
+                           const SpGradExpDofMapHelper<GpGradProd>& oDofMapElem)=0;
 
           virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const=0;
           virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const=0;
 
-          virtual void
-          Update(doublereal dCoef,
-                 SpFunctionCall func)=0;
+          virtual void Update(doublereal dCoef, SpFunctionCall func)=0;
 
           virtual void Update(const VectorHandler& Y, doublereal dCoef)=0;
+
+          virtual void Reset(SpFunctionCall func)=0;
 
           virtual void
           AssRes(SubVectorHandler& WorkVec,
@@ -2613,7 +2607,7 @@ namespace {
                         const VectorHandler& XCurr,
                         SpGradientAssVecBase::SpAssMode mode)=0;
 
-          virtual int iGetNumConnectedNodes(void) const=0;
+          virtual int GetNumConnectedNodes(void) const=0;
           virtual void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const=0;
           HydroRootElement* pGetParent() const { return pParent; }
           virtual std::ostream& PrintLogFile(std::ostream& os) const=0;
@@ -2633,9 +2627,23 @@ namespace {
           virtual void GetMovingMeshOffset(SpColVector<SpGradient, 2>& x) const = 0;
           virtual void GetMovingMeshOffset(SpColVector<GpGradProd, 2>& x) const = 0;
 
+          SpGradExpDofMapHelper<SpGradient>& GetDofMap() { return oDofMapSpGradient; }
      protected:
           virtual doublereal dGetMinClearance() const=0;
           virtual doublereal dGetPocketHeightMesh(const SpColVector<doublereal, 2>& x) const=0;
+
+          const SpGradExpDofMapHelper<doublereal>& GetDofMap(const SpGradientVectorHandler<doublereal>&) const {
+               return oDofMapDoublereal;
+          }
+          const SpGradExpDofMapHelper<SpGradient>& GetDofMap(const SpGradientVectorHandler<SpGradient>&) const {
+               return oDofMapSpGradient;
+          }
+
+          const SpGradExpDofMapHelper<GpGradProd>& GetDofMap(const SpGradientVectorHandler<GpGradProd>&) const {
+               return oDofMapGpGradProd;
+          }
+
+          void RebuildDofMap();
 
 #if MBDYN_ENABLE_PROFILE
           enum { PROF_RES = 0, PROF_JAC = 1};
@@ -2644,8 +2652,13 @@ namespace {
                std::chrono::nanoseconds dtOperatorPlus[2];
           } profile;
 #endif
+          static constexpr SpGradExpDofMapHelper<doublereal> oDofMapDoublereal{};
+          static constexpr SpGradExpDofMapHelper<GpGradProd> oDofMapGpGradProd{};
+          SpGradExpDofMapHelper<SpGradient> oDofMapSpGradient;
 
      private:
+          inline void ElemUpdateDofMap(void (SpGradExpDofMapHelper<SpGradient>::*pFunc)(const SpGradient&));
+
           template <typename T> inline void
           GetNonNegativeClearanceTpl(const T& h,
                                      T& hn,
@@ -2653,6 +2666,8 @@ namespace {
                                      T* dhn_dt) const;
 
           HydroRootElement* pParent;
+          std::unordered_set<const HydroNode*> rgNodes;
+          bool bDofMapUseInactiveNodes;
      };
 
      class RigidBodyBearing: public BearingGeometry {
@@ -2670,7 +2685,7 @@ namespace {
           GetOffsetNode2() const { return o2_R2; }
           const SpMatrix<doublereal, 3, 3>&
           GetOrientationNode2() const { return Rb2; }
-          virtual int iGetNumConnectedNodes(void) const override;
+          virtual int GetNumConnectedNodes(void) const override;
           virtual void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
           virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const override;
           virtual integer iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const override;
@@ -2725,24 +2740,8 @@ namespace {
                         SpColVector<doublereal, 3>& v) const override;
 
           virtual void
-          GetPosition3D(const SpColVector<SpGradient, 2>& x,
-                        SpColVector<SpGradient, 3>& v) const override;
-
-          virtual void
-          GetPosition3D(const SpColVector<GpGradProd, 2>& x,
-                        SpColVector<GpGradProd, 3>& v) const override;
-
-          virtual void
           GetTangentCoordSys(const SpColVector<doublereal, 2>& x,
                              SpMatrix<doublereal, 3, 3>& Rt) const override;
-
-          virtual void
-          GetTangentCoordSys(const SpColVector<SpGradient, 2>& x,
-                             SpMatrix<SpGradient, 3, 3>& Rt) const override;
-
-          virtual void
-          GetTangentCoordSys(const SpColVector<GpGradProd, 2>& x,
-                             SpMatrix<GpGradProd, 3, 3>& Rt) const override;
 
           virtual void
           GetStructNodeOffset(const HydroNode* pHydroNode, SpColVector<doublereal, 3>& v) const override;
@@ -2860,8 +2859,7 @@ namespace {
                            const SpColVector<doublereal, 3>& dF_0_Rt,
                            const SpColVector<doublereal, 3>& dF_h_Rt,
                            const SpColVector<doublereal, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func) override;
+                           const SpGradExpDofMapHelper<doublereal>& oDofMapElem) override;
 
           virtual void
           AddReactionForce(const SpColVector<doublereal, 2>& x,
@@ -2870,8 +2868,7 @@ namespace {
                            const SpColVector<SpGradient, 3>& dF_0_Rt,
                            const SpColVector<SpGradient, 3>& dF_h_Rt,
                            const SpColVector<SpGradient, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func) override;
+                           const SpGradExpDofMapHelper<SpGradient>& oDofMapElem) override;
 
           virtual void
           AddReactionForce(const SpColVector<doublereal, 2>& x,
@@ -2880,14 +2877,15 @@ namespace {
                            const SpColVector<GpGradProd, 3>& dF_0_Rt,
                            const SpColVector<GpGradProd, 3>& dF_h_Rt,
                            const SpColVector<GpGradProd, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func) override;
+                           const SpGradExpDofMapHelper<GpGradProd>& oDofMapElem) override;
 
           virtual void
           Update(doublereal dCoef, SpFunctionCall func) override;
 
           virtual void
           Update(const VectorHandler& Y, doublereal dCoef) override;
+
+          virtual void Reset(SpFunctionCall func) override;
 
           virtual void
           AssRes(SubVectorHandler& WorkVec,
@@ -2959,10 +2957,15 @@ namespace {
           pFindMeshPocket(const SpColVector<GpGradProd, 2>& x) const override;
      private:
           template <typename T>
+          struct ReactionForce;
+
+          template <typename T>
           void UnivAssRes(SpGradientAssVec<T>& WorkMat,
                           doublereal dCoef,
                           const SpGradientVectorHandler<T>& XCurr,
-                          SpFunctionCall func);
+                          SpFunctionCall func,
+                          const SpGradExpDofMapHelper<T>& oDofMap,
+                          const ReactionForce<T>& oReact);
 
           template <typename T>
           class Boundary {
@@ -3004,7 +3007,7 @@ namespace {
                SpColVectorA<T, 3> F2_R1;
                SpColVectorA<T, 3> M2_R1;
 
-               inline void Reset();
+               inline void Reset(const SpGradExpDofMapHelper<T>& oDofMap);
           };
 
           template <typename T>
@@ -3015,18 +3018,18 @@ namespace {
                            const SpColVector<T, 3>& dF_0_Rt,
                            const SpColVector<T, 3>& dF_h_Rt,
                            const SpColVector<T, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func,
+                           const SpGradExpDofMapHelper<T>& oDofMapElem,
+                           const SpGradExpDofMapHelper<T>& oDofMap,
                            ReactionForce<T>& oReact);
 
           inline const
-          ReactionForce<doublereal>& GetReactionForce(const doublereal& dummy) const;
+          ReactionForce<doublereal>& GetReactionForce(const SpGradientVectorHandler<doublereal>&) const;
 
           inline const
-          ReactionForce<SpGradient>& GetReactionForce(const SpGradient& dummy) const;
+          ReactionForce<SpGradient>& GetReactionForce(const SpGradientVectorHandler<SpGradient>&) const;
 
           inline const
-          ReactionForce<GpGradProd>& GetReactionForce(const GpGradProd& dummy) const;
+          ReactionForce<GpGradProd>& GetReactionForce(const SpGradientVectorHandler<GpGradProd>&) const;
 
           Boundary<doublereal> oBound;
           Boundary<SpGradient> oBound_grad;
@@ -3080,8 +3083,7 @@ namespace {
                            const SpColVector<doublereal, 3>& dF_0_Rt,
                            const SpColVector<doublereal, 3>& dF_h_Rt,
                            const SpColVector<doublereal, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func) override;
+                           const SpGradExpDofMapHelper<doublereal>& oDofMapElem) override;
 
           virtual void
           AddReactionForce(const SpColVector<doublereal, 2>& x,
@@ -3090,8 +3092,7 @@ namespace {
                            const SpColVector<SpGradient, 3>& dF_0_Rt,
                            const SpColVector<SpGradient, 3>& dF_h_Rt,
                            const SpColVector<SpGradient, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func) override;
+                           const SpGradExpDofMapHelper<SpGradient>& oDofMapElem) override;
 
           virtual void
           AddReactionForce(const SpColVector<doublereal, 2>& x,
@@ -3100,14 +3101,15 @@ namespace {
                            const SpColVector<GpGradProd, 3>& dF_0_Rt,
                            const SpColVector<GpGradProd, 3>& dF_h_Rt,
                            const SpColVector<GpGradProd, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func) override;
+                           const SpGradExpDofMapHelper<GpGradProd>& oDofMapElem) override;
 
           virtual void
           Update(doublereal dCoef, SpFunctionCall func) override;
 
           virtual void
           Update(const VectorHandler& Y, doublereal dCoef) override;
+
+          virtual void Reset(SpFunctionCall func) override;
 
           virtual void
           AssRes(SubVectorHandler& WorkVec,
@@ -3179,10 +3181,15 @@ namespace {
 
      private:
           template <typename T>
+          struct ReactionForce;
+
+          template <typename T>
           void UnivAssRes(SpGradientAssVec<T>& WorkMat,
                           doublereal dCoef,
                           const SpGradientVectorHandler<T>& XCurr,
-                          SpFunctionCall func);
+                          SpFunctionCall func,
+                          const SpGradExpDofMapHelper<T>& oDofMap,
+                          const ReactionForce<T>& oReact);
 
           template <typename T>
           struct Boundary {
@@ -3225,7 +3232,7 @@ namespace {
                SpColVectorA<T, 3> F2_R2;
                SpColVectorA<T, 3> M2_R2;
 
-               inline void Reset();
+               inline void Reset(const SpGradExpDofMapHelper<T>& oDofMap);
           };
 
           template <typename T>
@@ -3236,18 +3243,18 @@ namespace {
                            const SpColVector<T, 3>& dF_0_Rt,
                            const SpColVector<T, 3>& dF_h_Rt,
                            const SpColVector<T, 2>& dM_h_Rt,
-                           doublereal dCoef,
-                           SpFunctionCall func,
+                           const SpGradExpDofMapHelper<T>& oDofMapElem,
+                           const SpGradExpDofMapHelper<T>& oDofMap,
                            ReactionForce<T>& oReact);
 
           inline const ReactionForce<doublereal>&
-          GetReactionForce(const doublereal& dummy) const;
+          GetReactionForce(const SpGradientVectorHandler<doublereal>&) const;
 
           inline const ReactionForce<SpGradient>&
-          GetReactionForce(const SpGradient& dummy) const;
+          GetReactionForce(const SpGradientVectorHandler<SpGradient>&) const;
 
           inline const ReactionForce<GpGradProd>&
-          GetReactionForce(const GpGradProd& dummy) const;
+          GetReactionForce(const SpGradientVectorHandler<GpGradProd>&) const;
 
           Boundary<doublereal> oBound;
           Boundary<SpGradient> oBound_grad;
@@ -4474,6 +4481,10 @@ namespace {
      public:
           explicit HydroMesh(HydroRootElement* pParent);
           virtual ~HydroMesh();
+          int GetNumConnectedNodes() const;
+          void GetConnectedNodes(std::vector<const Node*>& rgNodes) const;
+          int GetNumConnectedElements() const;
+          void GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const;
           /**
            *  @param p returns the pressure at the node by taking into account
            *               the specific boundary conditions of the selected elements
@@ -4506,6 +4517,8 @@ namespace {
 
           virtual void
           Update(const VectorHandler& Y, doublereal dCoef);
+
+          inline void Reset(SpFunctionCall func);
 
           inline doublereal dGetMaxPressureGradient() const;
 
@@ -4906,6 +4919,8 @@ namespace {
                                    doublereal dDefScale,
                                    doublereal dPressScale);
           virtual ~ComplianceModel();
+          virtual int GetNumConnectedElements() const;
+          virtual void GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const;
           virtual int iGetNumNodes() const;
           virtual void SetNode(int iNode, HydroNode* pNode);
           virtual HydroNode* pGetNode(int iNode) const;
@@ -4977,6 +4992,9 @@ namespace {
                                         SolverBase::StepIntegratorType eStepInteg,
                                         ComplianceMatrixArray&& rgMatrices);
           virtual ~ComplianceModelNodal();
+
+          virtual int GetNumConnectedElements() const override;
+          virtual void GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -5121,6 +5139,9 @@ namespace {
                                               DEhdInterpolOption eInterpolOption,
                                               SolverBase::StepIntegratorType eStepInteg);
           virtual ~ComplianceModelNodalDouble();
+
+          virtual int GetNumConnectedElements() const override;
+          virtual void GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const override;
 
           template <typename T>
           void AssRes(SpGradientAssVec<T>& WorkVec,
@@ -5572,8 +5593,8 @@ namespace {
           virtual unsigned int iGetPrivDataIdx(const char *s) const override;
           virtual doublereal dGetPrivData(unsigned int i) const override;
           int GetNumConnectedNodes(void) const override;
-          void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
-          void SetValue(DataManager *pDM, VectorHandler& X, VectorHandler& XP,
+          virtual void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
+          virtual void SetValue(DataManager *pDM, VectorHandler& X, VectorHandler& XP,
                         SimulationEntity::Hints *ph) override;
           std::ostream& Restart(std::ostream& out) const override;
           virtual unsigned int iGetInitialNumDof(void) const override;
@@ -5669,7 +5690,9 @@ namespace {
 
           inline void UnivWorkSpaceDim(integer* piNumRows, integer* piNumCols, SpFunctionCall func) const;
           inline void AddDofOwner(HydroDofOwner* pDofOwner);
+
           void RebuildDofMap();
+
           inline void InitPrivData();
           inline const HydroDofOwner* pFindDofOwner(unsigned int i, sp_grad::SpFunctionCall eFunc) const;
           void PrintNodeHeader(const Node2D* pNode, Node2D::NodeType eType, std::ostream& out) const;
@@ -6228,9 +6251,7 @@ namespace {
 
                oDofOwner.clear();
 
-               for (auto i = rgDofOwner.cbegin(); i != rgDofOwner.cend(); ++i) {
-                    HydroDofOwner* const pDofOwner = *i;
-
+               for (HydroDofOwner* pDofOwner: rgDofOwner) {
                     const integer iNumDof = (rgFuncs[j] == SpFunctionCall::INITIAL_ASS_RES)
                          ? pDofOwner->iGetInitialNumDof()
                          : pDofOwner->iGetNumDof();
@@ -6461,8 +6482,10 @@ namespace {
           profile.dtUpdateNodes[PROF_JAC] += high_resolution_clock::now() - start;
           start = high_resolution_clock::now();
 #endif
+          pMesh->Reset(SpFunctionCall::REGULAR_JAC);
 
           SpGradientSubMatrixHandler& WorkMat = WorkMatVar.SetSparseGradient();
+
           WorkMat.Reset();
 
           for (auto i = rgElements.begin(); i != rgElements.end(); ++i) {
@@ -6543,6 +6566,8 @@ namespace {
           for (auto i = rgNodes.begin(); i != rgNodes.end(); ++i) {
                (*i)->Update(XCurr, XPrimeCurr, dCoef, SpFunctionCall::REGULAR_RES);
           }
+
+          pMesh->Reset(SpFunctionCall::REGULAR_RES);
 
 #if MBDYN_ENABLE_PROFILE
           profile.dtUpdateNodes[PROF_RES] += high_resolution_clock::now() - start;
@@ -6691,18 +6716,29 @@ namespace {
      HydroRootElement::GetNumConnectedNodes(void) const
      {
           HYDRO_ASSERT(pMesh != nullptr);
-          HYDRO_ASSERT(pMesh->pGetGeometry() != nullptr);
 
-          return pMesh->pGetGeometry()->iGetNumConnectedNodes();
+          int iNumConnectedNodes = pMesh->GetNumConnectedNodes();
+
+          for (const auto& pNode: rgNodes) {
+               iNumConnectedNodes += pNode->GetNumConnectedNodes();
+          }
+
+          return iNumConnectedNodes;
      }
 
      void
      HydroRootElement::GetConnectedNodes(std::vector<const Node *>& connectedNodes) const
      {
           HYDRO_ASSERT(pMesh != nullptr);
-          HYDRO_ASSERT(pMesh->pGetGeometry() != nullptr);
 
-          pMesh->pGetGeometry()->GetConnectedNodes(connectedNodes);
+          connectedNodes.clear();
+          connectedNodes.reserve(GetNumConnectedNodes());
+
+          pMesh->GetConnectedNodes(connectedNodes);
+
+          for (const auto& pNode: rgNodes) {
+               pNode->GetConnectedNodes(connectedNodes);
+          }
      }
 
      void
@@ -6764,7 +6800,10 @@ namespace {
                     (*i)->Update(XCurr, *pXPrimeCurr, 1., SpFunctionCall::INITIAL_ASS_JAC);
                }
 
+               pMesh->Reset(SpFunctionCall::INITIAL_ASS_JAC);
+
                SpGradientSubMatrixHandler& WorkMat = WorkMatVar.SetSparseGradient();
+
                WorkMat.Reset();
 
                for (auto i = rgElements.begin(); i != rgElements.end(); ++i) {
@@ -6800,6 +6839,8 @@ namespace {
                for (auto i = rgNodes.begin(); i != rgNodes.end(); ++i) {
                     (*i)->Update(XCurr, *pXPrimeCurr, 1., SpFunctionCall::INITIAL_ASS_RES);
                }
+
+               pMesh->Reset(SpFunctionCall::INITIAL_ASS_RES);
 
 #if HYDRO_DEBUG > 0
                integer iSizeCurr = WorkVec.iGetSize();
@@ -8508,6 +8549,15 @@ namespace {
           return 0;
      }
 
+     int Node2D::GetNumConnectedNodes() const
+     {
+          return 0;
+     }
+
+     void Node2D::GetConnectedNodes(std::vector<const Node*>& rgNodes) const
+     {
+     }
+
      void Node2D::BeforePredict(VectorHandler& X,
                                 VectorHandler& XP,
                                 std::deque<VectorHandler*>& qXPrev,
@@ -8756,6 +8806,16 @@ namespace {
 
      ThermalCoupledNode::~ThermalCoupledNode()
      {
+     }
+
+     int ThermalCoupledNode::GetNumConnectedNodes() const
+     {
+          return 1;
+     }
+
+     void ThermalCoupledNode::GetConnectedNodes(std::vector<const Node*>& rgNodes) const
+     {
+          rgNodes.push_back(pExtThermNode);
      }
 
      void ThermalCoupledNode::GetTemperature(doublereal& T, doublereal dCoef) const
@@ -9292,100 +9352,149 @@ namespace {
           std::array<NodeDataHydr<G>, iNumNodes> rgNDH;
           const BearingGeometry* const pGeometry = pGetMesh()->pGetGeometry();
 
+          SpGradExpDofMapHelper<G> oDofMap;
+
           for (index_type i = 0; i < iNumNodes; ++i) {
                rgNodes[i]->GetClearance(rgNDH[i].h);
+
                pGeometry->GetNonNegativeClearance(rgNDH[i].h, rgNDH[i].h);
+
+               oDofMap.GetDofStat(rgNDH[i].h);
+
                rgNodes[i]->GetViscosity(rgNDH[i].eta, dCoef);
+
+               oDofMap.GetDofStat(rgNDH[i].eta);
+
                rgNodes[i]->GetHydraulicVelocity(rgNDH[i].U);
+
+               oDofMap.GetDofStat(rgNDH[i].U(iDirection));
+
+               rgNodes[i]->GetDensity(rgNDH[i].rho, dCoef);
+
+               oDofMap.GetDofStat(rgNDH[i].rho);
+
+               rgNodes[i]->GetPressure(rgNDH[i].p, dCoef);
+
+               oDofMap.GetDofStat(rgNDH[i].p);
+
+               if (uNodeDataReq & ND_THERMAL) {
+                    rgNodes[i]->GetTemperature(rgNDH[i].T, dCoef);
+
+                    oDofMap.GetDofStat(rgNDH[i].T);
+
+                    rgNodes[i]->GetVelocity(rgNDH[i].U1, rgNDH[i].U2);
+
+                    oDofMap.GetDofStat(rgNDH[i].U1(iDirection));
+                    oDofMap.GetDofStat(rgNDH[i].U2(iDirection));
+               }
+
+               if (uNodeDataReq & ND_THERMAL_WALL) {
+                    rgNodes[i]->GetContactFrictionLossDens(rgNDH[i].Pfc);
+
+                    oDofMap.GetDofStat(rgNDH[i].Pfc);
+               }
           }
 
-          const G h = 0.5 * (rgNDH[iNodeDown].h + rgNDH[iNodeUp].h);
+          oDofMap.Reset();
+
+          for (index_type i = 0; i < iNumNodes; ++i) {
+               oDofMap.InsertDof(rgNDH[i].h);
+               oDofMap.InsertDof(rgNDH[i].eta);
+               oDofMap.InsertDof(rgNDH[i].U(iDirection));
+               oDofMap.InsertDof(rgNDH[i].rho);
+               oDofMap.InsertDof(rgNDH[i].p);
+
+               if (uNodeDataReq & ND_THERMAL) {
+                    oDofMap.InsertDof(rgNDH[i].T);
+                    oDofMap.InsertDof(rgNDH[i].U1(iDirection));
+                    oDofMap.InsertDof(rgNDH[i].U2(iDirection));
+               }
+
+               if (uNodeDataReq & ND_THERMAL_WALL) {
+                    oDofMap.InsertDof(rgNDH[i].Pfc);
+               }
+          }
+
+          oDofMap.InsertDone();
+
+          G h, U, a0;
+
+          oDofMap.MapAssign(h, 0.5 * (rgNDH[iNodeDown].h + rgNDH[iNodeUp].h));
+          oDofMap.MapAssign(U, 0.5 * (rgNDH[iNodeDown].U(iDirection) + rgNDH[iNodeUp].U(iDirection)));
+
           const G eta = 0.5 * (rgNDH[iNodeDown].eta + rgNDH[iNodeUp].eta);
-          const G U = 0.5 * (rgNDH[iNodeDown].U(iDirection) + rgNDH[iNodeUp].U(iDirection));
 
           for (index_type j = 0; j <= ePressSource; ++j) {
-               for (index_type i = 0; i < iNumNodes; ++i) {
-                    switch (j) {
-                    case PRESSURE_FROM_NODE:
-                         rgNodes[i]->GetPressure(rgNDH[i].p, dCoef);
-                         break;
-
-                    case PRESSURE_FROM_MESH:
-                         pGetMesh()->GetPressure(rgNodes[i], rgNDH[i].p, dCoef);
-                         break;
-                    };
+               switch (j) {
+               case PRESSURE_FROM_MESH:
+                    for (index_type i = 0; i < iNumNodes; ++i) {
+                         rgNodes[i]->pGetFluid()->Cavitation(rgNDH[i].p);
+                    }
+                    break;
                }
 
                const G dp_du = (rgNDH[iNodeUp].p - rgNDH[iNodeDown].p) / du;
 
-               const G a0 = h * h / (12. * eta) * dp_du;
+               oDofMap.MapAssign(a0, h * h / (12. * eta) * dp_du);
 
-               rgFlux[j].wu = EvalUnique(U - a0);
-               rgFlux[j].qu = EvalUnique(h * rgFlux[j].wu);
+               oDofMap.MapAssign(rgFlux[j].wu, U - a0);
+               oDofMap.MapAssign(rgFlux[j].qu, h * rgFlux[j].wu);
 
                const index_type iUpwindu = rgFlux[j].qu >= 0. ? iNodeDown : iNodeUp;
 
-               G rho;
+               oDofMap.MapAssign(rgFlux[j].mdotu, rgNDH[iUpwindu].rho * rgFlux[j].qu);
 
-               rgNodes[iUpwindu]->GetDensity(rho, dCoef);
+               switch (j) {
+               case PRESSURE_FROM_NODE:
+                    if (uNodeDataReq & ND_THERMAL) {
+                         G dU;
 
-               rgFlux[j].mdotu = EvalUnique(rho * rgFlux[j].qu);
+                         oDofMap.MapAssign(dU, 0.5 * (rgNDH[iNodeDown].U1(iDirection) + rgNDH[iNodeUp].U1(iDirection)
+                                                      - rgNDH[iNodeDown].U2(iDirection) - rgNDH[iNodeUp].U2(iDirection)));
 
-               if ((uNodeDataReq & ND_THERMAL) && j == PRESSURE_FROM_NODE) {
-                    std::array<NodeDataTherm<G>, iNumNodes> rgNDT;
+                         doublereal beta = 0.;
 
-                    for (index_type i = 0; i < iNumNodes; ++i) {
-                         rgNodes[i]->GetTemperature(rgNDT[i].T, dCoef);
-                         rgNodes[i]->GetVelocity(rgNDT[i].U1, rgNDT[i].U2);
-                    }
+                         if (rgNDH[iNodeUp].p > pGetFluid()->dGetRefPressure() &&
+                             rgNDH[iNodeDown].p > pGetFluid()->dGetRefPressure()) {
+                              doublereal rhoc, drhoc_dT;
 
-                    const G dU = 0.5 * (rgNDT[iNodeDown].U1(iDirection) + rgNDT[iNodeUp].U1(iDirection)
-                                        - rgNDT[iNodeDown].U2(iDirection) - rgNDT[iNodeUp].U2(iDirection));
+                              pGetFluid()->GetDensity(pGetFluid()->dGetRefPressure(),
+                                                      pGetFluid()->dGetRefTemperature(),
+                                                      rhoc,
+                                                      nullptr,
+                                                      &drhoc_dT);
 
-                    doublereal beta = 0.;
-
-                    if (rgNDH[iNodeUp].p > pGetFluid()->dGetRefPressure() &&
-                        rgNDH[iNodeDown].p > pGetFluid()->dGetRefPressure()) {
-                         doublereal rhoc, drhoc_dT;
-
-                         pGetFluid()->GetDensity(pGetFluid()->dGetRefPressure(),
-                                                 pGetFluid()->dGetRefTemperature(),
-                                                 rhoc,
-                                                 nullptr,
-                                                 &drhoc_dT);
-
-                         beta = -drhoc_dT / rhoc;
-                    }
-
-                    G cp;
-
-                    pGetFluid()->GetSpecificHeat(rgNDH[iUpwindu].p,
-                                                 rgNDT[iUpwindu].T,
-                                                 rho,
-                                                 cp,
-                                                 HydroFluid::SPEC_HEAT_TRUE);
-
-                    oNode.Qu = EvalUnique(rgFlux[j].qu * (beta * rgNDT[iUpwindu].T * dp_du
-                                                          - rho * cp * (rgNDT[iNodeUp].T - rgNDT[iNodeDown].T) / du)
-                                          + h * a0 * dp_du + eta * dU * dU / h);
-
-                    if (uNodeDataReq & ND_THERMAL_WALL) {
-                         std::array<G, iNumNodes> Pfci;
-
-                         for (index_type i = 0; i < iNumNodes; ++i) {
-                              rgNodes[i]->GetContactFrictionLossDens(Pfci[i]);
+                              beta = -drhoc_dT / rhoc;
                          }
 
-                         const G a1 = 0.5 * h / eta * dp_du;
+                         G cp;
 
-                         const G Psi0 = dU / h - a1;
-                         const G Psih = dU / h + a1;
+                         pGetFluid()->GetSpecificHeat(rgNDH[iUpwindu].p,
+                                                      rgNDH[iUpwindu].T,
+                                                      rgNDH[iUpwindu].rho,
+                                                      cp,
+                                                      HydroFluid::SPEC_HEAT_TRUE);
 
-                         oNode.A0 = EvalUnique(eta * Psi0 * Psi0);
-                         oNode.Ah = EvalUnique(eta * Psih * Psih);
-                         oNode.Ac = EvalUnique(0.5 * (Pfci[iNodeUp] + Pfci[iNodeDown]) / h);
+                         oDofMap.MapAssign(oNode.Qu, rgFlux[j].qu * (beta * rgNDH[iUpwindu].T * dp_du
+                                                                     - rgNDH[iUpwindu].rho * cp * (rgNDH[iNodeUp].T - rgNDH[iNodeDown].T) / du)
+                                           + h * a0 * dp_du + eta * dU * dU / h);
+
+                         if (uNodeDataReq & ND_THERMAL_WALL) {
+                              G a1, Psi0, Psih;
+
+                              oDofMap.MapAssign(a1, 0.5 * h / eta * dp_du);
+
+                              oDofMap.MapAssign(Psi0, dU / h - a1);
+                              oDofMap.MapAssign(Psih, dU / h + a1);
+
+                              oDofMap.MapAssign(oNode.A0, eta * Psi0 * Psi0);
+                              oDofMap.MapAssign(oNode.Ah, eta * Psih * Psih);
+                              oDofMap.MapAssign(oNode.Ac, 0.5 * (rgNDH[iNodeUp].Pfc + rgNDH[iNodeDown].Pfc) / h);
+                         }
                     }
+                    break;
                }
+
           }
      }
 
@@ -10536,6 +10645,16 @@ namespace {
      integer HydroCoupledNode::iGetNumColsWorkSpace(sp_grad::SpFunctionCall eFunc) const
      {
           return 1 + HydroIncompressibleNode::iGetNumColsWorkSpace(eFunc);
+     }
+
+     int HydroCoupledNode::GetNumConnectedNodes() const
+     {
+          return 1;
+     }
+
+     void HydroCoupledNode::GetConnectedNodes(std::vector<const Node*>& rgNodes) const
+     {
+          rgNodes.push_back(pExtNode);
      }
 
      void HydroCoupledNode::GetPressure(doublereal& p, doublereal) const
@@ -11876,6 +11995,16 @@ namespace {
      {
      }
 
+     int HydroCoupledComprNode::GetNumConnectedNodes() const
+     {
+          return 1;
+     }
+
+     void HydroCoupledComprNode::GetConnectedNodes(std::vector<const Node*>& rgNodes) const
+     {
+          rgNodes.push_back(pExtNode);
+     }
+
      integer HydroCoupledComprNode::iGetFirstEquationIndex(sp_grad::SpFunctionCall eFunc) const
      {
           return pExtNode->iGetFirstRowIndex() + 1;
@@ -12072,6 +12201,15 @@ namespace {
      {
      }
 
+     int ComplianceModel::GetNumConnectedElements() const
+     {
+          return 0;
+     }
+
+     void ComplianceModel::GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const
+     {
+     }
+
      int ComplianceModel::iGetNumNodes() const
      {
           return rgNodes.size();
@@ -12218,6 +12356,18 @@ namespace {
      ComplianceModelNodal::~ComplianceModelNodal()
      {
 
+     }
+
+     int ComplianceModelNodal::GetNumConnectedElements() const
+     {
+          return pModalJoint != nullptr ? 1 : 0;
+     }
+
+     void ComplianceModelNodal::GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const
+     {
+          if (pModalJoint) {
+               rgElem.push_back(pModalJoint);
+          }
      }
 
      void
@@ -12674,6 +12824,28 @@ namespace {
 
      ComplianceModelNodalDouble::~ComplianceModelNodalDouble()
      {
+     }
+
+     int ComplianceModelNodalDouble::GetNumConnectedElements() const
+     {
+          int iNumConnectedElements = 0;
+
+          for (auto pModalJoint: rgModalJoints) {
+               if (pModalJoint) {
+                    ++iNumConnectedElements;
+               }
+          }
+
+          return iNumConnectedElements;
+     }
+
+     void ComplianceModelNodalDouble::GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const
+     {
+          for (auto pModalJoint: rgModalJoints) {
+               if (pModalJoint) {
+                    rgElem.push_back(pModalJoint);
+               }
+          }
      }
 
      template <typename T>
@@ -15351,8 +15523,12 @@ namespace {
           oParser.Parse(strFileName, pMesh, rgElements, rgNodes, dPressScale);
      }
 
+     constexpr SpGradExpDofMapHelper<doublereal> BearingGeometry::oDofMapDoublereal;
+     constexpr SpGradExpDofMapHelper<GpGradProd> BearingGeometry::oDofMapGpGradProd;
+
      BearingGeometry::BearingGeometry(HydroRootElement* pParent)
-          :pParent(pParent)
+          :pParent(pParent),
+           bDofMapUseInactiveNodes(false)
      {
 #if MBDYN_ENABLE_PROFILE
           memset(&profile, 0, sizeof(profile));
@@ -15368,6 +15544,97 @@ namespace {
           }
 
 #endif
+     }
+
+     void BearingGeometry::Initialize()
+     {
+          rgNodes.clear();
+          rgNodes.reserve(pParent->iGetNumNodes());
+
+          const index_type iNumElements = pParent->iGetNumElements();
+
+          for (index_type iElem = 0; iElem < iNumElements; ++iElem) {
+               const HydroElement* const pElem = pParent->pGetElement(iElem);
+
+               switch (pElem->GetElementType()) {
+               case HydroElement::FRICTION_ELEM:
+                    break;
+               default:
+                    continue;
+               }
+
+               const index_type iNumNodes = pElem->iGetNumNodes();
+
+               for (index_type iNode = 0; iNode < iNumNodes; ++iNode) {
+                    const HydroNode* const pNode = pElem->pGetNode(iNode);
+
+                    rgNodes.insert(pNode);
+               }
+
+               bDofMapUseInactiveNodes = (bDofMapUseInactiveNodes ||
+                                          dynamic_cast<const QuadFeIso9FrictionElem*>(pElem) != nullptr);
+          }
+     }
+
+     void BearingGeometry::RebuildDofMap()
+     {
+          oDofMapSpGradient.ResetDofStat();
+
+          ElemUpdateDofMap(&SpGradExpDofMapHelper<SpGradient>::GetDofStat);
+
+          oDofMapSpGradient.Reset();
+
+          ElemUpdateDofMap(&SpGradExpDofMapHelper<SpGradient>::InsertDof);
+
+          oDofMapSpGradient.InsertDone();
+     }
+
+     void BearingGeometry::ElemUpdateDofMap(void (SpGradExpDofMapHelper<SpGradient>::*pFunc)(const SpGradient&))
+     {
+          constexpr doublereal dCoef = 1.;
+
+          SpGradient oGradDof;
+          SpColVectorA<SpGradient, 2, 12> oGradVec1, oGradVec2;
+          const HydroMesh* const pMesh = pParent->pGetMesh();
+
+          for (const HydroNode* pNode: rgNodes) {
+               if (bDofMapUseInactiveNodes) {
+                    // Because QuadFeIso9FrictionElem is cutting the negative pressure at integration points instead of nodes
+                    pNode->GetPressure(oGradDof, dCoef);
+               } else {
+                    pMesh->GetPressure(pNode, oGradDof, dCoef);
+               }
+
+               (oDofMapSpGradient.*pFunc)(oGradDof);
+
+               if (pNode->GetContactPressure(oGradDof)) {
+                    (oDofMapSpGradient.*pFunc)(oGradDof);
+
+                    pNode->GetContactStress(oGradVec1);
+
+                    for (auto& g: oGradVec1) {
+                         (oDofMapSpGradient.*pFunc)(g);
+                    }
+               }
+
+               pNode->GetClearance(oGradDof);
+
+               (oDofMapSpGradient.*pFunc)(oGradDof);
+
+               pNode->GetViscosity(oGradDof);
+
+               (oDofMapSpGradient.*pFunc)(oGradDof);
+
+               pNode->GetVelocity(oGradVec1, oGradVec2);
+
+               for (auto& g: oGradVec1) {
+                    (oDofMapSpGradient.*pFunc)(g);
+               }
+
+               for (auto& g: oGradVec2) {
+                    (oDofMapSpGradient.*pFunc)(g);
+               }
+          }
      }
 
      void
@@ -15523,7 +15790,7 @@ namespace {
 #endif
      }
 
-     int RigidBodyBearing::iGetNumConnectedNodes(void) const
+     int RigidBodyBearing::GetNumConnectedNodes(void) const
      {
           return 2;
      }
@@ -15531,9 +15798,11 @@ namespace {
      void
      RigidBodyBearing::GetConnectedNodes(std::vector<const Node *>& connectedNodes) const
      {
-          connectedNodes.resize(iGetNumConnectedNodes());
-          connectedNodes[0] = pNode1;
-          connectedNodes[1] = pNode2;
+          HYDRO_ASSERT(pNode1 != nullptr);
+          HYDRO_ASSERT(pNode2 != nullptr);
+
+          connectedNodes.push_back(pNode1);
+          connectedNodes.push_back(pNode2);
      }
 
      void RigidBodyBearing::WorkSpaceDim(integer* piNumRows, integer* piNumCols, sp_grad::SpFunctionCall eFunc) const
@@ -15724,18 +15993,6 @@ namespace {
           GetPosition3DTpl(x1, v1);
      }
 
-     void CylindricalBearing::GetPosition3D(const SpColVector<SpGradient, 2>& x1,
-                                            SpColVector<SpGradient, 3>& v1) const
-     {
-          GetPosition3DTpl(x1, v1);
-     }
-
-     void CylindricalBearing::GetPosition3D(const SpColVector<GpGradProd, 2>& x1,
-                                            SpColVector<GpGradProd, 3>& v1) const
-     {
-          GetPosition3DTpl(x1, v1);
-     }
-
      template <typename T>
      inline void
      CylindricalBearing::GetPosition3DTpl(const SpColVector<T, 2>& x1,
@@ -15778,20 +16035,6 @@ namespace {
 
      void CylindricalBearing::GetTangentCoordSys(const SpColVector<doublereal, 2>& x,
                                                  SpMatrix<doublereal, 3, 3>& Rt) const
-     {
-          GetTangentCoordSysTpl(x, Rt);
-     }
-
-     void
-     CylindricalBearing::GetTangentCoordSys(const SpColVector<SpGradient, 2>& x,
-                                            SpMatrix<SpGradient, 3, 3>& Rt) const
-     {
-          GetTangentCoordSysTpl(x, Rt);
-     }
-
-     void
-     CylindricalBearing::GetTangentCoordSys(const SpColVector<GpGradProd, 2>& x,
-                                            SpMatrix<GpGradProd, 3, 3>& Rt) const
      {
           GetTangentCoordSysTpl(x, Rt);
      }
@@ -15977,21 +16220,11 @@ namespace {
 
      void CylindricalMeshAtShaft::Initialize()
      {
+          CylindricalBearing::Initialize();
+
           oBound.Initialize();
           oBound_grad.Initialize();
           oBound_gradp.Initialize();
-
-          integer iNumRows, iNumCols;
-
-          // Will be always higher than WorkSpaceDim
-          WorkSpaceDim(&iNumRows, &iNumCols, SpFunctionCall::INITIAL_ASS_FLAG);
-
-          const unsigned iNumDof = pGetParent()->iGetNumDof() + iNumCols;
-
-          oReaction_grad.F1_R1.ResizeReset(iNumDof);
-          oReaction_grad.M1_R1.ResizeReset(iNumDof);
-          oReaction_grad.F2_R1.ResizeReset(iNumDof);
-          oReaction_grad.M2_R1.ResizeReset(iNumDof);
      }
 
      template <typename T>
@@ -16085,16 +16318,49 @@ namespace {
           HYDRO_TRACE("X2P=[" << X2P << "].';\n");
           HYDRO_TRACE("omega2=[" << omega2 << "].';\n");
 
-          const SpColVector<T, 3> a0 = R1 * (o1 + Rb1_v1);
-          const SpColVector<T, 3> a2 = EvalUnique(X1 - X2 + a0);
-          const SpColVector<T, 3> a1 = EvalUnique(X1P + Cross(omega1, a0)
-                                                  - X2P - Cross(omega2, a2));
+          T w, dw_dt;
+
+          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
+
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(X1);
+          oDofMap.GetDofStat(R1);
+          oDofMap.GetDofStat(X1P);
+          oDofMap.GetDofStat(omega1);
+          oDofMap.GetDofStat(X2);
+          oDofMap.GetDofStat(R2);
+          oDofMap.GetDofStat(X2P);
+          oDofMap.GetDofStat(omega2);
+          oDofMap.GetDofStat(w);
+          oDofMap.GetDofStat(dw_dt);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(X1);
+          oDofMap.InsertDof(R1);
+          oDofMap.InsertDof(X1P);
+          oDofMap.InsertDof(omega1);
+          oDofMap.InsertDof(X2);
+          oDofMap.InsertDof(R2);
+          oDofMap.InsertDof(X2P);
+          oDofMap.InsertDof(omega2);
+          oDofMap.InsertDof(w);
+          oDofMap.InsertDof(dw_dt);
+
+          oDofMap.InsertDone();
+
+          const SpColVector<T, 3> a0(R1 * (o1 + Rb1_v1), oDofMap);
+          const SpColVector<T, 3> a2(X1 - X2 + a0, oDofMap);
+          const SpColVector<T, 3> a1(X1P + Cross(omega1, a0, oDofMap)
+                                     - X2P - Cross(omega2, a2, oDofMap), oDofMap);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a0);
           HYDRO_DUMP_VAR(rParent.pGetParent(), a1);
           HYDRO_DUMP_VAR(rParent.pGetParent(), a2);
 
-          const SpColVector<T, 3> b = EvalUnique(Rb2T_R2T * a2 - Rb2T_o2);
+          const SpColVector<T, 3> Rb2T_R2T_a2(Rb2T_R2T * a2, oDofMap);
+          const SpColVector<T, 3> b(Rb2T_R2T_a2 - Rb2T_o2, oDofMap);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), b);
 
@@ -16104,7 +16370,7 @@ namespace {
 
           HYDRO_TRACE("R=" << R << ";\n");
 
-          const T a5 = EvalUnique(b(1) * b(1) + b(2) * b(2));
+          const T a5 = oDofMap.MapEval(b(1) * b(1) + b(2) * b(2));
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a5);
 
@@ -16112,11 +16378,11 @@ namespace {
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), a3);
 
-          const T cos_Phi2 = b(1) / a3;
-          const T sin_Phi2 = b(2) / a3;
+          const T cos_Phi2 = oDofMap.MapEval(b(1) / a3);
+          const T sin_Phi2 = oDofMap.MapEval(b(2) / a3);
           const T& z2 = b(3);
 
-          T Phi2 = atan2(sin_Phi2, cos_Phi2);
+          T Phi2 = oDofMap.MapEval(atan2(sin_Phi2, cos_Phi2));
 
           if (Phi2 < 0.) {
                // Attention: pFindBearingPockets assumes that Phi1 is in range 0 ... 2 * pi
@@ -16138,54 +16404,56 @@ namespace {
                SpGradientTraits<T>::ResizeReset(dDeltay2_dz2, 0., 0);
           }
 
-          T w, dw_dt;
-
-          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
-
-          const T h0 = R + Deltay2 - a3;
+          const T h0 = oDofMap.MapEval(R + Deltay2 - a3);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), h0);
 
-          h = EvalUnique(h0 + w);
+          oDofMap.MapAssign(h, h0 + w);
 
           HYDRO_DUMP_VAR(rParent.pGetParent(), h);
 
           HYDRO_TRACE("h=" << h << ";\n");
 
-          const SpColVector<T, 3> db_dt = Rb2T_R2T * a1;
+          const SpColVector<T, 3> db_dt(Rb2T_R2T * a1, oDofMap);
 
           HYDRO_TRACE("db_dt=[" << db_dt << "].';\n");
 
-          const T dx2_dt = R * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a5;
+          const T dx2_dt = oDofMap.MapEval(R * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a5);
+
           const T& dz2_dt = db_dt(3);
-          const T dDeltay2_dt = dDeltay2_dx2 * dx2_dt + dDeltay2_dz2 * dz2_dt;
-          dh_dt = EvalUnique(dDeltay2_dt - (b(1) * db_dt(1) + b(2) * db_dt(2)) / a3 + dw_dt);
+
+          const T dDeltay2_dt = oDofMap.MapEval(dDeltay2_dx2 * dx2_dt + dDeltay2_dz2 * dz2_dt);
+
+          oDofMap.MapAssign(dh_dt, dDeltay2_dt - (b(1) * db_dt(1) + b(2) * db_dt(2)) / a3 + dw_dt);
 
           HYDRO_TRACE("dh_dt=" << dh_dt << ";\n");
 
-          const SpColVector<T, 3> v2{EvalUnique((R + Deltay2) * cos_Phi2),
-                                     EvalUnique((R + Deltay2) * sin_Phi2),
+          const SpColVector<T, 3> v2{oDofMap.MapEval((R + Deltay2) * cos_Phi2),
+                                     oDofMap.MapEval((R + Deltay2) * sin_Phi2),
                                      z2};
 
-          const SpColVector<T, 3> vh{EvalUnique(h0 * cos_Phi2),
-                                     EvalUnique(h0 * sin_Phi2),
+          const SpColVector<T, 3> vh{oDofMap.MapEval(h0 * cos_Phi2),
+                                     oDofMap.MapEval(h0 * sin_Phi2),
                                      T{}};
 
           HYDRO_TRACE("v2=[" << v2 << "].';\n");
           HYDRO_TRACE("vh=[" << vh << "].';\n");
 
-          const SpColVector<T, 3> P1Dot = EvalUnique(X1P + Cross(omega1, a0));
-          const SpColVector<T, 3> P2Dot = EvalUnique(X2P + Cross(omega2, (R2 * (o2 + Rb2 * v2))) - Cross(omega1, (R2 * (Rb2 * vh))));
+          const SpColVector<T, 3> P1Dot(X1P + Cross(omega1, a0, oDofMap), oDofMap);
+
+          const SpColVector<T, 3> Rb2_v2(Rb2 * v2, oDofMap);
+          const SpColVector<T, 3> Rb2_vh(Rb2 * vh, oDofMap);
+          const SpColVector<T, 3> P2Dot(X2P + Cross(omega2, R2 * (o2 + Rb2_v2), oDofMap) - Cross(omega1, R2 * Rb2_vh, oDofMap), oDofMap);
 
           const auto& Rbt1 = pNode->GetTangentCoordSys();
 
-          const SpColVector<T, 3> P1Dot_R1 = Transpose(R1) * P1Dot;
-          const SpColVector<T, 3> P2Dot_R1 = Transpose(R1) * P2Dot;
+          const SpColVector<T, 3> P1Dot_R1(Transpose(R1) * P1Dot, oDofMap);
+          const SpColVector<T, 3> P2Dot_R1(Transpose(R1) * P2Dot, oDofMap);
 
-          U1 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P1Dot_R1;
-          U2 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P2Dot_R1;
+          U1.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P1Dot_R1, oDofMap);
+          U2.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt1)) * P2Dot_R1, oDofMap);
 
-          U = EvalUnique((U2 - U1) * 0.5);
+          U.MapAssign((U2 - U1) * 0.5, oDofMap);
 
 #if HYDRO_DEBUG > 1
           std::cout.precision(prec1);
@@ -16202,12 +16470,34 @@ namespace {
           const auto& Rb2 = rParent.GetOrientationNode2();
           const doublereal r = rParent.dGetMeshRadius();
 
-          const SpColVector<T, 3> R2_Rb2_e1 = R2 * Rb2.GetCol(1);
+          SpGradExpDofMapHelper<T> oDofMap;
 
-          x(1) = r * atan2(Dot(R1 * Rb1.GetCol(2), R2_Rb2_e1),
-                           Dot(R1 * Rb1.GetCol(1), R2_Rb2_e1));
+          oDofMap.GetDofStat(x);
+          oDofMap.GetDofStat(X1);
+          oDofMap.GetDofStat(R1);
+          oDofMap.GetDofStat(X2);
+          oDofMap.GetDofStat(R2);
 
-          x(2) = Dot(Rb1.GetCol(3), Transpose(R1) * (X2 + R2 * o2 - X1) - o1);
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(x);
+          oDofMap.InsertDof(X1);
+          oDofMap.InsertDof(R1);
+          oDofMap.InsertDof(X2);
+          oDofMap.InsertDof(R2);
+
+          oDofMap.InsertDone();
+
+          const SpColVector<T, 3> R2_Rb2_e1(R2 * Rb2.GetCol(1), oDofMap);
+
+          x(1) = r * atan2(Dot(R1 * Rb1.GetCol(2), R2_Rb2_e1, oDofMap),
+                           Dot(R1 * Rb1.GetCol(1), R2_Rb2_e1, oDofMap));
+
+          const SpColVector<T, 3> R2_o2(R2 * o2, oDofMap);
+          const SpColVector<T, 3> dX(X2 + R2_o2 - X1, oDofMap);
+          const SpColVector<T, 3> dX_R1(Transpose(R1) * dX, oDofMap);
+
+          x(2) = Dot(Rb1.GetCol(3), dX_R1 - o1, oDofMap);
      }
 
      void CylindricalMeshAtShaft::GetMovingMeshOffset(SpColVector<doublereal, 2>& x) const
@@ -16276,15 +16566,14 @@ namespace {
                                               const SpColVector<doublereal, 3>& dF_0_Rt,
                                               const SpColVector<doublereal, 3>& dF_h_Rt,
                                               const SpColVector<doublereal, 2>& dM_h_Rt,
-                                              doublereal dCoef,
-                                              SpFunctionCall func)
+                                              const SpGradExpDofMapHelper<doublereal>& oDofMapElem)
      {
 #if MBDYN_ENABLE_PROFILE
           using namespace std::chrono;
           auto start = high_resolution_clock::now();
 #endif
 
-          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, dCoef, func, oReaction);
+          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, oDofMapElem, oDofMapDoublereal, oReaction);
 
 #if MBDYN_ENABLE_PROFILE
           profile.dtAddForce[PROF_RES] += high_resolution_clock::now() - start;
@@ -16298,15 +16587,14 @@ namespace {
                                               const SpColVector<SpGradient, 3>& dF_0_Rt,
                                               const SpColVector<SpGradient, 3>& dF_h_Rt,
                                               const SpColVector<SpGradient, 2>& dM_h_Rt,
-                                              doublereal dCoef,
-                                              SpFunctionCall func)
+                                              const SpGradExpDofMapHelper<SpGradient>& oDofMapElem)
      {
 #if MBDYN_ENABLE_PROFILE
           using namespace std::chrono;
           auto start = high_resolution_clock::now();
 #endif
 
-          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, dCoef, func, oReaction_grad);
+          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, oDofMapElem, oDofMapSpGradient, oReaction_grad);
 
 #if MBDYN_ENABLE_PROFILE
           profile.dtAddForce[PROF_JAC] += high_resolution_clock::now() - start;
@@ -16320,19 +16608,18 @@ namespace {
                                               const SpColVector<GpGradProd, 3>& dF_0_Rt,
                                               const SpColVector<GpGradProd, 3>& dF_h_Rt,
                                               const SpColVector<GpGradProd, 2>& dM_h_Rt,
-                                              doublereal dCoef,
-                                              SpFunctionCall func)
+                                              const SpGradExpDofMapHelper<GpGradProd>& oDofMapElem)
      {
-          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, dCoef, func, oReaction_gradp);
+          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, oDofMapElem, oDofMapGpGradProd, oReaction_gradp);
      }
 
      template <typename T>
-     void CylindricalMeshAtShaft::ReactionForce<T>::Reset()
+     void CylindricalMeshAtShaft::ReactionForce<T>::Reset(const SpGradExpDofMapHelper<T>& oDofMap)
      {
-          F1_R1.ResizeReset(0);
-          M1_R1.ResizeReset(0);
-          F2_R1.ResizeReset(0);
-          M2_R1.ResizeReset(0);
+          F1_R1.ResizeReset(oDofMap);
+          M1_R1.ResizeReset(oDofMap);
+          F2_R1.ResizeReset(oDofMap);
+          M2_R1.ResizeReset(oDofMap);
      }
 
      template <typename T>
@@ -16343,24 +16630,22 @@ namespace {
                                               const SpColVector<T, 3>& dF2_0_Rt1,
                                               const SpColVector<T, 3>& dF1_h_Rt1,
                                               const SpColVector<T, 2>& dM1_h_Rt1,
-                                              doublereal dCoef,
-                                              SpFunctionCall func,
+                                              const SpGradExpDofMapHelper<T>& oDofMapElem,
+                                              const SpGradExpDofMapHelper<T>& oDofMap,
                                               ReactionForce<T>& oReact)
      {
 #if MBDYN_ENABLE_PROFILE
           using namespace std::chrono;
           auto start = high_resolution_clock::now();
 #endif
-          const SpColVector<T, 3> dF1_R1 = EvalUnique(Rbt1 * dF1_h_Rt1);
-          const SpColVector<T, 3> dM1_h_R1 = Rbt1.GetCol(1) * dM1_h_Rt1(1) + Rbt1.GetCol(3) * dM1_h_Rt1(2);
+          const SpColVector<T, 3> dF1_R1(Rbt1 * dF1_h_Rt1, oDofMapElem);
+          const SpColVector<T, 3> dM1_h_R1(Rbt1.GetCol(1) * dM1_h_Rt1(1) + Rbt1.GetCol(3) * dM1_h_Rt1(2), oDofMapElem);
+          const SpColVector<T, 3> dF2_R1(Rbt1 * dF2_0_Rt1, oDofMapElem);
 
-          oReact.F1_R1 += dF1_R1;
-          oReact.M1_R1 += EvalUnique(Cross(Rb1_v1, dF1_R1) + dM1_h_R1);
-
-          const SpColVector<T, 3> dF2_R1 = EvalUnique(Rbt1 * dF2_0_Rt1);
-
-          oReact.F2_R1 += dF2_R1;
-          oReact.M2_R1 += EvalUnique(Cross(Rb1_v1, dF2_R1) - dM1_h_R1);
+          oReact.F1_R1.Add(dF1_R1, oDofMap);
+          oReact.M1_R1.Add(Cross(Rb1_v1, dF1_R1) + dM1_h_R1, oDofMap);
+          oReact.F2_R1.Add(dF2_R1, oDofMap);
+          oReact.M2_R1.Add(Cross(Rb1_v1, dF2_R1) - dM1_h_R1, oDofMap);
 
 #if GRADIENT_DEBUG >= 2
           for (integer i = 1; i <= 3; ++i)
@@ -16376,19 +16661,19 @@ namespace {
      }
 
      const CylindricalMeshAtShaft::ReactionForce<doublereal>&
-     CylindricalMeshAtShaft::GetReactionForce(const doublereal&) const
+     CylindricalMeshAtShaft::GetReactionForce(const SpGradientVectorHandler<doublereal>&) const
      {
           return oReaction;
      }
 
      const CylindricalMeshAtShaft::ReactionForce<SpGradient>&
-     CylindricalMeshAtShaft::GetReactionForce(const SpGradient&) const
+     CylindricalMeshAtShaft::GetReactionForce(const SpGradientVectorHandler<SpGradient>&) const
      {
           return oReaction_grad;
      }
 
      const CylindricalMeshAtShaft::ReactionForce<GpGradProd >&
-     CylindricalMeshAtShaft::GetReactionForce(const GpGradProd&) const
+     CylindricalMeshAtShaft::GetReactionForce(const SpGradientVectorHandler<GpGradProd>&) const
      {
           return oReaction_gradp;
      }
@@ -16403,14 +16688,12 @@ namespace {
           case SpFunctionCall::INITIAL_DER_RES:
           case SpFunctionCall::INITIAL_ASS_RES:
                oBound.Update(dCoef, func);
-               oReaction.Reset();
                break;
 
           case SpFunctionCall::REGULAR_JAC:
           case SpFunctionCall::INITIAL_DER_JAC:
           case SpFunctionCall::INITIAL_ASS_JAC:
                oBound_grad.Update(dCoef, func);
-               oReaction_grad.Reset();
                break;
 
           default:
@@ -16422,7 +16705,29 @@ namespace {
      CylindricalMeshAtShaft::Update(const VectorHandler& Y, doublereal dCoef)
      {
           oBound_gradp.Update(dCoef, SpFunctionCall::REGULAR_JAC);
-          oReaction_gradp.Reset();
+          oReaction_gradp.Reset(oDofMapGpGradProd);
+     }
+
+     void
+     CylindricalMeshAtShaft::Reset(SpFunctionCall func)
+     {
+          switch (func) {
+          case SpFunctionCall::REGULAR_RES:
+          case SpFunctionCall::INITIAL_DER_RES:
+          case SpFunctionCall::INITIAL_ASS_RES:
+               oReaction.Reset(oDofMapDoublereal);
+               break;
+
+          case SpFunctionCall::REGULAR_JAC:
+          case SpFunctionCall::INITIAL_DER_JAC:
+          case SpFunctionCall::INITIAL_ASS_JAC:
+               RebuildDofMap();
+               oReaction_grad.Reset(oDofMapSpGradient);
+               break;
+
+          default:
+               HYDRO_ASSERT(0);
+          }
      }
 
      void
@@ -16505,7 +16810,7 @@ namespace {
                                          const SpGradientVectorHandler<T>& XPrimeCurr,
                                          SpFunctionCall func)
      {
-          UnivAssRes(WorkMat, dCoef, XCurr, func);
+          UnivAssRes(WorkMat, dCoef, XCurr, func, GetDofMap(XCurr), GetReactionForce(XCurr));
      }
 
 
@@ -16514,14 +16819,16 @@ namespace {
                                                 const SpGradientVectorHandler<T>& XCurr,
                                                 SpFunctionCall func)
      {
-          UnivAssRes(WorkMat, 1., XCurr, func);
+          UnivAssRes(WorkMat, 1., XCurr, func, GetDofMap(XCurr), GetReactionForce(XCurr));
      }
 
      template <typename T>
      void CylindricalMeshAtShaft::UnivAssRes(SpGradientAssVec<T>& WorkVec,
                                              doublereal dCoef,
                                              const SpGradientVectorHandler<T>& XCurr,
-                                             SpFunctionCall func)
+                                             SpFunctionCall func,
+                                             const SpGradExpDofMapHelper<T>& oDofMap,
+                                             const ReactionForce<T>& oReact)
      {
 #if GRADIENT_DEBUG >= 2
           std::cerr << "func=" << func << std::endl;
@@ -16546,14 +16853,12 @@ namespace {
           pNode2->GetXCurr(X2, dCoef, func);
           pNode2->GetRCurr(R2, dCoef, func);
 
-          const ReactionForce<T>& oReact = GetReactionForce(X1(1));
-
           const T lambda = -Dot(Rb1.GetCol(3), (Transpose(R1) * (X1 - X2 - R2 * o2) + o1))
                / Dot(Rb1.GetCol(3), (Transpose(R1) * (R2 * Rb2.GetCol(3))));
-          const SpColVector<T, 3> F1 = EvalUnique((R1 * oReact.F1_R1) * dInitAss);
-          const SpColVector<T, 3> M1 = EvalUnique((R1 * oReact.M1_R1) * dInitAss + Cross((R1 * o1), F1));
-          const SpColVector<T, 3> F2 = EvalUnique((R1 * oReact.F2_R1) * dInitAss);
-          const SpColVector<T, 3> M2 = EvalUnique((R1 * oReact.M2_R1) * dInitAss + Cross((R2 * (o2 + Rb2.GetCol(3) * lambda)), F2));
+          const SpColVector<T, 3> F1((R1 * oReact.F1_R1) * dInitAss, oDofMap);
+          const SpColVector<T, 3> M1((R1 * oReact.M1_R1) * dInitAss + Cross((R1 * o1), F1), oDofMap);
+          const SpColVector<T, 3> F2((R1 * oReact.F2_R1) * dInitAss, oDofMap);
+          const SpColVector<T, 3> M2((R1 * oReact.M2_R1) * dInitAss + Cross((R2 * (o2 + Rb2.GetCol(3) * lambda)), F2), oDofMap);
 
           const integer iFirstMomIndexNode1 = (func & INITIAL_ASS_FLAG) ? pNode1->iGetFirstPositionIndex() : pNode1->iGetFirstMomentumIndex();
           const integer iFirstMomIndexNode2 = (func & INITIAL_ASS_FLAG) ? pNode2->iGetFirstPositionIndex() : pNode2->iGetFirstMomentumIndex();
@@ -16654,21 +16959,11 @@ namespace {
 
      void CylindricalMeshAtBearing::Initialize()
      {
+          CylindricalBearing::Initialize();
+
           oBound.Initialize();
           oBound_grad.Initialize();
           oBound_gradp.Initialize();
-
-          integer iNumRows, iNumCols;
-
-          // Will be always higher than WorkSpaceDim
-          WorkSpaceDim(&iNumRows, &iNumCols, SpFunctionCall::INITIAL_ASS_FLAG);
-
-          const unsigned iNumDof = pGetParent()->iGetNumDof() + iNumCols;
-
-          oReaction_grad.F1_R2.ResizeReset(iNumDof);
-          oReaction_grad.M1_R2.ResizeReset(iNumDof);
-          oReaction_grad.F2_R2.ResizeReset(iNumDof);
-          oReaction_grad.M2_R2.ResizeReset(iNumDof);
      }
 
      void
@@ -16720,14 +17015,12 @@ namespace {
           case SpFunctionCall::INITIAL_DER_RES:
           case SpFunctionCall::INITIAL_ASS_RES:
                oBound.Update(dCoef, func);
-               oReaction.Reset();
                break;
 
           case SpFunctionCall::REGULAR_JAC:
           case SpFunctionCall::INITIAL_DER_JAC:
           case SpFunctionCall::INITIAL_ASS_JAC:
                oBound_grad.Update(dCoef, func);
-               oReaction_grad.Reset();
                break;
 
           default:
@@ -16739,7 +17032,29 @@ namespace {
      CylindricalMeshAtBearing::Update(const VectorHandler& Y, doublereal dCoef)
      {
           oBound_gradp.Update(dCoef, SpFunctionCall::REGULAR_JAC);
-          oReaction_gradp.Reset();
+          oReaction_gradp.Reset(oDofMapGpGradProd);
+     }
+
+     void
+     CylindricalMeshAtBearing::Reset(SpFunctionCall func)
+     {
+          switch (func) {
+          case SpFunctionCall::REGULAR_RES:
+          case SpFunctionCall::INITIAL_DER_RES:
+          case SpFunctionCall::INITIAL_ASS_RES:
+               oReaction.Reset(oDofMapDoublereal);
+               break;
+
+          case SpFunctionCall::REGULAR_JAC:
+          case SpFunctionCall::INITIAL_DER_JAC:
+          case SpFunctionCall::INITIAL_ASS_JAC:
+               RebuildDofMap();
+               oReaction_grad.Reset(oDofMapSpGradient);
+               break;
+
+          default:
+               HYDRO_ASSERT(0);
+          }
      }
 
      void
@@ -16822,7 +17137,7 @@ namespace {
                                            const SpGradientVectorHandler<T>& XPrimeCurr,
                                            SpFunctionCall func)
      {
-          UnivAssRes(WorkMat, dCoef, XCurr, func);
+          UnivAssRes(WorkMat, dCoef, XCurr, func, GetDofMap(XCurr), GetReactionForce(XCurr));
      }
 
 
@@ -16831,7 +17146,7 @@ namespace {
                                                   const SpGradientVectorHandler<T>& XCurr,
                                                   SpFunctionCall func)
      {
-          UnivAssRes(WorkMat, 1., XCurr, func);
+          UnivAssRes(WorkMat, 1., XCurr, func, GetDofMap(XCurr), GetReactionForce(XCurr));
      }
 
      template <typename T>
@@ -16839,7 +17154,9 @@ namespace {
      CylindricalMeshAtBearing::UnivAssRes(SpGradientAssVec<T>& WorkVec,
                                           doublereal dCoef,
                                           const SpGradientVectorHandler<T>& XCurr,
-                                          SpFunctionCall func)
+                                          SpFunctionCall func,
+                                          const SpGradExpDofMapHelper<T>& oDofMap,
+                                          const ReactionForce<T>& oReact)
      {
           SpColVectorA<T, 3, 1> X1, X2;
           SpMatrixA<T, 3, 3, 3> R1, R2;
@@ -16858,16 +17175,23 @@ namespace {
           const SpMatrix<doublereal, 3, 3>& Rb1 = GetOrientationNode1();
           const SpMatrix<doublereal, 3, 3>& Rb2 = GetOrientationNode2();
 
-          const ReactionForce<T>& oReact = GetReactionForce(X1(1));
-
           const doublereal dInitAss = pGetParent()->dGetStartupFactor();
 
           const T lambda = -Dot(Rb2.GetCol(3), (Transpose(R2) * (X1 + (R1 * o1) - X2) - o2))
                / Dot(Rb2.GetCol(3), (Transpose(R2) * (R1 * Rb1.GetCol(3))));
-          const SpColVector<T, 3> F1 = EvalUnique((R2 * oReact.F1_R2) * dInitAss);
-          const SpColVector<T, 3> M1 = EvalUnique((R2 * oReact.M1_R2) * dInitAss + Cross((R1 * (o1 + Rb1.GetCol(3) * lambda)), F1));
-          const SpColVector<T, 3> F2 = EvalUnique((R2 * oReact.F2_R2) * dInitAss);
-          const SpColVector<T, 3> M2 = EvalUnique((R2 * oReact.M2_R2) * dInitAss + Cross(R2 * o2, F2));
+
+          const SpColVector<T, 3> l1 = R1 * (o1 + Rb1.GetCol(3) * lambda);
+          const SpColVector<T, 3> l2 = R2 * o2;
+
+          SpColVector<T, 3> F1(R2 * oReact.F1_R2, oDofMap);
+          SpColVector<T, 3> M1(SpColVector<T, 3>(R2 * oReact.M1_R2, oDofMap) + Cross(l1, F1, oDofMap), oDofMap);
+          SpColVector<T, 3> F2(R2 * oReact.F2_R2, oDofMap);
+          SpColVector<T, 3> M2(SpColVector<T, 3>(R2 * oReact.M2_R2, oDofMap) + Cross(l2, F2, oDofMap), oDofMap);
+
+          F1 *= dInitAss;
+          M1 *= dInitAss;
+          F2 *= dInitAss;
+          M2 *= dInitAss;
 
           SaveReactionForce(F1, M1, F2, M2);
 
@@ -16951,15 +17275,14 @@ namespace {
                                                 const SpColVector<doublereal, 3>& dF_0_Rt,
                                                 const SpColVector<doublereal, 3>& dF_h_Rt,
                                                 const SpColVector<doublereal, 2>& dM_h_Rt,
-                                                doublereal dCoef,
-                                                SpFunctionCall func)
+                                                const SpGradExpDofMapHelper<doublereal>& oDofMapElem)
      {
 #if MBDYN_ENABLE_PROFILE
           using namespace std::chrono;
           auto start = high_resolution_clock::now();
 #endif
 
-          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, dCoef, func, oReaction);
+          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, oDofMapElem, oDofMapDoublereal, oReaction);
 
 #if MBDYN_ENABLE_PROFILE
           profile.dtAddForce[PROF_RES] += high_resolution_clock::now() - start;
@@ -16973,15 +17296,14 @@ namespace {
                                                 const SpColVector<SpGradient, 3>& dF_0_Rt,
                                                 const SpColVector<SpGradient, 3>& dF_h_Rt,
                                                 const SpColVector<SpGradient, 2>& dM_h_Rt,
-                                                doublereal dCoef,
-                                                SpFunctionCall func)
+                                                const SpGradExpDofMapHelper<SpGradient>& oDofMapElem)
      {
 #if MBDYN_ENABLE_PROFILE
           using namespace std::chrono;
           auto start = high_resolution_clock::now();
 #endif
 
-          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, dCoef, func, oReaction_grad);
+          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, oDofMapElem, oDofMapSpGradient, oReaction_grad);
 
 #if MBDYN_ENABLE_PROFILE
           profile.dtAddForce[PROF_JAC] += high_resolution_clock::now() - start;
@@ -16995,19 +17317,18 @@ namespace {
                                                 const SpColVector<GpGradProd, 3>& dF_0_Rt,
                                                 const SpColVector<GpGradProd, 3>& dF_h_Rt,
                                                 const SpColVector<GpGradProd, 2>& dM_h_Rt,
-                                                doublereal dCoef,
-                                                SpFunctionCall func)
+                                                const SpGradExpDofMapHelper<GpGradProd>& oDofMapElem)
      {
-          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, dCoef, func, oReaction_gradp);
+          AddReactionForce(x, v, Rt, dF_0_Rt, dF_h_Rt, dM_h_Rt, oDofMapElem, oDofMapGpGradProd, oReaction_gradp);
      }
 
      template <typename T>
-     void CylindricalMeshAtBearing::ReactionForce<T>::Reset()
+     void CylindricalMeshAtBearing::ReactionForce<T>::Reset(const SpGradExpDofMapHelper<T>& oDofMap)
      {
-          F1_R2.ResizeReset(0);
-          M1_R2.ResizeReset(0);
-          F2_R2.ResizeReset(0);
-          M2_R2.ResizeReset(0);
+          F1_R2.ResizeReset(oDofMap);
+          M1_R2.ResizeReset(oDofMap);
+          F2_R2.ResizeReset(oDofMap);
+          M2_R2.ResizeReset(oDofMap);
      }
 
      template <typename T>
@@ -17018,36 +17339,34 @@ namespace {
                                                 const SpColVector<T, 3>& dF2_0_Rt2,
                                                 const SpColVector<T, 3>& dF1_h_Rt2,
                                                 const SpColVector<T, 2>& dM1_h_Rt2,
-                                                doublereal dCoef,
-                                                SpFunctionCall func,
+                                                const SpGradExpDofMapHelper<T>& oDofMapElem,
+                                                const SpGradExpDofMapHelper<T>& oDofMap,
                                                 ReactionForce<T>& oReact)
      {
-          const SpColVector<T, 3> dF1_R2 = EvalUnique(Rbt2 * dF1_h_Rt2);
-          const SpColVector<T, 3> dM1_h_R2 = Rbt2.GetCol(1) * dM1_h_Rt2(1) + Rbt2.GetCol(3) * dM1_h_Rt2(2);
+          const SpColVector<T, 3> dF1_R2(Rbt2 * dF1_h_Rt2, oDofMapElem);
+          const SpColVector<T, 3> dM1_h_R2(Rbt2.GetCol(1) * dM1_h_Rt2(1) + Rbt2.GetCol(3) * dM1_h_Rt2(2), oDofMapElem);
+          const SpColVector<T, 3> dF2_R2(Rbt2 * dF2_0_Rt2, oDofMapElem);
 
-          oReact.F1_R2 += dF1_R2;
-          oReact.M1_R2 += EvalUnique(Cross(Rb2_v2, dF1_R2) + dM1_h_R2);
-
-          const SpColVector<T, 3> dF2_R2 = EvalUnique(Rbt2 * dF2_0_Rt2);
-
-          oReact.F2_R2 += dF2_R2;
-          oReact.M2_R2 += EvalUnique(Cross(Rb2_v2, dF2_R2) - dM1_h_R2);
+          oReact.F1_R2.Add(dF1_R2, oDofMap);
+          oReact.M1_R2.Add(Cross(Rb2_v2, dF1_R2, oDofMapElem) + dM1_h_R2, oDofMap);
+          oReact.F2_R2.Add(dF2_R2, oDofMap);
+          oReact.M2_R2.Add(Cross(Rb2_v2, dF2_R2, oDofMapElem) - dM1_h_R2, oDofMap);
      }
 
      const CylindricalMeshAtBearing::ReactionForce<doublereal>&
-     CylindricalMeshAtBearing::GetReactionForce(const doublereal& dummy) const
+     CylindricalMeshAtBearing::GetReactionForce(const SpGradientVectorHandler<doublereal>&) const
      {
           return oReaction;
      }
 
      const CylindricalMeshAtBearing::ReactionForce<SpGradient>&
-     CylindricalMeshAtBearing::GetReactionForce(const SpGradient& dummy) const
+     CylindricalMeshAtBearing::GetReactionForce(const SpGradientVectorHandler<SpGradient>&) const
      {
           return oReaction_grad;
      }
 
      const CylindricalMeshAtBearing::ReactionForce<GpGradProd >&
-     CylindricalMeshAtBearing::GetReactionForce(const GpGradProd& dummy) const
+     CylindricalMeshAtBearing::GetReactionForce(const SpGradientVectorHandler<GpGradProd>&) const
      {
           return oReaction_gradp;
      }
@@ -17105,18 +17424,51 @@ namespace {
           const auto& Rb1 = rParent.GetOrientationNode1();
           const auto& Rb2_v2 = pNode->GetPosition3D();
 
-          const SpColVector<T, 3> a3 = R2 * (o2 + Rb2_v2);
-          const SpColVector<T, 3> a1 = EvalUnique(X2 + a3 - X1);
-          const SpColVector<T, 3> b = Rb1T_R1T * a1 - Rb1T_o1;
+          T w, dw_dt;
+
+          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
+
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(X1);
+          oDofMap.GetDofStat(R1);
+          oDofMap.GetDofStat(X1P);
+          oDofMap.GetDofStat(omega1);
+          oDofMap.GetDofStat(X2);
+          oDofMap.GetDofStat(R2);
+          oDofMap.GetDofStat(X2P);
+          oDofMap.GetDofStat(omega2);
+          oDofMap.GetDofStat(w);
+          oDofMap.GetDofStat(dw_dt);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(X1);
+          oDofMap.InsertDof(R1);
+          oDofMap.InsertDof(X1P);
+          oDofMap.InsertDof(omega1);
+          oDofMap.InsertDof(X2);
+          oDofMap.InsertDof(R2);
+          oDofMap.InsertDof(X2P);
+          oDofMap.InsertDof(omega2);
+          oDofMap.InsertDof(w);
+          oDofMap.InsertDof(dw_dt);
+
+          oDofMap.InsertDone();
+
+          const SpColVector<T, 3> a3(R2 * (o2 + Rb2_v2), oDofMap);
+          const SpColVector<T, 3> a1(X2 + a3 - X1, oDofMap);
+          const SpColVector<T, 3> Rb1T_R1T_a1(Rb1T_R1T * a1, oDofMap);
+          const SpColVector<T, 3> b(Rb1T_R1T_a1 - Rb1T_o1, oDofMap);
           const doublereal r = rParent.dGetShaftRadius();
-          const T a4 = EvalUnique(b(1) * b(1) + b(2) * b(2));
+          const T a4 = oDofMap.MapEval(b(1) * b(1) + b(2) * b(2));
           const T a0 = sqrt(a4);
 
-          const T cos_Phi1 = b(1) / a0;
-          const T sin_Phi1 = b(2) / a0;
+          const T cos_Phi1 = oDofMap.MapEval(b(1) / a0);
+          const T sin_Phi1 = oDofMap.MapEval(b(2) / a0);
           const T& z1 = b(3);
 
-          T Phi1 = atan2(sin_Phi1, cos_Phi1);
+          T Phi1 = oDofMap.MapEval(atan2(sin_Phi1, cos_Phi1));
 
           if (Phi1 < 0.) {
                // Attention: pFindShaftPockets assumes that Phi1 is in range 0 ... 2 * pi
@@ -17138,42 +17490,41 @@ namespace {
                pPocket1->GetHeightDerZ(x1, dDeltay1_dz1);
           }
 
-          T w, dw_dt;
+          const T h0 = oDofMap.MapEval(a0 - r - Deltay1);
+          h = h0 + w;
 
-          pNode->GetRadialDeformation(w, dw_dt, dCoef, func);
-
-          const T h0 = a0 - r - Deltay1;
-          h = EvalUnique(h0 + w);
-
-          const SpColVector<T, 3> v1{EvalUnique((r + Deltay1) * cos_Phi1),
-                                     EvalUnique((r + Deltay1) * sin_Phi1),
+          const SpColVector<T, 3> v1{oDofMap.MapEval((r + Deltay1) * cos_Phi1),
+                                     oDofMap.MapEval((r + Deltay1) * sin_Phi1),
                                      z1};
 
-          const SpColVector<T, 3> db_dt = Rb1T_R1T * (X2P + Cross(omega2, a3)
-                                                      - X1P - Cross(omega1, a1));
+          const SpColVector<T, 3> db_dt(Rb1T_R1T * (X2P + Cross(omega2, a3, oDofMap)
+                                                    - X1P - Cross(omega1, a1, oDofMap)), oDofMap);
 
-          const T dx1_dt = r * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a4;
+          const T dx1_dt = oDofMap.MapEval(r * (b(1) * db_dt(2) - db_dt(1) * b(2)) / a4);
           const T& dz1_dt = db_dt(3);
-          const T dDeltay1_dt = dDeltay1_dx1 * dx1_dt + dDeltay1_dz1 * dz1_dt;
+          const T dDeltay1_dt = oDofMap.MapEval(dDeltay1_dx1 * dx1_dt + dDeltay1_dz1 * dz1_dt);
 
-          dh_dt = EvalUnique((b(1) * db_dt(1) + b(2) * db_dt(2)) / a0 - dDeltay1_dt + dw_dt);
+          dh_dt = oDofMap.MapEval((b(1) * db_dt(1) + b(2) * db_dt(2)) / a0 - dDeltay1_dt + dw_dt);
 
-          const SpColVector<T, 3> vh{EvalUnique(h0 * cos_Phi1),
-                                     EvalUnique(h0 * sin_Phi1),
+          const SpColVector<T, 3> vh{oDofMap.MapEval(h0 * cos_Phi1),
+                                     oDofMap.MapEval(h0 * sin_Phi1),
                                      T{}};
 
-          const SpColVector<T, 3> dP1_dt = X1P + Cross(omega1, (R1 * (o1 + Rb1 * v1))) + Cross(omega2, (R1 * (Rb1 * vh)));
-          const SpColVector<T, 3> dP2_dt = X2P + Cross(omega2, a3);
+          const SpColVector<T, 3> Rb1_v1(Rb1 * v1, oDofMap);
+          const SpColVector<T, 3> Rb1_vh(Rb1 * vh, oDofMap);
+          const SpColVector<T, 3> R1_o1_Rb1_v1(R1 * (o1 + Rb1_v1), oDofMap);
+          const SpColVector<T, 3> dP1_dt(X1P + Cross(omega1, R1_o1_Rb1_v1, oDofMap) + Cross(omega2, R1 * Rb1_vh, oDofMap), oDofMap);
+          const SpColVector<T, 3> dP2_dt(X2P + Cross(omega2, a3, oDofMap), oDofMap);
 
           const auto& Rbt2 = pNode->GetTangentCoordSys();
 
-          const SpColVector<T, 3> dP1_dt_R2 = Transpose(R2) * dP1_dt;
-          const SpColVector<T, 3> dP2_dt_R2 = Transpose(R2) * dP2_dt;
+          const SpColVector<T, 3> dP1_dt_R2(Transpose(R2) * dP1_dt, oDofMap);
+          const SpColVector<T, 3> dP2_dt_R2(Transpose(R2) * dP2_dt, oDofMap);
 
-          U1 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP1_dt_R2;
-          U2 = Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP2_dt_R2;
+          U1.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP1_dt_R2, oDofMap);
+          U2.MapAssign(Transpose(SubMatrix<1, 1, 3, 1, 2, 2>(Rbt2)) * dP2_dt_R2, oDofMap);
 
-          U = EvalUnique((U1 - U2) * 0.5);
+          U.MapAssign((U1 - U2) * 0.5, oDofMap);
      }
 
      template <typename T>
@@ -17185,12 +17536,34 @@ namespace {
           const auto& Rb2 = rParent.GetOrientationNode2();
           const doublereal r = rParent.dGetMeshRadius();
 
-          const SpColVector<T, 3> R1_Rb1_e1 = R1 * Rb1.GetCol(1);
+          SpGradExpDofMapHelper<T> oDofMap;
 
-          x(1) = r * atan2(Dot(R2 * Rb2.GetCol(2), R1_Rb1_e1),
-                           Dot(R2 * Rb2.GetCol(1), R1_Rb1_e1));
+          oDofMap.GetDofStat(x);
+          oDofMap.GetDofStat(X1);
+          oDofMap.GetDofStat(R1);
+          oDofMap.GetDofStat(X2);
+          oDofMap.GetDofStat(R2);
 
-          x(2) = Dot(Rb2.GetCol(3), Transpose(R2) * (X1 + R1 * o1 - X2) - o2);
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(x);
+          oDofMap.InsertDof(X1);
+          oDofMap.InsertDof(R1);
+          oDofMap.InsertDof(X2);
+          oDofMap.InsertDof(R2);
+
+          oDofMap.InsertDone();
+
+          const SpColVector<T, 3> R1_Rb1_e1(R1 * Rb1.GetCol(1), oDofMap);
+
+          x(1) = r * atan2(Dot(R2 * Rb2.GetCol(2), R1_Rb1_e1, oDofMap),
+                           Dot(R2 * Rb2.GetCol(1), R1_Rb1_e1, oDofMap));
+
+          const SpColVector<T, 3> R1_o1(R1 * o1, oDofMap);
+          const SpColVector<T, 3> dX(X1 + R1_o1 - X2, oDofMap);
+          const SpColVector<T, 3> dX_R2(Transpose(R2) * dX, oDofMap);
+
+          x(2) = Dot(Rb2.GetCol(3), dX_R2 - o2, oDofMap);
      }
 
      void CylindricalMeshAtBearing::GetMovingMeshOffset(SpColVector<doublereal, 2>& x) const
@@ -17859,41 +18232,60 @@ namespace {
           zPPrev = zPCurr;
      }
 
+     static const SpMatrix<doublereal, 2, 2> Eye2x2{1., 0., 0., 1.};
+
      template <typename T>
      void LugreFriction::GetFrictionForceTpl(const T& h, const SpColVector<T, 2>& U, const T& p, SpColVector<T, 2>& tau)
      {
           const SpColVector<T, 2> Ueff = U * doublereal(p > 0.);
 
-          const T norm_Ueff = Dot(Ueff, Ueff);
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(Ueff);
+          oDofMap.GetDofStat(p);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(Ueff);
+          oDofMap.InsertDof(p);
+
+          oDofMap.InsertDone();
+
+          const T norm_Ueff = Dot(Ueff, Ueff, oDofMap);
 
           T kappa;
 
           if (norm_Ueff == 0.) {
                SpGradientTraits<T>::ResizeReset(kappa, 0., 0);
           } else {
-               const SpColVector<T, 2> Mk_U = Mk * Ueff;
-               const SpColVector<T, 2> Ms_U = Ms * Ueff;
-               const SpColVector<T, 2> Mk2_U = Mk2 * Ueff;
-               const SpColVector<T, 2> Ms2_U = Ms2 * Ueff;
-               const T norm_Mk2_U = sqrt(Dot(Mk2_U, Mk2_U));
-               const T a0 = norm_Mk2_U / sqrt(Dot(Mk_U, Mk_U));
-               const T a1 = sqrt(Dot(Ms2_U, Ms2_U) / Dot(Ms_U, Ms_U));
+               const SpColVector<T, 2> Mk_U(Mk * Ueff, oDofMap);
+               const SpColVector<T, 2> Ms_U(Ms * Ueff, oDofMap);
+               const SpColVector<T, 2> Mk2_U(Mk2 * Ueff, oDofMap);
+               const SpColVector<T, 2> Ms2_U(Ms2 * Ueff, oDofMap);
+               const T norm_Mk2_U = sqrt(Dot(Mk2_U, Mk2_U, oDofMap));
+               const T a0 = oDofMap.MapEval(norm_Mk2_U / sqrt(Dot(Mk_U, Mk_U, oDofMap)));
+               const T a1 = oDofMap.MapEval(sqrt(Dot(Ms2_U, Ms2_U, oDofMap) / Dot(Ms_U, Ms_U, oDofMap)));
 
-               kappa = EvalUnique(norm_Mk2_U / (a0 + (a1 - a0) * exp(-pow(sqrt(norm_Ueff) / vs, gamma))));
+               kappa = oDofMap.MapEval(norm_Mk2_U / (a0 + (a1 - a0) * exp(-pow(sqrt(norm_Ueff) / vs, gamma))));
           }
 
           tCurr = pGetMesh()->pGetParent()->dGetTime();
 
           const doublereal dt = tCurr - tPrev;
           const SpMatrix<T, 2, 2> A = invMk2_sigma0 * kappa;
-          const SpMatrix<T, 2, 2> B = A * (beta * dt) + SpMatrix<doublereal, 2, 2>{1., 0., 0., 1};
+          const SpMatrix<T, 2, 2> B = A * (beta * dt) + Eye2x2;
 
-          const SpColVector<T, 2> zP = Inv(B) * (Ueff - A * (zPrev + zPPrev * ((1 - beta) * dt)));
-          const SpColVector<T, 2> z = zPrev + (zP * beta + zPPrev * (1 - beta)) * dt;
+          SpMatrixA<T, 2, 2> invB;
+          T detB;
+
+          Inv(B, invB, detB, oDofMap);
+
+          const SpColVector<T, 2> zP(invB * SpColVector<T,2>(Ueff - SpColVector<T,2>(A * (zPrev + zPPrev * ((1 - beta) * dt)), oDofMap), oDofMap), oDofMap);
+          const SpColVector<T, 2> z(zPrev + (zP * beta + zPPrev * (1 - beta)) * dt, oDofMap);
 
           SaveStictionState(z, zP);
 
-          tau = EvalUnique((sigma0 * z + sigma1 * zP) * p);
+          tau.MapAssign(SpColVector<T,2>(SpColVector<T,2>(sigma0 * z, oDofMap) + SpColVector<T,2>(sigma1 * zP, oDofMap), oDofMap) * p, oDofMap);
      }
 
      void LugreFriction::SaveStictionState(const SpColVector<doublereal, 2>& z, const SpColVector<doublereal, 2>& zP)
@@ -18613,66 +19005,119 @@ namespace {
      {
           const bool bUpdateFriction = pGetMesh()->pGetParent()->bUpdateFrictionLoss();
 
-          std::array<T, iNumNodes> pi, hi;
-          std::array<SpColVectorA<T, 2, 12>, iNumNodes> U1i, U2i;
-          T eta(0.), eta_tmp; // Note: viscosity could depend on density and temperature
+          std::array<T, iNumNodes> pi, paspi, hi, etai;
+          std::array<SpColVectorA<T, 2, 12>, iNumNodes> U1i, U2i, tauc_0i;
+          doublereal dPfc = 0.;
+          index_type iNumNodesContact = 0;
 
-          for (integer i = 0; i < iNumNodes; ++i) {
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          for (index_type i = 0; i < iNumNodes; ++i) {
                pGetMesh()->GetPressure(rgHydroNodes[i], pi[i], dCoef);
+
+               oDofMap.GetDofStat(pi[i]);
+
                rgHydroNodes[i]->GetClearance(hi[i]);
+
+               oDofMap.GetDofStat(hi[i]);
+
                rgHydroNodes[i]->GetVelocity(U1i[i], U2i[i]);
-               rgHydroNodes[i]->GetViscosity(eta_tmp, dCoef);
-               eta += eta_tmp;
+
+               oDofMap.GetDofStat(U1i[i]);
+               oDofMap.GetDofStat(U2i[i]);
+
+               rgHydroNodes[i]->GetViscosity(etai[i], dCoef);
+
+               oDofMap.GetDofStat(etai[i]);
+
+               if (rgHydroNodes[i]->GetContactPressure(paspi[i])) {
+                    oDofMap.GetDofStat(paspi[i]);
+
+                    rgHydroNodes[i]->GetContactStress(tauc_0i[i]);
+
+                    oDofMap.GetDofStat(tauc_0i[i]);
+
+                    doublereal Pfc_tmp;
+
+                    rgHydroNodes[i]->GetContactFrictionLossDens(Pfc_tmp);
+
+                    dPfc += Pfc_tmp;
+
+                    ++iNumNodesContact;
+               }
           }
 
-          eta /= iNumNodes;
+          dPfc *= (dA / iNumNodes);
+
+          oDofMap.Reset();
+
+          for (const auto& p: pi) {
+               oDofMap.InsertDof(p);
+          }
+
+          for (const auto& pasp: paspi) {
+               oDofMap.InsertDof(pasp);
+          }
+
+          for (const auto& h: hi) {
+               oDofMap.InsertDof(h);
+          }
+
+          for (const auto& eta: etai) {
+               oDofMap.InsertDof(eta);
+          }
+
+          for (const auto& U1: U1i) {
+               oDofMap.InsertDof(U1);
+          }
+
+          for (const auto& U2: U2i) {
+               oDofMap.InsertDof(U2);
+          }
+
+          for (const auto& tauc_0: tauc_0i) {
+               oDofMap.InsertDof(tauc_0);
+          }
+
+          oDofMap.InsertDone();
+
+          const T eta = 0.25 * (etai[iNode1NE] + etai[iNode2NW] + etai[iNode3SW] + etai[iNode4SE]);
 
           // use fluid pressure only for pressure gradient
           const T dp_dx = ((pi[iNode1NE] - pi[iNode2NW]) + (pi[iNode4SE] - pi[iNode3SW])) * (0.5 / dx);
           const T dp_dz = ((pi[iNode1NE] - pi[iNode4SE]) + (pi[iNode2NW] - pi[iNode3SW])) * (0.5 / dz);
 
-          SpColVectorA<T, 2, 12> tauc_0, tauc_0_tmp;
-          T dPfc{0.}, Pfc_tmp, pasp_tmp;
-          index_type iNumNodesWithContact = 0;
+          const SpColVector<T, 2> U((U1i[iNode1NE] - U2i[iNode1NE] + U1i[iNode2NW] - U2i[iNode2NW]
+                                     + U1i[iNode3SW] - U2i[iNode3SW] + U1i[iNode4SE] - U2i[iNode4SE]) * 0.25, oDofMap);
 
-          for (integer i = 0; i < iNumNodes; ++i) {
-               if (rgHydroNodes[i]->GetContactPressure(pasp_tmp)) {
-                    rgHydroNodes[i]->GetContactStress(tauc_0_tmp);
-                    rgHydroNodes[i]->GetContactFrictionLossDens(Pfc_tmp);
-                    pi[i] += pasp_tmp;
-                    tauc_0 += tauc_0_tmp;
-                    dPfc += Pfc_tmp;
-                    ++iNumNodesWithContact;
-               }
+          T h = oDofMap.MapEval(0.25 * (hi[iNode1NE] + hi[iNode2NW] + hi[iNode3SW] + hi[iNode4SE]));
+          T ptot = oDofMap.MapEval(0.25 * (pi[iNode1NE] + pi[iNode2NW] + pi[iNode3SW] + pi[iNode4SE]));
+
+          if (iNumNodesContact) {
+               oDofMap.Add(ptot, 0.25 * (paspi[iNode1NE] + paspi[iNode2NW] + paspi[iNode3SW] + paspi[iNode4SE]));
           }
-
-          tauc_0 /= iNumNodes;
-          dPfc *= dA / iNumNodes;
-
-          const SpColVector<T, 2> U = (U1i[iNode1NE] - U2i[iNode1NE] + U1i[iNode2NW] - U2i[iNode2NW]
-                                       + U1i[iNode3SW] - U2i[iNode3SW] + U1i[iNode4SE] - U2i[iNode4SE]) * 0.25;
-
-          const T h = 0.25 * (hi[iNode1NE] + hi[iNode2NW] + hi[iNode3SW] + hi[iNode4SE]);
-          const T ptot = 0.25 * (pi[iNode1NE] + pi[iNode2NW] + pi[iNode3SW] + pi[iNode4SE]);
 
           BearingGeometry* const pGeometry = pGetMesh()->pGetGeometry();
 
-          T hx;
+          pGeometry->GetNonNegativeClearance(h, h);
 
-          pGeometry->GetNonNegativeClearance(h, hx);
+          const T tau_xy_p_h = oDofMap.MapEval(0.5 * h * dp_dx);
 
-          const T tau_xy_p_h = 0.5 * hx * dp_dx;
-          const T tau_xy_U_h = eta * U(1) / hx;
-          const T tau_yz_p_h = 0.5 * hx * dp_dz;
-          const T tau_yz_U_h = eta * U(2) / hx;
+          const T tau_xy_U_h = oDofMap.MapEval(eta * U(1) / h);
 
-          const T tau_xy_0 = (-tau_xy_p_h + tau_xy_U_h);
-          const T tau_yz_0 = (-tau_yz_p_h + tau_yz_U_h);
+          const T tau_yz_p_h = oDofMap.MapEval(0.5 * h * dp_dz);
 
-          const T tau_xy_h = (tau_xy_p_h + tau_xy_U_h);
-          const T tau_yz_h = (tau_yz_p_h + tau_yz_U_h);
+          const T tau_yz_U_h = oDofMap.MapEval(eta * U(2) / h);
 
-          for (int i = 0; i < iNumNodes; ++i) {
+          const T tau_xy_0 = oDofMap.MapEval(-tau_xy_p_h + tau_xy_U_h);
+
+          const T tau_yz_0 = oDofMap.MapEval(-tau_yz_p_h + tau_yz_U_h);
+
+          const T tau_xy_h = oDofMap.MapEval(tau_xy_p_h + tau_xy_U_h);
+
+          const T tau_yz_h = oDofMap.MapEval(tau_yz_p_h + tau_yz_U_h);
+
+          for (index_type i = 0; i < iNumNodes; ++i) {
                SetStress(rgHydroNodes[i], tau_xy_0, tau_yz_0, tau_xy_h, tau_yz_h);
           }
 
@@ -18684,22 +19129,28 @@ namespace {
                                     ptot * dA,
                                     -tau_yz_h * dA};
 
-          const SpColVector<T, 2> dM_h_Rt{(dA * dz / 24) * (pi[iNode3SW] - pi[iNode2NW] + pi[iNode4SE] - pi[iNode1NE]),
-                                          T{}};
+          SpColVector<T, 2> dM_h_Rt{oDofMap.MapEval((dA * dz / 24.) * (pi[iNode3SW] - pi[iNode2NW] + pi[iNode4SE] - pi[iNode1NE])),
+                                    T()};
+
+          if (iNumNodesContact) {
+               oDofMap.Add(dM_h_Rt(1), (dA * dz / 24.) * (paspi[iNode3SW] - paspi[iNode2NW] + paspi[iNode4SE] - paspi[iNode1NE]));
+          }
 
           if (bUpdateFriction) {
                AddFrictionLoss(HydroRootBase::FLUID_FRICTION, U2i, dF_0_Rt(1), dF_0_Rt(3));
                AddFrictionLoss(HydroRootBase::FLUID_FRICTION, U1i, dF_h_Rt(1), dF_h_Rt(3));
           }
 
-          if (iNumNodesWithContact) {
-               if (bUpdateFriction) {
+          if (iNumNodesContact) {
+               const SpColVector<T, 2> tauc_0(0.25 * (tauc_0i[iNode1NE] + tauc_0i[iNode2NW] + tauc_0i[iNode3SW] + tauc_0i[iNode4SE]), oDofMap);
+
+               if (bUpdateFriction && std::is_same<T, doublereal>::value) {
                     AddFrictionLoss(HydroRootBase::CONTACT_FRICTION, -dPfc);
                }
 
-               static const int iReactionIdx[2] = {1, 3};
+               static constexpr index_type iReactionIdx[2] = {1, 3};
 
-               for (int i = 1; i <= 2; ++i) {
+               for (index_type i = 1; i <= 2; ++i) {
                     // Note: The contact pressure will be always
                     //               normal to the surface of each part
                     //           but the angle between the surface
@@ -18713,8 +19164,8 @@ namespace {
                     //               as long as the relative clearance is small
                     //               in case of a cylindrical bearing.
 
-                    dF_0_Rt(iReactionIdx[i - 1]) += tauc_0(i) * dA;
-                    dF_h_Rt(iReactionIdx[i - 1]) -= tauc_0(i) * dA;
+                    oDofMap.Add(dF_0_Rt(iReactionIdx[i - 1]), tauc_0(i) * dA);
+                    oDofMap.Sub(dF_h_Rt(iReactionIdx[i - 1]), tauc_0(i) * dA);
                }
           }
 
@@ -18724,8 +19175,7 @@ namespace {
                                       dF_0_Rt,
                                       dF_h_Rt,
                                       dM_h_Rt,
-                                      dCoef,
-                                      func);
+                                      oDofMap);
      }
 
      void LinFD4FrictionElem::AddFrictionLoss(HydroRootBase::FrictionLossType type, const std::array<SpColVectorA<doublereal, 2, 12>, iNumNodes>& Ui, doublereal dTau_xy, doublereal dTau_yz) const
@@ -18905,7 +19355,7 @@ namespace {
 
                CHECK_NUM_COLS_WORK_SPACE(this, func, mdotz, rgHydroNodes[rgNodeIdxHydro[i]]->iGetFirstEquationIndex(func));
 
-               WorkVec.AddItem(rgHydroNodes[rgNodeIdxHydro[i]]->iGetFirstEquationIndex(func), EvalUnique(-dx / iNumFluxNodes * mdotz));
+               WorkVec.AddItem(rgHydroNodes[rgNodeIdxHydro[i]]->iGetFirstEquationIndex(func), -dx / iNumFluxNodes * mdotz);
           }
      }
 
@@ -19077,9 +19527,9 @@ namespace {
                SpGradientTraits<G>::ResizeReset(drho_dt, 0., 0);
           }
 
-          const G Re = EvalUnique(((mdot[iNodeFlxEast] - mdot[iNodeFlxWest]) / dx
-                                   + (mdot[iNodeFlzNorth] - mdot[iNodeFlzSouth]) / dz
-                                   + (drho_dt * h + rho * dh_dt)) * dEquationScaleReynolds);
+          const G Re = ((mdot[iNodeFlxEast] - mdot[iNodeFlxWest]) / dx
+                        + (mdot[iNodeFlzNorth] - mdot[iNodeFlzSouth]) / dz
+                        + (drho_dt * h + rho * dh_dt)) * dEquationScaleReynolds;
 
           if (bSetMaxTimeStep) {
                SetMaxTimeStep(w);
@@ -19112,13 +19562,13 @@ namespace {
 
                     const doublereal rho_ref = pGetFluid()->dGetRefDensity();
 
-                    f = EvalUnique((rho - rhoc) * (dEquationScaleComp / (rho_ref * dCoef * pParent->dGetScale(HydroRootElement::SCALE_THETA_DOF))));
+                    f = (rho - rhoc) * (dEquationScaleComp / (rho_ref * dCoef * pParent->dGetScale(HydroRootElement::SCALE_THETA_DOF)));
 
                     HYDRO_ASSERT(std::isfinite(SpGradientTraits<G>::dGetValue(f)));
                } else {
                     HYDRO_ASSERT(p <= pc);
 
-                    f = EvalUnique((p - pc) * (dEquationScaleComp / (dCoef * pParent->dGetScale(HydroRootElement::SCALE_PRESSURE_DOF))));
+                    f = (p - pc) * (dEquationScaleComp / (dCoef * pParent->dGetScale(HydroRootElement::SCALE_PRESSURE_DOF)));
 
                     HYDRO_ASSERT(std::isfinite(SpGradientTraits<G>::dGetValue(f)));
                }
@@ -19271,9 +19721,9 @@ namespace {
                SpGradientTraits<G>::ResizeReset(drho_dt, 0., 0);
           }
 
-          const G Re = EvalUnique(((mdot[iNodeFlxEast] - mdot[iNodeFlxWest]) / dx
-                                   + (mdot[iNodeFlzNorth] - mdot[iNodeFlzSouth]) / dz
-                                   + (drho_dt * h + rho * dh_dt)) * dEquationScale);
+          const G Re = ((mdot[iNodeFlxEast] - mdot[iNodeFlxWest]) / dx
+                        + (mdot[iNodeFlzNorth] - mdot[iNodeFlzSouth]) / dz
+                        + (drho_dt * h + rho * dh_dt)) * dEquationScale;
 
           if (bSetMaxTimeStep) {
                SetMaxTimeStep(w);
@@ -19302,7 +19752,7 @@ namespace {
 
                const doublereal dEquationScaleComp = pParent->dGetScale(HydroRootElement::SCALE_COMPLEMENTARITY_COND);
 
-               G f = EvalUnique((rhoc - rho) * (dEquationScaleComp / (rho_ref * dCoef * pParent->dGetScale(HydroRootElement::SCALE_THETA_DOF))));
+               G f = (rhoc - rho) * (dEquationScaleComp / (rho_ref * dCoef * pParent->dGetScale(HydroRootElement::SCALE_THETA_DOF)));
 
                CHECK_NUM_COLS_WORK_SPACE(this, func, f, iFirstIndex + 1);
 
@@ -19503,10 +19953,10 @@ namespace {
           const G dTN_dz = (T[iNodeNorth] - T[iNodeCenter]) / (x[iNodeNorth](2) - x[iNodeCenter](2));
           const G dTS_dz = (T[iNodeCenter] - T[iNodeSouth]) / (x[iNodeCenter](2) - x[iNodeSouth](2));
 
-          f = EvalUnique(h * (lambda * ((dTE_dx - dTW_dx) / (0.5 * (x[iNodeEast](1) - x[iNodeWest](1)))
-                                        + (dTN_dz - dTS_dz) / (0.5 * (x[iNodeNorth](2) - x[iNodeSouth](2))))
-                              - rho * cp * dT_dt + beta * T[iNodeCenter] * dp_dt)
-                         + Pfc);
+          f = h * (lambda * ((dTE_dx - dTW_dx) / (0.5 * (x[iNodeEast](1) - x[iNodeWest](1)))
+                             + (dTN_dz - dTS_dz) / (0.5 * (x[iNodeNorth](2) - x[iNodeSouth](2))))
+                   - rho * cp * dT_dt + beta * T[iNodeCenter] * dp_dt)
+               + Pfc;
 
           G Phi0{0.}, Phih{0.};
 
@@ -19524,7 +19974,7 @@ namespace {
                          + alphaz[i] * Ahz[i] + Ac;
                }
 
-               f += EvalUnique(alphax[i] * Qx[i] + alphaz[i] * Qz[i]);
+               f += alphax[i] * Qx[i] + alphaz[i] * Qz[i];
           }
 
           if (pWall && (func & SpFunctionCall::REGULAR_FLAG)) {
@@ -19543,7 +19993,7 @@ namespace {
                Qdot0 = EvalUnique(-a1 * lambda / h);
                Qdoth = EvalUnique(lambda / h * (a1 + 2 * a2 + 3 * a3 + 4 * a4));
 
-               f += EvalUnique(Qdot0 + Qdoth);
+               f += Qdot0 + Qdoth;
           }
      }
 
@@ -19831,17 +20281,17 @@ namespace {
           pGetFluid()->GetSpecificHeat(p, T, rho, cpm, HydroFluid::SPEC_HEAT_AVERAGED);
           pGetFluid()->GetSpecificHeat(p, T_sup, rho, cpm_sup, HydroFluid::SPEC_HEAT_AVERAGED);
 
-          const G mdot_sup = EvalUnique((mdot[iNodeFlxEast] - mdot[iNodeFlxWest]) * dz
-                                        + (mdot[iNodeFlzNorth] - mdot[iNodeFlzSouth]) * dx
-                                        + (drho_dt * h + rho * dh_dt) * (dx * dz));
+          const G mdot_sup = (mdot[iNodeFlxEast] - mdot[iNodeFlxWest]) * dz
+               + (mdot[iNodeFlzNorth] - mdot[iNodeFlzSouth]) * dx
+               + (drho_dt * h + rho * dh_dt) * (dx * dz);
 
-          const G Qdot_sup = EvalUnique(mdot_sup * (cpm_sup * T_sup - cpm * T));
+          const G Qdot_sup = mdot_sup * (cpm_sup * T_sup - cpm * T);
 
           G f(0.), Qdot0(0.), Qdoth(0.);
 
           EnergyBalance(f, Qdot0, Qdoth, dCoef, func);
 
-          f += EvalUnique(Qdot_sup / (dx * dz));
+          f += Qdot_sup / (dx * dz);
           f *= dScale;
 
           const ThermWallBoundCond* pWall = pGetMesh()->pGetThermWallBoundCond();
@@ -20425,12 +20875,28 @@ namespace {
                }
           }
 
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(pe);
+          oDofMap.GetDofStat(he);
+          oDofMap.GetDofStat(hdote);
+          oDofMap.GetDofStat(Ue);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(pe);
+          oDofMap.InsertDof(he);
+          oDofMap.InsertDof(hdote);
+          oDofMap.InsertDof(Ue);
+
+          oDofMap.InsertDone();
+
           const index_type iIntegRule = iSelectIntegrationRule(pe);
           const doublereal dEquationScale = pGetMesh()->pGetParent()->dGetScale(HydroRootElement::SCALE_REYNOLDS_EQU) / dCoef;
 
           if (iNumActiveNodes > 0) {
                const index_type iNumGauss = iGetNumGaussPoints(iIntegRule);
-               SpColVectorA<T, iNumNodes> fe;
+               SpColVector<T, iNumNodes> fe(iNumNodes, oDofMap);
 
                for (index_type i = 1; i <= iNumGauss; ++i) {
                     for (index_type j = 1; j <= iNumGauss; ++j) {
@@ -20443,20 +20909,22 @@ namespace {
                          const SpMatrix<doublereal, 2, iNumNodes>& B = rgGaussPntDat[idxGauss].B;
                          const SpMatrix<doublereal, iNumNodes, iNumNodes>& BTB = rgGaussPntDat[idxGauss].BTB;
 
-                         T h = Dot(N, he);
-                         T a0 = Dot(N, hdote);
+                         T h = Dot(N, he, oDofMap);
+                         T a0 = Dot(N, hdote, oDofMap);
 
                          pGeometry->GetNonNegativeClearance(h, h, &a0, &a0);
 
-                         fe += (BTB * pe) * EvalUnique(pow(h, 3) * alpha);
+                         const SpColVector<T, iNumNodes> BTBpe(BTB * pe, oDofMap);
+
+                         fe.Add(BTBpe * oDofMap.MapEval(pow(h, 3) * alpha), oDofMap);
 
                          for (index_type k = 1; k <= 2; ++k) {
-                              a0 += EvalUnique(Dot(N, Ue.GetCol(k)) * Dot(Transpose(B.GetRow(k)), he));
+                              a0 += oDofMap.MapEval(Dot(N, Ue.GetCol(k), oDofMap) * Dot(Transpose(B.GetRow(k)), he, oDofMap));
                          }
 
-                         a0 *= 12. * Dot(N, etae) * alpha;
+                         a0 = oDofMap.MapEval(12. * alpha * Dot(N, etae, oDofMap) * a0);
 
-                         fe += N * a0;
+                         fe.Add(N * a0, oDofMap);
                     }
                }
 
@@ -20695,6 +21163,26 @@ namespace {
                rgNodes[i - 1]->GetViscosity(etae(i));
           }
 
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(pe);
+          oDofMap.GetDofStat(paspe);
+          oDofMap.GetDofStat(he);
+          oDofMap.GetDofStat(U1e);
+          oDofMap.GetDofStat(U2e);
+          oDofMap.GetDofStat(tauc_0e);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(pe);
+          oDofMap.InsertDof(paspe);
+          oDofMap.InsertDof(he);
+          oDofMap.InsertDof(U1e);
+          oDofMap.InsertDof(U2e);
+          oDofMap.InsertDof(tauc_0e);
+
+          oDofMap.InsertDone();
+
           const index_type iIntegRule = iSelectIntegrationRule(pe, &paspe);
           const index_type iNumGaussPnt = iGetNumGaussPoints(iIntegRule);
 
@@ -20706,17 +21194,17 @@ namespace {
                     const SpColVector<doublereal, iNumNodes>& N = rgGaussPntDat[iGaussIdx].N;
                     const SpMatrix<doublereal, 2, iNumNodes>& B = rgGaussPntDat[iGaussIdx].B;
                     const doublereal detJ = rgGaussPntDat[iGaussIdx].detJ;
-                    T p = Dot(N, pe), dp_dx, dp_dz;
+                    T p = Dot(N, pe, oDofMap), dp_dx, dp_dz;
 
                     if (HydroFluid::CAVITATION_REGION == pGetFluid()->Cavitation(p)) {
                          SpGradientTraits<T>::ResizeReset(dp_dx, 0., 0); // set pressure gradient to zero if pressure is negative according to Guembel boundary condition
                          SpGradientTraits<T>::ResizeReset(dp_dz, 0., 0);
                     } else {
-                         dp_dx = Dot(Transpose(B.GetRow(1)), pe);
-                         dp_dz = Dot(Transpose(B.GetRow(2)), pe);
+                         dp_dx = Dot(Transpose(B.GetRow(1)), pe, oDofMap);
+                         dp_dz = Dot(Transpose(B.GetRow(2)), pe, oDofMap);
                     }
 
-                    T h = Dot(N, he);
+                    T h = Dot(N, he, oDofMap);
 
                     pGeometry->GetNonNegativeClearance(h, h);
 
@@ -20725,38 +21213,38 @@ namespace {
                     SpColVectorA<T, 2, 13> U1, U2, tauc_0;
 
                     for (index_type k = 1; k <= 2; ++k) {
-                         U1(k) = Dot(N, U1e.GetCol(k));
-                         U2(k) = Dot(N, U2e.GetCol(k));
+                         U1(k) = Dot(N, U1e.GetCol(k), oDofMap);
+                         U2(k) = Dot(N, U2e.GetCol(k), oDofMap);
                     }
 
                     T pasp{0.};
 
                     if (bContact) {
-                         pasp = Dot(N, paspe);
+                         pasp = Dot(N, paspe, oDofMap);
 
                          if (pasp < 0.) { // Could happen in the transition region
                               SpGradientTraits<T>::ResizeReset(pasp, 0., 0);
                          }
 
                          for (index_type k = 1; k <= 2; ++k) {
-                              tauc_0(k) = Dot(N, tauc_0e.GetCol(k));
+                              tauc_0(k) = Dot(N, tauc_0e.GetCol(k), oDofMap);
                          }
                     }
 
-                    const T ptot = p + pasp;
+                    const T ptot = oDofMap.MapEval(p + pasp);
 
-                    const SpColVector<T, 2> dU = EvalUnique(U1 - U2);
+                    const SpColVector<T, 2> dU(U1 - U2, oDofMap);
 
-                    const T tau_xy_p_h = 0.5 * h * dp_dx;
-                    const T tau_xy_U_h = eta * dU(1) / h;
-                    const T tau_yz_p_h = 0.5 * h * dp_dz;
-                    const T tau_yz_U_h = eta * dU(2) / h;
+                    const T tau_xy_p_h = oDofMap.MapEval(0.5 * h * dp_dx);
+                    const T tau_xy_U_h = oDofMap.MapEval(eta * dU(1) / h);
+                    const T tau_yz_p_h = oDofMap.MapEval(0.5 * h * dp_dz);
+                    const T tau_yz_U_h = oDofMap.MapEval(eta * dU(2) / h);
 
-                    const T tau_xy_0 = EvalUnique(-tau_xy_p_h + tau_xy_U_h);
-                    const T tau_yz_0 = EvalUnique(-tau_yz_p_h + tau_yz_U_h);
+                    const T tau_xy_0 = oDofMap.MapEval(-tau_xy_p_h + tau_xy_U_h);
+                    const T tau_yz_0 = oDofMap.MapEval(-tau_yz_p_h + tau_yz_U_h);
 
-                    const T tau_xy_h = EvalUnique(tau_xy_p_h + tau_xy_U_h);
-                    const T tau_yz_h = EvalUnique(tau_yz_p_h + tau_yz_U_h);
+                    const T tau_xy_h = oDofMap.MapEval(tau_xy_p_h + tau_xy_U_h);
+                    const T tau_yz_h = oDofMap.MapEval(tau_yz_p_h + tau_yz_U_h);
 
                     SetStress(r, s, tau_xy_0, tau_yz_0, tau_xy_h, tau_yz_h);
 
@@ -20796,8 +21284,8 @@ namespace {
                               //               as long as the relative clearance is small
                               //               in case of a cylindrical bearing.
 
-                              dF_0_Rt(iReactionIdx[i - 1]) += EvalUnique(tauc_0(i) * dA);
-                              dF_h_Rt(iReactionIdx[i - 1]) -= EvalUnique(tauc_0(i) * dA);
+                              oDofMap.Add(dF_0_Rt(iReactionIdx[i - 1]), tauc_0(i) * dA);
+                              oDofMap.Sub(dF_h_Rt(iReactionIdx[i - 1]), tauc_0(i) * dA);
                          }
                     }
 
@@ -20807,8 +21295,7 @@ namespace {
                                                 dF_0_Rt,
                                                 dF_h_Rt,
                                                 dM_h_Rt,
-                                                dCoef,
-                                                func);
+                                                oDofMap);
                }
           }
      }
@@ -20961,6 +21448,26 @@ namespace {
                rgNodes[i - 1]->GetDensity(rhoe(i), dCoef);
           }
 
+          SpGradExpDofMapHelper<T> oDofMap;
+
+          oDofMap.GetDofStat(pe);
+
+          for (const auto& Uei: Ue) {
+               oDofMap.GetDofStat(Uei);
+          }
+
+          oDofMap.GetDofStat(he);
+
+          oDofMap.Reset();
+
+          oDofMap.InsertDof(pe);
+
+          for (const auto& Uei: Ue) {
+               oDofMap.InsertDof(Uei);
+          }
+
+          oDofMap.InsertDof(he);
+
           const index_type iIntegRule = iSelectIntegrationRule(pe);
           const index_type iNumGauss = iGetNumGaussPoints(iIntegRule);
           // Note: We have three nodes and only two Gauss points.
@@ -20973,11 +21480,11 @@ namespace {
                const SpColVector<doublereal, iNumNodes>& N = rgGaussPntDat[idxGauss].N;
                const SpMatrix<doublereal, 2, iNumNodes>& B = rgGaussPntDat[idxGauss].B;
 
-               T h = Dot(N, he);
+               T h = Dot(N, he, oDofMap);
 
                pGeometry->GetNonNegativeClearance(h, h);
 
-               T dp_dz = Dot(Transpose(B.GetRow(2)), pe);
+               T dp_dz = Dot(Transpose(B.GetRow(2)), pe, oDofMap);
 
                const doublereal eta = Dot(N, etae);
                const doublereal rho = Dot(N, rhoe);
@@ -20985,10 +21492,10 @@ namespace {
                T Uz{0.};
 
                for (index_type l = 1; l <= iNumNodes; ++l) {
-                    Uz += N(l) * Ue[l - 1](2);
+                    oDofMap.Add(Uz, N(l) * Ue[l - 1](2));
                }
 
-               mdotz -= EvalUnique((rho * dx / iNumNodesOutletBound) * h * (Uz - h * h * dp_dz / (12. * eta)));
+               oDofMap.Sub(mdotz, (rho * dx / iNumNodesOutletBound) * h * (Uz - h * h * dp_dz / (12. * eta)));
           }
 
           HYDRO_TRACE("mdotz(" << sref << ")=" << SpGradient::dGetValue(mdotz) * iNumNodesOutletBound << std::endl);
@@ -22161,6 +22668,48 @@ namespace {
      {
      }
 
+     int HydroMesh::GetNumConnectedNodes() const
+     {
+          HYDRO_ASSERT(pGeometry != nullptr);
+
+          int iNumConnectedNodes = pGeometry->GetNumConnectedNodes();
+
+          if (pThermWallBoundCond) {
+               iNumConnectedNodes += pThermWallBoundCond->GetNumConnectedNodes();
+          }
+
+          return iNumConnectedNodes;
+     }
+
+     void HydroMesh::GetConnectedNodes(std::vector<const Node*>& rgNodes) const
+     {
+          HYDRO_ASSERT(pGeometry != nullptr);
+
+          pGeometry->GetConnectedNodes(rgNodes);
+
+          if (pThermWallBoundCond) {
+               pThermWallBoundCond->GetConnectedNodes(rgNodes);
+          }
+     }
+
+     int HydroMesh::GetNumConnectedElements() const
+     {
+          int iNumConnectedElements = 0;
+
+          if (pCompliance) {
+               iNumConnectedElements += pCompliance->GetNumConnectedElements();
+          }
+
+          return iNumConnectedElements;
+     }
+
+     void HydroMesh::GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const
+     {
+          if (pCompliance) {
+               pCompliance->GetConnectedElements(rgElem);
+          }
+     }
+
      void HydroMesh::ParseGeometry(DataManager* pDM, MBDynParser& HP)
      {
           if (!HP.IsKeyWord("geometry")) {
@@ -22836,6 +23385,11 @@ namespace {
           if (pCompliance) {
                pCompliance->Update(Y, dCoef);
           }
+     }
+
+     void HydroMesh::Reset(SpFunctionCall func)
+     {
+          pGetGeometry()->Reset(func);
      }
 
      doublereal HydroMesh::dGetMaxPressureGradient() const
@@ -23744,23 +24298,23 @@ namespace {
                }
           }
 
-          for (auto i = rgGrooves.cbegin(); i != rgGrooves.cend(); ++i) {
-               if ((*i)->GetType() == LubricationGroove::FIXED && (*i)->iGetNumNodes() == 0) {
+          for (const auto& pGroove: rgGrooves) {
+               if (pGroove->GetType() == LubricationGroove::FIXED && pGroove->iGetNumNodes() == 0) {
                     silent_cerr("hydrodynamic plain bearing2("
                                 << pGetParent()->GetLabel()
                                 << "): No nodes affected by lubrication groove ("
-                                << (*i)->iGetLabel() << ")" << std::endl);
+                                << pGroove->iGetLabel() << ")" << std::endl);
 
                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                }
           }
 
-          for (auto i = rgCouplingCond.cbegin(); i != rgCouplingCond.cend(); ++i) {
-               if ((*i)->iGetNumNodes() == 0) {
+          for (const auto& pCouplingCond: rgCouplingCond) {
+               if (pCouplingCond->iGetNumNodes() == 0) {
                     silent_cerr("hydrodynamic plain bearing2("
                                 << pGetParent()->GetLabel()
                                 << "): No nodes affected by pressure coupling condition ("
-                                << (*i)->iGetLabel() << ")" << std::endl);
+                                << pCouplingCond->iGetLabel() << ")" << std::endl);
 
                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                }
