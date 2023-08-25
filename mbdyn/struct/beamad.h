@@ -92,7 +92,26 @@ public:
             const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
             enum sp_grad::SpFunctionCall func);
 
+     virtual SubVectorHandler&
+     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
+
+     virtual VariableSubMatrixHandler&
+     InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                   const VectorHandler& XCurr) override;
+
+     template <typename T>
+     inline void
+     InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                   const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                   sp_grad::SpFunctionCall func);
 protected:
+     template <typename T>
+     inline void
+     UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                doublereal dCoef,
+                const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                enum sp_grad::SpFunctionCall func);
+
      virtual void
      AddInternalForces(sp_grad::SpColVector<doublereal, 6>& AzLoc, unsigned int iSez);
 
@@ -208,7 +227,26 @@ public:
             const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
             enum sp_grad::SpFunctionCall func);
 
+     virtual SubVectorHandler&
+     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
+
+     virtual VariableSubMatrixHandler&
+     InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                   const VectorHandler& XCurr) override;
+
+     template <typename T>
+     inline void
+     InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                   const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                   sp_grad::SpFunctionCall func);
 protected:
+     template <typename T>
+     inline void
+     UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                doublereal dCoef,
+                const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                enum sp_grad::SpFunctionCall func);
+
      inline void
      UpdateState(const std::array<sp_grad::SpMatrixA<doublereal, 3, 3>, NUMSEZ>& R,
                  const std::array<sp_grad::SpColVectorA<doublereal, 3>, NUMSEZ>& p,
