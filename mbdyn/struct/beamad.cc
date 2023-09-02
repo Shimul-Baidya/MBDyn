@@ -516,14 +516,12 @@ ViscoElasticBeamAd::UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
      std::array<SpColVectorA<T, 3>, NUMNODES> gNod, gPrimeNod;
      std::array<SpColVectorA<T, 3>, NUMNODES> XNod, XPrimeNod;
-     SpColVectorA<T, 3> WNod;
 
      SpGradExpDofMapHelper<T> oDofMap;
 
      for (unsigned int i = 0; i < NUMNODES; i++) {
           pNode[i]->GetgCurr(gNod[i], dCoef, func);
           pNode[i]->GetgPCurr(gPrimeNod[i], dCoef, func);
-          pNode[i]->GetWCurr(WNod, dCoef, func);
           pNode[i]->GetXCurr(XNod[i], dCoef, func);
           pNode[i]->GetVCurr(XPrimeNod[i], dCoef, func);
 
@@ -546,9 +544,11 @@ ViscoElasticBeamAd::UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
      std::array<SpColVectorA<T, 3>, NUMNODES> xTmp, xPrimeTmp;
      SpMatrixA<T, 3, 3> RNod;
+     SpColVectorA<T, 3> WNod;
 
      for (unsigned int i = 0; i < NUMNODES; i++) {
           pNode[i]->GetRCurr(RNod, dCoef, func); // No need to insert into oDofMap because it will depend only on gNod
+          pNode[i]->GetWCurr(WNod, dCoef, func);
 
           const SpColVector<T, 3> fTmp(RNod * f[i], oDofMap);
 
