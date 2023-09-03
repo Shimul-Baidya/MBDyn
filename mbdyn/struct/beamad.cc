@@ -160,9 +160,13 @@ BeamAd::AssReactionForce(sp_grad::SpGradientAssVec<T>& WorkVec,
 
      const SpColVector<T, 3> F_I = SubColVector<1, 1, 3>(Az[S_I]);
 
+     DEBUGCERR("BeamAd(" << GetLabel() << "): F_I=" << F_I << "\n");
+
      WorkVec.AddItem(iNode1FirstMomIndex + 1, F_I);
 
      const SpColVector<T, 3> M_I(Cross(p[S_I] - X[NODE1], SubColVector<1, 1, 3>(Az[S_I]), oDofMap) + SubColVector<4, 1, 3>(Az[S_I]), oDofMap);
+
+     DEBUGCERR("BeamAd(" << GetLabel() << "): M_I=" << M_I << "\n");
 
      WorkVec.AddItem(iNode1FirstMomIndex + 4, M_I);
 
@@ -171,7 +175,12 @@ BeamAd::AssReactionForce(sp_grad::SpGradientAssVec<T>& WorkVec,
                                   + Cross(p[SII] - X[NODE2], SubColVector<1, 1, 3>(Az[SII]), oDofMap)
                                   - Cross(p[S_I] - X[NODE2], SubColVector<1, 1, 3>(Az[S_I]), oDofMap), oDofMap);
 
+     DEBUGCERR("BeamAd(" << GetLabel() << "): F_II=" << F_II << "\n");
+
      WorkVec.AddItem(iNode2FirstMomIndex + 1, F_II);
+
+     DEBUGCERR("BeamAd(" << GetLabel() << "): M_II=" << M_II << "\n");
+
      WorkVec.AddItem(iNode2FirstMomIndex + 4, M_II);
 
      const SpColVector<T, 3> F_III = -SubColVector<1, 1, 3>(Az[SII]);
@@ -189,6 +198,50 @@ BeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
                enum sp_grad::SpFunctionCall func)
 {
+     UnivAssRes(WorkVec, dCoef, XCurr, func);
+}
+
+SubVectorHandler&
+BeamAd::InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr)
+{
+     sp_grad::SpGradientAssVec<doublereal>::InitialAssRes(this,
+                                                          WorkVec,
+                                                          XCurr,
+                                                          sp_grad::SpFunctionCall::INITIAL_ASS_RES);
+
+     return WorkVec;
+}
+
+VariableSubMatrixHandler&
+BeamAd::InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                      const VectorHandler& XCurr)
+{
+     sp_grad::SpGradientAssVec<sp_grad::SpGradient>::InitialAssJac(this,
+                                                                   WorkMat.SetSparseGradient(),
+                                                                   XCurr,
+                                                                   sp_grad::SpFunctionCall::INITIAL_ASS_JAC);
+
+     return WorkMat;
+}
+
+template <typename T>
+inline void
+BeamAd::InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                      const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                      sp_grad::SpFunctionCall func)
+{
+     UnivAssRes(WorkVec, 1., XCurr, func);
+}
+
+template <typename T>
+inline void
+BeamAd::UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                   doublereal dCoef,
+                   const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                   enum sp_grad::SpFunctionCall func)
+{
+     DEBUGCOUTFNAME("BeamAd::UnivAssRes");
+
      using namespace sp_grad;
 
      DEBUGCOUT("dCoef=" << dCoef << "\n");
@@ -218,7 +271,7 @@ BeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      std::array<SpColVectorA<T, 3>, NUMNODES> xTmp;
 
      for (unsigned int i = 0; i < NUMNODES; i++) {
-          pNode[i]->GetRCurr(RNod, dCoef, func);
+          pNode[i]->GetRCurr(RNod, dCoef, func); // No need to insert into oDofMap because it will depend only on gNod
           xTmp[i].MapAssign(X[i] + RNod * f[i], oDofMap);
 
           DEBUGCOUT("f[" << i << "]=" << f[i] << "\n");
@@ -260,6 +313,8 @@ BeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                DefLoc[iSez](i + 3) = Dot(R[iSez].GetCol(i), GgGrad, oDofMap) + DefLocRef[iSez](i + 3);
           }
 
+          DEBUGCERR("BeamAd(" << GetLabel() << "): DefLoc[" << iSez << "]=" << DefLoc[iSez] << "\n");
+
           /* Calcola le azioni interne */
           pD[iSez]->pGetConstLaw()->Update(DefLoc[iSez], AzLoc[iSez]);
 
@@ -296,7 +351,7 @@ BeamAd::AssJac(VariableSubMatrixHandler& WorkMat,
                const VectorHandler& XCurr,
                const VectorHandler& XPrimeCurr)
 {
-     DEBUGCOUTFNAME("Beam::AssJac => AssStiffnessMat");
+     DEBUGCOUTFNAME("BeamAd::AssJac");
 
      sp_grad::SpGradientAssVec<sp_grad::SpGradient>::AssJac(this,
                                                             WorkMat.SetSparseGradient(),
@@ -332,7 +387,7 @@ BeamAd::AssRes(SubVectorHandler& WorkVec,
                const VectorHandler& XCurr,
                const VectorHandler& XPrimeCurr)
 {
-     DEBUGCOUTFNAME("BeamAd::AssRes => AssStiffnessVec");
+     DEBUGCOUTFNAME("BeamAd::AssRes");
 
      sp_grad::SpGradientAssVec<doublereal>::AssRes(this,
                                                    WorkVec,
@@ -408,8 +463,49 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                            const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
                            enum sp_grad::SpFunctionCall func)
 {
-     DEBUGCOUTFNAME("ViscoElasticBeamAd::AssRes");
+     UnivAssRes(WorkVec, dCoef, XCurr, func);
+}
 
+SubVectorHandler&
+ViscoElasticBeamAd::InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr)
+{
+     sp_grad::SpGradientAssVec<doublereal>::InitialAssRes(this,
+                                                          WorkVec,
+                                                          XCurr,
+                                                          sp_grad::SpFunctionCall::INITIAL_ASS_RES);
+
+     return WorkVec;
+}
+
+VariableSubMatrixHandler&
+ViscoElasticBeamAd::InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                                  const VectorHandler& XCurr)
+{
+     sp_grad::SpGradientAssVec<sp_grad::SpGradient>::InitialAssJac(this,
+                                                                   WorkMat.SetSparseGradient(),
+                                                                   XCurr,
+                                                                   sp_grad::SpFunctionCall::INITIAL_ASS_JAC);
+
+     return WorkMat;
+}
+
+template <typename T>
+inline void
+ViscoElasticBeamAd::InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                  const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                  sp_grad::SpFunctionCall func)
+{
+     UnivAssRes(WorkVec, 1., XCurr, func);
+}
+
+template <typename T>
+inline void
+ViscoElasticBeamAd::UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                               doublereal dCoef,
+                               const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                               enum sp_grad::SpFunctionCall func)
+{
+     DEBUGCOUTFNAME("ViscoElasticBeamAd::UnivAssRes");
      /* Riceve il vettore gia' dimensionato e con gli indici a posto
       * per scrivere il residuo delle equazioni di equilibrio dei tre nodi */
 
@@ -420,16 +516,12 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
      std::array<SpColVectorA<T, 3>, NUMNODES> gNod, gPrimeNod;
      std::array<SpColVectorA<T, 3>, NUMNODES> XNod, XPrimeNod;
-     SpMatrixA<T, 3, 3> RNod;
-     SpColVectorA<T, 3> WNod;
 
      SpGradExpDofMapHelper<T> oDofMap;
 
      for (unsigned int i = 0; i < NUMNODES; i++) {
           pNode[i]->GetgCurr(gNod[i], dCoef, func);
-          pNode[i]->GetRCurr(RNod, dCoef, func);
           pNode[i]->GetgPCurr(gPrimeNod[i], dCoef, func);
-          pNode[i]->GetWCurr(WNod, dCoef, func);
           pNode[i]->GetXCurr(XNod[i], dCoef, func);
           pNode[i]->GetVCurr(XPrimeNod[i], dCoef, func);
 
@@ -451,8 +543,13 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      oDofMap.InsertDone();
 
      std::array<SpColVectorA<T, 3>, NUMNODES> xTmp, xPrimeTmp;
+     SpMatrixA<T, 3, 3> RNod;
+     SpColVectorA<T, 3> WNod;
 
      for (unsigned int i = 0; i < NUMNODES; i++) {
+          pNode[i]->GetRCurr(RNod, dCoef, func); // No need to insert into oDofMap because it will depend only on gNod
+          pNode[i]->GetWCurr(WNod, dCoef, func);
+
           const SpColVector<T, 3> fTmp(RNod * f[i], oDofMap);
 
           xTmp[i].MapAssign(XNod[i] + fTmp, oDofMap);
@@ -547,6 +644,8 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                DefLoc[iSez](i + 3) = Dot(R[iSez].GetCol(i), GgGrad, oDofMap) + DefLocRef[iSez](i + 3);
           }
 
+          DEBUGCERR("ViscoElasticBeamAd(" << GetLabel() << "): DefLoc[" << iSez << "]=" << DefLoc[iSez] << "\n");
+
           /* Calcola le velocita' di deformazione nel sistema locale nei punti di valutazione */
           const SpColVector<T, 3> DL1(LPrime[iSez] + Cross(L[iSez], Omega[iSez]), oDofMap);
           const SpColVector<T, 3> DL2(G * gPrimeGrad[iSez] + GPrimeg + Cross(GgGrad, Omega[iSez]), oDofMap);
@@ -555,6 +654,8 @@ ViscoElasticBeamAd::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
                DefPrimeLoc[iSez](i) = Dot(R[iSez].GetCol(i), DL1, oDofMap);
                DefPrimeLoc[iSez](i + 3) = Dot(R[iSez].GetCol(i), DL2, oDofMap) + DefPrimeLocRef[iSez](i + 3);
           }
+
+          DEBUGCERR("ViscoElasticBeamAd(" << GetLabel() << "): DefPrimeLoc[" << iSez << "]=" << DefPrimeLoc[iSez] << "\n");
 
           /* Calcola le azioni interne */
           pD[iSez]->pGetConstLaw()->Update(DefLoc[iSez], DefPrimeLoc[iSez], AzLoc[iSez]);
