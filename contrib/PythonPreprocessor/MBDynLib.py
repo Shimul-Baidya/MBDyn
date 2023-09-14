@@ -1383,3 +1383,107 @@ class AerodynamicBeam:
             s = s + ',\n\tcustom output, ' + ', '.join(str(i) for i in self.custom_output)
         s = s + ';\n'
         return s
+
+class DriveCaller:
+    pass
+
+class ArrayDriveCaller(DriveCaller):
+    type = 'array'
+    def __init__(self, **kwargs):
+        pass
+
+class BistopDriveCaller(DriveCaller):
+    type = 'bistop'
+    def __init__(self, **kwargs):
+        try:
+            self.initial_status = kwargs['initial status']
+        except KeyError:
+            self.initial_status = 'active'
+            pass
+        assert isinstance(kwargs['activation_condition'], DriveCaller), (
+                '\n-------------------\nERROR:' +
+                ' DriveCaller(\'bistop\'): <activation_condition> should be' + 
+                ' a DriveCaller() instance' + 
+                '\n-------------------\n')
+        assert isinstance(kwargs['deactivation_condition'], DriveCaller), (
+                '\n-------------------\nERROR:' +
+                ' DriveCaller(\'bistop\'): <deactivation_condition> should be' + 
+                ' a DriveCaller() instance' + 
+                '\n-------------------\n')
+        self.activation_condition = kwargs['activation_condition']
+        self.deactivation_condition = kwargs['deactivation_condition']
+    def __str__(self):
+        s = 'bistop'
+        s = s + ',\n\t'
+        s = s + print(self.activation_condition)
+        s = s + ',\n\t',
+        s = s + print(self.deactivation_condition)
+        return s
+    def print(self, idx):
+        s = 'drive caller:'
+        s = s + ',\n\t'
+        s = s + str(idx)
+        s = s + ',\n\t\t'
+        s = s + str(self)
+        return s
+        
+class ConstDriveCaller(DriveCaller):
+    type = 'const'
+    def __init__(self, **kwargs):
+        assert isinstance(kwargs['const_value'], Number), ( 
+                '\n-------------------\nERROR:' +
+                ' DriveCaller(\'const\'): <const_value> must be numeric ' +
+                '\n-------------------\n')
+        self.const_value = kwargs['const_value']
+
+    def __str__(self):
+        s = 'const, ' + str(self.const_value)
+        return s
+    def print(self, idx):
+        s = 'drive caller: {}, const, {};'.format(idx, self.const_value)
+        return s
+
+
+class Data:
+    problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == 'problem type':
+                if value in problem_type:
+                    self.type = value
+                else:
+                    raise ValueError('Unrecognised problem type')            
+
+class InitialValueStrategy:
+    strategy_type = ('NO CHANGE', 'FACTOR', 'CHANGE')
+    def __init__(self, stype, **kwargs):
+        if stype in strategy_type:
+            self.type = value
+        else:
+            raise ValueError('Unrecognised strategy')
+       
+        if self.type == 'FACTOR':
+            for key, value in kwargs.items():
+                if key == 'reduction_factor':
+                    self.reduction_factor = value
+                if key == 'steps_before_reduction':
+                    self.steps_before_reduction = value
+                if key == 'raise_factor':
+                    self.raise_factor = value
+                if key == 'steps_before_raise':
+                    self.steps_before_raise = value
+                if key == 'minimum_iterations':
+                    self.minimum_iterations = value
+                if key == 'maximum_iterations':
+                    self.maximum_iterations = value
+        if self_type == 'CHANGE':
+            self.time_step_pattern = DriveCaller('const', 1e-3);
+
+class InitialValue:
+    def __init__(self):
+        self.initial_time = 0.
+        self.final_time = 10.
+        self.strategy = InitialValueStrategy()
+        self.min_time_step = 1e-6
+        self.max_time_step = 1.
+        self.time_step = 1e-3
