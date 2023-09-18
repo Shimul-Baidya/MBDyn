@@ -64,6 +64,9 @@ declared_MBVars = {}
 
 MBDynLib_simplify = True
 
+def errprint(*args, **kwargs):
+    print(*args, file = sys.stderr, **kwargs)
+
 def get_value(x):
     if isinstance(x, expression):
         return x.__get__()
@@ -1385,64 +1388,178 @@ class AerodynamicBeam:
         return s
 
 class DriveCaller:
+    idx = -1
     pass
 
 class ArrayDriveCaller(DriveCaller):
     type = 'array'
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
+        for arg in args:
+            assert isinstance(arg, DriveCaller), (
+                    '\n-------------------\nERROR:' +
+                    ' ArrayDriveCaller: each argument of constructor must be' + 
+                    ' a DriveCaller instance' + 
+                    '\n-------------------\n')
+        self.drives = args
         pass
+        try:
+            assert isinstance(kwargs['idx'], Integral), (
+                    '\n-------------------\nERROR:' +
+                    ' ArrayDriveCaller: <idx> should be an Integer value' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{},'.format(self.type)
+        for drive in self.drives:
+            if drive.idx < 0:
+                s = s + '\n\t{}'.format(drive)
+            else:
+                s = s + '\n\treference, {}'.format(drive.idx)
+        return s
 
 class BistopDriveCaller(DriveCaller):
     type = 'bistop'
     def __init__(self, **kwargs):
         try:
-            self.initial_status = kwargs['initial status']
+            if kwargs['initial_status'] in ['active', 'inactive']:
+                self.initial_status = kwargs['initial status']
+            else:
+                raise ValueError(
+                        '\n------------------\nERROR:' + 
+                        ' BistopDriveCaller: <initial_status> must be' + 
+                        ' either \'active\' or \'inactive\'' + 
+                        '\n------------------\n')
         except KeyError:
             self.initial_status = 'active'
             pass
+        try:
+            assert isinstance(kwargs['idx'], Integral), (
+                    '\n-------------------\nERROR:' +
+                    ' BistopDriveCaller: <idx> should be an Integer value' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
         assert isinstance(kwargs['activation_condition'], DriveCaller), (
                 '\n-------------------\nERROR:' +
-                ' DriveCaller(\'bistop\'): <activation_condition> should be' + 
-                ' a DriveCaller() instance' + 
+                ' BistopDriveCaller: <activation_condition> must be' + 
+                ' a DriveCaller instance' + 
                 '\n-------------------\n')
         assert isinstance(kwargs['deactivation_condition'], DriveCaller), (
                 '\n-------------------\nERROR:' +
-                ' DriveCaller(\'bistop\'): <deactivation_condition> should be' + 
-                ' a DriveCaller() instance' + 
+                ' BistopDriveCaller: <deactivation_condition> must be' + 
+                ' a DriveCaller instance' + 
                 '\n-------------------\n')
         self.activation_condition = kwargs['activation_condition']
         self.deactivation_condition = kwargs['deactivation_condition']
     def __str__(self):
-        s = 'bistop'
-        s = s + ',\n\t'
-        s = s + print(self.activation_condition)
-        s = s + ',\n\t',
-        s = s + print(self.deactivation_condition)
-        return s
-    def print(self, idx):
-        s = 'drive caller:'
-        s = s + ',\n\t'
-        s = s + str(idx)
-        s = s + ',\n\t\t'
-        s = s + str(self)
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{},\n\tinitial status, {},'.format(self.type, self.initial_status)
+        s = s + '\n\t# activation condition drive'
+        if self.activation_condition.idx < 0:
+            s = s + '\n\t{}'.format(self.activation_condition)
+        else:
+            s = s + '\n\treference, {}'.format(self.activation_condition.idx)
+        s = s + '\n\t# deactivation condition drive'
+        if self.deactivation_condition.idx < 0:
+            s = s + '\n\t{}'.format(self.deactivation_condition)
+        else:
+            s = s + '\n\treference, {}'.format(self.deactivation_condition.idx)
         return s
         
 class ConstDriveCaller(DriveCaller):
     type = 'const'
     def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], Integral), (
+                    '\n-------------------\nERROR:' +
+                    ' ConstDriveCaller: <idx> should be an Integer value' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
         assert isinstance(kwargs['const_value'], Number), ( 
                 '\n-------------------\nERROR:' +
-                ' DriveCaller(\'const\'): <const_value> must be numeric ' +
+                ' ConstDriveCaller: <const_value> must be numeric ' +
                 '\n-------------------\n')
         self.const_value = kwargs['const_value']
-
     def __str__(self):
-        s = 'const, ' + str(self.const_value)
-        return s
-    def print(self, idx):
-        s = 'drive caller: {}, const, {};'.format(idx, self.const_value)
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        
+        s = s + '{}, {}'.format(self.type, self.const_value)
         return s
 
+class ClosestNextDriveCaller(DriveCaller):
+    type = 'closest next'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], Integral), (
+                    '\n-------------------\nERROR:' +
+                    ' ClosestNextDriveCaller: <idx> should be an Integer value' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['initial_time'], Number), (
+                    '\n-------------------\nERROR:' +
+                    ' ClosestNextDriveCaller: <initial_time> should be numeric' + 
+                    '\n-------------------\n')
+            self.initial_time = kwargs['initial_time']
+        except KeyError:
+            (
+                '\n-------------------\nERROR:' +
+                ' ClosestNextDriveCaller: <initial_time> is not set' + 
+                '\n-------------------\n')
+        try:
+            if isinstance(kwargs['final_time'], Number):
+                self.final_time = kwargs['final_time']
+            elif isinstance(kwargs['final_time'], str) and kwargs['final_time'] == 'forever':
+                self.final_time = 'forever'
+            else:
+                raise ValueError(
+                        '\n-------------------\nERROR:' +
+                        ' ClosestNextDriveCaller: <finale_time> must either be' +
+                        ' numeric or \'forever\'' + 
+                        '\n-------------------\n')
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' ClosestNextDriveCaller: <final_time> is not set' + 
+                    '\n-------------------\n')
+        try:
+            assert isinstance(kwargs['increment'], DriveCaller), (
+                    '\n-------------------\nERROR:' +
+                    ' ClosestNextDriveCaller: <increment> should be a' + 
+                    ' DriveCaller instance' + 
+                    '\n-------------------\n')
+            self.increment = kwargs['increment']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' ClosestNextDriveCaller: <increment> is not set' + 
+                    '\n-------------------\n')
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        s = s + ',\n\t{}, {},'.format(self.initial_time, self.final_time)
+        s = s + '\n\t# increment drive'
+        if self.increment.idx < 0:
+            s = s + '\n\t{}'.format(self.increment)
+        else:
+            s = s + '\n\treference, {}'.format(self.increment.idx)
+        return s
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
