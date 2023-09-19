@@ -1561,6 +1561,97 @@ class ClosestNextDriveCaller(DriveCaller):
             s = s + '\n\treference, {}'.format(self.increment.idx)
         return s
 
+class CosineDriveCaller(DriveCaller):
+    type = 'cosine'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], Integral), (
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <idx> should be an Integer value' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['initial_time'], Number), (
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <idx> should be an Integer value' + 
+                    '\n-------------------\n')
+            if kwargs['initial_time'] >= 0:
+                self.initial_time = kwargs['initial_time']
+            else:
+                raise ValueError(
+                        '\n-------------------\nERROR:' +
+                        ' CosineDriveCaller: <initial_time> should be non-negative' + 
+                        '\n-------------------\n'
+                        )
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['angular_velocity'], Number), (
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <angular_velocity> should be a number' + 
+                    '\n-------------------\n')
+            self.angular_velocity = kwargs['angular_velocity']
+        except KeyError:
+            eprint(
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <angular_velocity> is required' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert isinstance(kwargs['amplitude'], Number), (
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <amplitude> should be a number' + 
+                    '\n-------------------\n')
+            self.amplitude = kwargs['amplitude']
+        except KeyError:
+            eprint(
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <amplitude> is required' + 
+                    '\n-------------------\n'
+            )
+        try:
+            if kwargs['number_of_cycles'] in ('half', 'one', 'forever'):
+                self.number_of_cycles = kwargs['number_of_cycles']
+            else:
+                assert isinstance(kwargs['number_of_cycles'], Number) (
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <number_of_cycles> must be either' + 
+                    '\n numeric or in (\'half\', \'one\', \'forever\')' + 
+                    '\n-------------------\n'
+                )
+                self.number_of_cycles = kwargs['number_of_cycles']
+        except KeyError:
+            eprint(
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <amplitude> is required' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert isinstance(kwargs['initial_value'], Number), (
+                    '\n-------------------\nERROR:' +
+                    ' CosineDriveCaller: <initial_value> should be a number' + 
+                    '\n-------------------\n')
+            self.initial_value = kwargs['initial_value']
+        except KeyError:
+            eprint(
+                    '\n-------------------\nWARNING:' +
+                    ' CosineDriveCaller: <initial_value> not provided, assuming 0.' + 
+                    '\n-------------------\n'
+            )
+            self.initial_value = 0.
+            pass
+     
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}, {},'.format(self.type, self.initial_time)
+        s = s + '{}, {},'.format(self.angular_velocity, self.amplitude)
+        s = s + '{}, {}'.format(self.number_of_cycles, self.initial_value)
+        return s
+
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
     def __init__(self, **kwargs):
