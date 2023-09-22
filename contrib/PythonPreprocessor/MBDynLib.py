@@ -2077,6 +2077,73 @@ class DoubleRampDriveCaller(DriveCaller):
         s = s + ',\n\t{}'.format(self.initial_value)
         return s
 
+class DoubleStepDriveCaller(DriveCaller):
+    type = 'double step'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' DoubleStepDriveCaller: <idx> must either be an integer value or an MBVar' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' DoubleStepDriveCaller: <initial_time> must either be a number or an MBVar' + 
+                    '\n-------------------\n')
+            self.initial_time = kwargs['initial_time']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' DoubleStepDriveCaller: <initial_time> not set, assuming 0.' + 
+                '\n-------------------\n')
+            self.initial_time = 0.
+            pass
+        try:
+            assert isinstance(kwargs['final_time'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' DoubleStepDriveCaller: <final_time> must either be a number or an MBVar' + 
+                    '\n-------------------\n')
+            self.final_time = kwargs['final_time']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' DoubleStepDriveCaller: <final_time> is not set' + 
+                '\n-------------------\n')
+        try:
+            assert isinstance(kwargs['step_value'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' DoubleStepDriveCaller: <step_value> must either be a number or an MBVar' + 
+                    '\n-------------------\n')
+            self.step_value = kwargs['step_value']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' DoubleStepDriveCaller: <step_value> is not set' + 
+                '\n-------------------\n')
+        try:
+            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' DoubleStepDriveCaller: <initial_value> must either be a number or an MBVar' + 
+                    '\n-------------------\n')
+            self.initial_value = kwargs['initial_value']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' DoubleStepDriveCaller: <initial_value> is not set, assuming 0.' + 
+                '\n-------------------\n')
+            self.initial_value = 0.
+            pass
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        s = s + ',\n\t{}, {}'.format(self.initial_time, self.final_time)
+        s = s + ',\n\t{}, {}'.format(self.step_value, self.initial_value)
+        return s
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
