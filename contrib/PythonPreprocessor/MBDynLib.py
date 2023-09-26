@@ -563,7 +563,10 @@ class PointMass:
         s = s + ';\n'
         return s
 
-class Body:
+class Element:
+    idx = -1
+
+class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
             output = 'yes'):
         assert isinstance(position, Position), (
@@ -577,6 +580,7 @@ class Body:
             ' must be a list;' + 
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'body'
         self.node = node
         self.mass = mass
         self.position = position
@@ -600,7 +604,7 @@ class Body:
         return s
 
 
-class StructuralForce:
+class StructuralForce(Element):
     def __init__(self, idx, node, ftype, position, force_drive, 
             force_orientation = [], moment_orientation = [],
             moment_drive = [], output = 'yes'):
@@ -625,6 +629,7 @@ class StructuralForce:
                 ' must be an instance of the Position class;' + 
                 '\n-------------------\n')
         self.idx = idx
+        self.type = 'force'
         self.node = node
         self.ftype = ftype
         self.position = position
@@ -650,7 +655,7 @@ class StructuralForce:
         return s
 
 
-class StructuralInternalForce:
+class StructuralInternalForce(Element):
     def __init__(self, idx, nodes, ftype, positions, force_drive, 
             force_orientation = [], moment_orientation = [],
             moment_drive = [], output = 'yes'):
@@ -679,6 +684,7 @@ class StructuralInternalForce:
                 ' moment orientations must be instances of the Position class;' + 
                 '\n-------------------\n')
         self.idx = idx
+        self.type = 'force'
         self.nodes = nodes
         self.ftype = ftype
         self.positions = positions
@@ -709,7 +715,7 @@ class StructuralInternalForce:
         return s
 
 
-class StructuralCouple:
+class StructuralCouple(Element):
     def __init__(self, idx, node, ctype, position, moment_drive, output = 'yes'):
         assert isinstance(position, Position), (
             '\n-------------------\nERROR:' + 
@@ -721,6 +727,7 @@ class StructuralCouple:
             ' unrecognised type of structural couple: ' + str(ctype) + 
             ';\n-------------------\n')
         self.idx = idx
+        self.type = 'couple'
         self.node = node
         self.ctype = ctype
         self.position = position
@@ -738,7 +745,7 @@ class StructuralCouple:
         return s
 
 
-class StructuralInternalCouple:
+class StructuralInternalCouple(Element):
     def __init__(self, idx, nodes, ctype, positions, moment_drive, output = 'yes'):
         assert len(nodes) == 2, (
             '\n-------------------\nERROR:' + 
@@ -759,6 +766,7 @@ class StructuralInternalCouple:
             ' unrecognised type of structural internal couple: ' + str(ctype) + 
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'couple'
         self.nodes = nodes
         self.ctype = ctype
         self.positions = positions
@@ -777,10 +785,11 @@ class StructuralInternalCouple:
         return s
 
 
-class Clamp:
+class Clamp(Element):
     def __init__(self, idx, node, pos = Position('', 'node'), 
             orient = Position('', 'node'), output = 'yes'):
         self.idx = idx
+        self.type = 'joint'
         self.node = node
         self.position = pos
         self.orientation = orient
@@ -795,7 +804,7 @@ class Clamp:
         return s
 
 
-class TotalJoint:
+class TotalJoint(Element):
     def __init__(self, idx, nodes, positions, \
             position_orientations, rotation_orientations, \
             position_constraints, orientation_constraints, \
@@ -866,6 +875,7 @@ class TotalJoint:
             ' the class Position;\n' +
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'joint'
         self.nodes = nodes
         self.positions = positions
         self.position_orientations = position_orientations
@@ -906,7 +916,7 @@ class TotalJoint:
         return s
 
 
-class TotalPinJoint:
+class TotalPinJoint(Element):
     def __init__(self, idx, node, 
             positions, position_orientations, rotation_orientations, 
             position_constraints, orientation_constraints, 
@@ -955,6 +965,7 @@ class TotalPinJoint:
             ' defining a total joint with ' + str(len(orientation_constrains)) + 
             ' orientation constraints;' + '\n-------------------\n')
         self.idx = idx
+        self.type = 'joint'
         self.node = node
         self.positions = positions
         self.position_orientations = position_orientations
@@ -993,13 +1004,14 @@ class TotalPinJoint:
         s = s + ';\n'
         return s
 
-class JointRegularization:
+class JointRegularization(Element):
     def __init__(self, idx, coefficients):
         assert (isinstance(coefficients, list) and len(coefficients) >= 1) or (isinstance(coefficients, Number)), (
             '\n-------------------\nERROR:' + 
             ' joint regularization needs at least one' +
             ' coefficient ' + '\n-------------------\n')
         self.idx = idx
+        self.type = 'joint regularization'
         self.coefficients = coefficients
     def __str__(self):
         s = 'joint regularization: ' + str(self.idx) + ", tikhonov"
@@ -1011,7 +1023,7 @@ class JointRegularization:
         return s
 
 
-class Rod:
+class Rod(Element):
     def __init__(self, idx, nodes, positions, const_law, length = 'from nodes', 
             output = 'yes'):
         assert len(nodes) == 2, (
@@ -1031,6 +1043,7 @@ class Rod:
             ' the class Position;\n' +
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'joint'
         self.nodes = nodes
         self.positions = positions
         self.const_law = const_law
@@ -1049,7 +1062,7 @@ class Rod:
         s = s + ';\n'
         return s
 
-class DeformableDiaplacement:
+class DeformableDiaplacement(Element):
     def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
         assert isinstance(nodes, list), (
             '\n-------------------\nERROR:' +
@@ -1076,6 +1089,7 @@ class DeformableDiaplacement:
             ' relative position orientations must be given in a list' +
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'joint'
         self.nodes = nodes
         self.positions = positions
         self.orientations = orientations
@@ -1098,7 +1112,7 @@ class DeformableDiaplacement:
         s = s + ';\n'
         return s
 
-class DeformableHinge:
+class DeformableHinge(Element):
     def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
         assert isinstance(nodes, list), (
             '\n-------------------\nERROR:' +
@@ -1125,6 +1139,7 @@ class DeformableHinge:
             ' relative position orientations must be given in a list' +
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'joint'
         self.nodes = nodes
         self.positions = positions
         self.orientations = orientations
@@ -1148,10 +1163,10 @@ class DeformableHinge:
         s = s + ';\n'
         return s
 
-class Shell:
+class Shell(Element):
     def __init__(self, shell_type, idx, nodes, const_law, output = 'yes'):
-        self.shell_type = shell_type
         self.idx = idx
+        self.type = shell_type
         self.nodes = nodes
         if isinstance(const_law, list):
             self.const_law = const_law
@@ -1159,7 +1174,7 @@ class Shell:
             self.const_law = [const_law]
         self.output = output
     def __str__(self):
-        s = str(self.shell_type) + ': ' + str(self.idx) + ',\n'
+        s = str(self.type) + ': ' + str(self.idx) + ',\n'
         s = s + '\t' + ', '.join(str(i) for i in self.nodes) + ',\n'
         s = s + '\t' + ', '.join(str(i) for i in self.const_law)
         if self.output != 'yes':
@@ -1167,7 +1182,7 @@ class Shell:
         s = s + ';\n'
         return s
         
-class Beam:
+class Beam(Element):
     def __init__(self, idx, nodes, positions, orientations, const_laws_orientations,
             const_laws, output = 'yes'):
         assert len(nodes) == 3 or len(nodes) == 2, (
@@ -1190,9 +1205,9 @@ class Beam:
             ' coonstitutive laws and ' + str(len(const_laws_orientations)) + ' constitutive law orientations;' +
             '\n-------------------\n')
         if len(nodes) == 2:
-            self.beam_type = 'beam2'
+            self.type = 'beam2'
         else:
-            self.beam_type = 'beam3'
+            self.type = 'beam3'
         self.idx = idx
         self.nodes = nodes
         self.positions = positions
@@ -1201,7 +1216,7 @@ class Beam:
         self.const_laws = const_laws
         self.output = output
     def __str__(self):
-        s = str(self.beam_type) + ': ' + str(self.idx)
+        s = str(self.type) + ': ' + str(self.idx)
         for (node, position, orientation) in zip(self.nodes, self.positions, self.orientations):
             s = s + ',\n\t' + str(node) + ',\n\t\tposition, ' + str(position) + ',\n\t\torientation, ' + str(orientation)
         for (cl_or, cl) in zip(self.const_laws_orientations, self.const_laws):
@@ -1215,7 +1230,7 @@ class Beam:
         s = s + ';\n'
         return s
 
-class AerodynamicBody:
+class AerodynamicBody(Element):
     def __init__(self, idx, node, 
             position, orientation, span,
             chord, aero_center, b_c_point, twist, integration_points,
@@ -1256,6 +1271,7 @@ class AerodynamicBody:
             ' defining an aerodynamic body with unrecognised jacobian flag'
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'aerodynamic body'
         self.node = node
         self.position = position
         self.orientation = orientation
@@ -1304,7 +1320,7 @@ class AerodynamicBody:
         return s
 
 
-class AerodynamicBeam:
+class AerodynamicBeam(Element):
     def __init__(self, idx, beam, 
             positions, orientations,
             chord, aero_center, b_c_point, twist, integration_points, 
@@ -1351,6 +1367,7 @@ class AerodynamicBeam:
             ' defining an aerodynamic beam with unrecognised jacobian flag'
             '\n-------------------\n')
         self.idx = idx
+        self.type = 'aerodynamic beam' + str(len(self.positions))
         self.beam = beam
         self.positions = positions
         self.orientations = orientations
@@ -2144,6 +2161,160 @@ class DoubleStepDriveCaller(DriveCaller):
         s = s + ',\n\t{}, {}'.format(self.initial_time, self.final_time)
         s = s + ',\n\t{}, {}'.format(self.step_value, self.initial_value)
         return s
+
+
+class DriveDriveCaller(DriveCaller):
+    type = 'drive'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' DriveDriveCaller: <idx> must either be an integer value or an MBVar' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['drive_caller1'], DriveCaller), (
+                    '\n-------------------\nERROR:' +
+                    ' DriveDriveCaller: <drive_caller1> must either be a number or an MBVar' + 
+                    '\n-------------------\n')
+            self.drive_caller1 = kwargs['drive_caller1']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' DriveDriveCaller: <drive_caller1> not set' + 
+                '\n-------------------\n')
+        try:
+            assert isinstance(kwargs['drive_caller2'], DriveCaller), (
+                    '\n-------------------\nERROR:' +
+                    ' DriveDriveCaller: <drive_caller2> must either be a number or an MBVar' + 
+                    '\n-------------------\n')
+            self.drive_caller2 = kwargs['drive_caller2']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' DriveDriveCaller: <drive_caller1> not set' + 
+                '\n-------------------\n')
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        if self.drive_caller1.idx < 0:
+            s = s + ',\n\t{}'.format(self.drive_caller1)
+        else:
+            s = s + ',\n\treference, {}'.format(self.drive_caller1.idx)
+        if self.drive_caller2.idx < 0:
+            s = s + ',\n\t{}'.format(self.drive_caller2)
+        else:
+            s = s + ',\n\treference, {}'.format(self.drive_caller2.idx)
+        return s
+
+
+class ElementDriveCaller(DriveCaller):
+    type = 'element'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' ElementDriveCaller: <idx> must either be an integer value or an MBVar' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['element'], Element), (
+                    '\n-------------------\nERROR:' +
+                    ' ElementDriveCaller: <element> must either be an instance of Element' + 
+                    '\n-------------------\n')
+            self.element = kwargs['element']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' ElementDriveCaller: <element> not set' + 
+                '\n-------------------\n')
+        try:
+            assert isinstance(kwargs['private_data'], str), (
+                    '\n-------------------\nERROR:' +
+                    ' ElementDriveCaller: <private_data> must either be a string' + 
+                    '\n-------------------\n')
+            self.private_data = kwargs['private_data']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' ElementDriveCaller: <final_time> is not set' + 
+                '\n-------------------\n')
+        try:
+            assert isinstance(kwargs['func_drive'], (DriveCaller, str)), (
+                    '\n-------------------\nERROR:' +
+                    ' ElementDriveCaller: <func_drive> must either be a' +
+                    ' DriveCaller or \'direct\'' + 
+                    '\n-------------------\n')
+            if isinstance(kwargs['func_drive'], str) and kwargs['func_drive'] != 'direct':
+                raise ValueError(
+                    '\n-------------------\nERROR:' +
+                    ' ElementDriveCaller: <func_drive> must either be a' +
+                    ' DriveCaller or \'direct\'' + 
+                    '\n-------------------\n'
+                    )
+            self.func_drive = kwargs['func_drive']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' ElementDriveCaller: <func_drive> is not set' + 
+                '\n-------------------\n')
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        s = s + ', {}, {}'.format(self.element.idx, self.element.type)
+        s = s + ', string, \"{}\"'.format(self.private_data)
+        s = s + ', {}'.format(self.func_drive)
+        return s
+
+class LinearDriveCaller(DriveCaller):
+    type = 'linear'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' LinearDriveCaller: <idx> must either be an integer value or an MBVar' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['const_coef'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' LinearDriveCaller: <const_coef> must either be a number of an MBVar' + 
+                    '\n-------------------\n')
+            self.const_coef = kwargs['const_coef']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' LinearDriveCaller: <const_coef> not set' + 
+                '\n-------------------\n')
+        try:
+            assert isinstance(kwargs['slope_coef'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' LinearDriveCaller: <slope_coef> must either be a number of an MBVar' + 
+                    '\n-------------------\n')
+            self.slope_coef = kwargs['slope_coef']
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' LinearDriveCaller: <slope_coef> not set' + 
+                '\n-------------------\n')
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        s = s + ', {}, {}'.format(self.const_coef, self.slope_coef)
+        return s
+
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
