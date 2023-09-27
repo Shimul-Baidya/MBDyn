@@ -322,12 +322,20 @@ class power(binary_expression):
         return ls + ' ^ ' + rs
 
 class MBVar(terminal_expression):
+    base_types = ('bool', 'integer', 'real', 'string')
+    var_types = base_types + tuple(['const' + ' ' + ti for ti in base_types]) +\
+                tuple(['ifndef' + ' ' + 'const' + ti for ti in base_types])
     def __init__(self, name, var_type, expression):
         assert(name)
         self.name = name
         self.var_type = var_type
         self.expression = expression
-        #self.do_declare = do_declare
+        assert (var_type in self.var_types), (
+            '\n-------------------\nERROR:' + 
+            ' MBVar: unknown variable type {}\n\t'.format(var_type) + 
+            '\n-------------------\n'
+        )
+       #self.do_declare = do_declare
         #if self.do_declare:
         assert (name in declared_ConstMBVars) == False, (
             '\n-------------------\nERROR:' + 
@@ -371,10 +379,16 @@ class MBVar(terminal_expression):
                 ' re-defining an already declared variable of type ' + str(declared_MBVars[self.name].var_type) + '\n' + 
                 'with different type ' + str(self.var_type) +
                 '\n-------------------\n')
-            print('set: ' + self.name + ' = ' + str(self.expression) + ';')
+            if ('string' in self.var_type):
+                print('set: ' + self.name + ' = \"' + str(self.expression) + '\";')
+            else:
+                print('set: ' + self.name + ' = ' + str(self.expression) + ';')
         else:
             declared_MBVars[self.name] = self
-            print('set: ' + self.var_type + ' ' + self.name + ' = ' + str(self.expression) + ';')
+            if ('string' in self.var_type):
+                print('set: ' + self.var_type + ' ' + self.name + ' = \"' + str(self.expression) + '\";')
+            else:
+                print('set: ' + self.name + ' = ' + str(self.expression) + ';')
         #globals()[self.name] = self    
         #__builtins__[self.name] = self    
         setattr(builtins, self.name, self)
@@ -400,7 +414,7 @@ class IfndefMBVar(MBVar):
         if name in declared_MBVars:
             pass
         else:
-            MBVar.__init__(self, name, 'const ' + var_type, value)
+            MBVar.__init__(self, name, 'ifndef ' + var_type, value)
 
 class null:
     def __str__(self):
@@ -1581,7 +1595,7 @@ class ConstDriveCaller(DriveCaller):
                     '\n-------------------\n')
             self.const_value = kwargs['const_value']
         except KeyError:
-            eprint(
+            errprint(
                 '\n-------------------\nERROR:' +
                 ' ConstDriveCaller: <const_value> must be provided' + 
                 '\n-------------------\n')
@@ -1673,7 +1687,7 @@ class CosineDriveCaller(DriveCaller):
                     '\n-------------------\n')
             self.initial_time = kwargs['initial_time']
         except KeyError:
-            eprint(
+            errprint(
                     '\n-------------------\nWARNING:' +
                     ' CosineDriveCaller: <initial_time> not set, assuming 0.' + 
                     '\n-------------------\n'
@@ -1687,7 +1701,7 @@ class CosineDriveCaller(DriveCaller):
                     '\n-------------------\n')
             self.angular_velocity = kwargs['angular_velocity']
         except KeyError:
-            eprint(
+            errprint(
                     '\n-------------------\nERROR:' +
                     ' CosineDriveCaller: <angular_velocity> is required' + 
                     '\n-------------------\n'
@@ -1699,7 +1713,7 @@ class CosineDriveCaller(DriveCaller):
                     '\n-------------------\n')
             self.amplitude = kwargs['amplitude']
         except KeyError:
-            eprint(
+            errprint(
                     '\n-------------------\nERROR:' +
                     ' CosineDriveCaller: <amplitude> is required' + 
                     '\n-------------------\n'
@@ -1712,7 +1726,7 @@ class CosineDriveCaller(DriveCaller):
                     '\n-------------------\n')
             self.number_of_cycles = kwargs['number_of_cycles']
         except KeyError:
-            eprint(
+            errprint(
                     '\n-------------------\nERROR:' +
                     ' CosineDriveCaller: <amplitude> is required' + 
                     '\n-------------------\n'
@@ -1724,7 +1738,7 @@ class CosineDriveCaller(DriveCaller):
                     '\n-------------------\n')
             self.initial_value = kwargs['initial_value']
         except KeyError:
-            eprint(
+            errprint(
                     '\n-------------------\nWARNING:' +
                     ' CosineDriveCaller: <initial_value> not provided, assuming 0.' + 
                     '\n-------------------\n'
@@ -2273,6 +2287,176 @@ class ElementDriveCaller(DriveCaller):
         s = s + ', string, \"{}\"'.format(self.private_data)
         s = s + ', {}'.format(self.func_drive)
         return s
+
+
+class ExponentialDriveCaller(DriveCaller):
+    type = 'exponential'
+    def __init__(self, **kwargs):
+        try:
+            arg = 'idx'
+            assert isinstance(kwargs[arg], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) + 
+                    ' an integer value or an MBVar' + 
+                    '\n-------------------\n')
+            self.idx = kwargs[arg]
+        except KeyError:
+            pass
+        try:
+            arg = 'amplitude_value'
+            assert isinstance(kwargs[arg], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
+                    ' a number of an MBVar' + 
+                    '\n-------------------\n')
+            self.amplitude_value = kwargs[arg]
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' {}: <{}> not set'.format(self.__class__.__name__, arg) + 
+                '\n-------------------\n')
+        try:
+            arg = 'time_constant_value'
+            assert isinstance(kwargs[arg], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
+                    ' a number of an MBVar' + 
+                    '\n-------------------\n')
+            self.time_constant_value = kwargs[arg]
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' {}: <{}> not set'.format(self.__class__.__name__, arg) + 
+                '\n-------------------\n')
+        try:
+            arg = 'initial_time'
+            assert isinstance(kwargs[arg], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
+                    ' a number of an MBVar' + 
+                    '\n-------------------\n')
+            self.initial_time = kwargs[arg]
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' {}: <{}> not set, assuming 0.'.format(self.__class__.__name__, arg) + 
+                '\n-------------------\n')
+            self.initial_time = 0.
+            pass
+        try:
+            arg = 'initial_value'
+            assert isinstance(kwargs[arg], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
+                    ' a number of an MBVar' + 
+                    '\n-------------------\n')
+            self.initial_value = kwargs[arg]
+        except KeyError:
+            (
+                '\n-------------------\nWARNING:' +
+                ' {}: <{}> not set, assuming 0.'.format(self.__class__.__name__, arg) + 
+                '\n-------------------\n')
+            self.initial_value = 0.
+            pass
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        s = s + ', {}, {}, {}, {}'.format(
+                    self.amplitude_value, 
+                    self.time_constant_value,
+                    self.initial_time,
+                    self.initial_value
+                    )
+        return s
+
+
+class FileDriveDrive(DriveCaller):
+    # TODO: needs FileDrive before
+    pass
+
+
+class FourierSeriesDrive(DriveCaller):
+    # TODO
+    pass
+
+
+class FrequencySweepDrive(DriveCaller):
+    # TODO
+    pass
+
+
+class GiNaCDriveCaller(DriveCaller):
+    type = 'ginac'
+    def __init__(self, **kwargs):
+        try:
+            arg = 'idx'
+            assert isinstance(kwargs[arg], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) + 
+                    ' an integer value or an MBVar' + 
+                    '\n-------------------\n')
+            self.idx = kwargs[arg]
+        except KeyError:
+            pass
+        try:
+            arg = 'expression'
+            assert isinstance(kwargs[arg], (MBVar, str)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' a string or an MBVar' + 
+                    '\n-------------------\n')
+            if isinstance(kwargs[arg], MBVar) and ('string' not in kwargs[arg].var_type):
+                raise TypeError(
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' an MBVar of type string' + 
+                    '\n-------------------\n'
+                )
+            self.expression = kwargs[arg]
+        except KeyError:
+                errprint(
+                '\n-------------------\nERROR' +
+                ' {}: <{}> not set'.format(self.__class__.__name__, arg) + 
+                '\n-------------------\n'
+                )
+        try:
+            arg = 'symbol'
+            assert isinstance(kwargs[arg], (MBVar, str)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' a string or an MBVar' + 
+                    '\n-------------------\n')
+            if isinstance (kwargs[arg], MBVar) and ('string' not in kwargs[arg].var_type):
+                raise TypeError(
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' an MBVar of type string' + 
+                    '\n-------------------\n'
+                )
+            self.symbol = kwargs[arg]
+        except KeyError:
+            pass
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        try:
+            if isinstance(self.symbol, MBVar):
+                s = s + ', symbol, {}'.format(self.symbol)
+            else:
+                s = s + ', symbol, \"{}\"'.format(self.symbol)
+        except AttributeError:
+            pass
+        if isinstance(self.expression, MBVar):
+            s = s + ', {}'.format(self.expression)
+        else:
+            s = s + ', \"{}\"'.format(self.expression)
+        return s
+    pass
+
 
 class LinearDriveCaller(DriveCaller):
     type = 'linear'
