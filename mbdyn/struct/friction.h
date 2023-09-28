@@ -3,7 +3,7 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 2003-2017
+ * Copyright (C) 2003-2023
  *
  * Marco Morandini	<morandini@aero.polimi.it>
  *
@@ -41,11 +41,9 @@
 /** Base class for friction models
  */
 class BasicFriction : public SimulationEntity{
-private:
-	void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0) { NO_OP; };
 public:
+	using SimulationEntity::SetValue;
+	using SimulationEntity::AfterConvergence;
 /*
  * 	unsigned int iGetNumDof(void) const;
  * 	DofOrder::Order GetDofType(unsigned int i) const;
@@ -222,7 +220,7 @@ private:
 		sticked,
 		sticking,
 		sliding};
-	logical converged_sticked;
+	//logical converged_sticked;
 	status_type status;
 	tr_type transition_type;	
 	doublereal converged_v;

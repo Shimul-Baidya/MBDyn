@@ -3,12 +3,12 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 2003-2017
+ * Copyright (C) 2003-2023
  *
  * This code is a partial merge of HmFe and MBDyn.
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -67,6 +67,7 @@ public:
                 NO_OP;
         };
 #endif /* DEBUG */
+	using MatrixHandler::operator=;
         class const_iterator {
                 friend class NaiveMatrixHandler;
 
@@ -106,40 +107,40 @@ public:
 
         virtual ~NaiveMatrixHandler(void);
 
-        integer iGetNumRows(void) const {
+        integer iGetNumRows(void) const override {
                 return iSize;
         };
 
-        integer iGetNumCols(void) const {
+        integer iGetNumCols(void) const override {
                 return iSize;
         };
 
-        void Reset(void);
+        void Reset(void) override;
 
         /* Ridimensiona la matrice */
-        virtual void Resize(integer, integer) {
+        virtual void Resize(integer, integer) override {
                 throw ErrGeneric(MBDYN_EXCEPT_ARGS);
         };
 
         virtual inline const doublereal&
-        operator () (integer iRow, integer iCol) const;
+        operator () (integer iRow, integer iCol) const override;
 
         virtual inline doublereal&
-        operator () (integer iRow, integer iCol);
+        operator () (integer iRow, integer iCol) override;
 
         /* Overload di += usato per l'assemblaggio delle matrici */
-        virtual MatrixHandler& operator += (const SubMatrixHandler& SubMH);
+        virtual MatrixHandler& operator += (const SubMatrixHandler& SubMH) override;
 
         /* Overload di -= usato per l'assemblaggio delle matrici */
-        virtual MatrixHandler& operator -= (const SubMatrixHandler& SubMH);
+        virtual MatrixHandler& operator -= (const SubMatrixHandler& SubMH) override;
 
         /* Overload di += usato per l'assemblaggio delle matrici
          * questi li vuole ma non so bene perche'; force per la doppia
          * derivazione di VariableSubMatrixHandler */
         virtual MatrixHandler&
-        operator += (const VariableSubMatrixHandler& SubMH);
+        operator += (const VariableSubMatrixHandler& SubMH) override;
         virtual MatrixHandler&
-        operator -= (const VariableSubMatrixHandler& SubMH);
+        operator -= (const VariableSubMatrixHandler& SubMH) override;
 
         void MakeCCStructure(std::vector<integer>& Ai,
                 std::vector<integer>& Ap);
@@ -153,21 +154,21 @@ protected:
         virtual MatrixHandler&
         MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
         virtual MatrixHandler&
         MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
 
         /* Matrix Vector product */
         virtual VectorHandler&
         MatVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
         virtual VectorHandler&
         MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
         virtual NaiveMatrixHandler* Copy() const override;
 };
 
@@ -267,12 +268,14 @@ public:
 
         virtual ~NaivePermMatrixHandler(void);
 
+	using MatrixHandler::operator=;
+
         const std::vector<integer>& GetPerm(void) const;
 
         const std::vector<integer>& GetInvPerm(void) const;
 
         virtual inline const doublereal&
-        operator () (integer iRow, integer iCol) const {
+        operator () (integer iRow, integer iCol) const override {
                 ASSERT(iRow > 0);
                 ASSERT(iRow <= iGetNumRows());
                 ASSERT(iCol > 0);
@@ -287,7 +290,7 @@ public:
         };
 
         virtual inline doublereal&
-        operator () (integer iRow, integer iCol) {
+        operator () (integer iRow, integer iCol) override {
                 ASSERT(iRow > 0);
                 ASSERT(iRow <= iGetNumRows());
                 ASSERT(iCol > 0);
@@ -308,21 +311,21 @@ protected:
         virtual MatrixHandler&
         MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
         virtual MatrixHandler&
         MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
                                 const doublereal& dCoef),
-                        MatrixHandler& out, const MatrixHandler& in) const;
+                        MatrixHandler& out, const MatrixHandler& in) const override;
 
         /* Matrix Vector product */
         virtual VectorHandler&
         MatVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
         virtual VectorHandler&
         MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
                                 const doublereal& dCoef),
-                        VectorHandler& out, const VectorHandler& in) const;
+                        VectorHandler& out, const VectorHandler& in) const override;
 };
 
 

@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2013
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -48,6 +48,13 @@
 #include "dgeequ.h"
 #include "linsol.h"
 #include "pastixwrap.h"
+#include "cscmhtpl.h"
+
+#if PASTIX_VERSION_MAJOR >= 6 && PASTIX_VERSION_MINOR >= 3 || PASTIX_VERSION_MAJOR > 6
+constexpr int PastixArrayBase = 0;
+#else
+constexpr int PastixArrayBase = 1;
+#endif
 
 PastixSolver::SpMatrix::SpMatrix()
      :iNumNonZeros(-1) {
@@ -55,7 +62,7 @@ PastixSolver::SpMatrix::SpMatrix()
      mtxtype = SpmGeneral;
      flttype = SpmDouble;
      fmttype = SpmCSC;
-     dof = 1;	       
+     dof = 1;
 }
 
 PastixSolver::SpMatrix::~SpMatrix() {
@@ -68,10 +75,10 @@ T* PastixSolver::SpMatrix::pAllocate(T* pMem, size_t nSize)
      pMem = reinterpret_cast<T*>(realloc(pMem, sizeof(T) * nSize));
 
      if (!pMem) {
-	  throw std::bad_alloc();
+          throw std::bad_alloc();
      }
 
-     return pMem;     
+     return pMem;
 }
 
 void PastixSolver::SpMatrix::Allocate(size_t iNumNZ, size_t iMatSize)
@@ -84,17 +91,17 @@ void PastixSolver::SpMatrix::Allocate(size_t iNumNZ, size_t iMatSize)
 bool PastixSolver::SpMatrix::MakeCompactForm(const SparseMatrixHandler& mh)
 {
      bool bNewPattern = false;
-     
-     if (iNumNonZeros != mh.Nz()) {	  
-	  // Force a new ordering step (e.g. needed if we are using a SpMapMatrixHandler)
-	  Allocate(mh.Nz(), mh.iGetNumCols());
-	  iNumNonZeros = mh.Nz();
-	  bNewPattern = true;
+
+     if (iNumNonZeros != mh.Nz()) {
+          // Force a new ordering step (e.g. needed if we are using a SpMapMatrixHandler)
+          Allocate(mh.Nz(), mh.iGetNumCols());
+          iNumNonZeros = mh.Nz();
+          bNewPattern = true;
      }
 
      nnz = mh.Nz();
      n = mh.iGetNumCols();
-     mh.MakeCompressedColumnForm(pAx(), pAi(), pAp(), 1);
+     mh.MakeCompressedColumnForm(pAx(), pAi(), pAp(), PastixArrayBase);
 
      spmUpdateComputedFields(this);
 
@@ -103,74 +110,76 @@ bool PastixSolver::SpMatrix::MakeCompactForm(const SparseMatrixHandler& mh)
      return bNewPattern;
 }
 
-PastixSolver::PastixSolver(SolutionManager* pSM, integer iDim, integer iNumIter, integer iNumThreads, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
+PastixSolver::PastixSolver(SolutionManager* pSM, integer iDim, integer iNumIter, doublereal dTolRefine, integer iNumThreads, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
     :LinearSolver(pSM),
      pastix_data(nullptr),
      bDoOrdering(true)
-{     
+{
     pastixInitParam(iparm, dparm);
 
     iparm[IPARM_VERBOSE] = iVerbose;
-    
+
     iparm[IPARM_FACTORIZATION] = PastixFactLU;
     iparm[IPARM_THREAD_NBR] = iNumThreads;
     iparm[IPARM_ITERMAX] = iNumIter;
 
     if (uSolverFlags & LinSol::SOLVER_FLAGS_ALLOWS_SCOTCH) {
-	 iparm[IPARM_ORDERING] = PastixOrderScotch;
+         iparm[IPARM_ORDERING] = PastixOrderScotch;
     } else if (uSolverFlags & LinSol::SOLVER_FLAGS_ALLOWS_METIS) {
-	 iparm[IPARM_ORDERING] = PastixOrderMetis;
+         iparm[IPARM_ORDERING] = PastixOrderMetis;
     }
 
     const unsigned uCompressionFlag = uSolverFlags & LinSol::SOLVER_FLAGS_COMPRESSION_MASK;
 
-    if (uCompressionFlag) {	 
-	 switch (uCompressionFlag) {
-	 case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_SVD:
-	      iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodSVD;
-	      break;
-	 case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_PQRCP:
-	      iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodPQRCP;
-	      break;
-	 case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_RQRCP:
-	      iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodRQRCP;
-	      break;
-	 case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_TQRCP:
-	      iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodTQRCP;
-	      break;
-	 case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_RQRRT:
-	      iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodRQRRT;
-	      break;
-	 }
-	 
-	 iparm[IPARM_COMPRESS_WHEN] = PastixCompressWhenEnd;
-	 dparm[DPARM_COMPRESS_TOLERANCE] = dCompressTol;
-	 dparm[DPARM_COMPRESS_MIN_RATIO] = dMinRatio;
+    if (uCompressionFlag) {
+         switch (uCompressionFlag) {
+         case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_SVD:
+              iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodSVD;
+              break;
+         case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_PQRCP:
+              iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodPQRCP;
+              break;
+         case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_RQRCP:
+              iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodRQRCP;
+              break;
+         case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_TQRCP:
+              iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodTQRCP;
+              break;
+         case LinSol::SOLVER_FLAGS_ALLOWS_COMPRESSION_RQRRT:
+              iparm[IPARM_COMPRESS_METHOD] = PastixCompressMethodRQRRT;
+              break;
+         }
+
+         iparm[IPARM_COMPRESS_WHEN] = PastixCompressWhenEnd;
+         dparm[DPARM_COMPRESS_TOLERANCE] = dCompressTol;
+         dparm[DPARM_COMPRESS_MIN_RATIO] = dMinRatio;
     }
+
+    dparm[DPARM_EPSILON_REFINEMENT] = dTolRefine;
 
     const Task2CPU& oCPUStateGlobal = Task2CPU::GetGlobalState();
 
     if (oCPUStateGlobal.iGetCount() >= iNumThreads) {
-	 std::vector<int> rgCPUSet(iNumThreads, -1);
+         std::vector<int> rgCPUSet(iNumThreads, -1);
 
-	 int iCPU = oCPUStateGlobal.iGetFirstCPU();
-    
-	 for (integer i = 0; i < iNumThreads; ++i) {
-	      rgCPUSet[i] = iCPU;
-	      iCPU = oCPUStateGlobal.iGetNextCPU(iCPU);
-	 }
-    
-	 pastixInitWithAffinity(&pastix_data, MPI_COMM_WORLD, iparm, dparm, &rgCPUSet.front());
+         int iCPU = oCPUStateGlobal.iGetFirstCPU();
+
+         for (integer i = 0; i < iNumThreads; ++i) {
+              rgCPUSet[i] = iCPU;
+              iCPU = oCPUStateGlobal.iGetNextCPU(iCPU);
+         }
+
+         pastixInitWithAffinity(&pastix_data, MPI_COMM_WORLD, iparm, dparm, &rgCPUSet.front());
     } else {
-	 pastixInit(&pastix_data, MPI_COMM_WORLD, iparm, dparm);
+         pastixInit(&pastix_data, MPI_COMM_WORLD, iparm, dparm);
     }
 }
 
 PastixSolver::~PastixSolver()
 {
      if (pastix_data) {
-	  pastixFinalize(&pastix_data);
-     }	
+          pastixFinalize(&pastix_data);
+     }
 }
 
 #ifdef DEBUG
@@ -182,72 +191,80 @@ void PastixSolver::IsValid(void) const
 void PastixSolver::Solve(void) const
 {
     int rc;
-    
+
     if (bDoOrdering) {
-	 rc = pastix_task_analyze(pastix_data, &spm);
+         rc = pastix_task_analyze(pastix_data, &spm);
 
-	 if (PASTIX_SUCCESS != rc) {
-	      throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	 }
+         if (PASTIX_SUCCESS != rc) {
+              throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+         }
 
-	 bDoOrdering = false;
+         bDoOrdering = false;
     }
 
-    if (bHasBeenReset) {	 
-	 rc = pastix_task_numfact(pastix_data, &spm);
+    if (bHasBeenReset) {
+         rc = pastix_task_numfact(pastix_data, &spm);
 
-	 if (PASTIX_SUCCESS != rc) {
-	      throw ErrFactor(-1, MBDYN_EXCEPT_ARGS);
-	 }
+         if (PASTIX_SUCCESS != rc) {
+              throw ErrFactor(-1, MBDYN_EXCEPT_ARGS);
+         }
 
-	 bHasBeenReset = false;
+         bHasBeenReset = false;
     }
-    
+
     // Right hand side will be overwritten by the solution by pastix
     std::copy(pdRhs, pdRhs + spm.n, pdSol);
-    
+
+#if PASTIX_VERSION_MAJOR >= 6 && PASTIX_VERSION_MINOR >= 3 || PASTIX_VERSION_MAJOR > 6
     rc = pastix_task_solve(pastix_data,
-			   1,
-			   pdSol,
-			   spm.n);
+                           spm.n,
+                           1,
+                           pdSol,
+                           spm.n);
+#else
+    rc = pastix_task_solve(pastix_data,
+                           1,
+                           pdSol,
+                           spm.n);
+#endif
 
     if (PASTIX_SUCCESS != rc) {
-	 throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+         throw ErrGeneric(MBDYN_EXCEPT_ARGS);
     }
 
     if (iparm[IPARM_ITERMAX] > 0) {
-	 bool bZeroVector = true;
+         bool bZeroVector = true;
 
-	 for (pastix_int_t i = 0; i < spm.n; ++i) {
-	      if (pdSol[i]) {
-		   bZeroVector = false;
-		   break;
-	      }
-	 }
+         for (pastix_int_t i = 0; i < spm.n; ++i) {
+              if (pdSol[i]) {
+                   bZeroVector = false;
+                   break;
+              }
+         }
 
-	 if (!bZeroVector) {
-	      // Avoid division zero by zero in PaStiX
-	      rc = pastix_task_refine(pastix_data,
-				      spm.n,
-				      1,
-				      pdRhs,
-				      spm.n,
-				      pdSol,
-				      spm.n);
+         if (!bZeroVector) {
+              // Avoid division zero by zero in PaStiX
+              rc = pastix_task_refine(pastix_data,
+                                      spm.n,
+                                      1,
+                                      pdRhs,
+                                      spm.n,
+                                      pdSol,
+                                      spm.n);
 
-	      if (PASTIX_SUCCESS != rc) {
-		   throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	      }
-	 }
+              if (PASTIX_SUCCESS != rc) {
+                   throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+              }
+         }
     }
 }
 
-PastixSolver::SpMatrix& PastixSolver::MakeCompactForm(SparseMatrixHandler& mh)
+PastixSolver::SpMatrix& PastixSolver::PastixMakeCompactForm(SparseMatrixHandler& mh)
 {
     ASSERT(mh.iGetNumRows() == mh.iGetNumCols());
-     
+
     if (!bHasBeenReset) {
-	 return spm;
+         return spm;
     }
 
     bDoOrdering = spm.MakeCompactForm(mh);
@@ -256,7 +273,7 @@ PastixSolver::SpMatrix& PastixSolver::MakeCompactForm(SparseMatrixHandler& mh)
 }
 
 template <typename MatrixHandlerType>
-PastixSolutionManager<MatrixHandlerType>::PastixSolutionManager(integer iDim, integer iNumThreads, integer iNumIter, const ScaleOpt& scale, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
+PastixSolutionManager<MatrixHandlerType>::PastixSolutionManager(integer iDim, integer iNumThreads, integer iNumIter, doublereal dTolRefine, const ScaleOpt& scale, unsigned uSolverFlags, doublereal dCompressTol, doublereal dMinRatio, integer iVerbose)
     :x(iDim),
      b(iDim),
      xVH(iDim, &x[0]),
@@ -267,7 +284,7 @@ PastixSolutionManager<MatrixHandlerType>::PastixSolutionManager(integer iDim, in
 {
     SAFENEWWITHCONSTRUCTOR(pLS,
                            PastixSolver,
-                           PastixSolver(this, iDim, iNumIter, iNumThreads, uSolverFlags, dCompressTol, dMinRatio, iVerbose));
+                           PastixSolver(this, iDim, iNumIter, dTolRefine, iNumThreads, uSolverFlags, dCompressTol, dMinRatio, iVerbose));
 
     pLS->pdSetResVec(&b[0]);
     pLS->pdSetSolVec(&x[0]);
@@ -290,7 +307,7 @@ void PastixSolutionManager<MatrixHandlerType>::IsValid(void) const
     ASSERT(A.iGetNumRows() == A.iGetNumCols());
     ASSERT(b.size() == static_cast<size_t>(A.iGetNumRows()));
     ASSERT(x.size() == static_cast<size_t>(A.iGetNumCols()));
-    
+
     pLS->IsValid();
 }
 #endif /* DEBUG */
@@ -310,9 +327,12 @@ void PastixSolutionManager<MatrixHandlerType>::MatrInitialize(void)
 template <typename MatrixHandlerType>
 void PastixSolutionManager<MatrixHandlerType>::MakeCompressedColumnForm(void)
 {
-     ScaleMatrixAndRightHandSide(A);
-     
-     pGetSolver()->MakeCompactForm(A);
+     auto& spm = pGetSolver()->PastixMakeCompactForm(A);
+
+     // Attention: Do not use spm.Nz() because we are calling spmSymmetrize!
+     CSCMatrixHandlerTpl<doublereal, pastix_int_t, PastixArrayBase> Acsc(spm.pAx(), spm.pAi(), spm.pAp(), A.iGetNumCols(), spm.nnz);
+
+     ScaleMatrixAndRightHandSide(Acsc);
 }
 
 template <typename MatrixHandlerType>
@@ -366,7 +386,7 @@ template <typename MatrixHandlerType>
 void PastixSolutionManager<MatrixHandlerType>::Solve(void)
 {
     MakeCompressedColumnForm();
-    
+
     pLS->Solve();
 
     ScaleSolution();

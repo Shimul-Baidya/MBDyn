@@ -75,6 +75,8 @@ modalmappingext.cc \
 modalmappingext.h \
 modalforce.cc \
 modalforce.h \
+offdispjad.cc \
+offdispjad.h \
 planej.cc \
 planej.h \
 point_contact.cc \
@@ -85,6 +87,8 @@ pzbeam.cc \
 pzbeam.h \
 pzbeam2.cc \
 pzbeam2.h \
+rbdispjad.cc \
+rbdispjad.h \
 rodbezj.cc \
 rodbezj.h \
 rodj.cc \
@@ -100,6 +104,16 @@ shelleas.cc \
 shelleas.h \
 socketstreammotionelem.cc \
 socketstreammotionelem.h \
+solid.h \
+solid.cc \
+solidcsl.h \
+solidcsl.cc \
+solidinteg.h \
+solidinteg.cc \
+solidpress.h \
+solidpress.cc \
+solidshape.h \
+solidshape.cc \
 spherj.cc \
 spherj.h \
 stredge.cc \
@@ -190,6 +204,14 @@ endif
 
 libstruct_la_LIBADD = @LIBS@
 libstruct_la_LDFLAGS = -static
+
+noinst_PROGRAMS = solidshapetest
+
+solidshapetest_SOURCES = solidshapetest.cc
+solidshapetest_LDADD = \
+../../libraries/libmbutil/libmbutil.la \
+../../libraries/libmbmath/libmbmath.la \
+libstruct.la
 
 AM_CPPFLAGS = \
 -I../../include \

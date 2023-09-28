@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -175,13 +175,12 @@ DeformableHingeJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Deformable hinge", OH, name);
+			OutputPrepare_int("Deformable hinge", OH);
 
-			Var_Phi = OH.CreateRotationVar(name, "", od, 
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, 
 				"relative orientation, in joint reference frame");
 
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}
@@ -604,6 +603,34 @@ ElasticHingeJoint::AfterConvergence(const VectorHandler& X,
 	ConstitutiveLaw3DOwner::AfterConvergence(ThetaCurr);
 }
 
+void
+ElasticHingeJoint::AfterPredict(void)
+{
+	/* Computes strains, updates constitutive law and generates
+	 * MDE and MDEPrime */
+
+	Mat3x3 R1h(pNode1->GetRRef()*tilde_R1h);
+	Mat3x3 R2h(pNode2->GetRRef()*tilde_R2h);
+
+	/* Current strain in material reference frame (node 1) */
+	ThetaCurr = ThetaRef = RotManip::VecRot(R1h.MulTM(R2h));
+
+	/* Updates constitutive law */
+	ConstitutiveLaw3DOwner::Update(ThetaRef);
+
+	/* don't repeat the above operations during AssRes */
+	bFirstRes = true;
+
+	/* Inverse of Gamma(ThetaRef) */
+	Mat3x3 GammaRefm1 = RotManip::DRot_I(ThetaRef);
+
+	/* Tangent matrices are updated and projected in the global
+	 * reference frame; they won't change during the solution
+	 * of the current time step, according to the updated-updated
+	 * approach */
+	MDE = R1h*ConstitutiveLaw3DOwner::GetFDE()*GammaRefm1.MulMT(R1h);
+}
+
 /* assemblaggio jacobiano */
 VariableSubMatrixHandler&
 ElasticHingeJoint::AssJac(VariableSubMatrixHandler& WorkMat,
@@ -676,7 +703,7 @@ ElasticHingeJoint::AssMats(VariableSubMatrixHandler& WorkMatA,
 }
 
 void
-ElasticHingeJoint::AfterPredict(void)
+ElasticHingeJoint::AfterPredict(VectorHandler& X, VectorHandler& XP)
 {
 	/* Calcola le deformazioni, aggiorna il legame costitutivo
 	 * e crea la MDE */
@@ -1865,6 +1892,7 @@ public:
 	virtual ConstitutiveLaw<Vec3, Mat3x3>* pCopy(void) const;
 	virtual std::ostream& Restart(std::ostream& out) const;
 
+	using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
 	virtual void Update(const Vec3& Eps, const Vec3& /* EpsPrime */  = Zero3);
 };
 

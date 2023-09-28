@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -44,7 +44,7 @@
 \usepackage{xcolor}
 \usepackage{framed}
 \usepackage{enumitem}
-
+\DeclareMathOperator{\trace}{trace}
 \input{../stdmacro}
 
 \newcommand{\kw}[1]{\textcolor{red}{\texttt{#1}}}
@@ -52,8 +52,8 @@
 \newcommand{\nt}[1]{\textcolor{blue}{\texttt{#1}}}
 \newcommand{\bnt}[1]{\texttt{<\textcolor{blue}{#1}>}}
 \newcommand{\be}[1]{\texttt{<{#1}>}}
-\newcommand{\ty}[1]{\textcolor{green}{\texttt{#1}}}
-\newcommand{\bty}[1]{\texttt{<\textcolor{green}{#1}>}}
+\newcommand{\ty}[1]{\textcolor{magenta}{\texttt{#1}}}
+\newcommand{\bty}[1]{\texttt{<\textcolor{magenta}{#1}>}}
 
 \newcommand{\hty}[1]{\htmlref{\ty{#1}}{sec:#1}}
 \newcommand{\htybty}[2]{\htmlref{\ty{#1}\bty{#2}}{sec:#1}}

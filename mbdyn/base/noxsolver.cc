@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
  /*
    AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-   Copyright (C) 2022(-2022) all rights reserved.
+   Copyright (C) 2022(-2023) all rights reserved.
 
    The copyright of this code is transferred
    to Pierangelo Masarati and Paolo Mantegazza
@@ -217,15 +217,15 @@ namespace {
                 const doublereal& SolTol,
                 doublereal& dSolErr) override;
 
-          bool MakeSolTest(const VectorHandler& XPrev,
-                           const VectorHandler& XCurr,
-                           const doublereal& dTol,
-                           doublereal& dTest);
+          bool NoxMakeSolTest(const VectorHandler& XPrev,
+                              const VectorHandler& XCurr,
+                              const doublereal& dTol,
+                              doublereal& dTest);
 
-          bool MakeResTest(const VectorHandler& oResVec,
-                           const doublereal& dTol,
-                           doublereal& dTest,
-                           doublereal& dTestDiff);
+          bool NoxMakeResTest(const VectorHandler& oResVec,
+                              const doublereal& dTol,
+                              doublereal& dTest,
+                              doublereal& dTestDiff);
      private:
           struct CPUTimeGuard
           {
@@ -327,7 +327,7 @@ namespace {
           setJacobianOperatorForSolve(const Teuchos::RCP<const Epetra_Operator>& solveJacOp) override;
 
           virtual bool
-          hasPreconditioner() const;
+          hasPreconditioner() const override;
 
           virtual void
           setPrecOperatorForSolve(const Teuchos::RCP<const Epetra_Operator>& solvePrecOp) override;
@@ -422,7 +422,7 @@ namespace {
           // According to "Numerical recipes in C the art of scientific computing" / William H. Press [et al.]. – 2nd ed.
           const doublereal dFirstResFact = problem.getNumIterations() == 0 ? 1e-2 : 1.;
 
-          eStatus = oNoxSolver.MakeResTest(oResVec, dFirstResFact * dTolRes, dErrRes, dErrResDiff)
+          eStatus = oNoxSolver.NoxMakeResTest(oResVec, dFirstResFact * dTolRes, dErrRes, dErrResDiff)
                ? NOX::StatusTest::Converged
                : NOX::StatusTest::Unconverged;
 
@@ -528,7 +528,7 @@ namespace {
           const MyVectorHandler XPrev(XPrevE.GlobalLength(), XPrevE.Values());
           const MyVectorHandler XCurr(XCurrE.GlobalLength(), XCurrE.Values());
 
-          eStatus = oNoxSolver.MakeSolTest(XPrev, XCurr, dTolSol, dErrSol)
+          eStatus = oNoxSolver.NoxMakeSolTest(XPrev, XCurr, dTolSol, dErrSol)
                ? NOX::StatusTest::Converged
                : NOX::StatusTest::Unconverged;
 
@@ -799,8 +799,8 @@ namespace {
 
           pNonlinearSolver->reset(*pSolutionView);
 
-          if (!bKeepJacAcrossSteps) {
-               ForcePrecondRebuild();
+          if (!bKeepJacAcrossSteps || bInDerivativeSolver) {
+               ForcePrecondRebuild(); // Will be useful for automatic derivative solver
           }
 
           iIterCnt = 0;
@@ -827,7 +827,7 @@ namespace {
                dResErr = oResTest.dGetTest();
                dSolErr = oSolTest.getStatus() != NOX::StatusTest::Unevaluated
                     ? oSolTest.dGetTest()
-                    : 0.;
+                    : -1.;
 
                if (solvStatus == NOX::StatusTest::Converged) {
                     break;
@@ -844,20 +844,20 @@ namespace {
           }
      }
 
-     bool NoxNonlinearSolver::MakeSolTest(const VectorHandler& XPrev,
-                                          const VectorHandler& XCurr,
-                                          const doublereal& dTol,
-                                          doublereal& dTest)
+     bool NoxNonlinearSolver::NoxMakeSolTest(const VectorHandler& XPrev,
+                                             const VectorHandler& XCurr,
+                                             const doublereal& dTol,
+                                             doublereal& dTest)
      {
           DeltaX.ScalarAddMul(XCurr, XPrev, -1.);
 
           return NonlinearSolver::MakeSolTest(pSolver, DeltaX, dTol, dTest);
      }
 
-     bool NoxNonlinearSolver::MakeResTest(const VectorHandler& oResVec,
-                                          const doublereal& dTol,
-                                          doublereal& dTest,
-                                          doublereal& dTestDiff)
+     bool NoxNonlinearSolver::NoxMakeResTest(const VectorHandler& oResVec,
+                                             const doublereal& dTol,
+                                             doublereal& dTest,
+                                             doublereal& dTestDiff)
      {
           bool bStatus = NonlinearSolver::MakeResTest(pSolver, pNonlinearProblem, oResVec, dTol, dTest, dTestDiff);
 
@@ -880,6 +880,12 @@ namespace {
           NOX::Abstract::PrePostOperator& oPrePost = *this;
           Teuchos::RCP<NOX::Abstract::PrePostOperator> pPrePost = Teuchos::rcpFromRef(oPrePost);
           oSolverParam.sublist("Solver Options").set("User Defined Pre/Post Operator", pPrePost);
+
+          if (bInDerivativeSolver) {
+               // In case of automatic estimation of the derivatives coefficient it is necessary
+               // to enforce a complete check! Otherwise SolErr might not be evaluated at all.
+               oSolverParam.sublist("Solver Options").set("Status Test Check Type", "Complete");
+          }
 
           int iSolverOutput = 0;
 
@@ -928,7 +934,7 @@ namespace {
                } else if (uFlags & SUFFICIENT_DEC_COND_ARED_PRED) {
                     oLineSearchParam.sublist(strLineSearchMethod).set("Sufficient Decrease Condition", "Ared/Pred");
                }
-               
+
                Teuchos::ParameterList& oLineSearchMethod = oLineSearchParam.sublist(strLineSearchMethod);
                oLineSearchMethod.set("Max Iters", iMaxIterLineSearch);
                oLineSearchMethod.set("Minimum Step", dMinStep);
@@ -1172,10 +1178,10 @@ namespace {
                pNonlinearProblem->Residual(pRes, pAbsRes);
           } catch (const SolutionDataManager::ChangedEquationStructure& oErr) {
                DEBUGCERR("Caught exception change equation structure ...\n");
-               
+
                if (bHonorJacRequest) {
                     DEBUGCERR("Force update of preconditioner ...\n");
-                    
+
                     ForcePrecondRebuild();
                }
           }

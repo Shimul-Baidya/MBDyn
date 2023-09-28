@@ -2,7 +2,7 @@
 /* 
  * HmFe (C) is a FEM analysis code. 
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
  * Marco Morandini  <morandini@aero.polimi.it>
  *
@@ -20,7 +20,7 @@
  * Modified to add methods
  * to be used in the parallel MBDyn Solver.
  *
- * Copyright (C) 2003-2017
+ * Copyright (C) 2003-2023
  *
  * Giuseppe Quaranta  <quaranta@aero.polimi.it>
  *
@@ -33,12 +33,12 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  * 
  * This code is a partial merge of HmFe and MBDyn.
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -143,8 +143,9 @@ public:
 	SpMapMatrixHandler(const integer &n = 0,const integer &nn = 0);
 
 	virtual ~SpMapMatrixHandler(void);
+	using MatrixHandler::operator=;
 
-	doublereal & operator()(integer i_row, integer i_col) {
+	doublereal & operator()(integer i_row, integer i_col) override {
 		ASSERTMSGBREAK(i_row > 0 && i_row <= NRows,
 				"Error in SpMapMatrixHandler::operator(), "
 				"row index out of range");
@@ -168,7 +169,7 @@ public:
 		}
 	};
 
-	void IncCoef(integer ix, integer iy, const doublereal& inc) {
+	void IncCoef(integer ix, integer iy, const doublereal& inc) override {
 		ASSERTMSGBREAK(ix > 0 && ix <= NRows,
 				"Error in SpMapMatrixHandler::IncCoef(), "
 				"row index out of range");
@@ -185,7 +186,7 @@ public:
 #endif /* MBDYN_X_KEEP_SPARSITY */
 	};
 
-	void DecCoef(integer ix, integer iy, const doublereal& inc) {
+	void DecCoef(integer ix, integer iy, const doublereal& inc) override {
 		ASSERTMSGBREAK(ix > 0 && ix <= NRows,
 				"Error in SpMapMatrixHandler::DecCoef(), "
 				"row index out of range");
@@ -202,7 +203,7 @@ public:
 #endif /* MBDYN_X_KEEP_SPARSITY */
 	};
 
-	void PutCoef(integer ix, integer iy, const doublereal& val) {
+	void PutCoef(integer ix, integer iy, const doublereal& val) override {
 		ASSERTMSGBREAK(ix - 1 < NRows,
 				"Error in SpMapMatrixHandler::PutCoef(), "
 				"row index out of range");
@@ -226,7 +227,7 @@ public:
 #endif /* MBDYN_X_KEEP_SPARSITY */
 	};
 
-	const doublereal& dGetCoef(integer ix, integer iy) const {
+	const doublereal& dGetCoef(integer ix, integer iy) const override {
 		ASSERTMSGBREAK(ix > 0 && ix <= NRows,
 				"Error in SpMapMatrixHandler::dGetCoef(), "
 				"row index out of range");
@@ -244,7 +245,7 @@ public:
 		}
 	};
 
-	const doublereal& operator () (integer ix, integer iy) const {
+	const doublereal& operator () (integer ix, integer iy) const override {
 		ASSERTMSGBREAK(ix > 0 && ix <= NRows,
 				"Error in SpMapMatrixHandler::operator(), "
 				"row index out of range");
@@ -295,12 +296,12 @@ public:
 			     int offset = 0) const override;
 
 
-	void Reset(void);
+	void Reset(void) override;
 
-	void Resize(integer ir, integer ic);
+	void Resize(integer ir, integer ic) override;
 
 	/* Estrae una colonna da una matrice */
-	VectorHandler& GetCol(integer icol, VectorHandler& out) const;
+	VectorHandler& GetCol(integer icol, VectorHandler& out) const override;
 
         virtual void Scale(const std::vector<doublereal>& oRowScale, const std::vector<doublereal>& oColScale) override;
 
@@ -310,11 +311,11 @@ protected:
 	MatrixHandler&
 	MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 	MatrixHandler&
 	MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 public:
 
         /* Moltiplica per uno scalare e somma a una matrice */
@@ -327,11 +328,11 @@ protected:
 	virtual VectorHandler&
 	MatVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 	virtual VectorHandler&
 	MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 
 public:
         virtual void EnumerateNz(const std::function<EnumerateNzCallback>& func) const override;

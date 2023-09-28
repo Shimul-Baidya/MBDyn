@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -141,68 +141,68 @@ gpc_mul(integer ndim1, integer nrow1, integer ncol1, const doublereal* m1,
  * esegue d = m1*m2; se m3 e' definita, d = m1*m2+m3
  */
 
-static inline int 
-gpc_add_mul(integer ndim1, integer nrow1, integer ncol1, const doublereal* m1,
-	    integer ndim2, integer nrow2, integer ncol2, const doublereal* m2,
-	    integer ndim3, integer nrow3, integer ncol3, const doublereal* m3,
-	    integer ndimd, integer nrowd, integer ncold, doublereal* d)
-{
-   	if (m3) {
-      		return gpc_addmul(ndim1, nrow1, ncol1, m1,
-				  ndim2, nrow2, ncol2, m2,
-				  ndim3, nrow3, ncol3, m3,
-				  ndimd, nrowd, ncold, d);
-   	} /* else */
-   	return gpc_mul(ndim1, nrow1, ncol1, m1,
-		       ndim2, nrow2, ncol2, m2,
-		       ndimd, nrowd, ncold, d);   
-}
+// static inline int
+// gpc_add_mul(integer ndim1, integer nrow1, integer ncol1, const doublereal* m1,
+// 	    integer ndim2, integer nrow2, integer ncol2, const doublereal* m2,
+// 	    integer ndim3, integer nrow3, integer ncol3, const doublereal* m3,
+// 	    integer ndimd, integer nrowd, integer ncold, doublereal* d)
+// {
+//    	if (m3) {
+//       		return gpc_addmul(ndim1, nrow1, ncol1, m1,
+// 				  ndim2, nrow2, ncol2, m2,
+// 				  ndim3, nrow3, ncol3, m3,
+// 				  ndimd, nrowd, ncold, d);
+//    	} /* else */
+//    	return gpc_mul(ndim1, nrow1, ncol1, m1,
+// 		       ndim2, nrow2, ncol2, m2,
+// 		       ndimd, nrowd, ncold, d);
+// }
 
 /*
  * esegue d = m1*m2+m3 senza check sulle dimensioni
  */
  
-static inline int
-gpc_addmul(integer ndim1, integer nrow1, integer ncol1, const doublereal* m1,
-	   integer ndim2, integer ncol2, const doublereal* m2,
-	   integer ndim3, const doublereal* m3,
-	   integer ndimd, doublereal* d)
-{
-   	ASSERT(m1 != NULL);
-   	ASSERT(m2 != NULL);
-   	ASSERT(m3 != NULL);
-   	ASSERT(d != NULL);
-
-   	ASSERT(ndim1 >= nrow1);
-   	ASSERT(ndim2 >= ncol1);
-   	ASSERT(ndim3 >= nrow1);
-   	ASSERT(ndimd >= nrow1);
-   
-   	doublereal* dd = d+ncol2*ndimd;
-   	doublereal* mm1 = (doublereal*)m1;
-   	doublereal* mm2 = (doublereal*)m2+ncol2*ndim2;
-   	doublereal* mm3 = (doublereal*)m3+ncol2*ndim3;
-   
-   	for (integer c = ncol2; c-- > 0; ) {
-      		dd -= ndimd-nrow1;
-      		mm2 -= ndim2;
-      		mm3 -= ndim3-nrow1;
-      		mm1 += nrow1;
-      
-      		for (integer r = nrow1; r-- > 0; ) {
-	 		dd--;
-	 		mm1--;
-	 		mm3--;
-	 
-	 		dd[0] = mm3[0];	
-	 		for (integer k = ncol1; k-- > 0; ) {
-	    			dd[0] += mm1[k*ndim1]*mm2[k];
-	 		}
-      		}
-   	}
-   
-   	return 0;
-}
+// static inline int
+// gpc_addmul(integer ndim1, integer nrow1, integer ncol1, const doublereal* m1,
+// 	   integer ndim2, integer ncol2, const doublereal* m2,
+// 	   integer ndim3, const doublereal* m3,
+// 	   integer ndimd, doublereal* d)
+// {
+//    	ASSERT(m1 != NULL);
+//    	ASSERT(m2 != NULL);
+//    	ASSERT(m3 != NULL);
+//    	ASSERT(d != NULL);
+// 
+//    	ASSERT(ndim1 >= nrow1);
+//    	ASSERT(ndim2 >= ncol1);
+//    	ASSERT(ndim3 >= nrow1);
+//    	ASSERT(ndimd >= nrow1);
+// 
+//    	doublereal* dd = d+ncol2*ndimd;
+//    	doublereal* mm1 = (doublereal*)m1;
+//    	doublereal* mm2 = (doublereal*)m2+ncol2*ndim2;
+//    	doublereal* mm3 = (doublereal*)m3+ncol2*ndim3;
+// 
+//    	for (integer c = ncol2; c-- > 0; ) {
+//       		dd -= ndimd-nrow1;
+//       		mm2 -= ndim2;
+//       		mm3 -= ndim3-nrow1;
+//       		mm1 += nrow1;
+// 
+//       		for (integer r = nrow1; r-- > 0; ) {
+// 	 		dd--;
+// 	 		mm1--;
+// 	 		mm3--;
+// 
+// 	 		dd[0] = mm3[0];
+// 	 		for (integer k = ncol1; k-- > 0; ) {
+// 	    			dd[0] += mm1[k*ndim1]*mm2[k];
+// 	 		}
+//       		}
+//    	}
+// 
+//    	return 0;
+// }
 
 /*
  * copia una matrice su un'altra
@@ -267,14 +267,14 @@ gpc_zero(integer size, doublereal* v)
  * setta un vettore
  */
 
-static inline int
-gpc_set(integer size, doublereal* v, const doublereal d)
-{
-   	for (integer i = size; i-- > 0; ) {
-      		v[i] = d;
-   	}
-   	return 0;
-}
+// static inline int
+// gpc_set(integer size, doublereal* v, const doublereal d)
+// {
+//    	for (integer i = size; i-- > 0; ) {
+//       		v[i] = d;
+//    	}
+//    	return 0;
+// }
 
 /*
  * costruisce le matrici grezze di predizione

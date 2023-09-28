@@ -1,0 +1,100 @@
+\subsection{Rigid body displacement joint}
+\label{sec:EL:STRUCT:JOINT:RIGID_BODY_DISP_JOINT}
+\emph{Author: Reinhard Resch}
+
+This element is a load distributing coupling constraint similar to NASTRAN's \texttt{RBE3} element.
+However, it may be used also in the context of large deformations and large rotations.
+It is intended mainly to provide an interface between solid elements, which are using \htmlref{\kw{structural displacement node}}{sec:NODE:STRUCTURAL}s with only three degrees of freedom,
+and the large family of elements (e.g. joints, forces, ...) which can be used only for \htmlref{\kw{structural node}}{sec:NODE:STRUCTURAL}s with six degrees of freedom.
+
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{joint_type} ::= \kw{rigid body displacement joint}
+
+    \bnt{joint_arglist} ::=
+       (\ty{StructNode}) \bnt{node_label_master} ,
+       (\ty{integer}) \bnt{slave_node_number} ,
+       \bnt{slave_node_data}
+       [ , \kw{alpha}, (\ty{real}) \bnt{alpha} ] ;
+
+    \bnt{slave_node_data} :: =
+       \bnt{one_slave_node_1}
+       [ , ... ]
+       [ , \bnt{one_slave_node_N} ];
+
+    \bnt{one_slave_node_i} :: =
+       (\ty{StructDispNode}) \bnt{node_label_slave_i}
+       [ , \kw{position} , (\hty{Vec3}) \bnt{position_slave_node_i} ]    
+       [ , \kw{weight} , (\ty{real}) \bnt{weight_slave_node_i} ]
+
+\end{Verbatim}
+
+\paragraph{Kinematics}
+The position and orientation of the \nt{node\_label\_master} is constrained in a way, that it's following the weighted average
+of the rigid body motion of a set of \nt{slave\_node\_number} slave nodes. But, no artificial stiffness will be added to the slave nodes.
+Since the slave nodes do not have any rotational degrees of freedom, a minimum number of three non coincident slave nodes is required.
+If the optional parameter \nt{position\_slave\_node} is present, it is used to compute the relative offset between \nt{node\_label\_slave}
+and \nt{node\_label\_master}. Otherwise, the initial position of \nt{node\_label\_slave} is used to compute the offset.
+\paragraph{Corner nodes of quadratic elements}
+There is also an optional weighting factor \nt{weight\_slave\_node} per node, which may be used for second order solid elements in order to achieve a smooth stress distribution.
+Negative values for \nt{weight\_slave\_node} are allowed (e.g. for corner nodes of quadratic hexahedrons), but the sum of all weighting factors must be always greater than zero.
+See also section~\ref{sec:EL:SOLID:preprocessing} for an example on how to create a \kw{rigid body displacement joint} automatically from a Finite Element mesh.
+\paragraph{Scaling}
+The optional parameter \nt{alpha} may be used to scale the constraint equations in order to improve the condition number of the Jacobian matrix.
+However, it has no effect on the result and the default value should be fine for most applications.
+
+\subsubsection{Output}
+The output occurs in the \texttt{.jnt} file, which contains the reaction force and reaction couple related to the \nt{node\_label\_master}.
+
+\subsubsection{Private Data}
+The following data is available:
+\begin{enumerate}
+\item \kw{"Fx"} reaction force at \nt{node\_label\_master} along \nt{node\_label\_master} axis 1
+\item \kw{"Fy"} reaction force at \nt{node\_label\_master} along \nt{node\_label\_master} axis 2
+\item \kw{"Fz"} reaction force at \nt{node\_label\_master} along \nt{node\_label\_master} axis 3
+
+\item \kw{"Mx"} reaction moment at \nt{node\_label\_master} along \nt{node\_label\_master} axis 1
+\item \kw{"My"} reaction moment at \nt{node\_label\_master} along \nt{node\_label\_master} axis 2
+\item \kw{"Mz"} reaction moment at \nt{node\_label\_master} along \nt{node\_label\_master} axis 3
+
+\item \kw{"fx"} reaction force at \nt{node\_label\_master} along global axis 1
+\item \kw{"fy"} reaction force at \nt{node\_label\_master} along global axis 2
+\item \kw{"fz"} reaction force at \nt{node\_label\_master} along global axis 3
+
+\item \kw{"mx"} reaction moment at \nt{node\_label\_master} along global axis 1
+\item \kw{"my"} reaction moment at \nt{node\_label\_master} along global axis 2
+\item \kw{"mz"} reaction moment at \nt{node\_label\_master} along global axis 3
+\end{enumerate}
+
+\paragraph{Example.}
+This example mimics an instance of NASTRAN's \texttt{RBE3} element.
+\begin{Verbatim}
+  begin: nodes;
+    structural: 609, static, reference, ref_id_solid, null,
+                             reference, ref_id_solid, eye,
+                             reference, ref_id_solid, null,
+                             reference, ref_id_solid, null;
+    structural: 1, dynamic displacement,
+                             reference, ref_id_solid, 5.1e+02,  1.0e+01, -1.0e+01,
+                             reference, ref_id_solid, null;
+    structural: 2, dynamic displacement,
+                             reference, ref_id_solid, 5.1e+02,  -1.0e+01, -1.0e+01,
+                             reference, ref_id_solid, null;
+    ...
+    structural: 8, dynamic displacement,
+                             reference, ref_id_solid, 9.9e+02,  -1.0e+01, 1.0e+01,
+                             reference, ref_id_solid, null;
+  end: nodes;
+  begin: elements;
+     joint: 100, rigid body displacement joint,
+            609, ## master node label
+              8, ## eight slave nodes
+              5, weight, 1.3333333333333348e+02, ## midside nodes
+              6, weight, 1.3333333333333351e+02,
+              7, weight, 1.3333333333333351e+02,
+              9, weight, 1.3333333333333351e+02,
+             13, weight, -3.3333333333333414e+01, ## corner nodes
+             14, weight, -3.3333333333333428e+01,
+             15, weight, -3.3333333333333421e+01,
+             16, weight, -3.3333333333333421e+01;
+   end: elements;
+\end{Verbatim}

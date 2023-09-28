@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2021
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
   AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-  Copyright (C) 2021(-2022) all rights reserved.
+  Copyright (C) 2021(-2023) all rights reserved.
 
   The copyright of this code is transferred
   to Pierangelo Masarati and Paolo Mantegazza
@@ -45,6 +45,7 @@
 
 #include <iostream>
 #include <vector>
+#include <limits>
 
 #include "myassert.h"
 #include "mynewmem.h"
@@ -75,7 +76,9 @@ private:
      typedef PardisoSolverTraits<MKL_INT_TYPE> SolverType;
      typedef typename SolverType::MH_INT_TYPE MH_INT_TYPE;
      
-     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE));
+     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE), "data type does not match");
+     static_assert(std::numeric_limits<MH_INT_TYPE>::is_integer, "invalid data type");
+     static_assert(std::numeric_limits<MKL_INT_TYPE>::is_integer, "invalid data type");
      
      mutable _MKL_DSS_HANDLE_t pt[64];
      mutable MKL_INT_TYPE iparm[64];
@@ -96,10 +99,10 @@ public:
 
      virtual void Solve() const override;
 
-     MKL_INT_TYPE MakeCompactForm(SparseMatrixHandler& mh,
-                                  std::vector<doublereal>& Ax,
-                                  std::vector<MH_INT_TYPE>& Ai,
-                                  std::vector<MH_INT_TYPE>& Ap) const;
+     MKL_INT_TYPE PardisoMakeCompactForm(SparseMatrixHandler& mh,
+                                         std::vector<doublereal>& Ax,
+                                         std::vector<MH_INT_TYPE>& Ai,
+                                         std::vector<MH_INT_TYPE>& Ap) const;
 };
 
 template <typename MatrixHandlerType, typename MKL_INT_TYPE>
@@ -131,9 +134,9 @@ public:
      virtual void MatrInitialize() override;
      virtual void Solve() override;
      void MakeCompressedRowForm();
-     virtual MatrixHandler* pMatHdl() const;
-     virtual VectorHandler* pResHdl() const;
-     virtual VectorHandler* pSolHdl() const;
+     virtual MatrixHandler* pMatHdl() const override;
+     virtual VectorHandler* pResHdl() const override;
+     virtual VectorHandler* pSolHdl() const override;
 };
 
 #endif

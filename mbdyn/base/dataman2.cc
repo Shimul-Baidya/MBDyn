@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -41,7 +41,7 @@
 
 #include "dataman.h"
 #include "dataman_.h"
-
+#include "fdjac.h"
 #include "gravity.h"
 #include "aerodyn.h"
 #include "solver.h"
@@ -159,6 +159,13 @@ DataManager::SetTime(const doublereal& dTime, const doublereal& dTimeStep,
 	if (pRBK) {
 		pRBK->Update();
 	}
+
+        if (pOutputMeter && pOutputMeter->dGet()) {
+             // For all multistage integrators, DataManager::SetTime() will be called multiple times per step,
+             // but DataManager::Output() will be called only once.
+             // So, it is required to save the last positive result of pOutputMeter->dGet() from all the stages.
+             bOutputNextStep = true;
+        }
 } /* End of DataManager::SetTime() */
 
 doublereal
@@ -351,7 +358,7 @@ DataManager::DofOwnerInit(void)
 					continue;
 				}
 				switch (pDispNode->GetStructDispNodeType()) {
-				case StructNode::STATIC:
+				case StructDispNode::STATIC:
 					continue;
 
 				default:
@@ -1969,7 +1976,7 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 				continue;
 			}
 
-			iNodeIndex = pSN->iGetFirstIndex();
+			iNodeIndex = pN->iGetFirstIndex();
 			OutHdl.WriteNcVar(Var_Eig_Idx, iNodeIndex, start, count); 
 			start[1]++;
 		}
@@ -2345,10 +2352,12 @@ DataManager::Output(long lStep,
 
 	DriveTrace(OutHdl); // trace output will be written for every time step
 
-	/* output only when allowed by the output meter */
-	if (!force && !pOutputMeter->dGet()) {
-		return false;
-	}
+        /* output only when allowed by the output meter */
+        if (!(force || bOutputNextStep)) {
+                return false;
+        }
+
+        bOutputNextStep = false;
 
 	/*
 	 * Write general simulation data to binary NetCDF file
@@ -2643,14 +2652,11 @@ DataManager::GetEqualityType(int i) const
         return Dofs[i - 1].Equality;
 }
 
-bool
-DataManager::bFDJac(void) const
-{
-	if (pFDJacMeter) {
-		return (pFDJacMeter->dGet() != 0.);
-	}
-
-	return false;
+void
+DataManager::FDJacCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac) {
+     if (pFDJac) {
+          pFDJac->JacobianCheck(pNLP, pJac);
+     }
 }
 
 unsigned

@@ -1,0 +1,227 @@
+% MBDyn (C) is a multibody analysis code.
+% http://www.mbdyn.org
+%
+% Copyright (C) 1996-2023
+%
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+%
+% Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+% via La Masa, 34 - 20156 Milano, Italy
+% http://www.aero.polimi.it
+%
+% Changing this copyright notice is forbidden.
+%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation (version 2 of the License).
+%
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with this program; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+\emph{Author: Reinhard Resch} \\
+A rigid body displacement joint is a load distributing rigid body coupling constraint similar to NASTRAN's \texttt{RBE3} element.
+\paragraph{Files.} \
+It is implemented in files
+
+\begin{tabular}{l}
+\texttt{mbdyn/struct/rbdispjad.h} \\
+\texttt{mbdyn/struct/rbdispjad.cc}
+\end{tabular}
+
+\paragraph{Kinematics}
+The purpose of a rigid body displacement joint is, to apply a position and orientation constraint to a master node in such a way,
+that the master node is following the weighted average rigid body motion of a set of displacement only slave nodes.
+In contrast to NASTRAN's \texttt{RBE3} element, large deformations and large rotations are supported.
+For each slave node the difference $\T{u}_j$, between the actual position of the slave node $\T{x}_j$ and the corresponding nominal offset
+from the master node, can be written as:
+\begin{eqnarray}
+\T{u}_j & = & \T{x}_m + \T{R}_m \, \T{o}_j- \T{x}_j \label{eq:rbdispjoint:u}
+\end{eqnarray}
+
+\begin{description}
+\item[$\T{x}_m$] Position of the master node
+\item[$\T{R}_m$] Orientation matrix of the master node
+\item[$\T{o}_j$] Initial distance between the slave node and the master node
+\item[$\T{x}_j$] Position of the slave node
+\end{description}
+In order to derive the expressions for the kinematic constraints, the virtual perturbation of $\T{u}_j$ is needed.
+\begin{eqnarray}
+\delta\T{u}_j & = & \delta\T{x}_m + \delta\T{R}_m \, \T{o}_j - \delta\T{x}_j \\
+\delta\T{R}_m & \approx & \delta\T{\varphi}_m \times \T{R}_m \\
+\delta\T{u}_j & = & \delta\T{x}_m + \delta\T{\varphi}_m \times \left( \T{R}_m \, \T{o}_j \right) - \underbrace{\delta{\T{x}}_j}_{=\T{0}} \label{eq:rbdispjoint:deltau}
+\end{eqnarray}
+\begin{description}
+\item[$\delta\T{u}_j$] Virtual perturbation of $\T{u}_j$
+\item[$\delta\T{x}_m$] Virtual perturbation of the position of the master node
+\item[$\delta\T{R}_m$] Virtual perturbation of the orientation matrix of the master node
+\item[$\delta\T{\varphi}_m$] Virtual perturbation of the rotation vector of the master node
+\item[$\delta\T{x}_j$] Virtual perturbation of $\T{x}_j$
+\end{description}
+Since the kinematic constraints should be applied only to the master node, $\delta\T{x}_j=\T{0}$ is assumed.
+\paragraph{Fictitious strain energy}
+In the following equation, the virtual perturbation of the fictitious strain energy $U^{\star}$ is defined.
+\begin{eqnarray}
+\delta U^{\star} & = & \sum_{j=1}^{N} w_j \, \delta\T{u}_j^T \, \T{u}_j \label{eq:rbdispjoint:deltaU}
+\end{eqnarray}
+\begin{description}
+\item[$\delta U^{\star}$] Virtual perturbation of the fictitious strain energy
+\item[$w_j$] Weighting factor for slave node~j
+\item[$N$] Number of slave nodes
+\end{description}
+It is not required, that every weighting factor $w_j$ is greater than zero. However the following condition must hold:
+\begin{eqnarray}
+\sum_{j=1}^N w_j &>& 0
+\end{eqnarray}
+\paragraph{Physical interpretation}
+One could give the following physical interpretation of $U^{\star}$: Between each slave node and the master node, a fictitious linear isotropic spring
+with stiffness $w_j$ is attached at an offset $\T{o}_j$ with respect to the master node.
+Then $U^{\star}$ is the overall strain energy of all fictitious springs.
+In order to fulfill the constraint equations, the fictitious strain energy $U^{\star}$ must be minimized.
+For that reason, we may write:
+\begin{eqnarray}
+\delta U^{\star} &  \equiv & \T{0} \label{eq:rbdispjoint:deltaU_0}
+\end{eqnarray}
+Within this context it is not obvious why $w_j < 0$ should be allowed.
+However, this condition is required only for second order hexahedral elements which require negative weights at the corner nodes.
+Otherwise it would not be possible to achieve a smooth stress distribution for such elements.
+\paragraph{Constraint equations}
+Now equation~\ref{eq:rbdispjoint:u} and equation~\ref{eq:rbdispjoint:deltau} are substituted into equation~\ref{eq:rbdispjoint:deltaU}:
+\begin{eqnarray}
+\delta U^{\star} & = & \sum_{j=1}^{N} w_j \, \left(\delta\T{x}_m^T + \delta\T{\varphi}_m^T \times \T{R}_m \, \T{o}_j\right) \left( \T{x}_m + \T{R}_m \, \T{o}_j - \T{x}_j \right) \\
+& = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m^T\,\left(\T{x}_m + \T{R}_m \, \T{o}_j - \T{x}_j \right) + \delta\T{\varphi}_m^T \, \left(\T{R}_m \, \T{o}_j \right)\times \left(\T{x}_m + \T{R_m} \, \T{o}_j - \T{x}_j \right)\right] \label{eq:rbdispjoint:deltaUrt}
+\end{eqnarray}
+Since equation~\ref{eq:rbdispjoint:deltaUrt} and equation~\ref{eq:rbdispjoint:deltaU_0} must be valid for any $\delta\T{x}_m$ and any $\delta\T{\varphi}_m$ we can directly derive the constraint equations $\T{\Phi}_t$ and $\T{\Phi}_r$:
+\begin{eqnarray}
+\T{\Phi}_t & = & \sum_{j=1}^{N} w_j \, \left(\T{x}_m + \T{R}_m \, \T{o}_j - \T{x}_j\right) = \T{0} \\
+\T{\Phi}_r & = & \sum_{j=1}^{N} w_j \, \left(\T{R}_m \, \T{o}_j \right)\times\left(\T{x}_m + \T{R}_m \, \T{o}_j - \T{x}_j \right) = \T{0}
+\end{eqnarray}
+\begin{description}
+\item[$\T{\Phi}_t$] Constraint equations for the position of the master node
+\item[$\T{\Phi}_r$] Constraint equations for the orientation of the master node
+\end{description}
+Because $\left(\T{R}_m \, \T{o}_j\right) \times \left(\T{R}_m \, \T{o}_j\right) = \T{0}$, the expression for $\T{\Phi}_r$ can be simplified.
+\begin{eqnarray}
+\T{\Phi}_r & = & \sum_{j=1}^{N} w_j \, \left(\T{R}_m \, \T{o}_j \right)\times\left(\T{x}_m - \T{x}_j \right) = \T{0}
+\end{eqnarray}
+\paragraph{Virtual perturbation of constraint equations}
+In order to include Lagrange multipliers in the equations of motion, it is required to derive the virtual perturbation of the constraint equations $\delta\T{\Phi}_t$ and $\delta\T{\Phi}_r$.
+\begin{eqnarray}
+\delta\T{\Phi}_t & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m + \delta\T{\varphi}_m \times \left(\T{R}_m \, \T{o}_j\right) - \delta\T{x}_j \right] \\
+                 & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m - \left(\T{R}_m \, \T{o}_j\right) \times \delta\T{\varphi}_m - \delta\T{x}_j \right] \\
+\delta\T{\Phi}_t^T & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{x}_m^T + \delta\T{\varphi}_m^T \, \left(\T{R}_m \, \T{o}_j\right)\times - \delta\T{x}_j^T \right] \label{eq:rbdispjoint:deltaPhit}
+\end{eqnarray}
+Now equation~\ref{eq:rbdispjoint:deltaPhit} can be rearranged and written in matrix form:
+\begin{eqnarray}
+\delta\T{\Phi}_t^T & = & \begin{pmatrix}
+                   \delta\T{x}_m^T &
+                   \delta\T{\varphi}_m^T &
+                   \delta\T{x}_1^T &
+                   \hdots{} &
+                   \delta\T{x}_N^T
+                   \end{pmatrix} \,
+\begin{pmatrix}
+        \sum_{j=1}^N w_j \, \T{I} \\
+        \sum_{j=1}^N w_j \, \left(\T{R}_m \, \T{o}_j\right)\times \\
+        -w_1 \, \T{I} \\
+        \vdots{} \\
+        -w_N \, \T{I}
+\end{pmatrix}
+\end{eqnarray}
+The same procedure is also applied to $\T{\Phi}_r$.
+\begin{eqnarray}
+\delta\T{\Phi}_r & = & \sum_{j=1}^{N} w_j\,\left[-\left(\T{x}_m - \T{x}_j\right) \times \delta\T{R}_m \, \T{o}_j + \left(\T{R}_m\,\T{o}_j\right)\times\left(\delta\T{x}_m - \delta\T{x}_j\right)\right] \\
+& = & \sum_{j=1}^{N} w_j \, \left[-\left(\T{x}_m - \T{x}_j\right)\times\delta\T{\varphi}_m\times\left(\T{R}_m \, \T{o}_j\right) + \left(\T{R}_m\,\T{o}_j\right) \times \left(\delta\T{x}_m - \delta\T{x}_j\right)\right] \\
+& = & \sum_{j=1}^{N} w_j \, \left[\left(\T{x}_m - \T{x}_j\right)\times\left(\T{R}_m \, \T{o}_j\right)\times\delta\T{\varphi}_m + \left(\T{R}_m\,\T{o}_j\right) \times \left(\delta\T{x}_m - \delta\T{x}_j\right)\right] \\
+\delta\T{\Phi}_r^T & = & \sum_{j=1}^{N} w_j \, \left[\delta\T{\varphi}_m^T \left(\T{R}_m \, \T{o}_j\right)\times\left(\T{x}_m - \T{x}_j\right)\times - \left(\delta\T{x}_m^T - \delta\T{x}_j^T\right) \left(\T{R}_m\,\T{o}_j\right) \times \right] \label{eq:rbdispjoint:deltaPhir}
+\end{eqnarray}
+Also equation~\ref{eq:rbdispjoint:deltaPhir} can be rearranged and written in matrix form:
+\begin{eqnarray}
+\delta\T{\Phi}_r^T & = &
+\begin{pmatrix}
+\delta\T{x}_m^T &
+\delta\T{\varphi}_m^T &
+\delta\T{x}_1^T &
+\hdots{} &
+\delta\T{x}_N^T
+\end{pmatrix} \,
+\begin{pmatrix}
+-\sum_{j=1}^N w_j\,\left(\T{R}_m\,\T{o}_j\right)\times \\
+\sum_{j=1}^N w_j\,\left(\T{R}_m\,\T{o}_j\right)\times\left(\T{x}_m - \T{x}_j\right)\times \\
+w_1\,\left(\T{R}_m\,\T{o}_1\right)\times \\
+\vdots{} \\
+w_N\,\left(\T{R}_m\,\T{o}_N\right)\times
+\end{pmatrix}
+\end{eqnarray}
+\paragraph{Adding contributions due to Lagrange multipliers}
+In order to enforce the constraint equations $\T{\Phi}_t$ and $\T{\Phi}_r$, Lagrange multipliers $\T{\lambda}_t$ and $\T{\lambda}_r$ are required.
+\begin{eqnarray}
+\delta W_{\lambda} & = & \delta\T{\Phi}_t^T \, \T{\lambda}_t + \delta\T{\Phi}_r^T \, \T{\lambda}_r \\
+& = &
+\begin{pmatrix}
+\delta\T{x}_m \\
+\delta\T{\varphi}_m \\
+\delta\T{x}_1 \\
+\vdots{} \\
+\delta\T{x}_N
+\end{pmatrix}^T \,
+\begin{pmatrix}
+\sum_{j=1}^N w_j\,\left[\T{\lambda}_t - \,\left(\T{R}_m\,\T{o}_j\right)\times\T{\lambda}_r\right] \\
+\sum_{j=1}^N w_j\left[\left(\T{R}_m\,\T{o}_j\right)\times\T{\lambda}_t+\left(\T{R}_m\,\T{o}_j\right)\times\left(\T{x}_m - \T{x}_j\right)\times\T{\lambda}_r\right] \\
+w_1\left[\left(\T{R}_m\,\T{o}_1\right)\times\T{\lambda}_r - \T{\lambda}_t\right] \\
+\vdots{} \\
+w_N\left[\left(\T{R}_m\,\T{o}_N\right)\times\T{\lambda}_r - \T{\lambda}_t\right]
+\end{pmatrix} \\
+& = &
+\begin{pmatrix}
+\delta\T{x}_m \\
+\delta\T{\varphi}_m \\
+\delta\T{x}_1 \\
+\vdots{} \\
+\delta\T{x}_N
+\end{pmatrix}^T \,
+\begin{pmatrix}
+\T{F}_m \\
+\T{M}_m \\
+\T{F}_1 \\
+\vdots{} \\
+\T{F}_N
+\end{pmatrix}
+\end{eqnarray}
+\begin{description}
+\item[$\T{\lambda}_t$] Lagrange multipliers for position constraints $\T{\Phi}_t$
+\item[$\T{\lambda}_r$] Lagrange multipliers for orientation constraints $\T{\Phi}_r$
+\item[$\T{F}_m$] Reaction force at the master node
+\item[$\T{M}_m$] Reaction couple at the master node
+\item[$\T{F}_j$] Reaction force at slave node~j
+\end{description}
+\paragraph{Contributions of the element}
+Finally the contributions of the rigid body displacement joint can be summarized as:
+\begin{eqnarray}
+\begin{pmatrix}
+\texttt{dCoef}^{-1} \, \T{\Phi}_t \\
+\texttt{dCoef}^{-1} \, \T{\Phi}_r \\
+\T{F}_m \\
+\T{M}_m \\
+\T{F}_1 \\
+\vdots{} \\
+\T{F}_N
+\end{pmatrix}
+& = &
+\begin{pmatrix}
+\texttt{dCoef}^{-1} \, \sum_{j=1}^{N} w_j \, \left(\T{x}_m + \T{R}_m \, \T{o}_j - \T{x}_j\right) \\
+\texttt{dCoef}^{-1} \, \sum_{j=1}^{N} w_j \, \left(\T{R}_m \, \T{o}_j \right)\times\left(\T{x}_m - \T{x}_j \right) \\
+\sum_{j=1}^N w_j\,\left[\T{\lambda}_t - \,\left(\T{R}_m\,\T{o}_j\right)\times\T{\lambda}_r\right] \\
+\sum_{j=1}^N w_j\left(\T{R}_m\,\T{o}_j\right)\times\left[\T{\lambda}_t+\left(\T{x}_m - \T{x}_j\right)\times\T{\lambda}_r\right] \\
+w_1\left[\left(\T{R}_m\,\T{o}_1\right)\times\T{\lambda}_r - \T{\lambda}_t\right] \\
+\vdots{} \\
+w_N\left[\left(\T{R}_m\,\T{o}_N\right)\times\T{\lambda}_r - \T{\lambda}_t\right]
+\end{pmatrix} \label{eq:rbdispjoint:elemcontrib}
+\end{eqnarray}
+In equation~\ref{eq:rbdispjoint:elemcontrib} the constraint equations $\T{\Phi}_t$ and $\T{\Phi}_r$
+are divided by $\texttt{dCoef}$ in order to improve the condition number of the Jacobian matrix.

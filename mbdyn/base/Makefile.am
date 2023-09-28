@@ -10,6 +10,8 @@ auth.cc \
 auth.h \
 bicg.cc \
 bicg.h \
+bistopdrive.cc \
+bistopdrive.h \
 bufferstream_out_elem.cc \
 bufferstream_out_elem.h \
 bufferstreamdrive.cc \
@@ -65,6 +67,8 @@ extforce.cc \
 extforce.h \
 extsocket.cc \
 extsocket.h \
+fdjac.h \
+fdjac.cc \
 filedrv.cc \
 filedrv.h \
 fixedstep.cc \
@@ -145,6 +149,8 @@ rtsolver.cc \
 rtsolver.h \
 sah.cc \
 sah.h \
+scalarnode.cc \
+scalarnode.h \
 scalarvalue.cc \
 scalarvalue.h \
 shape.cc \
@@ -222,6 +228,8 @@ endif
 
 if USE_GINAC
 libbase_la_SOURCES += \
+ginacmbd.h \
+ginacmbd.cc \
 ginaccltp.h \
 ginacdrive.cc \
 ginacdrive.h
@@ -251,7 +259,7 @@ schurdataman.cc \
 schurdataman.h
 endif
 
-libbase_la_LIBADD = @LIBS@ @SECURITY_LIBS@ @OCTAVE_LIBS@ $(GINACLIB_LIBS)
+libbase_la_LIBADD = @LIBS@ @SECURITY_LIBS@ @OCTAVE_LIBS@ @TRILINOS_LIBS@ $(GINACLIB_LIBS)
 libbase_la_LDFLAGS = -static
 
 AM_CPPFLAGS = \

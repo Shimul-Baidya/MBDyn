@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2014
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -55,6 +55,8 @@
 #include "inplanej.h"  /* Vincoli di giacitura nel piano */
 #include "inline.h"
 #include "modal.h"
+#include "offdispjad.h"
+#include "rbdispjad.h"
 #if 0 /* No longer supported */
 #include "planedj.h"
 #endif
@@ -98,7 +100,7 @@ Joint::~Joint(void)
 
 
 void
-Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH, std::string& name)
+Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH)
 {
 #ifdef USE_NETCDF
 	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
@@ -108,22 +110,21 @@ Joint::OutputPrepare_int(const std::string& type, OutputHandler &OH, std::string
 	(void)OH.CreateVar(os.str(), type);
 
 	// joint sub-data
-	os << '.';
-	name = os.str();
+	m_sOutputNameBase = os.str();
 
-	Var_F_local = OH.CreateVar<Vec3>(name + "f",
+	Var_F_local = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "f",
 		OutputHandler::Dimensions::Force,
 		"local reaction force (fx, fy, fz)");
 
-	Var_M_local = OH.CreateVar<Vec3>(name + "m",
+	Var_M_local = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "m",
 		OutputHandler::Dimensions::Moment,
 		"local reaction moment (mx, my, mz)");
 
-	Var_F_global = OH.CreateVar<Vec3>(name + "F",
+	Var_F_global = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
 		OutputHandler::Dimensions::Force,
 		"global reaction force (FX, FY, FZ)");
 
-	Var_M_global = OH.CreateVar<Vec3>(name + "M",
+	Var_M_global = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
 		OutputHandler::Dimensions::Moment,
 		"global reaction moment (MX, MY, MZ)");
 
@@ -262,7 +263,8 @@ ReadJoint(DataManager* pDM,
 #ifdef MBDYN_DEVEL
 		"screw",
 #endif // MBDYN_DEVEL
-
+                "offset" "displacement" "joint",
+                "rigid" "body" "displacement" "joint",
 		NULL
 	};
 
@@ -329,7 +331,8 @@ ReadJoint(DataManager* pDM,
 #ifdef MBDYN_DEVEL
 		SCREWJOINT,
 #endif // MBDYN_DEVEL
-		
+		OFFSETDISPLACEMENTJOINT,
+                RIGIDBODYDISPLACEMENTJOINT,
 		LASTKEYWORD
 	};
 
@@ -666,13 +669,14 @@ ReadJoint(DataManager* pDM,
 			(void)HP.GetRotAbs(::AbsRefFrame);
 		}
 
+		OrientationDescription od = ReadOptionalOrientationDescription(pDM, HP);
 
 		flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
 
 		/* allocazione e creazione */
 		SAFENEWWITHCONSTRUCTOR(pEl,
 			PinJoint,
-			PinJoint(uLabel, pDO, pNode, X0, d, fOut));
+			PinJoint(uLabel, pDO, pNode, X0, d, od, fOut));
 
 		std::ostream& out = pDM->GetLogFile();
 		out << "sphericalpin: " << uLabel
@@ -2206,7 +2210,16 @@ ReadJoint(DataManager* pDM,
 		Vec3 f1(HP.GetPosRel(RF1));
 
 		Mat3x3 R1(Eye3);
-		if (HP.IsKeyWord("hinge") || HP.IsKeyWord("orientation")) {
+		bool bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+
+		if (bOrientation) {
 			R1 = HP.GetRotRel(RF1);
 		}
 
@@ -2221,7 +2234,16 @@ ReadJoint(DataManager* pDM,
 		Vec3 f2(HP.GetPosRel(RF2, RF1, f1));
 
 		Mat3x3 R2(Eye3);
-		if (HP.IsKeyWord("hinge") || HP.IsKeyWord("orientation")) {
+		bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+
+		if (bOrientation) {
 			R2 = HP.GetRotRel(RF2, RF1, R1);
 		}
 
@@ -2373,7 +2395,16 @@ ReadJoint(DataManager* pDM,
 		Vec3 f(HP.GetPosRel(RF));
 
 		Mat3x3 R(Eye3);
-		if (HP.IsKeyWord("hinge") || HP.IsKeyWord("orientation")) {
+		bool bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+
+		if (bOrientation) {
 			R = HP.GetRotRel(RF);
 		}
 
@@ -3673,8 +3704,18 @@ ReadJoint(DataManager* pDM,
 			<< " " << pNode->GetLabel()
 			<< " " << f;
 
+		bool bOrientation;
+
 		Mat3x3 R = Eye3;
-		if (HP.IsKeyWord("hinge")) {
+		bOrientation = false;
+		if (HP.IsKeyWord("orientation")) {
+			bOrientation = true;
+
+		} else if (HP.IsKeyWord("hinge")) {
+			silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+			bOrientation = true;
+		}
+		if (bOrientation) {
 			R = HP.GetRotRel(RF);
 		}
 		DEBUGLCOUT(MYDEBUG_INPUT,
@@ -3771,17 +3812,25 @@ ReadJoint(DataManager* pDM,
 				
 				out << " " << f1;
 
-				if (HP.IsKeyWord("hinge")) {
+				bOrientation = false;
+				if (HP.IsKeyWord("orientation")) {
+					bOrientation = true;
+
+				} else if (HP.IsKeyWord("hinge")) {
+					silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+					bOrientation = true;
+				}
+
+				if (bOrientation) {
 					if (HP.IsKeyWord("same")) {
 						R1 = bc[i-1]->GetR(3);
 					} else {
 						R1 = HP.GetRotRel(RF);
 						/* FIXME: allow tolerance? */
 						if (!R1.IsExactlySame(bc[i-1]->GetR(3))) {
-							silent_cerr("line " << HP.GetLineData() << ": "
-								"Beam(" << pBeam->GetLabel() << ").R1 "
+							silent_cerr("Beam(" << pBeam->GetLabel() << ").R1 "
 								"and Beam(" << bc[i-1]->pGetBeam()->GetLabel() << ").R3 "
-								"do not match" << std::endl);
+								"do not match at line " << HP.GetLineData() << std::endl);
 							throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
 						}
 					}
@@ -3791,7 +3840,16 @@ ReadJoint(DataManager* pDM,
 
 			} else {
 				f1 = HP.GetPosRel(RF);
-				if (HP.IsKeyWord("hinge")) {
+				bOrientation = false;
+				if (HP.IsKeyWord("orientation")) {
+					bOrientation = true;
+
+				} else if (HP.IsKeyWord("hinge")) {
+					silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+					bOrientation = true;
+				}
+
+				if (bOrientation) {
 					R1 = HP.GetRotRel(RF);
 					DEBUGLCOUT(MYDEBUG_INPUT, "Node 1 rotation matrix: "
 						<< std::endl << R1 << std::endl);
@@ -3814,7 +3872,16 @@ ReadJoint(DataManager* pDM,
 			out << " " << f2;
 
 			Mat3x3 R2(Eye3);
-			if (HP.IsKeyWord("hinge")) {
+			bOrientation = false;
+			if (HP.IsKeyWord("orientation")) {
+				bOrientation = true;
+
+			} else if (HP.IsKeyWord("hinge")) {
+				silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+				bOrientation = true;
+			}
+
+			if (bOrientation) {
 				R2 = HP.GetRotRel(RF);
 				DEBUGLCOUT(MYDEBUG_INPUT,
 					"Node 2 rotation matrix: " << std::endl
@@ -3837,7 +3904,16 @@ ReadJoint(DataManager* pDM,
 			out << " " << f3;
 
 			Mat3x3 R3(Eye3);
-			if (HP.IsKeyWord("hinge")) {
+			bOrientation = false;
+			if (HP.IsKeyWord("orientation")) {
+				bOrientation = true;
+
+			} else if (HP.IsKeyWord("hinge")) {
+				silent_cerr("Joint(" << uLabel << "): \"hinge\" is deprecated, use \"orientation\" instead at line " << HP.GetLineData() << std::endl);
+				bOrientation = true;
+			}
+
+			if (bOrientation) {
 				R3 = HP.GetRotRel(RF);
 				DEBUGLCOUT(MYDEBUG_INPUT,
 					"Node 3 rotation matrix: " << std::endl
@@ -3888,6 +3964,30 @@ ReadJoint(DataManager* pDM,
 
 		out << std::endl;
 
+		BasicFriction *bf = 0;
+		BasicShapeCoefficient *bsh = 0;
+		doublereal preload = 0.;
+		if (HP.IsKeyWord("friction")) {
+			if (sliderType != BeamSliderJoint::SPHERICAL) {
+// 				silent_cerr("Error defining the beam slider joint" << uLabel
+// 					<< " at line " << HP.GetLineData() 
+// 					<< ": friction allowd only for \"spherical\"  beam sliders"
+// 					<< std::endl);
+// 				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+				silent_cerr("Warning: the beam slider joint" << uLabel
+					<< " at line " << HP.GetLineData() 
+					<< ": is not  \"spherical\", but "
+					<< "friction account only for the contact force and not the moment"
+					<< std::endl);
+			}
+			//~ r = HP.GetReal();
+			if (HP.IsKeyWord("preload")) {
+				preload = HP.GetReal();
+			}
+			bf = ParseFriction(HP,pDM);
+			bsh = ParseShapeCoefficient(HP);
+		}
+
 		flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
 		SAFENEWWITHCONSTRUCTOR(pEl, BeamSliderJoint,
 			BeamSliderJoint(uLabel, pDO,
@@ -3895,7 +3995,7 @@ ReadJoint(DataManager* pDM,
 				sliderType,
 				nB, bc,
 				uIB, uIN, dL,
-				f, R, fOut));
+				f, R, fOut, preload, bsh, bf));
 		} break;
 
 	case MODAL:
@@ -4020,8 +4120,121 @@ ReadJoint(DataManager* pDM,
 			<< std::endl;
 	} break;
 #endif // MBDYN_DEVEL
+        case OFFSETDISPLACEMENTJOINT: {
+             if (!pDM->bUseAutoDiff()) {
+                  silent_cerr("offset displacement joint(" << uLabel << "): requires support for automatic differentiation at line"
+                              << HP.GetLineData() << "\n"
+                              "add \"use automatic differentiation;\" inside the control data section\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
 
-	/* Aggiungere qui altri vincoli */
+             const StructNodeAd* pNode1 = pDM->ReadNode<const StructNodeAd, Node::STRUCTURAL>(HP);
+             const ReferenceFrame RF1{pNode1};
+
+             const StructDispNodeAd* pNode2 = pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP);
+             const ReferenceFrame RF2{pNode2};
+
+             const Vec3 X2 = HP.IsKeyWord("position") ? HP.GetPosAbs(RF2) : RF2.GetX();
+             const Vec3 o1 = RF1.GetR().MulTV(X2 - RF1.GetX());
+
+             flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
+
+             SAFENEWWITHCONSTRUCTOR(pEl,
+                                    OffsetDispJointAd,
+                                    OffsetDispJointAd(uLabel, pDO,
+                                                      pNode1, o1,
+                                                      pNode2,
+                                                      fOut));
+
+             std::ostream& out = pDM->GetLogFile();
+
+             out << "offsetdisplacementjoint: " << uLabel
+                 << " " << pNode1->GetLabel()
+                 << " " << o1
+                 << " " << pNode2->GetLabel()
+                 << "\n";
+        } break;
+
+        case RIGIDBODYDISPLACEMENTJOINT: {
+             if (!pDM->bUseAutoDiff()) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): requires support for automatic differentiation at line"
+                              << HP.GetLineData() << "\n"
+                              "add \"use automatic differentiation;\" inside the control data section\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const StructNodeAd* pNodeMaster = pDM->ReadNode<const StructNodeAd, Node::STRUCTURAL>(HP);
+             const ReferenceFrame RFm(pNodeMaster);
+
+             const integer iNumNodesSlave = HP.GetInt();
+
+             if (iNumNodesSlave < 3) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): minimum three slave nodes are required at line "
+                              << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             std::vector<RigidBodyDispJointAd::SlaveNodeData> rgNodesSlave;
+
+             rgNodesSlave.reserve(iNumNodesSlave);
+
+             doublereal dWeightTot = 0.;
+             doublereal dOffset2 = 0.;
+
+             for (integer j = 1; j <= iNumNodesSlave; ++j) {
+                  const StructDispNodeAd* const pNodeSlave = pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP);
+                  const ReferenceFrame RFj{pNodeSlave};
+                  const Vec3 Xj = HP.IsKeyWord("position") ? HP.GetPosAbs(RFj) : RFj.GetX();
+                  const Vec3 oj = RFm.GetR().MulTV(Xj - RFm.GetX());
+                  const doublereal dWeight = HP.IsKeyWord("weight") ? HP.GetReal() : 1.;
+
+                  dWeightTot += dWeight;
+                  dOffset2 += oj.Dot();
+
+                  rgNodesSlave.emplace_back(pNodeSlave, oj, dWeight);
+             }
+
+             if (dWeightTot <= 0.) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): total weight must be greather than zero at line "
+                              << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             if (dOffset2 <= 0.) {
+                  silent_cerr("rigid body displacement joint(" << uLabel << "): sum of square of all distances must be greater than zero at line "
+                              << HP.GetLineData() << "\n");
+                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+             }
+
+             const doublereal dAlpha = HP.IsKeyWord("alpha") ? HP.GetReal() : std::pow(rgNodesSlave.size(), 2) / dOffset2;
+
+             for (auto& oNDS: rgNodesSlave) {
+                  oNDS.weight *= dAlpha / dWeightTot;
+             }
+
+             flag fOut = pDM->fReadOutput(HP, Elem::JOINT);
+
+             std::ostream& out = pDM->GetLogFile();
+
+             out << "rigidbodydisplacementjoint: " << uLabel
+                 << " " << pNodeMaster->GetLabel();
+
+             for (const auto& oNDS: rgNodesSlave) {
+                  out << oNDS.pNode->GetLabel() << ' '
+                      << oNDS.offset << ' '
+                      << oNDS.weight << ' ';
+             }
+
+             out << '\n';
+
+             SAFENEWWITHCONSTRUCTOR(pEl,
+                                    RigidBodyDispJointAd,
+                                    RigidBodyDispJointAd(uLabel, pDO,
+                                                         pNodeMaster,
+                                                         std::move(rgNodesSlave),
+                                                         fOut));
+        } break;
+        /* Aggiungere qui altri vincoli */
 
 	default:
 		silent_cerr("Joint(" << uLabel << "): unknown joint type "

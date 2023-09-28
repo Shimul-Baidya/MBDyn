@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -110,7 +110,9 @@ this name as the ordering variable for the rest of the data.
 
 
 \subsection{Node Level}
-There is no variable \kw{node}, with the name of the node level.
+There variable \kw{node} contains the number of node types that are present in the output.
+Its attribute \kw{types} is a semicolon-separated string of the node types.
+
 This level contains as many sublevels as the node types
 that are present in the model.
 Each node type consists in a variable that contains an array
@@ -121,9 +123,46 @@ contained in specific variables, whose names describe the contents.
 
 Currently supported node types are:
 \begin{itemize}
+\item Abstract nodes, indicated as \kw{abstr}.
+\item Electric nodes, indicated as \kw{elec}.
+\item Pressure nodes, indicated as \kw{pres}.
 \item Structural nodes, indicated as \kw{struct}.
+\item Thermal nodes, indicated as \kw{thermal}.
 \end{itemize}
 
+
+\subsubsection{Abstract Node}
+\label{sec:NetCDF:Node:Abstract Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.abstr.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state is present;
+
+\item \kw{node.elec.}\bnt{label}\kw{.X} contains the state of the node;
+
+\item \kw{node.elec.}\bnt{label}\kw{.XP} contains the time derivative of the state of the node.
+\end{itemize}
+
+
+\subsubsection{Electric Node}
+\label{sec:NetCDF:Node:Electric Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.elec.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state (of the voltage) is present;
+
+\item \kw{node.elec.}\bnt{label}\kw{.V} contains the voltage of the node;
+
+\item \kw{node.elec.}\bnt{label}\kw{.VP} contains the time derivative of the voltage of the node.
+\end{itemize}
+
+
+\subsubsection{Pressure Node}
+\label{sec:NetCDF:Node:Pressure Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.pres.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{algebraic}, indicating that the time derivative of the state (of the pressure) is not present;
+
+\item \kw{node.pres.}\bnt{label}\kw{.p} contains the pressure of the node;
+\end{itemize}
 
 
 \subsubsection{Structural Node}
@@ -168,28 +207,42 @@ in the appropriate reference frame;
 of the node, in the appropriate reference frame.
 \end{itemize}
 
-If requested, the inertia associated to \kw{dynamic} nodes is output
+If requested, the inertia associated with \kw{dynamic} nodes is output
 within the namespace of the node, although actually handled
 by the corresponding \kw{automatic structural} element.
 As a consequence, extra variables can appear in the output
 of \kw{dynamic} nodes.
 \begin{itemize}
 \item \kw{node.struct.}\bnt{label}\kw{.B} contains the momentum of the inertia
-associated to the node, in the appropriate reference frame;
+associated with the node, in the appropriate reference frame;
 
 \item \kw{node.struct.}\bnt{label}\kw{.G} contains the momenta moment of the inertia
-associated to the node, in the appropriate reference frame;
+associated with the node, in the appropriate reference frame;
 
 \item \kw{node.struct.}\bnt{label}\kw{.BP} contains the derivative of the momentum
-of the inertia associated to the node, in the appropriate reference frame;
+of the inertia associated with the node, in the appropriate reference frame;
 
 \item \kw{node.struct.}\bnt{label}\kw{.GP} contains the derivative of momenta moment
-of the inertia associated to the node, in the appropriate reference frame.
+of the inertia associated with the node, in the appropriate reference frame.
+\end{itemize}
+
+
+\subsubsection{Thermal Node}
+\label{sec:NetCDF:Node:Thermal Node}
+The following variables are defined.
+\begin{itemize}
+\item \kw{node.thermal.}\bnt{label} is actually empty; its \kw{type} attribute contains \kw{differential}, indicating that the time derivative of the state (of the temperature) is present;
+
+\item \kw{node.thermal.}\bnt{label}\kw{.T} contains the temperature of the node;
+
+\item \kw{node.thermal.}\bnt{label}\kw{.TP} contains the time derivative of the temperature of the node.
 \end{itemize}
 
 
 \subsection{Element Level}
-There is no variable \kw{elem}, with the name of the element level.
+There variable \kw{elem} contains the number of element types that are present in the output.
+Its attribute \kw{types} is a semicolon-separated string of the element types.
+
 This level contains as many sublevels as the element types
 that are present in the model.
 Each element type consists in a variable that contains an array
@@ -402,6 +455,13 @@ evaluation point.
 
 
 
+\subsubsection{Driven}
+\label{sec:NetCDF:Elem:Driven}
+
+When an element is driven, a scalar field \kw{driven} is added to the driven element's entry.
+Its value is 1 when the driven element is active, and 0 otherwise.
+The content of the driven element's output should be disregarded when this flag is 0.
+
 
 \subsubsection{Force}
 \label{sec:NetCDF:Elem:Force}
@@ -512,7 +572,6 @@ Additional variables can be added, depending on the joint type.
 \item \kw{elem.joint.}\bnt{label}\kw{.Omega} contains the relative angular velocity
   of the two connected nodes, expressed in the joint reference frame attached to node 1.
 \end{itemize}
-
 If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.MR} contains the friction moment;
@@ -523,7 +582,13 @@ If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.Beam} contains the label of the current beam;
 \item \kw{elem.joint.}\bnt{label}\kw{.sRef} contains the current curvilinear abscissa;
-\item \kw{elem.joint.}\bnt{label}\kw{.l} contains the local direction unit vector.
+\item \kw{elem.joint.}\bnt{label}\kw{.l} contains the three components of the local direction unit vector, in the absolute reference frame.
+\end{itemize}
+If friction is present:
+\begin{itemize}
+\item \kw{elem.joint.}\bnt{label}\kw{.FF} contains the tangential force component;
+\item \kw{elem.joint.}\bnt{label}\kw{.fc} contains the friction coefficient;
+\item \kw{elem.joint.}\bnt{label}\kw{.v} contains the sliding velocity.
 \end{itemize}
 
 \paragraph{Brake:}
@@ -533,7 +598,6 @@ If friction is present:
 \item \kw{elem.joint.}\bnt{label}\kw{.Omega} contains the relative angular
   velocity, expressed in the reference frame of node 2.
 \end{itemize}
-
 If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.fc} contains the friction coefficient;
@@ -649,7 +713,7 @@ If friction is present:
 \end{itemize}
 
 \paragraph{In line:}
-Only if friction is present:
+If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.FF} contains the friction force along
   the constraint direction;
@@ -682,7 +746,6 @@ Only if friction is present:
 \item \kw{elem.joint.}\bnt{label}\kw{.Omega} contains the relative angular
   velocity of the connected nodes, expressed in the joint reference frame.
 \end{itemize}
-
 If friction is present:
 \begin{itemize}
 \item \kw{elem.joint.}\bnt{label}\kw{.MRF} contains the friction moment
@@ -707,13 +770,15 @@ If friction is present:
 
 \paragraph{Rod:}
 \begin{itemize}
-\item \kw{elem.joint.}\bnt{label}\kw{.dElle} contains the length of the
+\item \kw{elem.joint.}\bnt{label}\kw{.l} contains the length of the
   element;
-\item \kw{elem.joint.}\bnt{label}\kw{.dEllePrime} contains the lengthening
+\item \kw{elem.joint.}\bnt{label}\kw{.lP} contains the lengthening
   velocity of the element;
 \item \kw{elem.joint.}\bnt{label}\kw{.v} contains the three components of
   the unit vector representing the element line of action, expressed 
   in the global reference frame;
+\item \kw{elem.joint.}\bnt{label}\kw{.constitutiveLaw.}\bnt{item} may contain any constitutive law-specific output, if any.
+  See the related constitutive law's NetCDF output options for possible values of \nt{item}.
 \end{itemize}
 
 \paragraph{Spherical joint:}

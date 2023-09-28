@@ -157,23 +157,22 @@ ScrewJoint::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Screw Joint", OH, name);
+			OutputPrepare_int("Screw Joint", OH);
 
-			Var_dTheta = OH.CreateVar<doublereal>(name + "dTheta",
+			Var_dTheta = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dTheta",
 				OutputHandler::Dimensions::rad,
 				"screw angle magnitude [deg]");
-			Var_Theta = OH.CreateVar<Vec3>(name + "Theta",
+			Var_Theta = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Theta",
 				OutputHandler::Dimensions::Length,
 				"screw axis (x, y, z)");
 			if (fc) {
-				Var_vrel = OH.CreateVar<doublereal>(name + "vRel",
+				Var_vrel = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "vRel",
 					OutputHandler::Dimensions::Velocity,
 					"contact point sliding velocity");
-				Var_fc = OH.CreateVar<doublereal>(name + "fc",
+				Var_fc = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "fc",
 					OutputHandler::Dimensions::Dimensionless,
 					"friction coefficient");
-				Var_MFR = OH.CreateVar<doublereal>(name + "MFR",
+				Var_MFR = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "MFR",
 					OutputHandler::Dimensions::Moment,
 					"friction moment");
 
@@ -700,7 +699,7 @@ ScrewJoint::AssMat(FullSubMatrixHandler& WM, doublereal dCoef,
 			 //variation of reaction force
 		dF0.ReDim(1);
 // 		if ((modF[0] == 0.) or (F.Norm() < preF)) {
-		if ((modF == 0.)) {
+		if (modF == 0.) {
 			 dF0.Set(0., 1, 12+1);
 		} else {
 			 dF0.Set(dLambda > 0 ? 1. : -1., 1, 12+1);

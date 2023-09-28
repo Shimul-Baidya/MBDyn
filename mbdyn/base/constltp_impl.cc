@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -691,10 +691,20 @@ struct SymbolicCLR : public ConstitutiveLawRead<T, Tder> {
 		/* Prestress and prestrain */
 		T PreStress(mb_zero<T>());
 		GetPreStress(HP, PreStress);
-#ifdef USE_GINAC
-		TplDriveCaller<T>* pTplDC =
-#endif /* ! USE_GINAC */
-			GetPreStrain<T>(pDM, HP);
+		TplDriveCaller<T>* pTplDC = GetPreStrain<T>(pDM, HP);
+		switch (CLType) {
+		case ConstLawType::ELASTIC:
+		case ConstLawType::VISCOELASTIC:
+			break;
+		default:
+			// not needed, but must allow users to define it!
+			if (pTplDC != 0) {
+				silent_cerr("warning, prestrain not used by constitutive law type selected at line "
+					<< HP.GetLineData() << std::endl);
+				SAFEDELETE(pTplDC);
+			}
+			break;
+		}
 
 		switch (CLType) {
 		case ConstLawType::ELASTIC: {

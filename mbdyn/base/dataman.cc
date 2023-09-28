@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -39,6 +39,7 @@ extern "C" {
 }
 
 #include "dataman.h"
+#include "fdjac.h"
 #include "friction.h"
 
 #if defined(USE_RUNTIME_LOADING) && defined(HAVE_LTDL_H)
@@ -143,8 +144,9 @@ dLastRestartTime(dInitialTime),
 saveXSol(false),
 solArrFileName(0),
 pOutputMeter(0),
+bOutputNextStep(false),
 iOutputCount(0),
-pFDJacMeter(0),
+pFDJac(nullptr),
 ResMode(RES_TEXT),
 #ifdef USE_NETCDF
 // NetCDF stuff
@@ -415,8 +417,13 @@ bAutoDiff(false)
 	     }
 
 	     if (bOutputFrames) {
-		  OutHdl.Open(OutputHandler::REFERENCEFRAMES);
-		  HP.OutputFrames(OutHdl.ReferenceFrames());
+		  if (OutHdl.UseText(OutputHandler::REFERENCEFRAMES)) {
+			OutHdl.Open(OutputHandler::REFERENCEFRAMES);
+			HP.OutputFrames(OutHdl.ReferenceFrames());
+		  } else {
+			silent_cerr("warning, requested reference frames output but text output is disabled." << std::endl
+					<< "NetCDF output of reference frames is not implemented yet." << std::endl);
+		  }
 	     }
 
 	     /* fine lettura elementi */
@@ -511,6 +518,10 @@ bAutoDiff(false)
 		  return;
 	     }
 
+             if (pRBK) {
+                  pRBK->Update();
+             }
+             
 #ifdef USE_SOCKET
 	     /* waits for all pending sockets to connect */
 	     WaitSocketUsers();
@@ -633,9 +644,9 @@ DataManager::~DataManager(void)
 		pOutputMeter = 0;
 	}
 
-	if (pFDJacMeter) {
-		SAFEDELETE(pFDJacMeter);
-		pFDJacMeter = 0;
+	if (pFDJac) {
+		SAFEDELETE(pFDJac);
+		pFDJac = nullptr;
 	}
 
 	if (pRBK) {

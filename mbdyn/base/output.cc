@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -82,8 +82,10 @@ const char* psExt[] = {
 	".dof",
 	".drv",		// 30
 	".trc",
+        ".sol",
+        ".prl",
 	".m",		// NOTE: ALWAYS LAST!
-	NULL		// 33
+	NULL		// 35
 };
 
 const std::unordered_map<const OutputHandler::Dimensions, const std::string> DimensionNames ({
@@ -123,6 +125,9 @@ const std::unordered_map<const OutputHandler::Dimensions, const std::string> Dim
 	{ OutputHandler::Dimensions::Moment , std::string("Moment") },
 	{ OutputHandler::Dimensions::Voltage , std::string("Voltage") },
 	{ OutputHandler::Dimensions::Charge , std::string("Charge") },
+	{ OutputHandler::Dimensions::Resistance , std::string("Resistance") },
+	{ OutputHandler::Dimensions::Capacitance, std::string("Capacitance") },
+	{ OutputHandler::Dimensions::Inductance, std::string("Inductance") },
 	{ OutputHandler::Dimensions::Frequency , std::string("Frequency") },
 	{ OutputHandler::Dimensions::deg , std::string("deg") },
 	{ OutputHandler::Dimensions::rad , std::string("rad") },
@@ -132,6 +137,7 @@ const std::unordered_map<const OutputHandler::Dimensions, const std::string> Dim
 	{ OutputHandler::Dimensions::MassFlow, std::string("Mass flow")},
 	{ OutputHandler::Dimensions::Jerk , std::string("Jerk") },
 	{ OutputHandler::Dimensions::VoltageDerivative , std::string("Voltage derivative") },
+	{ OutputHandler::Dimensions::TemperatureDerivative , std::string("Temperature derivative") },
 	{ OutputHandler::Dimensions::UnknownDimension , std::string("Unknown dimension") }
 });
 
@@ -281,6 +287,18 @@ void OutputHandler::SetDerivedUnits(std::unordered_map<Dimensions, std::string>&
 		Units[Dimensions::Mass] + " " +
 		Units[Dimensions::Time] + "^-3 " +
 		Units[Dimensions::Current] + "^-1";
+	Units[Dimensions::Resistance] = Units[Dimensions::Length] + "^2 " + 
+		Units[Dimensions::Mass] + " " + 
+		Units[Dimensions::Time] + "^-3 " +
+		Units[Dimensions::Current] + "^-2";
+	Units[Dimensions::Capacitance] = Units[Dimensions::Length] + "^-2 " + 
+		Units[Dimensions::Mass] + "^-1 " + 
+		Units[Dimensions::Time] + "^4 " +
+		Units[Dimensions::Current] + "^2";
+	Units[Dimensions::Inductance] = Units[Dimensions::Length] + "^2 " + 
+		Units[Dimensions::Mass] + " " + 
+		Units[Dimensions::Time] + "^-2 " +
+		Units[Dimensions::Current] + "^-2";
 	Units[Dimensions::Frequency] = Units[Dimensions::Time] + "^-1";
 	Units[Dimensions::Charge] = Units[Dimensions::Time] + " " +
 		Units[Dimensions::Current];
@@ -382,11 +400,13 @@ OutputHandler::OutputHandler_int(void)
 	OutData[STRNODES].pof = &ofStrNodes;
 
 	OutData[ELECTRIC].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[ELECTRIC].pof= &ofElectric;
 
 	OutData[THERMALNODES].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[THERMALNODES].pof= &ofThermalNodes;
 
 	OutData[THERMALELEMENTS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
@@ -394,7 +414,8 @@ OutputHandler::OutputHandler_int(void)
 	OutData[THERMALELEMENTS].pof= &ofThermalElements;
 
 	OutData[ABSTRACT].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[ABSTRACT].pof = &ofAbstract;
 
 	OutData[INERTIA].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
@@ -440,7 +461,8 @@ OutputHandler::OutputHandler_int(void)
 	OutData[HYDRAULIC].pof = &ofHydraulic;
 
 	OutData[PRESNODES].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
-		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+		| OUTPUT_MAY_USE_NETCDF;
 	OutData[PRESNODES].pof = &ofPresNodes;
 
 	OutData[LOADABLE].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
@@ -504,6 +526,16 @@ OutputHandler::OutputHandler_int(void)
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[TRACES].pof = &ofTraces;
 
+	OutData[SOLIDS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+		| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+
+        OutData[SOLIDS].pof = &ofSolids;
+
+        OutData[SURFACE_LOADS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+             | OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
+
+        OutData[SURFACE_LOADS].pof = &ofSurfaceLoads;
+        
 	OutData[EIGENANALYSIS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 	OutData[EIGENANALYSIS].pof = &ofEigenanalysis;
@@ -559,37 +591,31 @@ OutputHandler::Open(const OutputHandler::OutFiles out)
 		// FIXME: we should use the default format, or any selected by the user;
 		// but wait a minute: can this actually happen?
 		// return NetCDFOpen(out, netCDF::NcFile::nc4);
-		return NetCDFOpen(out, netCDF::NcFile::classic);
+		NetCDFOpen(out, netCDF::NcFile::classic);
 
-	} else
+	}
 #endif /* USE_NETCDF */
-	{
-		if (!IsOpen(out)) {
-			const char *fname = _sPutExt(psExt[out]);
+	if (UseText(out) && !IsOpen(out)) {
+		const char *fname = _sPutExt(psExt[out]);
 
-			// Apre lo stream
-			OutData[out].pof->open(fname);
+		// Open stream
+		OutData[out].pof->open(fname);
 
-			if (!(*OutData[out].pof)) {
-				silent_cerr("Unable to open file "
-					"\"" << fname << "\"" << std::endl);
-				throw ErrFile(MBDYN_EXCEPT_ARGS);
-			}
-
-			if (UseText(out)) {
-				// Setta la formattazione dei campi
-				if (UseDefaultPrecision(out)) {
-					OutData[out].pof->precision(iCurrPrecision);
-				}
-
-				// Setta la notazione
-				if (UseScientific(out)) {
-					OutData[out].pof->setf(std::ios::scientific);
-				}
-			}
+		if (!(*OutData[out].pof)) {
+			silent_cerr("Unable to open file "
+				"\"" << fname << "\"" << std::endl);
+			throw ErrFile(MBDYN_EXCEPT_ARGS);
 		}
 
-		return;
+		// Set precision
+		if (UseDefaultPrecision(out)) {
+			OutData[out].pof->precision(iCurrPrecision);
+		}
+
+		// Set notation
+		if (UseScientific(out)) {
+			OutData[out].pof->setf(std::ios::scientific);
+		}
 	}
 
 	return;
@@ -621,7 +647,7 @@ OutputHandler::Open(const int out, const std::string& postfix)
 		std::string sCurrFileName = sGet();
 		std::stringstream fname_ss;
 
-		unsigned uExtIdx = sCurrFileName.find_last_of(EXT_SEP);
+		auto uExtIdx = sCurrFileName.find_last_of(EXT_SEP);
 
 		if (uExtIdx != std::string::npos) {
 			fname_ss << sCurrFileName.substr(0, uExtIdx);
@@ -1032,6 +1058,9 @@ template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const unsigned int&, const unsigned int&);
+template void OutputHandler::WriteNcVar(const MBDynNcVar&, const int&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const size_t&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const long&, const unsigned int&);
 template void OutputHandler::WriteNcVar(const MBDynNcVar&, const doublereal&,
@@ -1072,7 +1101,7 @@ OutputHandler::CreateRotationVar(const std::string& name_prefix,
 {
 	NcDimVec dim;
 	AttrValVec attrs;
-	std::string name(name_prefix);
+	std::string name(name_prefix + ".");
 
 	switch (od) {
 	case ORIENTATION_MATRIX:
@@ -1208,6 +1237,12 @@ ToBeOutput::SetOutputFlag(flag f)
 	ASSERT(f ? f & flag(1) : 1);
 
   	fOutput = f;
+}
+
+const std::string&
+ToBeOutput::sGetOutputNameBase(void) const
+{
+	return m_sOutputNameBase;
 }
 
 Traceable::Traceable(flag fTrace)

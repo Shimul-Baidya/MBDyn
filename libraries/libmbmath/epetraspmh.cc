@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2022(-2022) all rights reserved.
+        Copyright (C) 2022(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -53,7 +53,6 @@
 
 EpetraSparseMatrixHandler::EpetraSparseMatrixHandler(const integer& iNumRows, const integer& iNumCols, integer iNumColsAlloc, const Epetra_Comm& oComm)
      :SparseMatrixHandler(iNumRows, iNumCols),
-      oComm(oComm),
       oEPM(::Copy, Epetra_Map(NRows, 1, oComm), Epetra_Map(NCols, 1, oComm), iNumColsAlloc),
       iNumColsAlloc(iNumColsAlloc)
 {
@@ -179,6 +178,11 @@ void EpetraSparseMatrixHandler::ExtractCrsDataPointers(integer*& rowptr, integer
      ASSERT(rowptr != nullptr);
      ASSERT(colind != nullptr);
      ASSERT(values != nullptr);
+
+     if (!rowptr) {
+          // Suppress all null pointer warnings reported by clang analyzer
+          throw ErrNotAvailableYet(MBDYN_EXCEPT_ARGS);
+     }
 }
 
 CSCMatrixHandlerTpl<doublereal, integer, 0>& EpetraSparseMatrixHandler::GetTransposedCSC() const

@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2020
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
   AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-  Copyright (C) 2020(-2020) all rights reserved.
+  Copyright (C) 2020(-2023) all rights reserved.
 
   The copyright of this code is transferred
   to Pierangelo Masarati and Paolo Mantegazza
@@ -140,12 +140,12 @@ public:
      TriangularContact(unsigned uLabel, const DofOwner *pDO,
 		       DataManager* pDM, MBDynParser& HP);
      virtual ~TriangularContact(void);
-     virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
+     virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
      VariableSubMatrixHandler&
      AssJac(VariableSubMatrixHandler& WorkMat,
 	    doublereal dCoef,
 	    const VectorHandler& XCurr,
-	    const VectorHandler& XPrimeCurr);
+	    const VectorHandler& XPrimeCurr) override;
      virtual void
      AssJac(VectorHandler& JacY,
             const VectorHandler& Y,
@@ -157,7 +157,7 @@ public:
      AssRes(SubVectorHandler& WorkVec,
 	    doublereal dCoef,
 	    const VectorHandler& XCurr,
-	    const VectorHandler& XPrimeCurr);
+	    const VectorHandler& XPrimeCurr) override;
      template <typename T>
      inline void
      AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
@@ -171,19 +171,19 @@ public:
 		   const sp_grad::SpGradientVectorHandler<T>& XCurr,
 		   enum sp_grad::SpFunctionCall func);
      virtual void AfterConvergence(const VectorHandler& X,
-				   const VectorHandler& XP);
+				   const VectorHandler& XP) override;
      int iGetNumConnectedNodes(void) const;
-     void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const;
-     std::ostream& Restart(std::ostream& out) const;
+     void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
+     std::ostream& Restart(std::ostream& out) const override;
      virtual void
-     InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
+     InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
      VariableSubMatrixHandler&
      InitialAssJac(VariableSubMatrixHandler& WorkMat,
-		   const VectorHandler& XCurr);
+		   const VectorHandler& XCurr) override;
      SubVectorHandler&
-     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
-     virtual void SetValue(DataManager*, VectorHandler&, VectorHandler&, SimulationEntity::Hints*);
-     virtual unsigned int iGetInitialNumDof() const;
+     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
+     virtual void SetValue(DataManager*, VectorHandler&, VectorHandler&, SimulationEntity::Hints*) override;
+     virtual unsigned int iGetInitialNumDof() const override;
 
 private:
      struct TargetFace;

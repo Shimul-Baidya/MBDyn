@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -637,6 +637,19 @@ Note that in this case $0 < \nt{restitution\_coef} \le 1$.
 Note that, to avoid division by zero, $\nt{dissipation\_coef} = 0$ when $|\dot{x}_0| < \nt{initial\_eps\_prime\_tol}$;
 as a consequence, when the initial contact velocity is below the threshold no dissipation takes place.
 
+\subsubsection{Output}
+This constitutive law appends data to the output of the elements it is used with in both the textual and NetCDF formats:
+\begin{itemize}
+\item the initial velocity at contact (\kw{xPi} in NetCDF format); when non-zero, it indicates that contact is taking place
+\item the dissipation coefficient that results from the initial velocity and approximately gives the desired restitution factor (\kw{dc} in NetCDF format)
+\end{itemize}
+In the textual format, those fields appear in the file where the element data is output, appended to the element's line after the regular fields.
+In NetCDF, they appear among the fields of the element, prefixed by \kw{constitutiveLaw.}\ (e.g. \kw{elem.joint.}\bnt{label}\kw{.constitutiveLaw.xPi}, where \nt{label} is the label of the joint that makes use of the constitutive law, for example a \kw{rod} joint).
+
+\subsubsection{Private Data}
+The same parameters output in the NetCDF format are also available as private data of the element the constitutive law is used with, prefixed by \kw{constitutiveLaw.}\ (e.g., access to the related datum is granted by the string \texttt{"model::element::joint(\bnt{label}, \textbackslash"constitutiveLaw.xPi\textbackslash")"} where \nt{label} is the label of the joint that makes use of the constitutive law, for example a \kw{rod} joint).
+
+
 
 \subsection{Module-damper-graall}
 \emph{Author: Pierangelo Masarati, based on an original work of Gian Luca Ghiringhelli}
@@ -664,38 +677,100 @@ This module implements a simple hydraulic damper with turbulent orifice and reli
 
 \noindent
 This module implements a family of simple muscle constitutive laws,
-based on \cite{PENNESTRI-2007-JB}.
+based on the simplified approach proposed in~\cite{PENNESTRI-2007-JB}.\\
+They are supposed to be applied to \kw{Rod} elements 
+(see Section~\ref{sec:EL:STRUCT:JOINT:ROD}).
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{drive_caller} ::= \kw{muscle Pennestri} ,
+    \bnt{constitutive_law} ::= \kw{muscle} ,
+        [ \kw{model}, \{ \kw{pennestri} | \kw{erf} \} , ]
         [ \kw{initial length} , \bnt{Li} , ]
         \kw{reference length} , \bnt{L0} ,
         [ \kw{reference velocity} , \bnt{V0} , ]
         \kw{reference force} , \bnt{F0} ,
         \kw{activation} , (\hty{DriveCaller}) \bnt{activation}
-            [ , \kw{activation check} , (\ty{bool}) \bnt{activation_check} ]
+            [ , \kw{activation check} , (\ty{bool}) \bnt{activation_check}
+              , \kw{warn}, (\ty{bool}) \bnt{warn_user}]
         [ , \kw{ergonomy} , \{ \kw{yes} | \kw{no} \} ]
         [ , \kw{reflexive} , # only when ergonomy == no
             \kw{proportional gain} , \bnt{kp} ,
             \kw{derivative gain} , \bnt{kd} ,
             \kw{reference length} , (\hty{DriveCaller}) \bnt{lref} ]
         [ , \kw{short range stiffness} ]
-        [ , \kw{model} , \{ \kw{exponential} | \kw{linear} \} ]
-        [ , \kw{gamma} , \bnt{gamma} ]
-        [ , \kw{delta} , \bnt{delta} ]
+        [     , \kw{model} , \{ \kw{exponential} | \kw{linear} \} ]
+        [     , \kw{gamma} , \bnt{gamma} ]
+        [     , \kw{delta} , \bnt{delta} ]
 \end{Verbatim}
-The \kw{ergonomy} flag, when active, indicates that the equivalent damping
-must not be used.
-It is used to indicate that the constitutive law acts as an ``ergonomy''
-spring in an inverse kinematics analysis.
+The general expression of the muscle force is
+\begin{equation}
+  f_m(x, v, a) = F_0\left(f_1(x)f_2(v)a(t) + f_3(x)\right)
+\end{equation}
+with $x = \ell/\ell_0$, $v = -\dot{\ell}/v_0$, and the following meaning of 
+the symbols:
+\begin{enumerate}
+  \item $\ell$: current length of the muscle, i.e. the instantaneous length
+    as provided by the \kw{Rod} element the constitutive is attached to;
+  \item $l_0$: optimal muscle length for isometric contraction, set through
+    \bnt{L0};
+  \item $v_0$: reference contraction velocity, optionally set through \bnt{V0};
+  \item $F_0$: maximum contractile force expressed by the muscle in isometric 
+    conditions, set trough \bnt{F0};
+  \item $a(t)$: muscular activation parameter, indicating the fraction of the 
+    maximum force that the muscle active component is producing at time $t$, 
+    $0 \leq a \leq 1$;
+  \item $f_1(x)$ is the active force-length relationship of the muscle (more
+    on this function later);
+  \item $f_2(v)$ is the active force-velocity relationship of the muscle (more
+    on this function later);
+  \item $f_3(x)$ is the passive force-length relationship of the muscle (again,
+    more on this function later);
+\end{enumerate}
+The two model differ in the implementation of the active force-length function $f_1(x)$. The
+\kw{pennestri} model is the one originally proposed in~\cite{PENNESTRI-2007-JB}:
+\begin{equation}
+  f_1(x) = \mathrm{e}^{\left(-40(x - 0.95)^4 + (x - 0.95)^2\right)} \\
+\end{equation}
+while the second one, the \kw{erf} model, is an original fitting of data published 
+in~\cite{WINTERS-2011-JB}, based on error functions:
+\begin{equation}
+  f_1(x) = a_1\mathrm{erf}(b_1(x + c_1)) + a_2\mathrm{erf}(b_2(x + c_2)) + a_3\mathrm{erf}(b_3(x + c_3))
+\end{equation}
+The constants $a_i, b_i, c_i, d$ are hard-coded, with the values of Table~\ref{tab:muscle_erf}.
+\begin{table}
+  \centering
+  \begin{tabular}{lr}
+    Symbol &Value \\
+    $a_1$ &0.4    \\
+    $b_1$ &10.0   \\
+    $c_1$ &-0.55  \\
+    $a_2$ &0.2    \\
+    $b_2$ &5.0    \\
+    $c_2$ &-0.85  \\
+    $a_3$ &-0.6   \\
+    $b_3$ &2.4    \\
+    $c_3$ &-1.35  \\
+  \end{tabular}
+  \caption{Constants hard-coded in the \kw{erf} muscle model $f_1(x)$ function.}
+  \label{tab:muscle_erf}
+\end{table}
+
+The $f_2(v)$ and $f_3(x)$ functions are the same for the two models:
+\begin{align}
+  f_2(v) &= 1.6 - 1.6\mathrm{e}^{\left(\dfrac{0.1}{(v - 1)^2} - \dfrac{1.1}{(v - 1)^4}\right)} \\
+  f_3(x) &= 1.3\tan^{-1}(0.1(x - 0.22)^{10}) \\
+\end{align}
+
+The \kw{ergonomy} flag, when active, indicates that the equivalent damping must not be
+used. It is used to indicate that the constitutive law acts as an ``ergonomy'' spring in
+an inverse kinematics analysis.
 
 The \kw{reflexive} keyword indicates that reflexive behavior is being defined;
 its use is mutually exclusive with the active status of the \kw{ergonomy} flag.
 
-The \kw{initial length} equal to \kw{reference length} unless specified.
+The \kw{initial length} is equal to the \kw{reference length} unless specified.
 It is used to differentiate the length of the rod as computed from the input
 from the length used to formulate the constitutive law.
 
-The \kw{reference velocity} is set to 2.5 m/s unless specified.
+The \kw{reference velocity} is set to 4\bnt{L0} m/s, unless specified.
 
 The second occurrence of the \kw{reference length} is related
 to the reflexive contribution to muscular activation, which is defined as
@@ -712,6 +787,13 @@ to the reflexive contribution to muscular activation, which is defined as
 	+
 	\nt{kd} \cdot \frac{\dot{\ell}}{\nt{V0}}
 \end{align}
+Be careful that the resulting requested activation can be outside of the range 
+${0 \leq a \leq 1}$. If \nt{activation\_check} is \kw{yes}, the compliance of
+the requested activation with the bounds is verified, and the actual value of the
+activation will be reset at 0 in case of underflow and 1 in case of overflow. If \nt{warn}
+is set to yes, a warning will be printed in \texttt{stderr} when over/underflow conditions
+are reached. 
+
 The contribution of the muscle short-range stiffness (SRS) can be added with \kw{short
 range stiffness}. The optional  parameter \nt{delta} represents the maximum nondimensional
 stretch perturbation, above which the short-range stiffness contribution to the muscle
@@ -736,7 +818,7 @@ The optional keyword \kw{model} activates the selection of the implementation:
           f_1(x)
           \cdot
           \Delta x
-          & 0 \leq \Delta x < \delta
+          & 0 \leq \Delta x < \nt{delta}
         \\
         F_{\text{SRS}} = 
           \nt{gamma}
@@ -748,7 +830,7 @@ The optional keyword \kw{model} activates the selection of the implementation:
           f_1(x)
           \cdot
           \nt{delta}
-          & \Delta x \ge \delta
+          & \Delta x \ge \nt{delta}
       \end{cases}
     \end{equation}
     where $f_1$ is the active force-stretch relationship defined according to the model
@@ -781,17 +863,24 @@ The optional keyword \kw{model} activates the selection of the implementation:
 
 \paragraph{Output.}
 The module appends additional output to the row of the element it is
-attached to in the \texttt{.jnt} file. Two columns are added:
+attached to in the \texttt{.jnt} file. The following columns are added:
 \begin{itemize}
   \item \kw{a}: the actual total activation of the muscle;
   \item \kw{aReq}: the \emph{requested} activation of the muscle, before
-    saturation is applied to confine it in the $0 < a < 1$ range;
-  \item \kw{f1}: the active force-stretch relationship (Cf.~\cite{PENNESTRI-2007-JB}),
+    saturation is applied to confine it in the $0 \le a \le 1$ range;
+  \item \kw{f1}: the active force-stretch relationship \cite{PENNESTRI-2007-JB},
     evaluated at the current stretch;
   \item \kw{f2}: the active force-contraction velocity relationship
-    (Cf.~\cite{PENNESTRI-2007-JB}), evaluated at the current contraction velocity;
-  \item \kw{f3}: the passive force-stretch relationship (Cf.~\cite{PENNESTRI-2007-JB}),
+    \cite{PENNESTRI-2007-JB}, evaluated at the current contraction velocity;
+  \item \kw{f3}: the passive force-stretch relationship \cite{PENNESTRI-2007-JB},
     evaluated at the current stretch;
+  \item \kw{df1dx}: the active force-stretch relationship derivative with respect to the
+    stretch, evaluated at the current stretch;
+  \item \kw{df2dv}: the active force-contraction velocity relationship derivative
+    with respect to the contraction velocity, evaluated at the current contraction
+    velocity;
+  \item \kw{df3dx}: the passive force-stretch relationship derivative with respect to the
+    stretch, evaluated at the current stretch;
   \item (if \kw{reflexive}) \kw{Kp}: the current value of the proportional gain, in the
     reflexive contribution;
   \item (if \kw{reflexive}) \kw{Kd}: the current value of the derivative gain, in the
@@ -801,7 +890,7 @@ attached to in the \texttt{.jnt} file. Two columns are added:
   \item (if \kw{short range stiffness}): \kw{SRSdfdx}: the gradient of the short-range
     stiffness force contribution with respect to the nondimensional stretch.
 \end{itemize}
-The two parameters are also added to the NetCDF output of the element.
+The same parameters are also added to the NetCDF output of the element, with the names indicated above.
 
 \section{Drive Caller Modules}
 
@@ -1175,6 +1264,7 @@ This module implements the Tcl plugin in form of run-time loadable module.
 Loadable element template (deprecated).
 
 \subsection{Module-udunits}
+\label{sec:modules:udunits}
 \emph{Author: Pierangelo Masarati}
 
 \noindent

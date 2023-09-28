@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -237,17 +237,17 @@ AutomaticStructDispElem::OutputPrepare(OutputHandler &OH)
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
 			std::ostringstream os;
-			os << "elem.autostruct." << GetLabel() << ".";
+			os << "elem.autostruct." << GetLabel();
 
-			std::string name(os.str());
+			m_sOutputNameBase = os.str();
 
-			Var_B = OH.CreateVar<Vec3>(name + "B", 
+			Var_B = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "B", 
 				OutputHandler::Dimensions::Momentum, "momentum (X, Y, Z)");
-			Var_G = OH.CreateVar<Vec3>(name + "G",  
+			Var_G = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "G",  
 				OutputHandler::Dimensions::MomentaMoment, "momenta moment (X, Y, Z)");
-			Var_BP = OH.CreateVar<Vec3>(name + "BP",  
+			Var_BP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "BP",  
 				OutputHandler::Dimensions::MomentumDerivative, "momentum derivative (X, Y, Z)");
-			Var_GP = OH.CreateVar<Vec3>(name + "GP",  
+			Var_GP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "GP",  
 				OutputHandler::Dimensions::MomentaMomentDerivative, "momenta moment derivative (X, Y, Z)");
 		}
 #endif // USE_NETCDF
@@ -619,17 +619,17 @@ AutomaticStructElem::OutputPrepare(OutputHandler &OH)
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
 			std::ostringstream os;
-			os << "node.struct." << GetLabel() << ".";
+			os << "node.struct." << GetLabel();
 
-			std::string name(os.str());
+			m_sOutputNameBase = os.str();
 
-			Var_B = OH.CreateVar<Vec3>(name + "B",  
+			Var_B = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "B",  
 				OutputHandler::Dimensions::Momentum, "momentum (X, Y, Z)");
-			Var_G = OH.CreateVar<Vec3>(name + "G",  
+			Var_G = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "G",  
 				OutputHandler::Dimensions::MomentaMoment, "momenta moment (X, Y, Z)");
-			Var_BP = OH.CreateVar<Vec3>(name + "BP",  
+			Var_BP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "BP",  
 				OutputHandler::Dimensions::MomentumDerivative, "momentum derivative (X, Y, Z)");
-			Var_GP = OH.CreateVar<Vec3>(name + "GP",   
+			Var_GP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "GP",   
 				OutputHandler::Dimensions::MomentaMomentDerivative, "momenta moment derivative (X, Y, Z)");
 		}
 #endif // USE_NETCDF

@@ -2,10 +2,10 @@ dnl $Header$
 dnl MBDyn (C) is a multibody analysis code.
 dnl http://www.mbdyn.org
 dnl
-dnl Copyright (C) 1996-2017
+dnl Copyright (C) 1996-2023
 dnl
-dnl Pierangelo Masarati     <masarati@aero.polimi.it>
-dnl Paolo Mantegazza        <mantegazza@aero.polimi.it>
+dnl Pierangelo Masarati     <pierangelo.masarati@polimi.it>
+dnl Paolo Mantegazza        <paolo.mantegazza@polimi.it>
 dnl
 dnl Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 dnl via La Masa, 34 - 20156 Milano, Italy
@@ -36,6 +36,7 @@ dnl OpenLDAP Autoconf Macros
 dnl
 divert(-1)
 builtin(include, build/mbdyn.m4)dnl
+builtin(include, build/m4_ax_check_compile_flag.m4)dnl
 builtin(include, build/m4_ax_pkg_swig.m4)dnl
 builtin(include, build/m4_ax_python_devel.m4)dnl
 builtin(include, build/m4_ax_swig_enable_cxx.m4)dnl

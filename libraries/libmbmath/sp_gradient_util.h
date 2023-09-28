@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2020
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2020(-2022) all rights reserved.
+        Copyright (C) 2020(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -58,17 +58,37 @@ namespace sp_grad {
           void ExprEvalHelper<SpGradCommon::ExprEvalDuplicate>::AssignOper(SpGradient& g1, const SpGradBase<Expr>& g2) {
                g1.AssignOper<Func, Expr>(g2);
           }
-	  
+
           template <typename Expr>
           void ExprEvalHelper<SpGradCommon::ExprEvalUnique>::Eval(SpGradient& g, const SpGradBase<Expr>& f) {
                g.MapAssign(f);
           }
 
-	  template <typename Func, typename Expr>
+          template <typename Func, typename Expr>
           void ExprEvalHelper<SpGradCommon::ExprEvalUnique>::AssignOper(SpGradient& g1, const SpGradBase<Expr>& g2) {
                g1.MapAssignOper<Func, Expr>(g2);
           }
-	  
+
+          template <typename Expr>
+          void ExprEvalHelper<SpGradCommon::ExprEvalDuplicate>::Eval(SpGradient& g, const SpGradBase<Expr>& f, const SpGradExpDofMapHelper<SpGradient>& oDofMap) {
+               g.MapAssign(f, oDofMap);
+          }
+
+          template <typename Func, typename Expr>
+          void ExprEvalHelper<SpGradCommon::ExprEvalDuplicate>::AssignOper(SpGradient& g1, const SpGradBase<Expr>& g2, const SpGradExpDofMapHelper<SpGradient>& oDofMap) {
+               g1.MapAssignOper<Func, Expr>(g2, oDofMap);
+          }
+
+          template <typename Expr>
+          void ExprEvalHelper<SpGradCommon::ExprEvalUnique>::Eval(SpGradient& g, const SpGradBase<Expr>& f, const SpGradExpDofMapHelper<SpGradient>& oDofMap) {
+               g.MapAssign(f, oDofMap);
+          }
+
+          template <typename Func, typename Expr>
+          void ExprEvalHelper<SpGradCommon::ExprEvalUnique>::AssignOper(SpGradient& g1, const SpGradBase<Expr>& g2, const SpGradExpDofMapHelper<SpGradient>& oDofMap) {
+               g1.MapAssignOper<Func, Expr>(g2, oDofMap);
+          }
+          
           template <typename AVAL, typename BVAL>
           struct InnerProductHelper {
                template <typename AITER, typename BITER>
@@ -104,7 +124,7 @@ namespace sp_grad {
                                       pBLast,
                                       iBOffset);
                }
-               
+
                template <typename AITER, typename BITER>
                static void
                MapEval(SpGradient& g,
@@ -124,6 +144,43 @@ namespace sp_grad {
                                       oDofMap);
                }
 
+               template <typename AITER, typename BITER>
+               static void
+               MapEval(SpGradient& g,
+                       AITER pAFirst,
+                       AITER pALast,
+                       index_type iAOffset,
+                       BITER pBFirst,
+                       BITER pBLast,
+                       index_type iBOffset,
+                       const SpGradExpDofMapHelper<SpGradient>& oDofMap) {
+                    g.MapInnerProduct(pAFirst,
+                                      pALast,
+                                      iAOffset,
+                                      pBFirst,
+                                      pBLast,
+                                      iBOffset,
+                                      oDofMap.GetDofMap());
+               }
+
+               template <typename AITER, typename BITER>
+               static void
+               MapEval(GpGradProd& g,
+                       AITER pAFirst,
+                       AITER pALast,
+                       index_type iAOffset,
+                       BITER pBFirst,
+                       BITER pBLast,
+                       index_type iBOffset,
+                       const SpGradExpDofMapHelper<GpGradProd>& oDofMap) {
+                    g.MapInnerProduct(pAFirst,
+                                      pALast,
+                                      iAOffset,
+                                      pBFirst,
+                                      pBLast,
+                                      iBOffset);
+               }
+               
                template <typename AITER, typename BITER>
                static void
                Eval(SpGradient& g,
@@ -201,6 +258,19 @@ namespace sp_grad {
                        const SpGradExpDofMap&) {
                     Eval(d, pAFirst, pALast, iAOffset, pBFirst, pBLast, iBOffset);
                }
+
+               template <typename AITER, typename BITER>
+               static void
+               MapEval(doublereal& d,
+                       AITER pAFirst,
+                       AITER pALast,
+                       index_type iAOffset,
+                       BITER pBFirst,
+                       BITER pBLast,
+                       index_type iBOffset,
+                       const SpGradExpDofMapHelper<doublereal>&) {
+                    Eval(d, pAFirst, pALast, iAOffset, pBFirst, pBLast, iBOffset);
+               }
           };
 
           template <typename AITER, typename BITER>
@@ -247,29 +317,29 @@ namespace sp_grad {
                             iAOffset,
                             pBFirst,
                             pBLast,
-			    iBOffset,
-			    oDofMap);
-	  }
+                            iBOffset,
+                            oDofMap);
+          }
 
-	  template <typename AITER, typename BITER>
-	  inline void
-	  InnerProduct(typename IterResultType<AITER, BITER>::Type& g,
-		       AITER pAFirst,
-		       AITER pALast,
-		       index_type iAOffset,
-		       BITER pBFirst,
-		       BITER pBLast,
-		       index_type iBOffset) {
-	       typedef InnerProductHelper<typename std::iterator_traits<AITER>::value_type,
-					  typename std::iterator_traits<BITER>::value_type> IPH;
-	       IPH::Eval(g,
-			 pAFirst,
-			 pALast,
-			 iAOffset,
-			 pBFirst,
-			 pBLast,
-			 iBOffset);
-	  }
+          template <typename AITER, typename BITER>
+          inline void
+          InnerProduct(typename IterResultType<AITER, BITER>::Type& g,
+                       AITER pAFirst,
+                       AITER pALast,
+                       index_type iAOffset,
+                       BITER pBFirst,
+                       BITER pBLast,
+                       index_type iBOffset) {
+               typedef InnerProductHelper<typename std::iterator_traits<AITER>::value_type,
+                                          typename std::iterator_traits<BITER>::value_type> IPH;
+               IPH::Eval(g,
+                         pAFirst,
+                         pALast,
+                         iAOffset,
+                         pBFirst,
+                         pBLast,
+                         iBOffset);
+          }
      }
 }
 #endif

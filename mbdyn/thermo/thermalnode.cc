@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2005
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -45,7 +45,6 @@ ThermalNode::ThermalNode(unsigned int uL,
 	flag fOut)
      :ScalarNode(uL, pDO, fOut),
       ScalarDifferentialNode(uL, pDO, dx, dxp, fOut)
-
 {
 	NO_OP;
 }
@@ -63,11 +62,20 @@ ThermalNode::GetNodeType(void) const
 	return Node::THERMAL;
 }
 
-/* Output */
 void
-ThermalNode::Output(OutputHandler& OH) const
+ThermalNode::OutputPrepare(OutputHandler &OH)
 {
-	ScalarDifferentialNode::Output(OH.Get(OutputHandler::THERMALNODES));
+	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+		if (OH.UseNetCDF(OutputHandler::THERMALNODES)) {
+			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+
+			ScalarDifferentialNode::OutputPrepare_int(OH,
+				"T", OutputHandler::Dimensions::Temperature, "Temperature",
+				"TP", OutputHandler::Dimensions::TemperatureDerivative, "Temperature time derivative");
+		}
+#endif // USE_NETCDF
+	}
 }
 
 const OutputHandler::Dimensions 

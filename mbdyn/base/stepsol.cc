@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -31,7 +31,7 @@
 
  /*
   *
-  * Copyright (C) 2003-2017
+  * Copyright (C) 2003-2023
   * Giuseppe Quaranta	<quaranta@aero.polimi.it>
   *
   * classi che impementano l'integrazione al passo
@@ -40,6 +40,7 @@
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
 #include <limits>
+#include <array>
 
 #include "schurdataman.h"
 #include "external.h"
@@ -293,7 +294,7 @@ DerivativeSolver::Advance(Solver* pS,
 		pDM->LinkToSolution(*pXCurr, *pXPrimeCurr);
 
 		bool bConverged = false;
-		const doublereal dInitialCoef = dCoef;
+                const doublereal dInitialCoef = dCoef;
 		doublereal dCoefBest = dCoef;
 		doublereal dResErrMin = std::numeric_limits<doublereal>::max();
 		doublereal dSolErrMin = dResErrMin;
@@ -338,8 +339,8 @@ DerivativeSolver::Advance(Solver* pS,
 
 			/* Save smallest residual error and corresponding derivative coefficient. */
 			if (Err < dResErrMin) {
-				dResErrMin = Err;
-				dSolErrMin = SolErr;
+                                dResErrMin = Err;
+                                dSolErrMin = SolErr;
 				dCoefBest = dCoef;
 			}
 
@@ -375,20 +376,23 @@ DerivativeSolver::Advance(Solver* pS,
 			} else {
 				/* Convergence could not be achieved with any coefficient.
 				 * Choose those coefficient with smallest residual error 
-				 * and increase the tolerance, so it will converge in any case. */
-				const doublereal dSafetyFactor = 1.01;
+				 * and increase the tolerance, so it should converge in any case. */
+				const doublereal dSafetyFactor = 1.1;
 
 				dCoef = dCoefBest;
-				dTol = dSafetyFactor * dResErrMin;
-				dSolTol = dSafetyFactor * dSolErrMin;
+                                // No need to apply tighter tolerances than requested,
+                                // because the solver could converge even before reaching this point.
+				dTol = std::max(dTol, dSafetyFactor * dResErrMin);
+				dSolTol = std::max(dSolTol, dSafetyFactor * dSolErrMin);
                                 MaxIterFact = 2;
 			}
 
 			silent_cout("Derivatives(" << i + 1  << '/' << 2 * iMaxIterCoef + 1
-				<< ") t=" << pDM->dGetTime()
-				<< " coef=" << dCoef / TStep
-				<< " tol=" << dTol
-				<< std::endl);
+                                    << ") t=" << pDM->dGetTime()
+                                    << " coef=" << dCoef / TStep
+                                    << " tol=" << dTol
+                                    << " soltol=" << dSolTol
+                                    << "\n");
 		}
 		/* if it gets here, it surely converged */
 		pDM->AfterConvergence();
@@ -472,8 +476,11 @@ doublereal DerivativeSolver::dGetCoef(unsigned int iDof) const
 doublereal
 DerivativeSolver::TestScale(const NonlinearSolverTest *pTest, doublereal& dAlgebraicEqu) const
 {
-	dAlgebraicEqu = dCoef;
-	return 1.;
+     dAlgebraicEqu = dCoef;
+
+     DEBUGCERR("DerivativeSolver::TestScale: dAlgebraicEqu = " << dAlgebraicEqu << "\n");
+
+     return 1.;
 }
 
 
@@ -501,47 +508,16 @@ StepNIntegrator::Residual(VectorHandler* pRes, VectorHandler* pAbsRes) const
 	pDM->AssRes(*pRes, db0Differential, pAbsRes);
 }
 
-#include "naivemh.h"
 void
 StepNIntegrator::Jacobian(MatrixHandler* pJac) const
 {
-	ASSERT(pDM != NULL);
-	pDM->AssJac(*pJac, db0Differential);
+     ASSERT(pDM != NULL);
+     pDM->AssJac(*pJac, db0Differential);
 
-	// Finite difference check of Jacobian matrix
-	// Uncomment this whenever you need to debug your new Jacobian
-	// NOTE: might not be safe!
-	if (pDM->bFDJac()) {
- 		NaiveMatrixHandler fdjac(pJac->iGetNumRows());
- 		fdjac.Reset();
- 		MyVectorHandler basesol(pJac->iGetNumRows());
- 		MyVectorHandler incsol(pJac->iGetNumRows());
- 		MyVectorHandler inc(pJac->iGetNumRows());
- 		Residual(&basesol, 0);
- 		doublereal ddd = 0.001;
- 		for (integer i = 1; i <= pJac->iGetNumRows(); i++) {
- 			incsol.Reset();
- 			inc.Reset();
- 			inc.PutCoef(i, ddd);
- 			Update(&inc);
- 			// std::cerr << pXPrimeCurr->operator()(30) << std::endl;
- 			pDM->AssRes(incsol, db0Differential);
- 			inc.Reset();
- 			inc.PutCoef(i, -ddd);
- 			Update(&inc);
- 			incsol -= basesol;
- 			incsol *= (1./(-ddd));
- 			for (integer j = 1; j <= pJac->iGetNumCols(); j++) {
- 				fdjac.PutCoef(j, i, std::abs(incsol(j)) > 1.E-100 ? incsol(j) : 0.);
- 			}
- 		}
-
- 		std::cerr << "\nxxxxxxxxxxxxxxx\n" << std::endl;
- 		std::cerr << *pJac << std::endl;
- 		std::cerr << "\n---------------\n" << std::endl;
- 		std::cerr << fdjac << std::endl;
- 		std::cerr << "\n===============\n" << std::endl;
-	}
+     // Finite difference check of Jacobian matrix
+     // Enable by means of a "finite difference jacobian meter" whenever you need to debug your new Jacobian
+     // NOTE: might not be safe!
+     pDM->FDJacCheck(this, pJac);
 }
 
 void StepNIntegrator::Jacobian(VectorHandler* pJac, const VectorHandler* pY) const

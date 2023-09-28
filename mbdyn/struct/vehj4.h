@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -174,6 +174,7 @@ protected:
 	doublereal dThetaRef;
 	doublereal dThetaCurr;
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssMat(FullSubMatrixHandler& WM, doublereal dCoef);
 	virtual void AssVec(SubVectorHandler& WorkVec);
@@ -197,21 +198,6 @@ public:
 	virtual ConstLawType::Type GetConstLawType(void) const {
 		return ConstLawType::ELASTIC;
 	};
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0)
-	{
-		DeformableAxialJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableAxialJoint::ParseHint(pDM, s);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 
 	/* assemblaggio jacobiano */
 	virtual VariableSubMatrixHandler&
@@ -293,6 +279,7 @@ class ViscousAxialJoint : virtual public Elem, public DeformableAxialJoint {
 protected:
 	doublereal dOmega;
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssMats(FullSubMatrixHandler& WMA,
 			FullSubMatrixHandler& WMB,
@@ -318,21 +305,6 @@ public:
 	virtual ConstLawType::Type GetConstLawType(void) const {
 		return ConstLawType::VISCOUS;
 	};
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0)
-	{
-		DeformableAxialJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableAxialJoint::ParseHint(pDM, s);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 
 	/* assemblaggio jacobiano */
 	virtual VariableSubMatrixHandler&
@@ -410,6 +382,7 @@ protected:
 			FullSubMatrixHandler& WMB,
 			doublereal dCoef);
 
+	using SimulationEntity::AfterPredict;
 	virtual void AfterPredict(void);
 	virtual void AssVec(SubVectorHandler& WorkVec);
 
@@ -432,21 +405,6 @@ public:
 	virtual ConstLawType::Type GetConstLawType(void) const {
 		return ConstLawType::VISCOELASTIC;
 	};
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0)
-	{
-		DeformableAxialJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableAxialJoint::ParseHint(pDM, s);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 
 	/* assemblaggio jacobiano */
 	virtual VariableSubMatrixHandler&

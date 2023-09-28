@@ -30,7 +30,7 @@
 
 /* here goes Morandini's copyright */
 
-/* Portions Copyright (C) 2009 Pierangelo Masarati <masarati@aero.polimi.it> */
+/* Portions Copyright (C) 2009 Pierangelo Masarati <pierangelo.masarati@polimi.it> */
 
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
 
@@ -42,11 +42,11 @@
 
 static ExpandableRowVector::ExpandableRowElement er_Zero;
 
-ExpandableRowVector::ExpandableRowVector(void) {};
+ExpandableRowVector::ExpandableRowVector(void) {}
 ExpandableRowVector::ExpandableRowVector(const integer n) {
 	ReDim(n);
 }
-ExpandableRowVector::~ExpandableRowVector(void) {};
+ExpandableRowVector::~ExpandableRowVector(void) {}
 void ExpandableRowVector::ReDim(const integer n) {
 	//we have to accept = 0, some elements do ReDim(0,0) (PointForceElement))
 	ASSERTMSGBREAK(n>=0, "ExpandableRowVector:ReDim(), n shold be >= 0");
@@ -54,7 +54,7 @@ void ExpandableRowVector::ReDim(const integer n) {
 }
 integer ExpandableRowVector::GetDim(void) const {
 	return v.size();
-};
+}
 void ExpandableRowVector::Zero(void) {
 	for (std::vector<ExpandableRowElement>::iterator i = v.begin(); i != v.end(); ++i) {
 		i->x = 0.;
@@ -72,56 +72,70 @@ void ExpandableRowVector::Link(const integer i, const ExpandableRowVector*const 
 	}
 	v[i - 1].xm[rhs_block - 1] = xp;
 }
-void ExpandableRowVector::Set(doublereal xx, integer i) {
+void ExpandableRowVector::Set(const doublereal xx, const integer i) {
 	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::Set() underflow");
 	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::Set() overflow");
 	v[i - 1].x = xx;
 }
-void ExpandableRowVector::Set(Vec3 xx, integer i) {
+void ExpandableRowVector::Set(const Vec3& xx, const integer i) {
 	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::Set() underflow");
 	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i-1+3) <= v.size(), "ExpandableRowVector::Set() overflow");
 	v[i - 1].x = xx(1);
 	v[i - 0].x = xx(2);
 	v[i + 1].x = xx(3);
 }
-void ExpandableRowVector::SetIdx(integer i, integer iidx) {
+void ExpandableRowVector::SetIdx(const integer i, const integer iidx) {
 	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::SetIdx() underflow");
 	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::SetIdx() overflow");
 	v[i - 1].idx = iidx;
 }
-void ExpandableRowVector::Set(doublereal xx, integer i, integer iidx) {
+void ExpandableRowVector::Set(const doublereal xx, const integer i, const integer iidx) {
 	Set(xx, i);
 	SetIdx(i, iidx);
 }
-void ExpandableRowVector::Set(Vec3 xx, integer i, integer iidx) {
+void ExpandableRowVector::Set(const Vec3& xx, const integer i, const integer iidx) {
 	Set(xx, i);
 	SetIdx(i, iidx);
 	SetIdx(i+1, iidx+1);
 	SetIdx(i+2, iidx+2);
 }
 doublereal&
-ExpandableRowVector::operator ()(integer i)
+ExpandableRowVector::operator ()(const integer i)
 {
 	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::() underflow");
 	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::() overflow");
 	return v[i - 1].x;
 }
 const doublereal&
-ExpandableRowVector::operator ()(integer i) const
+ExpandableRowVector::operator ()(const integer i) const
 {
 	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::() underflow");
 	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::() overflow");
 	return v[i - 1].x;
 }
-void ExpandableRowVector::Add(doublereal xx, integer i) {
+void ExpandableRowVector::Add(const doublereal xx, const integer i) {
 	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::Add() underflow");
 	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::Add() overflow");
 	v[i - 1].x += xx;
 }
-void ExpandableRowVector::Sub(doublereal xx, integer i) {
+void ExpandableRowVector::Sub(const doublereal xx, const integer i) {
 	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::Sub() underflow");
 	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::Sub() overflow");
 	v[i - 1].x -= xx;
+}
+void ExpandableRowVector::Add(const Vec3& xx, const integer i) {
+	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::Add() underflow");
+	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::Add() overflow");
+	v[i - 1].x += xx[0];
+	v[i - 0].x += xx[1];
+	v[i + 1].x += xx[2];
+}
+void ExpandableRowVector::Sub(const Vec3& xx, const integer i) {
+	ASSERTMSGBREAK(i > 0, "ExpandableRowVector::Sub() underflow");
+	ASSERTMSGBREAK(std::vector<ExpandableRowVector>::size_type(i) <= v.size(), "ExpandableRowVector::Sub() overflow");
+	v[i - 1].x -= xx[0];
+	v[i - 0].x -= xx[1];
+	v[i + 1].x -= xx[2];
 }
 void ExpandableRowVector::Add(SubVectorHandler& WorkVec, const doublereal c) const {
 	for (std::vector<ExpandableRowElement>::size_type i = 0; i < v.size(); i++) {
@@ -267,11 +281,11 @@ std::ostream & operator << (std::ostream & s, const ExpandableRowVector & z) {
 static ExpandableMatrix::ExpandableColBlock ecb_Zero;
 
 
-ExpandableMatrix::ExpandableMatrix(void) {};
+ExpandableMatrix::ExpandableMatrix(void) {}
 ExpandableMatrix::ExpandableMatrix(const integer n, const integer m) {
 	ReDim(n, m);
 }
-ExpandableMatrix::~ExpandableMatrix(void) {};
+ExpandableMatrix::~ExpandableMatrix(void) {}
 void ExpandableMatrix::ReDim(const integer n, const integer m) {
 	//we have to accept = 0, some elements do ReDim(0,0) (PointForceElement))
 	ASSERTMSGBREAK(n>=0, "ExpandableMatrix:ReDim(), n shold be >= 0");
@@ -285,11 +299,9 @@ void ExpandableMatrix::SetBlockDim(const integer block, const integer ncols) {
 	ASSERTMSGBREAK(block>0, "ExpandableMatrix:SetBlockDim(), block shold be > 0");
 	ASSERTMSGBREAK(block <= GetNBlocks(), "ExpandableMatrix:SetBlockDim(), block shold be "
 		"<= GetNBlocks()");
-	int pippo = 0;
 	for (std::vector<ExpandableRowVector>::iterator i = v[block-1].rows.begin();
 		i != v[block-1].rows.end(); ++i)
 	{
-			pippo++;
 			i->ReDim(ncols);
 	}
 }
@@ -304,10 +316,10 @@ integer ExpandableMatrix::GetNRows() const {
 	} else {
 		return 0;
 	}
-};
+}
 integer ExpandableMatrix::GetNBlocks() const {
 	return v.size();
-};
+}
 integer ExpandableMatrix::GetBlockNCols(const integer block) const {
 	ASSERTMSGBREAK(block >= 0, "ExpandableMatrix:GetBlockNCols(), "
 		"block shold be >= 0");
@@ -343,7 +355,7 @@ void ExpandableMatrix::Link(const integer i, const ExpandableRowVector*const xp)
 	v[i - 1].Link(xp);
 }
 
-void ExpandableMatrix::Set(doublereal xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Set(const doublereal xx, const integer eq, const integer block, const integer block_col) {
 	ASSERTMSGBREAK(eq > 0, "ExpandableMatrix::Set() underflow");
 	ASSERTMSGBREAK(block > 0, "ExpandableMatrix::Set() underflow");
 	ASSERTMSGBREAK(block_col > 0, "ExpandableMatrix::Set() underflow");
@@ -352,19 +364,19 @@ void ExpandableMatrix::Set(doublereal xx, integer eq, integer block, integer blo
 	ASSERTMSGBREAK(block_col <= GetBlockNCols(block), "ExpandableRowVector::Set() overflow");
 	v[block - 1].rows[eq - 1].Set(xx, block_col);
 }
-void ExpandableMatrix::Set(Vec3 xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Set(const Vec3& xx, const integer eq, const integer block, const integer block_col) {
 	for (integer i = 0; i <3; i++) {
 		Set(xx(i + 1), eq + i, block, block_col);
 	}
 }
-void ExpandableMatrix::Set(Mat3x3 xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Set(const Mat3x3& xx, integer eq, integer block, integer block_col) {
 	for (integer i = 0; i <3; i++) {
 		for (integer ii = 0; ii <3; ii++) {
 			Set(xx(i + 1, ii + 1), eq + i, block, block_col + ii);
 		}
 	}
 }
-void ExpandableMatrix::SetBlockIdx(integer block, integer iidx) {
+void ExpandableMatrix::SetBlockIdx(const integer block, const integer iidx) {
 	ASSERTMSGBREAK(block > 0, "ExpandableMatrix::SetColIdx() underflow");
 	ASSERTMSGBREAK(block <= GetNBlocks(), "ExpandableMatrix::SetColIdx() overflow");
 	v[block - 1].SetColIdx(iidx);
@@ -387,7 +399,7 @@ void ExpandableMatrix::SetBlockIdx(integer block, integer iidx) {
 // 	ASSERTMSGBREAK(std::vector<ExpandableRow>::size_type(i) <= v.size(), "ExpandableRowVector::() overflow");
 // 	return v[i - 1].x;
 // }
-void ExpandableMatrix::Add(doublereal xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Add(const doublereal xx, const integer eq, const integer block, const integer block_col) {
 	ASSERTMSGBREAK(eq > 0, "ExpandableMatrix::Add() underflow");
 	ASSERTMSGBREAK(block > 0, "ExpandableMatrix::Add() underflow");
 	ASSERTMSGBREAK(block_col > 0, "ExpandableMatrix::Add() underflow");
@@ -396,7 +408,7 @@ void ExpandableMatrix::Add(doublereal xx, integer eq, integer block, integer blo
 	ASSERTMSGBREAK(block_col <= GetBlockNCols(block), "ExpandableRowVector::Add() overflow");
 	v[block - 1].rows[eq - 1].Add(xx, block_col);
 }
-void ExpandableMatrix::Sub(doublereal xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Sub(const doublereal xx, const integer eq, const integer block, const integer block_col) {
 	ASSERTMSGBREAK(eq > 0, "ExpandableMatrix::Sub() underflow");
 	ASSERTMSGBREAK(block > 0, "ExpandableMatrix::Sub() underflow");
 	ASSERTMSGBREAK(block_col > 0, "ExpandableMatrix::Sub() underflow");
@@ -405,24 +417,24 @@ void ExpandableMatrix::Sub(doublereal xx, integer eq, integer block, integer blo
 	ASSERTMSGBREAK(block_col <= GetBlockNCols(block), "ExpandableRowVector::Sub() overflow");
 	v[block - 1].rows[eq - 1].Sub(xx, block_col);
 }
-void ExpandableMatrix::Add(Vec3 xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Add(const Vec3& xx, const integer eq, const integer block, const integer block_col) {
 	for (integer i = 0; i <3; i++) {
 		Add(xx(i + 1), eq + i, block, block_col);
 	}
 }
-void ExpandableMatrix::Add(Mat3x3 xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Add(const Mat3x3& xx, const integer eq, const integer block, const integer block_col) {
 	for (integer i = 0; i <3; i++) {
 		for (integer ii = 0; ii <3; ii++) {
 			Add(xx(i + 1, ii + 1), eq + i, block, block_col + ii);
 		}
 	}
 }
-void ExpandableMatrix::Sub(Vec3 xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Sub(const Vec3& xx, const integer eq, const integer block, const integer block_col) {
 	for (integer i = 0; i <3; i++) {
 		Sub(xx(i + 1), eq + i, block, block_col);
 	}
 }
-void ExpandableMatrix::Sub(Mat3x3 xx, integer eq, integer block, integer block_col) {
+void ExpandableMatrix::Sub(const Mat3x3& xx, const integer eq, const integer block, const integer block_col) {
 	for (integer i = 0; i <3; i++) {
 		for (integer ii = 0; ii <3; ii++) {
 			Sub(xx(i + 1, ii + 1), eq + i, block, block_col + ii);

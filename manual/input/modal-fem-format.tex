@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -45,6 +45,9 @@ as detailed in Appendix~\ref{sec:APP:EL:STRUCT:JOINT:MODAL:NASTRAN}
 (in short, it processes binary output from NASTRAN, as defined by means
 of appropriate ALTER files provided with MBDyn sources, into a file
 that is suitable for direct input in MBDyn);
+\item from mboct-fem-pkg
+  (\htmladdnormallink{\texttt{https://github.com/octave-user/mboct-fem-pkg}}{https://github.com/octave-user/mboct-fem-pkg})
+  as discussed in Section~\ref{sec:APP:EL:STRUCT:JOINT:MODAL:MBOCTFEMPKG};
 \item by manually crafting the output of your favorite FEM analysis:
 since it is essentially a plain ASCII file, it can be generated
 in a straightforward manner from analogous results obtained with
@@ -115,6 +118,49 @@ The format is:
 [...]
 \bnt{C_NMODES_1} [...] \bnt{C_NMODES_NMODES}
 <comments; the modal damping matrix in column-major (symmetric?)>
+** \kw{RECORD GROUP 14},<any comment to EOL; "INVARIANT 3. COLUMN-MAJOR FORM">
+\bnt{I3_1_1} \bnt{I3_1_2} \bnt{I3_1_3} [...]
+\bnt{I3_2_1} \bnt{I3_2_2} \bnt{I3_2_3} [...]
+\bnt{I3_3_1} \bnt{I3_3_2} \bnt{I3_3_3} [...]
+<comments; the invariant 3 in column-major form>
+** \kw{RECORD GROUP 15},<any comment to EOL; "INVARIANT 4. COLUMN-MAJOR FORM">
+\bnt{I4_1_1} \bnt{I4_1_2} \bnt{I4_1_3} [...]
+\bnt{I4_2_1} \bnt{I4_2_2} \bnt{I4_2_3} [...]
+\bnt{I4_3_1} \bnt{I4_3_2} \bnt{I4_3_3} [...]
+<comments; the invariant 4 in column-major form>
+** \kw{RECORD GROUP 16},<any comment to EOL; "INVARIANT 8. COLUMN-MAJOR FORM">
+\bnt{I8_1_1_1} \bnt{I8_1_2_1} \bnt{I8_1_3_1} \bnt{I8_1_1_2} [...] \bnt{I8_1_3_NMODES}
+\bnt{I8_2_1_1} \bnt{I8_2_2_1} \bnt{I8_2_3_1} \bnt{I8_2_1_2} [...] \bnt{I8_2_3_NMODES}
+\bnt{I8_3_1_1} \bnt{I8_3_2_1} \bnt{I8_3_3_1} \bnt{I8_3_1_2} [...] \bnt{I8_3_3_NMODES}
+<comments; the invariant 8 in column-major form>
+** \kw{RECORD GROUP 17},<any comment to EOL; "INVARIANT 5. COLUMN-MAJOR FORM">
+\bnt{I5_1_1_1} \bnt{I5_1_2_1} \bnt{I5_1_3_1} [...] \bnt{I5_1_NMODES_1} \bnt{I5_1_1_2} [...] \bnt{I5_1_NMODES_NMODES}
+\bnt{I5_2_1_1} \bnt{I5_2_2_1} \bnt{I5_2_3_1} [...] \bnt{I5_2_NMODES_1} \bnt{I5_2_1_2} [...] \bnt{I5_2_NMODES_NMODES}
+\bnt{I5_3_1_1} \bnt{I5_3_2_1} \bnt{I5_3_3_1} [...] \bnt{I5_3_NMODES_1} \bnt{I5_3_1_2} [...] \bnt{I5_3_NMODES_NMODES}
+<comments; the invariant 5 in column-major form>
+** \kw{RECORD GROUP 18},<any comment to EOL; "INVARIANT 9- COLUMN-MAJOR FORM">
+\bnt{I9_1_1_1_1} \bnt{I9_1_2_1_1} \bnt{I9_1_3_1_1} [...] \bnt{I9_1_NMODES_1_1} \bnt{I9_1_1_2_1} [...] \bnt{I9_1_3_NMODES_NMODES}
+\bnt{I9_2_1_1_1} \bnt{I9_2_2_1_1} \bnt{I9_2_3_1_1} [...] \bnt{I9_2_NMODES_1_1} \bnt{I9_2_1_2_1} [...] \bnt{I9_2_3_NMODES_NMODES}
+\bnt{I9_3_1_1_1} \bnt{I9_3_2_1_1} \bnt{I9_3_3_1_1} [...] \bnt{I9_3_NMODES_1_1} \bnt{I9_3_1_2_1} [...] \bnt{I9_3_3_NMODES_NMODES}
+<comments; the invariant 9 in column-major form>
+** \kw{RECORD GROUP 19},<any comment to EOL; "MODAL STRESS STIFFENING MATRIX.">
+\bnt{NSTRESSSTIFFMAT}
+\bnt{ISTRESSSTIFFINDEX_1}
+\bnt{K0_1_1_ISTRESSSTIFFINDEX_1}      \bnt{K0_1_2_ISTRESSSTIFFINDEX_1}      [...] \bnt{K0_1_NMODES_ISTRESSSTIFFINDEX_1}
+\bnt{K0_2_1_ISTRESSSTIFFINDEX_1}      \bnt{K0_2_2_ISTRESSSTIFFINDEX_1}      [...] \bnt{K0_2_NMODES_ISTRESSSTIFFINDEX_1}
+[...]                             [...]                             [...] [...]
+\bnt{K0_NMODES_1_ISTRESSSTIFFINDEX_1} \bnt{K0_NMODES_2_ISTRESSSTIFFINDEX_1} [...] \bnt{K0_3_NMODES_ISTRESSSTIFFINDEX_1}
+\bnt{ISTRESSSTIFFINDEX_2}
+\bnt{K0_1_1_ISTRESSSTIFFINDEX_2}      \bnt{K0_1_2_ISTRESSSTIFFINDEX_2}      [...] \bnt{K0_1_NMODES_ISTRESSSTIFFINDEX_2}
+\bnt{K0_2_1_ISTRESSSTIFFINDEX_2}      \bnt{K0_2_2_ISTRESSSTIFFINDEX_2}      [...] \bnt{K0_2_NMODES_ISTRESSSTIFFINDEX_2}
+[...]                             [...]                             [...] [...]
+\bnt{K0_NMODES_1_ISTRESSSTIFFINDEX_2} \bnt{K0_NMODES_2_ISTRESSSTIFFINDEX_2} [...] \bnt{K0_3_NMODES_ISTRESSSTIFFINDEX_2}
+\bnt{ISTRESSSTIFFINDEX_NSTRESSSTIFFMAT}
+\bnt{K0_1_1_ISTRESSSTIFFINDEX_NSTRESSSTIFFMAT}      [...] \bnt{K0_1_NMODES_ISTRESSSTIFFINDEX_NSTRESSSTIFFMAT}
+\bnt{K0_2_1_ISTRESSSTIFFINDEX_NSTRESSSTIFFMAT}      [...] \bnt{K0_2_NMODES_ISTRESSSTIFFINDEX_NSTRESSSTIFFMAT}
+[...]                                           [...]
+\bnt{K0_NMODES_1_ISTRESSSTIFFINDEX_NSTRESSSTIFFMAT} [...] \bnt{K0_NMODES_NMODES_ISTRESSSTIFFINDEX_NSTRESSSTIFFMAT}
+<comments; the set of modal stress stiffening matrices in column-major form>
 ** \kw{END OF FILE}
 \end{Verbatim}
 %\end{verbatim}
@@ -233,7 +279,7 @@ Note however that the positive-definiteness of the generalized
 stiffness matrix is not a requirement.
 
 \item \kw{RECORD GROUP 11} contains the lumped inertia matrix
-associated to the \nt{NNODES} (exposed) FEM nodes;
+associated with the \nt{NNODES} (exposed) FEM nodes;
 for each node, the $X$, $Y$, $Z$, $RX$, $RY$ and $RY$ inertia
 coefficients are listed (they can be zero).
 The nodal mass coefficients $Y$ and $Z$ should be equal
@@ -265,6 +311,21 @@ If given, it is used in the analysis unless overridden by any damping
 specification indicated in the modal joint element definition.
 The generalized damping matrix appeared in MBDyn 1.5.3.
 
+\item \kw{RECORD GROUP 14} contains $\mathcal{I}_3$, a $3 \times \nt{NMODES}$ matrix that contains static coupling between rigid body and FEM node displacements. See the tecman.
+\item \kw{RECORD GROUP 15} contains $\mathcal{I}_4$, a $3 \times \nt{NMODES}$ matrix that contains static coupling between rigid body rotations and FEM node displacements. See the tecman.
+\item \kw{RECORD GROUP 16} contains $\mathcal{I}_8$, a $3 \times 3 \times \nt{NMODES}$ matrix which is required to consider centrifugal loads. See the tecman.
+\item \kw{RECORD GROUP 17} contains $\mathcal{I}_5$, a $3 \times \nt{NMODES} \times \nt{NMODES}$ matrix that contains the static coupling between FEM node displacements. See the tecman.
+\item \kw{RECORD GROUP 18} contains $\mathcal{I}_9$, a $3 \times 3 \times \nt{NMODES} \times \nt{NMODES}$ matrix which is required to consider the so called ``spin softening'' effect. See the tecman.
+\item \kw{RECORD GROUP 19} contains $\T{K}_{0\omega}$, $\T{K}_{0r}$, $\T{K}_{0t}$, $\T{K}_{0F}$ and $\T{K}_{0M}$, a set of $\nt{NMODES} \times \nt{NMODES}$ matrices which are required to consider the so called ``stress-stiffening'' effect. See the tecman. In order to reduce the computational cost, it is not required to provide all $12 + 6 \times \nt{NNODES}$ matrices. Instead only a subset of available matrices may be provided. Each matrix is identified by it's \bnt{ISTRESSSTIFFINDEX} tag according to the following table:
+  \begin{align}
+    \T{K}_{0\omega}&\rightarrow\left[1\hdots6\right] \nonumber \\
+    \T{K}_{0r}&\rightarrow\left[7\hdots9\right] \nonumber \\
+    \T{K}_{0t}&\rightarrow\left[10\hdots12\right] \nonumber \\
+    \T{K}_{0F_1}&\rightarrow\left[13\hdots15\right] \nonumber \\
+    \T{K}_{0M_1}&\rightarrow\left[16\hdots18\right] \nonumber \\
+    \T{K}_{0F_2}&\rightarrow\left[19\hdots21\right] \nonumber \\
+    \T{K}_{0M_2}&\rightarrow\left[22\hdots24\right]
+  \end{align}
 \end{itemize}
 
 Note that \kw{RECORD GROUP 11} and \kw{RECORD GROUP 12}
@@ -424,7 +485,7 @@ The corresponding global inertia properties are:
 \subsection{Example: Static Model}
 As an example, a very simple, hand-made FEM model file is presented below.
 It models a FEM model made of three aligned nodes, where inertia 
-is only associated to the mid-node.
+is only associated with the mid-node.
 As a consequence, the three mode shapes must be interpreted as static
 shapes, since the modal mass matrix is null.
 Note that each line is prefixed with a two-digit line number 
@@ -716,7 +777,62 @@ Conventionally, the \texttt{.fem} extension is used.
 
 \end{enumerate} % procedure
 
-
+\section{Procedure for mboct-fem-pkg}
+\label{sec:APP:EL:STRUCT:JOINT:MODAL:MBOCTFEMPKG}
+\href{https://github.com/octave-user/mboct-fem-pkg}{mboct-fem-pkg} is a Finite Element Toolkit for \href{https://gnu.org/software/octave}{GNU-Octave}. It can be used to generate modal element data for MBDyn. In addition to that, postprocessing of the combined output from several modal elements is possible using \href{http://www.gmsh.info/}{Gmsh}. The following GNU-Octave code gives an example on how to create modal element data for MBDyn with mboct-fem-pkg.
+\begin{Verbatim}[commandchars=\\\{\}]
+  \ty{## load the package}
+  pkg load mboct-fem-pkg; 
+  \ty{## load the mesh file in Gmsh format}
+  mesh = \nt{fem_pre_mesh_import}(\kw{"conrod_gmsh.msh"}, \kw{"gmsh"}); 
+  mesh.material_data.E = 70000e6; \ty{## Young's modulus [Pa]}
+  mesh.material_data.nu = 0.3; \ty{## Poisson's ratio [1]}
+  mesh.material_data.rho = 2700; \ty{## density [kg/m^3]}
+  mesh.material_data.alpha = 1e-8; \ty{## mass damping [s^-1]}
+  mesh.material_data.beta = 1e-7; \ty{## stiffness damping [s]}
+  \ty{## allocate material assignment}
+  mesh.materials.iso20 = \nt{zeros}(rows(mesh.elements.iso20), 1, \kw{"int32"});
+  \ty{## locate a group of solid elements with id 10}
+  grp_idx_beam = \nt{find}([[mesh.groups.iso20].id] == 10);
+  \ty{## locate a group of surface elements with id 12}
+  grp_idx_clamp = \nt{find}([[mesh.groups.quad8].id] == 12);
+  \ty{## assign the material number one to all elements in group 10}
+  mesh.materials.iso20(mesh.groups.iso20(grp_idx_beam).elements) = 1;
+  \ty{## insert a new node used as modal node}
+  cms_opt.nodes.modal.number = \nt{rows}(mesh.nodes) + 2;
+  \ty{## define the name of the modal node used in MBDyn's input files}
+  cms_opt.nodes.modal.name = \kw{"node_id_modal"};
+  \ty{## insert a new node used as interface node}
+  cms_opt.nodes.interfaces.number = \nt{rows}(mesh.nodes) + 1;
+  \ty{## define the name of the interface node in MBDyn's input files}
+  cms_opt.nodes.interfaces.name = \kw{"node_id_interface1"};
+  \ty{## define the position of the modal node in the FEM reference frame}
+  mesh.nodes(cms_opt.nodes.modal.number, 1:3) = [0, 0, 0];
+  \ty{## define the position of the interface node in the FEM reference frame}
+  mesh.nodes(cms_opt.nodes.interfaces.number, 1:3) = [0.1, 0, 0];
+  \ty{## create an RBE3 element for the interface node}
+  \ty{## all nodes inside group 13 will be coupled to the interface node}
+  mesh.elements.rbe3 = \nt{fem_pre_mesh_rbe3_from_surf}(mesh, 13, cms_opt.nodes.interfaces.number, \kw{"quad8"});
+  \ty{## compute 20 normal modes}
+  cms_opt.modes.number = 20;
+  \ty{## define the name of the modal element in MBDyn's input files}
+  cms_opt.element.name = \kw{"elem_id_modal"};
+  \ty{## allocate the DOF status for all nodes}
+  load_case_dof.locked_dof = \nt{false}(size(mesh.nodes));
+  \ty{## lock all degrees of freedom of the modal node}
+  load_case_dof.locked_dof(cms_opt.nodes.modal.number, :) = true;
+  \ty{## lock all degrees of freedom of clamped nodes}
+  load_case_dof.locked_dof(mesh.groups.quad8(grp_idx_clamp).nodes, :) = true;
+  \ty{## generate modal element data}
+  [mesh_cms, ...
+   mat_ass_cms, ...
+   dof_map_cms, ...
+   sol_eig_cms, ...
+   cms_opt, ...
+   sol_tau_cms] = \nt{fem_cms_create2}(mesh, load_case_dof, cms_opt);
+  \ty{## write MBDyn's input files conrod_mbd.fem and conrod_mbd.elm}
+  \nt{fem_cms_export}(\kw{"conrod_mbd"}, mesh_cms, dof_map_cms, mat_ass_cms, cms_opt); 
+\end{Verbatim}
 
 \section{Procedures for Other FEA Software}
 Currently, no (semi-)automatic procedures are available to extract modal

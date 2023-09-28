@@ -3,9 +3,9 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -29,7 +29,7 @@
  */
 /*
  * Authors:	Yang Ding <dingyang@gatech.edu>
- *		Pierangelo Masarati <masarati@aero.polimi.it>
+ *		Pierangelo Masarati <pierangelo.masarati@polimi.it>
  */
 
 #include "mbconfig.h"           /* This goes first in every *.c,*.cc file */
@@ -136,7 +136,7 @@ m_iDim(0)
 		silent_cout(
 "\n"
 "Module:        loadinc - load increment normalization\n"
-"Author:        Pierangelo Masarati <masarati@aero.polimi.it>\n"
+"Author:        Pierangelo Masarati <pierangelo.masarati@polimi.it>\n"
 "Organization:  Dipartimento di Ingegneria Aerospaziale\n"
 "               Politecnico di Milano\n"
 "               http://www.aero.polimi.it/\n"
@@ -629,7 +629,7 @@ m_pDrivenLoadIncNorm(0)
 		silent_cout(
 "\n"
 "Module:        loadinc - load increment force\n"
-"Author:        Pierangelo Masarati <masarati@aero.polimi.it>\n"
+"Author:        Pierangelo Masarati <pierangelo.masarati@polimi.it>\n"
 "Organization:  Dipartimento di Ingegneria Aerospaziale\n"
 "               Politecnico di Milano\n"
 "               http://www.aero.polimi.it/\n"

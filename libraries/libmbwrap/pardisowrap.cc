@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2021
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
   AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-  Copyright (C) 2021(-2022) all rights reserved.
+  Copyright (C) 2021(-2023) all rights reserved.
 
   The copyright of this code is transferred
   to Pierangelo Masarati and Paolo Mantegazza
@@ -53,6 +53,7 @@
 
 #include "pardisowrap.h"
 #include "cscmhtpl.h"
+#include "constexpr_math.h"
 
 template <typename MKL_INT_TYPE>
 PardisoSolver<MKL_INT_TYPE>::PardisoSolver(SolutionManager* pSM, integer iDim, doublereal dPivot, integer iNumThreads, integer iNumIter, integer iVerbose)
@@ -104,7 +105,7 @@ void PardisoSolver<MKL_INT_TYPE>::Solve(void) const
     const MKL_INT_TYPE iNumNzA = pAp[n] - pAp[0];
 
     MKL_INT_TYPE ierror = 0;
-    constexpr doublereal dTolBW = sqrt(std::numeric_limits<doublereal>::epsilon());
+    constexpr doublereal dTolBW = constexpr_math::sqrt(std::numeric_limits<doublereal>::epsilon());
     doublereal dErrBW = std::numeric_limits<doublereal>::max();
     bool bSymbolicFactor = iNumNzA != iNumNz;
     bool bRepeatFactor = false;
@@ -174,10 +175,10 @@ void PardisoSolver<MKL_INT_TYPE>::Solve(void) const
 }
 
 template <typename MKL_INT_TYPE>
-MKL_INT_TYPE PardisoSolver<MKL_INT_TYPE>::MakeCompactForm(SparseMatrixHandler& mh,
-                                                          std::vector<doublereal>& Ax,
-                                                          std::vector<MH_INT_TYPE>& Ai,
-                                                          std::vector<MH_INT_TYPE>& Ap) const
+MKL_INT_TYPE PardisoSolver<MKL_INT_TYPE>::PardisoMakeCompactForm(SparseMatrixHandler& mh,
+                                                                 std::vector<doublereal>& Ax,
+                                                                 std::vector<MH_INT_TYPE>& Ai,
+                                                                 std::vector<MH_INT_TYPE>& Ap) const
 {
      MH_INT_TYPE iNumNzA = mh.MakeCompressedRowForm(Ax, Ai, Ap, 1);
 
@@ -185,9 +186,9 @@ MKL_INT_TYPE PardisoSolver<MKL_INT_TYPE>::MakeCompactForm(SparseMatrixHandler& m
 
      pAx = &Ax.front();
 
-     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE));
-     static_assert(std::numeric_limits<MH_INT_TYPE>::is_integer);
-     static_assert(std::numeric_limits<MKL_INT_TYPE>::is_integer);
+     static_assert(sizeof(MH_INT_TYPE) == sizeof(MKL_INT_TYPE), "data type does not match");
+     static_assert(std::numeric_limits<MH_INT_TYPE>::is_integer, "invalid data type");
+     static_assert(std::numeric_limits<MKL_INT_TYPE>::is_integer, "invalid data type");
      
      pAi = reinterpret_cast<MKL_INT_TYPE*>(&Ai.front());
      pAp = reinterpret_cast<MKL_INT_TYPE*>(&Ap.front());
@@ -237,7 +238,7 @@ void PardisoSolutionManager<MatrixHandlerType, MKL_INT_TYPE>::MatrInitialize(voi
 template <typename MatrixHandlerType, typename MKL_INT_TYPE>
 void PardisoSolutionManager<MatrixHandlerType, MKL_INT_TYPE>::MakeCompressedRowForm(void)
 {
-    pGetSolver()->MakeCompactForm(A, Ax, Ai, Ap);
+    pGetSolver()->PardisoMakeCompactForm(A, Ax, Ai, Ap);
 }
 
 template <typename MatrixHandlerType, typename MKL_INT_TYPE>

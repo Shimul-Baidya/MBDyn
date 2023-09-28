@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -109,12 +109,6 @@ public:
 		*piNumRows = 6;
 		*piNumCols = 6;
 	};
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0) {};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 
 	virtual VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat, doublereal dCoef,
@@ -252,20 +246,6 @@ public:
 	InitialAssRes(SubVectorHandler& WorkVec,
 			const VectorHandler& XCurr);
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0) {};
-	virtual unsigned int iGetNumPrivData(void) const {
-		return Rod::iGetNumPrivData();
-	};
-	virtual unsigned int iGetPrivDataIdx(const char *s) const {
-		return Rod::iGetPrivDataIdx(s);
-	};
-	virtual doublereal dGetPrivData(unsigned int i) const {
-		return Rod::dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 };
 
 /* ViscoElasticRod - end */
@@ -336,21 +316,6 @@ public:
 	/* Contributo al residuo durante l'assemblaggio iniziale */
 	virtual SubVectorHandler&
 	InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
-
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-			VectorHandler& X, VectorHandler& XP,
-			SimulationEntity::Hints *ph = 0) {};
-	virtual unsigned int iGetNumPrivData(void) const {
-		return Rod::iGetNumPrivData();
-	};
-	virtual unsigned int iGetPrivDataIdx(const char *s) const {
-		return Rod::iGetPrivDataIdx(s);
-	};
-	virtual doublereal dGetPrivData(unsigned int i) const {
-		return Rod::dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 };
 
 /* RodWithOffset - end */

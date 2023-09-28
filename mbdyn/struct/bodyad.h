@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2022(-2022) all rights reserved.
+        Copyright (C) 2022(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -58,12 +58,15 @@ public:
 protected:
      template <typename T>
      void
-     AssVecRBK_int(const sp_grad::SpColVector<T, 3>& STmp,
+     AssVecRBK_int(const RigidBodyKinematics* pRBK,
+                   const sp_grad::SpColVector<T, 3>& X,
+                   const sp_grad::SpColVector<T, 3>& V,
+                   const sp_grad::SpColVector<T, 3>& W,
+                   const sp_grad::SpColVector<T, 3>& STmp,
                    const sp_grad::SpMatrix<T, 3, 3>& JTmp,
                    sp_grad::SpGradientAssVec<T>& WorkVec,
-                   doublereal dCoef,
-                   sp_grad::SpFunctionCall func);
-     
+                   const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
+
      void
      UpdateInertia(const sp_grad::SpColVector<doublereal, 3>& STmp,
                    const sp_grad::SpMatrix<doublereal, 3, 3>& JTmp) const;
@@ -81,18 +84,18 @@ private:
 
 class DynamicBodyAd: public DynamicBody, public BodyAd {
 public:
-     DynamicBodyAd(unsigned int uL, const DynamicStructNodeAd* pNodeTmp, 
-                   doublereal dMassTmp, const Vec3& XgcTmp, const Mat3x3& JTmp, 
+     DynamicBodyAd(unsigned int uL, const DynamicStructNodeAd* pNodeTmp,
+                   doublereal dMassTmp, const Vec3& XgcTmp, const Mat3x3& JTmp,
                    flag fOut);
 
      virtual ~DynamicBodyAd();
- 
+
      virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
- 
+
      virtual VariableSubMatrixHandler&
      AssJac(VariableSubMatrixHandler& WorkMat,
             doublereal dCoef,
-            const VectorHandler& XCurr, 
+            const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr) override;
 
      virtual void
@@ -102,13 +105,13 @@ public:
             const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
-     
+
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
-            const VectorHandler& XCurr, 
+            const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr) override;
- 
+
      template <typename T>
      void
      AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
@@ -118,7 +121,7 @@ public:
             sp_grad::SpFunctionCall func);
 protected:
      using BodyAd::UpdateInertia;
-     
+
      void
      UpdateInertia(const sp_grad::SpColVector<doublereal, 3>& STmp,
                    const sp_grad::SpMatrix<doublereal, 3, 3>& JTmp) const;
@@ -191,7 +194,7 @@ public:
             const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
-     
+
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
@@ -205,13 +208,13 @@ public:
             const sp_grad::SpGradientVectorHandler<T>& XCurr,
             const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
             sp_grad::SpFunctionCall func);
-     
+
 private:
      using BodyAd::UpdateInertia;
-     
+
      void UpdateInertia(const sp_grad::SpColVector<doublereal, 3>& S,
                         const sp_grad::SpMatrix<doublereal, 3, 3>& J) const;
-     
+
      const ModalNodeAd* const pNode;
 };
 

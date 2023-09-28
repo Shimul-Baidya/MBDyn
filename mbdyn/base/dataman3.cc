@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -51,6 +51,7 @@
 #include "filedrv.h"
 #include "nodead.h"
 #include "elecnodead.h"
+#include "fdjac.h"
 #include "presnode.h"
 #include "presnodead.h"
 #include "j2p.h"
@@ -96,6 +97,8 @@ DataManager::ReadControl(MBDynParser& HP,
 		psReadControlElems[Elem::JOINT_REGULARIZATION],
 		psReadControlElems[Elem::BEAM],
 		psReadControlElems[Elem::PLATE],
+                psReadControlElems[Elem::SOLID],
+                psReadControlElems[Elem::SURFACE_LOAD],
 		psReadControlElems[Elem::AIRPROPERTIES],
 		psReadControlElems[Elem::INDUCEDVELOCITY],
 		psReadControlElems[Elem::AEROMODAL],
@@ -158,7 +161,7 @@ DataManager::ReadControl(MBDynParser& HP,
 		"default" "scale",
 
 		"finite" "difference" "jacobian" "meter",
-
+                "jacobian" "check",
 		"read" "solution" "array",
 
 		"select" "timeout",
@@ -191,6 +194,8 @@ DataManager::ReadControl(MBDynParser& HP,
 			JOINT_REGULARIZATIONS,
 		BEAMS,
 		PLATES,
+                SOLIDS,
+                SURFACE_LOADS,
 		AIRPROPERTIES,
 		INDUCEDVELOCITYELEMENTS,
 		AEROMODALS,
@@ -253,7 +258,8 @@ DataManager::ReadControl(MBDynParser& HP,
 		DEFAULTAERODYNAMICOUTPUT,
 		DEFAULTSCALE,
 
-		FDJAC_METER,
+                FDJAC_METER,
+                JACOBIAN_CHECK,
 
 		READSOLUTIONARRAY,
 
@@ -404,6 +410,22 @@ DataManager::ReadControl(MBDynParser& HP,
 			}
 		} break;
 
+		case SOLIDS: {
+			integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
+			ElemData[Elem::SOLID].iExpectedNum = iDmy;
+			DEBUGLCOUT(MYDEBUG_INPUT, "Solids: " << iDmy << std::endl);
+                        // FIXME: Assertion fails if this is enabled
+			// if (iDmy > 0 ) {
+			// 	bInitialJointAssemblyToBeDone = true;
+			// }
+		} break;
+
+                case SURFACE_LOADS: {
+                        integer iDmy = HP.GetInt(0, HighParser::range_ge<integer>(0));
+                        ElemData[Elem::SURFACE_LOAD].iExpectedNum = iDmy;
+                        DEBUGLCOUT(MYDEBUG_INPUT, "SurfaceLoads: " << iDmy << std::endl);
+                } break;
+                     
 		/* Elementi aerodinamici: proprieta' dell'aria */
 		case AIRPROPERTIES: {
 			if (ElemData[Elem::AIRPROPERTIES].iExpectedNum > 0) {
@@ -656,7 +678,23 @@ DataManager::ReadControl(MBDynParser& HP,
 						<< std::endl);
 					break;
 
-				case AERODYNAMICELEMENTS:
+				case SOLIDS:
+					ElemData[Elem::SOLID].ToBeUsedInAssembly(true);
+					DEBUGLCOUT(MYDEBUG_INPUT,
+						"Solids will be used "
+						"in initial joint assembly"
+						<< std::endl);
+					break;
+                                        
+                                case SURFACE_LOADS:
+                                        ElemData[Elem::SURFACE_LOAD].ToBeUsedInAssembly(true);
+                                        DEBUGLCOUT(MYDEBUG_INPUT,
+                                                "Surface loads will be used "
+                                                "in initial joint assembly"
+                                                << std::endl);
+                                        break;
+
+                                case AERODYNAMICELEMENTS:
 					ElemData[Elem::AERODYNAMIC].ToBeUsedInAssembly(true);
 					DEBUGLCOUT(MYDEBUG_INPUT,
 						"Aerodynamic Elements will be used "
@@ -1157,6 +1195,14 @@ EndOfUse:
 					ElemData[Elem::PLATE].DefaultOut(true);
 					break;
 
+                                case SOLIDS:
+                                        ElemData[Elem::SOLID].DefaultOut(true);
+                                        break;
+
+                                case SURFACE_LOADS:
+                                        ElemData[Elem::SURFACE_LOAD].DefaultOut(true);
+                                        break;
+
 				case RIGIDBODIES:
 					ElemData[Elem::BODY].DefaultOut(true);
 					break;
@@ -1282,14 +1328,92 @@ EndOfUse:
 			}
 			break;
 
-		case FDJAC_METER: {
-			if (pFDJacMeter != 0) {
-				silent_cerr("\"finite difference jacobian meter\" already defined" << std::endl);
-				throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
-			}
-			DriveCaller *pTmp = HP.GetDriveCaller(false);
-			pFDJacMeter = pTmp;
-		} break;
+                case FDJAC_METER:
+                case JACOBIAN_CHECK: {
+                        if (pFDJac != nullptr) {
+                                silent_cerr("\"finite difference jacobian meter\" already defined" << std::endl);
+                                throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                        }
+
+                        FiniteDifferenceJacobianParam oFDParam;
+
+                        oFDParam.pFDJacMeterStep.reset(HP.GetDriveCaller());
+                        oFDParam.pFDJacMeterIter.reset(HP.IsKeyWord("iterations") ? HP.GetDriveCaller() : new OneDriveCaller);
+
+                        enum FiniteDifferenceOrder: unsigned {
+                             FD_POLYNOMIAL_1 = 1u,
+                             FD_POLYNOMIAL_2 = 2u,
+                             FD_POLYNOMIAL_4 = 4u,
+                             FD_POLYNOMIAL_6 = 6u,
+                             AD_FORWARD_MODE = 0xFFFFFFFFu
+                        } eFDJacOrder = FD_POLYNOMIAL_1;
+
+                        if (HP.IsKeyWord("forward" "mode" "automatic" "differentiation")) {
+                             eFDJacOrder = AD_FORWARD_MODE;
+                        } else {
+                             if (HP.IsKeyWord("coefficient")) {
+                                  oFDParam.dFDJacCoef = HP.GetReal();
+                             }
+
+                             if (HP.IsKeyWord("order")) {
+                                  eFDJacOrder = static_cast<FiniteDifferenceOrder>(HP.GetInt());
+                             }
+                        }
+
+                        if (HP.IsKeyWord("output")) {
+                             while (HP.IsArg()) {
+                                  if (HP.IsKeyWord("none")) {
+                                       oFDParam.uOutputFlags = FiniteDifferenceJacobianBase::FDJAC_OUTPUT_NONE;
+                                  } else if (HP.IsKeyWord("all")) {
+                                       oFDParam.uOutputFlags = FiniteDifferenceJacobianBase::FDJAC_OUTPUT_ALL;
+                                  } else if (HP.IsKeyWord("matrices")) {
+                                       if (HP.GetYesNoOrBool()) {
+                                            oFDParam.uOutputFlags |= FiniteDifferenceJacobianBase::FDJAC_OUTPUT_MAT_PER_ITER;
+                                       } else {
+                                            oFDParam.uOutputFlags &= ~FiniteDifferenceJacobianBase::FDJAC_OUTPUT_MAT_PER_ITER;
+                                       }
+                                  } else if (HP.IsKeyWord("statistics" "iteration")) {
+                                       if (HP.GetYesNoOrBool()) {
+                                            oFDParam.uOutputFlags |= FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_PER_ITER;
+                                       } else {
+                                            oFDParam.uOutputFlags &= ~FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_PER_ITER;
+                                       }
+                                  } else if (HP.IsKeyWord("statistics")) {
+                                       if (HP.GetYesNoOrBool()) {
+                                            oFDParam.uOutputFlags |= FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_END;
+                                       } else {
+                                            oFDParam.uOutputFlags &= ~FiniteDifferenceJacobianBase::FDJAC_OUTPUT_STAT_END;
+                                       }
+                                  }
+                             }
+                        }
+
+                        typedef FiniteDifferenceJacobian<2> FDJac1;
+                        typedef FiniteDifferenceJacobian<3> FDJac2;
+                        typedef FiniteDifferenceJacobian<5> FDJac4;
+                        typedef FiniteDifferenceJacobian<7> FDJac6;
+
+                        switch (eFDJacOrder) {
+                        case FD_POLYNOMIAL_1:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac1, FDJac1(this, std::move(oFDParam)));
+                             break;
+                        case FD_POLYNOMIAL_2:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac2, FDJac2(this, std::move(oFDParam)));
+                             break;
+                        case FD_POLYNOMIAL_4:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac4, FDJac4(this, std::move(oFDParam)));
+                             break;
+                        case FD_POLYNOMIAL_6:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, FDJac6, FDJac6(this, std::move(oFDParam)));
+                             break;
+                        case AD_FORWARD_MODE:
+                             SAFENEWWITHCONSTRUCTOR(pFDJac, AdForwardModeJacobian, AdForwardModeJacobian(this, std::move(oFDParam)));
+                             break;
+                        default:
+                             silent_cerr("invalid order " << eFDJacOrder << " for finite difference operator at line " << HP.GetLineData() << "\n");
+                             throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                        }
+                } break;
 
 		case READSOLUTIONARRAY:{
 			int len = strlen(sInputFileName) + sizeof(".X");
@@ -1510,6 +1634,10 @@ EndOfUse:
 		// FIXME: replace with a single call that sets NetCDF for all types that support it
 		OutHdl.SetNetCDF(OutputHandler::NETCDF);
 		OutHdl.SetNetCDF(OutputHandler::STRNODES);
+		OutHdl.SetNetCDF(OutputHandler::ELECTRIC);
+		OutHdl.SetNetCDF(OutputHandler::THERMALNODES);
+		OutHdl.SetNetCDF(OutputHandler::PRESNODES);
+		OutHdl.SetNetCDF(OutputHandler::ABSTRACT);
 		OutHdl.SetNetCDF(OutputHandler::INERTIA);
 		OutHdl.SetNetCDF(OutputHandler::JOINTS);
 		OutHdl.SetNetCDF(OutputHandler::BEAMS);
@@ -2266,7 +2394,10 @@ DataManager::ReadNodes(MBDynParser& HP)
 	}
 
 	ASSERT(ni == Nodes.end());
-	ASSERT(iNumNodes == Nodes.size());
+	//ASSERT(iNumNodes == Nodes.size());
+	if (iNumNodes != Nodes.size()) {
+		throw DataManager::ErrMissingNodes(MBDYN_EXCEPT_ARGS);
+	}
 
 	DEBUGLCOUT(MYDEBUG_INPUT, "End of nodes data" << std::endl);
 } /* End of DataManager::ReadNodes() */

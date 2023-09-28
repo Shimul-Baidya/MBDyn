@@ -3,9 +3,9 @@
  * This library comes with MBDyn (C), a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -337,7 +337,7 @@ const char cDebugFree  = 'F';
 	do { \
 		ASSERT(!(pnt)); \
 		ASSERT(sizeof(item)); \
-		ASSERT((sz) != 0);	   \
+		ASSERT(sz >= 0);	  \
 		try{(pnt) = new item[sz];} \
 		catch(std::bad_alloc& ba) { \
 			_Safenew(__FILE__, __LINE__, 1); \
@@ -352,7 +352,7 @@ const char cDebugFree  = 'F';
 	do { \
 		ASSERT(!(pnt)); \
 		ASSERT(sizeof(item)); \
-		ASSERT(sz); \
+		ASSERT(sz >= 0);      \
 		try{(pnt) = new item[sz];} \
 		catch(std::bad_alloc& ba) { \
 			_Safenew(__FILE__, __LINE__, 1); \
@@ -596,7 +596,7 @@ extern std::ostream& operator << (std::ostream& rout, const clMemMan& rm);
 	do { \
 		ASSERT(!(pnt)); \
 		ASSERT(sizeof(item)); \
-		ASSERT((sz) != 0);		   \
+		ASSERT(sz >= 0);       \
 		try{(pnt) = new item[sz];} \
 		catch(std::bad_alloc& ba) { \
 			_Safenew(__FILE__, __LINE__, 1); \
@@ -610,7 +610,7 @@ extern std::ostream& operator << (std::ostream& rout, const clMemMan& rm);
 	do { \
 		ASSERT(!(pnt)); \
 		ASSERT(sizeof(item)); \
-		ASSERT(sz); \
+		ASSERT(sz >= 0);       \
 		try{(pnt) = new item[sz];} \
 		catch(std::bad_alloc& ba) { \
 			_Safenew(__FILE__, __LINE__, 1); \

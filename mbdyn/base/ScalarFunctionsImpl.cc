@@ -2,7 +2,7 @@
 /* 
  * HmFe (C) is a FEM analysis code. 
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
  * Marco Morandini  <morandini@aero.polimi.it>
  *
@@ -20,12 +20,12 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  * 
  * This code is a partial merge of HmFe and MBDyn.
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -287,6 +287,8 @@ LogScalarFunction::LogScalarFunction(
 	if (b != 1.) {
 		mul_const /= log(b);
 	}
+	(void) mul_input; // silence unused warning
+	(void) base; // silence unused warning
 }
 
 LogScalarFunction::~LogScalarFunction()
@@ -1381,16 +1383,12 @@ public:
 		return out << "# not implemented!";
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& /* EpsPrime */  = 0.) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		for (int i = 1; i <= n; i++) {
-#if defined(MBDYN_X_WORKAROUND_GCC_3_2) || defined(MBDYN_X_WORKAROUND_GCC_3_3)
-			ConstitutiveLaw<T, Tder>::F.Put(i, (*pSF)(Eps(i)));
-			ConstitutiveLaw<T, Tder>::FDE.Put(i, i, pSF->ComputeDiff(Eps(i)));
-#else // !MBDYN_X_WORKAROUND_GCC_3_2 && ! MBDYN_X_WORKAROUND_GCC_3_3
 			ConstitutiveLaw<T, Tder>::F(i) = (*pSF)(Eps(i));
 			ConstitutiveLaw<T, Tder>::FDE(i, i) = pSF->ComputeDiff(Eps(i));
-#endif // !MBDYN_X_WORKAROUND_GCC_3_3 && ! MBDYN_X_WORKAROUND_GCC_3_3
 		}
 	};
 };
@@ -1532,6 +1530,7 @@ public:
 		return out << "# not implemented!";
 	};
 
+	using ConstitutiveLawAd<T, Tder>::Update;
 	virtual void Update(const T& Eps, const T& /* EpsPrime */  = 0.) {
 		ConstitutiveLaw<T, Tder>::Epsilon = Eps;
 		for (unsigned i = 1; i <= n; i++) {
@@ -1540,13 +1539,8 @@ public:
 				continue;
 			}
 
-#if defined(MBDYN_X_WORKAROUND_GCC_3_2) || defined(MBDYN_X_WORKAROUND_GCC_3_3)
-			ConstitutiveLaw<T, Tder>::F.Put(i, (*SF[i - 1])(Eps(i)));
-			ConstitutiveLaw<T, Tder>::FDE.Put(i, i, SF[i - 1]->ComputeDiff(Eps(i)));
-#else // !MBDYN_X_WORKAROUND_GCC_3_2 && ! MBDYN_X_WORKAROUND_GCC_3_3
 			ConstitutiveLaw<T, Tder>::F(i) = (*SF[i - 1])(Eps(i));
 			ConstitutiveLaw<T, Tder>::FDE(i, i) = SF[i - 1]->ComputeDiff(Eps(i));
-#endif // !MBDYN_X_WORKAROUND_GCC_3_2 && ! MBDYN_X_WORKAROUND_GCC_3_3
 		}
 	};
 };

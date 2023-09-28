@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2020
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2020(-2022) all rights reserved.
+        Copyright (C) 2020(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -321,166 +321,6 @@ namespace sp_grad {
 
      private:
           const bool f;
-     };
-
-     namespace util {
-          template <typename BinaryFunc, bool bIsScalarConstLhs, bool bIsScalarConstRhs>
-          struct GpGradProdBinExprEval {
-               static void dEval() = delete;
-          };
-
-          template <typename BinaryFunc>
-          struct GpGradProdBinExprEval<BinaryFunc, false, false> {
-               template <typename LhsExpr, typename RhsExpr>
-               static doublereal dEval(const LhsExpr& u, const RhsExpr& v, doublereal& dDer) {
-                    const doublereal uv = u.dGetValue();
-                    const doublereal vv = v.dGetValue();
-                    const doublereal ud = u.dGetDeriv();
-                    const doublereal vd = v.dGetDeriv();
-
-                    doublereal dVal = BinaryFunc::f(uv, vv);
-
-                    dDer = BinaryFunc::df_du(uv, vv) * ud + BinaryFunc::df_dv(uv, vv) * vd;
-
-                    return dVal;
-               }
-          };
-
-          template <typename BinaryFunc>
-          struct GpGradProdBinExprEval<BinaryFunc, true, false> {
-               template <typename LhsExpr, typename RhsExpr>
-               static doublereal dEval(const LhsExpr& u, const RhsExpr& v, doublereal& dDer) {
-                    const doublereal uv = u.dGetValue();
-                    const doublereal vv = v.dGetValue();
-                    const doublereal vd = v.dGetDeriv();
-
-                    static_assert(u.dGetDeriv() == 0., "u must be a scalar constant");
-
-                    doublereal dVal = BinaryFunc::f(uv, vv);
-
-                    dDer = BinaryFunc::df_dv(uv, vv) * vd;
-
-                    return dVal;
-               }
-          };
-
-          template <typename BinaryFunc>
-          struct GpGradProdBinExprEval<BinaryFunc, false, true> {
-               template <typename LhsExpr, typename RhsExpr>
-               static doublereal dEval(const LhsExpr& u, const RhsExpr& v, doublereal& dDer) {
-                    const doublereal uv = u.dGetValue();
-                    const doublereal vv = v.dGetValue();
-                    const doublereal ud = u.dGetDeriv();
-
-                    static_assert(v.dGetDeriv() == 0., "v must be a scalar constant");
-
-                    doublereal dVal = BinaryFunc::f(uv, vv);
-
-                    dDer = BinaryFunc::df_du(uv, vv) * ud;
-
-                    return dVal;
-               }
-          };
-     }
-
-     template <typename BinaryFunc, typename LhsExpr, typename RhsExpr>
-     class GpGradProdBinExpr: public GpGradProdBase<GpGradProdBinExpr<BinaryFunc, LhsExpr, RhsExpr> > {
-     public:
-          GpGradProdBinExpr(const LhsExpr& u, const RhsExpr&  v) {
-               typedef typename util::remove_all<LhsExpr>::type LhsExprType;
-               typedef typename util::remove_all<RhsExpr>::type RhsExprType;
-               constexpr bool bIsScalarConstLhs = LhsExprType::bIsScalarConst;
-               constexpr bool bIsScalarConstRhs = RhsExprType::bIsScalarConst;
-
-               static_assert(!(bIsScalarConstLhs && bIsScalarConstRhs), "At least one argument must be no constant");
-
-               typedef util::GpGradProdBinExprEval<BinaryFunc, bIsScalarConstLhs, bIsScalarConstRhs> ExprEvalHelper;
-
-               dVal = ExprEvalHelper::dEval(u, v, dDer);
-          }
-
-          constexpr doublereal dGetValue() const {
-               return dVal;
-          }
-
-          constexpr doublereal dGetDeriv() const {
-               return dDer;
-          }
-
-          static constexpr bool bIsScalarConst = false;
-
-     private:
-          doublereal dVal;
-          doublereal dDer;
-     };
-
-     template <typename UnaryFunc, typename Expr>
-     class GpGradProdUnExpr: public GpGradProdBase<GpGradProdUnExpr<UnaryFunc, Expr> > {
-     public:
-          explicit GpGradProdUnExpr(const Expr& u) {
-               const doublereal uv = u.dGetValue();
-               const doublereal ud = u.dGetDeriv();
-
-               dVal = UnaryFunc::f(uv);
-               dDer = UnaryFunc::df_du(uv) * ud;
-          }
-
-          constexpr doublereal dGetValue() const {
-               return dVal;
-          }
-
-          constexpr doublereal dGetDeriv() const {
-               return dDer;
-          }
-
-          static constexpr bool bIsScalarConst = false;
-     private:
-          doublereal dVal;
-          doublereal dDer;
-     };
-
-     template <typename ScalarType>
-     class GpGradProdConstExpr: public GpGradProdBase<GpGradProdConstExpr<ScalarType>> {
-     public:
-          constexpr explicit GpGradProdConstExpr(doublereal dVal)
-               :dVal(dVal) {
-          }
-
-          constexpr ScalarType dGetValue() const {
-               return dVal;
-          }
-
-          static constexpr doublereal dGetDeriv() {
-               return 0.;
-          }
-
-          static constexpr bool bIsScalarConst = true;
-     private:
-          const ScalarType dVal;
-     };
-
-     template <typename BinaryFunc, typename LhsExpr, typename RhsExpr>
-     class GpGradProdBoolExpr: public GpGradProdBase<GpGradProdBoolExpr<BinaryFunc, LhsExpr, RhsExpr>> {
-     public:
-          constexpr GpGradProdBoolExpr(const LhsExpr& u, const RhsExpr& v)
-               :bVal(BinaryFunc::f(u.dGetValue(), v.dGetValue())) {
-          }
-
-          constexpr operator bool() const {
-               return bVal;
-          }
-
-          constexpr bool dGetValue() const {
-               return bVal;
-          }
-
-          static constexpr doublereal dGetDeriv() {
-               return 0.;
-          }
-
-          static constexpr bool bIsScalarConst = true;
-     private:
-          const bool bVal;
      };
 }
 #endif

@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -37,6 +37,53 @@ structure for nodes and elements is allocated at the beginning with fixed
 size. This is going to change, giving raise to a ``free'' and resizeable
 structure. But this practice is to be considered reliable since it allows a
 sort of double-check on the entities that are inserted.
+
+\section{Enable support for automatic differentiation}
+\emph{Author: Reinhard Resch}
+\label{sec:CONTROLDATA:AD}
+\begin{Verbatim}[commandchars=\\\{\}]
+  \bnt{card} :: = \kw{use automatic differentiation} ;
+\end{Verbatim}
+This keyword must be used in order to enable support for automatic differentiation in MBDyn.
+All the elements listed in table~\ref{sec:CONTROLDATA:AD:elements} can use automatic differentiation.
+Also elements without support for automatic differentiation may be used in a model with
+\kw{use automatic differentiation} enabled.
+\begin{table}
+\centering
+\caption{Elements with support for automatic differentiation (AD)}
+\label{sec:CONTROLDATA:AD:elements}
+\begin{tabular}{|l|c|c|}
+  \hline
+  element & supported with AD disabled & supported with AD enabled \\
+  \hline
+  \kw{beam3} & $\surd$ & $\surd$ \\
+  \kw{modal} & $\surd$ & $\surd$ \\
+  \kw{total joint} & $\surd$ & $\surd$ \\
+  \kw{total pin joint} & $\surd$ & $\surd$ \\
+  \kw{body} & $\surd$  & $\surd$ \\
+  \kw{automatic structural} & $\surd$ & $\surd$ \\
+  \kw{hexahedron8} & & $\surd$ \\
+  \kw{hexahedron20} & & $\surd$ \\
+  \kw{hexahedron20r} & & $\surd$ \\
+  \kw{pentahedron15} & & $\surd$ \\
+  \kw{tetrahedron10} & & $\surd$ \\
+  \kw{pressureq4} & & $\surd$ \\
+  \kw{pressureq8} & & $\surd$ \\
+  \kw{pressureq8r} & & $\surd$ \\
+  \kw{pressuret6} & & $\surd$ \\
+  \kw{tractionq4} & & $\surd$ \\
+  \kw{tractionq8} & & $\surd$ \\
+  \kw{tractionq8r} & & $\surd$ \\
+  \kw{tractiont6} & & $\surd$ \\
+  \kw{hydrodynamic plain bearing} & & $\surd$ \\  
+  \kw{hydrodynamic plain bearing2} & & $\surd$ \\
+  \kw{journal bearing} & & $\surd$ \\
+  \kw{triangular contact} & & $\surd$ \\
+  \kw{ball bearing contact} & & $\surd$ \\
+  \kw{unilateral in plane} & & $\surd$ \\
+  \hline
+\end{tabular}
+\end{table}
 
 \section{Assembly-Related Cards}
 The initial assembly related cards are: 
@@ -82,6 +129,8 @@ but the previous behavior can be recovered back with this flag.
             | \kw{gravity}
             | \kw{forces}
             | \kw{beams}
+            | \kw{solids}
+            | \kw{surface loads}
             | \kw{aerodynamic elements}
             | \kw{loadable elements} \} 
 \end{Verbatim}
@@ -253,6 +302,7 @@ By default, no timeout is used, so \texttt{select(2)} waits forever.
         | \kw{joints}
         | \kw{loadable}
         | \kw{plates}
+        | \kw{solids}
         | \kw{rigid bodies}
         | \kw{thermal elements} \}
 \end{Verbatim}
@@ -576,13 +626,52 @@ See Section~\ref{sec:IVP:TOLERANCE} for further details.
 
 \subsection{Finite Difference Jacobian Meter}\label{sec:CONTROLDATA:FDJAC_METER}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{card} ::= \kw{finite difference jacobian meter} : (\hty{DriveCaller}) \bnt{compute_finite_difference};
+  \bnt{card} ::= \{ \kw{finite difference jacobian meter} | \kw{jacobian check} \} :
+                    (\hty{DriveCaller}) \bnt{compute_finite_difference_time}
+      [ , \kw{iterations}, (\hty{DriveCaller}) \bnt{compute_finite_difference_iteration} ]
+      [ , \{ \kw{forward mode automatic differentiation} | [ \kw{coefficient}, (\ty{real}) \bnt{delta}, ]
+                                                     [ \kw{order}, (\ty{integer}) \bnt{k} , ] \} ]
+      [ , \kw{output}
+          [ , \{ \kw{none} | \kw{all} \} ]
+          [ , \kw{matrices}, \{ \kw{yes} | \kw{no} \}  ]
+          [ , \kw{statistics}, \{ \kw{yes} | \kw{no} \} ]
+          [ , \kw{statistics iteration}, \{ \kw{yes} | \kw{no} \} ]
+      ]
 \end{Verbatim}
 
 \noindent
-When \nt{compute\_finite\_difference} is true computes the problem Jacobian matrix by means of finite differences, 
+When \nt{compute\_finite\_difference\_time} and \nt{compute\_finite\_difference\_iteration} are true,
+compute the problem Jacobian matrix by means of finite differences,
 and write on standard output both the analytic and finite difference Jacobian matrices.
+It is possible to tune the accuracy of the finite difference approximation by means of
+the finite difference perturbation parameter \nt{delta} and the finite difference order \nt{k}.
+Those options can be used to check if the implementation of the residual vector and the Jacobian matrix
+are consistent. However, in order to check if the implementation of the Jacobian matrix
+and the implementation of the matrix free Jacobian vector product are consistent,
+the keyword \kw{forward mode automatic differentiation} should be used instead.
+By default, all output options are enabled and the sparse matrices are printed in triplet format.
+If it is desired to print only the maximum difference between the analytical Jacobian
+and the finite difference Jacobian matrix, then the keywords \kw{statistics} and/or \kw{statistics iteration} may be used.
 This option makes sense only for debugging, and may lead to really cumbersome screen output.
+
+\paragraph{Examples}
+\begin{Verbatim}
+  ## Output the finite difference Jacobian and the analytical Jacobian matrix
+  ## every 1e-3 seconds and always at the third iteration of each time step,
+  ## using a 6th order accurate finite difference formula and a perturbation
+  ## parameter of delta=1e-5.
+  finite difference jacobian meter: closest next, 0., forever, 1e-3,
+                                    iterations, string, "Var == 3",
+                                    coefficient, 1e-5,
+                                    order, 6,
+                                    output, none, matrices, yes;
+
+  ## Output the maximum difference between the Jacobian free matrix vector product and the
+  ## analytical Jacobian matrix over every iteration and every step at the end of the simulation.
+  jacobian check: one, one,
+                  forward mode automatic differentiation,
+                  output, none, statistics, yes;
+\end{Verbatim}
 
 \subsection{Model}
 \label{sec:CONTROLDATA:MODEL}
@@ -704,6 +793,8 @@ The following counters can be defined:
 \item \kw{joint regularizations}
 \item \kw{loadable elements}
 \item \kw{output elements}
+\item \kw{solids}
+\item \kw{surface loads}
 \item \kw{rigid bodies}
 \end{itemize}
 

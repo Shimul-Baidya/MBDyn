@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2005
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -197,6 +197,8 @@ Mass::AssVecRBK_int(SubVectorHandler& WorkVec)
 	// force
 	Vec3 f;
 	f = pRBK->GetXPP()*dMass;
+	f += pRBK->GetWP().Cross(s0);
+	f += pRBK->GetW().Cross(pRBK->GetW().Cross(s0));        
 
 	WorkVec.Sub(iIdx + 1, f);
 }
@@ -2218,9 +2220,9 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 
 	} else {
 		if (pStrNode) {
-			const DynamicStructNode* pDynamicStructNode = dynamic_cast<const DynamicStructNode*>(pDynamicDispNode);
-			const ModalNode* pModalNode = dynamic_cast<const ModalNode*>(pDynamicDispNode);
-			const RigidBodyKinematics* pRBK = pDynamicStructNode->pGetRBK();
+			const DynamicStructNode* const pDynamicStructNode = dynamic_cast<const DynamicStructNode*>(pStrNode);
+			const ModalNode* const pModalNode = dynamic_cast<const ModalNode*>(pStrNode);
+			const RigidBodyKinematics* const pRBK = pStrNode->pGetRBK();
 
 			if (pModalNode && pRBK) {
 				silent_cerr("Body(" << uLabel << ") "
@@ -2233,7 +2235,7 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 			if (pModalNode) {
                                 if (pDM->bUseAutoDiff()) {
                                         SAFENEWWITHCONSTRUCTOR(pEl, ModalBodyAd,
-                                                               ModalBodyAd(uLabel, dynamic_cast<const ModalNodeAd*>(pModalNode), dm, Xgc, J, fOut));                                        
+                                                               ModalBodyAd(uLabel, dynamic_cast<const ModalNodeAd*>(pModalNode), dm, Xgc, J, fOut));
                                 } else {
                                         SAFENEWWITHCONSTRUCTOR(pEl, ModalBody,
                                                                ModalBody(uLabel, pModalNode, dm, Xgc, J, fOut));
@@ -2242,7 +2244,7 @@ ReadBody(DataManager* pDM, MBDynParser& HP, unsigned int uLabel)
 			} else {
                                 if (pDM->bUseAutoDiff()) {
                                         SAFENEWWITHCONSTRUCTOR(pEl, DynamicBodyAd,
-                                                               DynamicBodyAd(uLabel, dynamic_cast<const DynamicStructNodeAd*>(pDynamicStructNode), dm, Xgc, J, fOut));                                        
+                                                               DynamicBodyAd(uLabel, dynamic_cast<const DynamicStructNodeAd*>(pDynamicStructNode), dm, Xgc, J, fOut));
                                 } else {
                                         SAFENEWWITHCONSTRUCTOR(pEl, DynamicBody,
                                                                DynamicBody(uLabel, pDynamicStructNode, dm, Xgc, J, fOut));

@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2022(-2022) all rights reserved.
+        Copyright (C) 2022(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -60,6 +60,8 @@ public:
 
      virtual ~BeamAd();
 
+     using Beam::AddInternalForces;
+
      virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
 
      virtual SubVectorHandler&
@@ -85,41 +87,65 @@ public:
      template <typename T>
      inline void
      AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
-	    doublereal dCoef,
-	    const sp_grad::SpGradientVectorHandler<T>& XCurr,
-	    const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
-	    enum sp_grad::SpFunctionCall func);
+            doublereal dCoef,
+            const sp_grad::SpGradientVectorHandler<T>& XCurr,
+            const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+            enum sp_grad::SpFunctionCall func);
 
+     virtual SubVectorHandler&
+     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
+
+     virtual VariableSubMatrixHandler&
+     InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                   const VectorHandler& XCurr) override;
+
+     template <typename T>
+     inline void
+     InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                   const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                   sp_grad::SpFunctionCall func);
 protected:
+     template <typename T>
+     inline void
+     UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                doublereal dCoef,
+                const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                enum sp_grad::SpFunctionCall func);
+
      virtual void
      AddInternalForces(sp_grad::SpColVector<doublereal, 6>& AzLoc, unsigned int iSez);
-     
+
      virtual void
      AddInternalForces(sp_grad::SpColVector<sp_grad::SpGradient, 6>& AzLoc, unsigned int iSez);
 
      virtual void
      AddInternalForces(sp_grad::SpColVector<sp_grad::GpGradProd, 6>& AzLoc, unsigned int iSez);
-        
+
      template <typename T>
      inline void
      AssReactionForce(sp_grad::SpGradientAssVec<T>& WorkVec,
                       const std::array<sp_grad::SpColVectorA<T, 3>, NUMSEZ>& p,
                       const std::array<sp_grad::SpColVectorA<T, 6>, NUMSEZ>& Az,
-                      const std::array<sp_grad::SpColVectorA<T, 3>, NUMNODES>& X) const;
-     
+                      const std::array<sp_grad::SpColVectorA<T, 3>, NUMNODES>& X,
+                      const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
+
      template <typename T>
-     static sp_grad::SpColVector<T, 3>
+     static void
      InterpState(const sp_grad::SpColVector<T, 3>& v1,
                  const sp_grad::SpColVector<T, 3>& v2,
                  const sp_grad::SpColVector<T, 3>& v3,
-                 Section Sec);
+                 sp_grad::SpColVector<T, 3>& p,
+                 Section Sec,
+                 const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
 
      template <typename T>
-     sp_grad::SpColVector<T, 3>
+     void
      InterpDeriv(const sp_grad::SpColVector<T, 3>& v1,
                  const sp_grad::SpColVector<T, 3>& v2,
                  const sp_grad::SpColVector<T, 3>& v3,
-                 Section Sec);
+                 sp_grad::SpColVector<T, 3>& g,
+                 Section Sec,
+                 const sp_grad::SpGradExpDofMapHelper<T>& oDofMap);
 
      inline void
      UpdateState(const std::array<sp_grad::SpMatrixA<doublereal, 3, 3>, NUMSEZ>& R,
@@ -147,7 +173,7 @@ protected:
                  const std::array<sp_grad::SpColVectorA<sp_grad::GpGradProd, 6>, NUMSEZ>& DefLoc,
                  const std::array<sp_grad::SpColVectorA<sp_grad::GpGradProd, 6>, NUMSEZ>& Az,
                  const std::array<sp_grad::SpColVectorA<sp_grad::GpGradProd, 6>, NUMSEZ>& AzLoc) {}
-     
+
 protected:
      const std::array<const StructNodeAd*, NUMNODES> pNode;
 };
@@ -170,15 +196,15 @@ public:
                         const ConstitutiveLaw6D* pDII,
                         OrientationDescription ood,
                         flag fOut);
-     
+
      virtual ~ViscoElasticBeamAd();
-     
+
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
             const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr) override;
-     
+
      virtual VariableSubMatrixHandler&
      AssJac(VariableSubMatrixHandler& WorkMat,
             doublereal dCoef,
@@ -196,12 +222,31 @@ public:
      template <typename T>
      inline void
      AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
-	    doublereal dCoef,
-	    const sp_grad::SpGradientVectorHandler<T>& XCurr,
-	    const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
-	    enum sp_grad::SpFunctionCall func);
-     
+            doublereal dCoef,
+            const sp_grad::SpGradientVectorHandler<T>& XCurr,
+            const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+            enum sp_grad::SpFunctionCall func);
+
+     virtual SubVectorHandler&
+     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
+
+     virtual VariableSubMatrixHandler&
+     InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                   const VectorHandler& XCurr) override;
+
+     template <typename T>
+     inline void
+     InitialAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                   const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                   sp_grad::SpFunctionCall func);
 protected:
+     template <typename T>
+     inline void
+     UnivAssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                doublereal dCoef,
+                const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                enum sp_grad::SpFunctionCall func);
+
      inline void
      UpdateState(const std::array<sp_grad::SpMatrixA<doublereal, 3, 3>, NUMSEZ>& R,
                  const std::array<sp_grad::SpColVectorA<doublereal, 3>, NUMSEZ>& p,

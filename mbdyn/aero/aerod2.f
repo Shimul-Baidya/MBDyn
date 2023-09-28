@@ -2,10 +2,10 @@ C $Header$
 C MBDyn (C) is a multibody analysis code. 
 C http://www.mbdyn.org
 C 
-C Copyright (C) 1996-2017
+C Copyright (C) 1996-2023
 C 
-C Pierangelo Masarati	<masarati@aero.polimi.it>
-C Paolo Mantegazza	<mantegazza@aero.polimi.it>
+C Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+C Paolo Mantegazza	<paolo.mantegazza@polimi.it>
 C 
 C Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 C via La Masa, 34 - 20156 Milano, Italy
@@ -993,7 +993,7 @@ C
       INTEGER*4 NRDB
       REAL*8 A,B,C,D
       
-      DIMENSION A(3,3),B(NRDB,1),C(3,3),D(3,3)
+      DIMENSION A(3,3),B(NRDB,*),C(3,3),D(3,3)
 
       INTEGER*4 I, K, L
       
@@ -1444,7 +1444,7 @@ C=    COMPILER (LINK=IBJ$)
       INTEGER*4 NR,N
       REAL*8 A,B,PERM
       
-      DIMENSION A(NR,1),B(1),PERM(1)
+      DIMENSION A(NR,*),B(*),PERM(*)
 
       REAL*8 X,DP
       INTEGER*4 I,K,IM1,INF
@@ -1597,7 +1597,7 @@ C
 
       INTEGER*4 NRA, NCA, NCC, IGO, I, K, L
       REAL*8 D
-      DIMENSION A(NRDA,1),B(NRDB,1),C(NRDC,1),D(3,3)
+      DIMENSION A(NRDA,*),B(NRDB,*),C(NRDC,*),D(3,3)
       
       NRA=3
       NCA=3
@@ -1668,7 +1668,7 @@ C*************************          POLCOE           ********************
 
       IMPLICIT NONE
       
-      REAL*8 X(1),Y(1),COF(1)
+      REAL*8 X(*),Y(*),COF(*)
       INTEGER*4 N
 C
       REAL*8 PHI,B,FF,S(10)

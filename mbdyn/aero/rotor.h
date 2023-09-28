@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -222,6 +222,7 @@ public:
 
 class NoRotor : virtual public Elem, public Rotor {
 protected:
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -272,6 +273,7 @@ public:
 
 class UniformRotor : virtual public Elem, public Rotor {
 protected:
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 	   	const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -408,6 +410,7 @@ public:
 protected:
 	Type gtype;
 
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -458,6 +461,9 @@ public:
 		return InducedVelocity::GLAUERT;
 	};
 
+	GlauertRotor::Type GetGlauertRotorType(void) const { return gtype; };
+	const char *GetGlauertRotorDesc(void) const;
+
 	// Somma alla trazione il contributo di un elemento
 	virtual void
 	AddForce(const Elem *pEl, const StructNode *pNode, const Vec3& F, const Vec3& M, const Vec3& X);
@@ -475,6 +481,7 @@ public:
 
 class ManglerRotor : virtual public Elem, public Rotor {
 protected:
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -566,6 +573,7 @@ protected:
 	doublereal dL31;
 	doublereal dL33;
 
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -698,6 +706,7 @@ protected:
 	doublereal dL31;
 	doublereal dL33;
 
+	using Rotor::Init;
 	virtual void Init(const StructNode* pCraft,
 		const Mat3x3& rrot,
 		const StructNode* pRotor,
@@ -714,6 +723,12 @@ protected:
 		const doublereal& dVSineTmp,
 		const doublereal& dVCosineTmp,
 		flag fOut);
+
+#ifdef USE_NETCDF
+	MBDynNcVar Var_dVConst;		// Constant inflow state
+	MBDynNcVar Var_dVSine;		// Sine inflow state (lateral) 
+	MBDynNcVar Var_dVCosine;	// Cosine inflow state (longitudinal)
+#endif // USE_NETCDF
 
 public:
 	PetersHeRotor(unsigned int uLabel, const DofOwner* pDO);
@@ -744,6 +759,7 @@ public:
 
 	// output; si assume che ogni tipo di elemento sappia,
 	// attraverso l'OutputHandler, dove scrivere il proprio output
+	virtual void OutputPrepare(OutputHandler& OH);
 	virtual void Output(OutputHandler& OH) const;
 
 	// Dimensioni del workspace

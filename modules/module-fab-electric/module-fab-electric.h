@@ -3,9 +3,9 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -44,7 +44,9 @@ private:
    doublereal i_curr;
    doublereal Voltage1;
    doublereal Voltage2;
-
+#ifdef USE_NETCDF
+   MBDynNcVar Var_di_curr;
+#endif // USE_NETCDF
 public:
 	Resistor(unsigned uLabel, const DofOwner *pDO,
 		DataManager* pDM, MBDynParser& HP);
@@ -80,10 +82,8 @@ public:
 	DofOrder::Order GetDofType(unsigned int i) const;
    void AfterConvergence(const VectorHandler& X, const VectorHandler& XP);
 
+   virtual void OutputPrepare(OutputHandler& OH);
 };
-
-
-
 
 class Capacitor
 : virtual public Elem, public UserDefinedElem {
@@ -94,7 +94,9 @@ private:
    doublereal i_curr;
    doublereal Voltage1;
    doublereal Voltage2;
-
+#ifdef USE_NETCDF
+   MBDynNcVar Var_di_curr;
+#endif // USE_NETCDF
 public:
 	Capacitor(unsigned uLabel, const DofOwner *pDO,
 		DataManager* pDM, MBDynParser& HP);
@@ -130,6 +132,7 @@ public:
 	DofOrder::Order GetDofType(unsigned int i) const;
    void AfterConvergence(const VectorHandler& X, const VectorHandler& XP);
 
+   virtual void OutputPrepare(OutputHandler& OH);
 };
 
 
@@ -143,6 +146,9 @@ private:
    doublereal i_curr;
    doublereal Voltage1;
    doublereal Voltage2;
+#ifdef USE_NETCDF
+   MBDynNcVar Var_di_curr;
+#endif // USE_NETCDF
 
 public:
 	Inductor(unsigned uLabel, const DofOwner *pDO,
@@ -179,6 +185,7 @@ public:
 	DofOrder::Order GetDofType(unsigned int i) const;
    void AfterConvergence(const VectorHandler& X, const VectorHandler& XP);
 
+   virtual void OutputPrepare(OutputHandler& OH);
 };
 
 

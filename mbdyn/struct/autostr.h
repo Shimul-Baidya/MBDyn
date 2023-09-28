@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -195,6 +195,9 @@ protected:
 	mutable Vec3 S;
 	mutable Mat3x3 J;
 
+private:
+	using AutomaticStructDispElem::ComputeAccelerations;
+protected:
 	virtual void ComputeAccelerations(Vec3& XPP, Vec3& WP) const;
 
 public:
@@ -210,6 +213,7 @@ public:
 	/* Scrive il contributo dell'elemento al file di restart */
 	virtual std::ostream& Restart(std::ostream& out) const;
 
+	using AutomaticStructDispElem::AddInertia;
 	virtual void AddInertia(const doublereal& dm, const Vec3& dS,
 		const Mat3x3& dJ);
 

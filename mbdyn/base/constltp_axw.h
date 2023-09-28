@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -79,6 +79,7 @@ public:
 		return m_pCL->Restart(out);
 	};
 
+	using ConstitutiveLawAd<Vec3, Mat3x3>::Update;
 	virtual void
 	Update(const Vec3& Eps, const Vec3& EpsPrime = mb_zero<Vec3>()) {
 		ConstitutiveLaw<Vec3, Mat3x3>::Epsilon = Eps;

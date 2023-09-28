@@ -3,12 +3,12 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 2003-2017
+ * Copyright (C) 2003-2023
  * 
  * This code is a partial merge of HmFe and MBDyn.
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  * Marco Morandini  <morandini@aero.polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
@@ -58,12 +58,14 @@ public:
 
 	virtual ~CColMatrixHandler();
 
+	using MatrixHandler::operator=;
+
 	/* used by MultiThreadDataManager to duplicate the storage array
 	 * while preserving the CC indices */
         virtual CompactSparseMatrixHandler *Copy(void) const override;
 
 public:
-	doublereal & operator()(integer i_row, integer i_col) {
+	doublereal & operator()(integer i_row, integer i_col) override {
 		ASSERTMSGBREAK(i_row > 0 && i_row <= this->iGetNumRows(),
 				"Error in CColMatrixHandler::operator(), "
 				"row index out of range");
@@ -100,7 +102,7 @@ public:
 		throw MatrixHandler::ErrRebuildMatrix(MBDYN_EXCEPT_ARGS);
 	};
 
-	const doublereal& operator () (integer i_row, integer i_col) const {
+	const doublereal& operator () (integer i_row, integer i_col) const override {
 		ASSERTMSGBREAK(i_row > 0 && i_row <= this->iGetNumRows(),
 				"Error in CColMatrixHandler::operator(), "
 				"row index out of range");
@@ -135,10 +137,10 @@ public:
 		return ::Zero1;
 	};
 
-	void Resize(integer ir, integer ic);
+	void Resize(integer ir, integer ic) override;
 
 	/* Estrae una colonna da una matrice */
-	VectorHandler& GetCol(integer icol, VectorHandler& out) const;
+	VectorHandler& GetCol(integer icol, VectorHandler& out) const override;
 
         /* Moltiplica per uno scalare e somma a una matrice */
 	MatrixHandler& MulAndSumWithShift(MatrixHandler& out,

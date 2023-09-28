@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 2007-2017
+ * Copyright (C) 2007-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -1967,6 +1967,7 @@ ReadStructMappingExtForce(DataManager* pDM,
 	std::map<unsigned, bool> Got;
 
 	for (unsigned n = 0, p = 0; p < unsigned(nPoints); n++) {
+		(void) n; //silence set but not used warning
 		const StructDispNode *pNode = pDM->ReadNode<const StructDispNode, Node::STRUCTURAL>(HP);
 		unsigned uL(pNode->GetLabel());
 		if (Got[uL]) {

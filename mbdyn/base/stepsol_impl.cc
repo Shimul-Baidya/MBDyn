@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -31,7 +31,7 @@
 
  /*
   *
-  * Copyright (C) 2003-2017
+  * Copyright (C) 2003-2023
   * Giuseppe Quaranta	<quaranta@aero.polimi.it>
   *
   * classi che impementano l'integrazione al passo
@@ -125,7 +125,12 @@ ImplicitEulerIntegrator::SetCoef(doublereal dT,
 		doublereal dAlpha,
 		enum StepChange /* NewStep */)
 {
-	db0Differential = db0Algebraic = dT*dAlpha;
+        DEBUGCERR("ImplicitEulerIntegrator::SetCoef: dT = " << dT << "\n");
+        DEBUGCERR("ImplicitEulerIntegrator::SetCoef: dAlpha = " << dAlpha << "\n");
+
+        db0Differential = db0Algebraic = dT*dAlpha;
+
+        DEBUGCERR("ImplicitEulerIntegrator::SetCoef: db0Differential = " << db0Differential << "\n");
 }
 
 /* Nota: usa predizione lineare per le derivate (massimo ordine possibile) */

@@ -2,12 +2,12 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 2003-2020
+ * Copyright (C) 2003-2023
  *
  * This code is a partial merge of HmFe and MBDyn.
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  * Marco Morandini  <morandini@aero.polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
@@ -33,7 +33,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-	Copyright (C) 2020(-2022) all rights reserved.
+	Copyright (C) 2020(-2023) all rights reserved.
 
 	The copyright of this code is transferred
 	to Pierangelo Masarati and Paolo Mantegazza
@@ -82,16 +82,18 @@ public:
 #endif
      }
 
+     using MatrixHandler::operator=;
+
      virtual integer iGetNumRows() const override { return NCols; }
      virtual integer iGetNumCols() const override { return NCols; }
 
      virtual const doublereal&
-     operator () (const integer iRow, const integer iCol) const {
+     operator () (const integer iRow, const integer iCol) const override {
           return *pFindItem(iRow, iCol);
      }
 
      virtual doublereal&
-     operator () (const integer iRow, const integer iCol) {
+     operator () (const integer iRow, const integer iCol) override {
           return *pFindItem(iRow, iCol);
      }
 
@@ -248,7 +250,7 @@ public:
      virtual VectorHandler&
      MatVecMul_base(void (VectorHandler::*op)(integer iRow,
 					      const doublereal& dCoef),
-		    VectorHandler& out, const VectorHandler& in) const {
+		    VectorHandler& out, const VectorHandler& in) const override {
 	  ASSERT(in.iGetSize() == iGetNumCols());
 	  ASSERT(out.iGetSize() == iGetNumRows());
 
@@ -269,7 +271,7 @@ public:
      virtual VectorHandler&
      MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
 					       const doublereal& dCoef),
-		     VectorHandler& out, const VectorHandler& in) const {
+		     VectorHandler& out, const VectorHandler& in) const override {
 	  ASSERT(in.iGetSize() == iGetNumRows());
 	  ASSERT(out.iGetSize() == iGetNumCols());
 

@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -78,8 +78,8 @@
 struct LoadableCalls;
 class Solver;
 
+class FiniteDifferenceJacobianBase;
 #include "datamanforward.h"
-
 /* DataManager - begin */
 
 class DataManager : public SolutionDataManager, public SolverDiagnostics,
@@ -178,14 +178,14 @@ protected:
 
 	/* raw output stuff */
 	DriveCaller *pOutputMeter;
+        mutable bool bOutputNextStep; // Save the last positive result from pOutputMeter->dGet()
 	mutable integer iOutputCount;
 
 protected:
-	DriveCaller *pFDJacMeter;
+        FiniteDifferenceJacobianBase* pFDJac;
 
 public:
-	bool bFDJac(void) const;
-
+        void FDJacCheck(const NonlinearProblem* pNLP, const MatrixHandler* pJac);
 	/* specialized output stuff */
 public:
 	enum ResType {
@@ -223,6 +223,9 @@ protected:
 	MBDynNcVar Var_Eig_Idx;
 	MBDynNcVar Var_Eig_dVR;
 	MBDynNcVar Var_Eig_dVL;
+
+public:
+	inline netCDF::NcFile::FileFormat GetNetCDFFileFormat(void) const { return NetCDF_Format; }
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 #endif /* USE_NETCDF */

@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -31,7 +31,7 @@
 
 /*
   AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-  Copyright (C) 2015(-2022) all rights reserved.
+  Copyright (C) 2015(-2023) all rights reserved.
 
   The copyright of this code is transferred
   to Pierangelo Masarati and Paolo Mantegazza
@@ -67,6 +67,149 @@ using namespace std;
 #include <sp_matvecass.h>
 #include "module-uni_in_plane.h"
 
+template <typename StructNodeType>
+struct StructNodeTraits;
+
+template <>
+struct StructNodeTraits<StructNodeAd> {
+     typedef StructNodeAd StructNodeType1;
+
+     typedef sp_grad::SpColVectorA<doublereal, 3> StructNodeOffsetType1;
+
+     template <typename T>
+     struct ContactPointTraits {
+          typedef std::vector<T> ContactPointVecType;
+          static void
+          resize(ContactPointVecType& ContactPointVec, size_t N) {
+               ContactPointVec.resize(N);
+          }
+     };
+
+     template <typename T>
+     struct RotationMatrixTraits {
+          typedef sp_grad::SpMatrixA<T, 3, 3> RotationMatrixType1;
+          static void
+          GetRCurr(const StructNodeAd* pNode1,
+                   RotationMatrixType1& R1,
+                   doublereal dCoef,
+                   sp_grad::SpFunctionCall func) {
+               pNode1->GetRCurr(R1, dCoef, func);
+          }
+     };
+
+     template <typename T>
+     struct AngularVelocityTraits {
+          typedef sp_grad::SpColVectorA<T, 3> AngularVelocityType1;
+
+          static void
+          GetWCurr(const StructNodeAd* pNode1,
+                   AngularVelocityType1& omega1,
+                   doublereal dCoef,
+                   sp_grad::SpFunctionCall func) {
+               pNode1->GetWCurr(omega1, dCoef, func);
+          }
+
+          template <typename Tomega1, typename TR1_o1>
+          static auto
+          Cross(const Tomega1& omega1, const TR1_o1& R1_o1)->decltype(sp_grad::Cross(omega1, R1_o1)) {
+               return sp_grad::Cross(omega1, R1_o1);
+          }
+     };
+
+     template <typename T>
+     struct MomentTraits {
+          typedef sp_grad::SpColVectorA<T, 3> MomentType1;
+
+          template <typename TR1_o1, typename TF1>
+          static auto
+          Cross(const TR1_o1& R1_o1, const TF1& F1)->decltype(sp_grad::Cross(R1_o1, F1)) {
+               return sp_grad::Cross(R1_o1, F1);
+          }
+     };
+
+     template <typename T>
+     static void
+     AddMomentNode1(sp_grad::SpGradientAssVec<T>& WorkVec,
+                    const integer iFirstMomentumIndexNode1,
+                    const sp_grad::SpColVector<T, 3>& M1) {
+          WorkVec.AddItem(iFirstMomentumIndexNode1 + 4, M1);
+     }
+};
+
+template <>
+struct StructNodeTraits<StructDispNodeAd> {
+     typedef StructDispNodeAd StructNodeType1;
+
+     struct StructNodeOffsetType1 {
+          StructNodeOffsetType1(const Vec3&) {
+          }
+
+          operator const Vec3&() const {
+               return ::Zero3;
+          }
+     };
+
+     template <typename T>
+     struct ContactPointTraits {
+          typedef std::array<T, 1> ContactPointVecType;
+          static void
+          resize(ContactPointVecType& ContactPointVec, size_t N) {
+               ASSERT(ContactPointVec.size() == N);
+          }
+     };
+
+     template <typename T>
+     struct RotationMatrixTraits {
+          struct RotationMatrixType1 {
+               const Vec3& operator*(const StructNodeOffsetType1& o1) const {
+                    return ::Zero3;
+               }
+          };
+
+          static void
+          GetRCurr(const StructDispNodeAd* pNode1,
+                   RotationMatrixType1& R1,
+                   doublereal dCoef,
+                   sp_grad::SpFunctionCall func) {
+          }
+     };
+
+     template <typename T>
+     struct AngularVelocityTraits {
+          struct AngularVelocityType1 {};
+
+          static void
+          GetWCurr(const StructDispNodeAd* pNode1,
+                   AngularVelocityType1& omega1,
+                   doublereal dCoef,
+                   sp_grad::SpFunctionCall func) {
+          }
+
+          static const Vec3&
+          Cross(const AngularVelocityType1& omega1,
+                const Vec3& R1_o1) {
+               return ::Zero3;
+          }
+     };
+
+     template <typename T>
+     struct MomentTraits {
+          typedef sp_grad::SpColVectorA<doublereal, 3> MomentType1;
+          static const Vec3&
+          Cross(const Vec3& R1_o1, const sp_grad::SpColVector<T, 3>& F1) {
+               return ::Zero3;
+          }
+     };
+
+     template <typename T>
+     static void
+     AddMomentNode1(sp_grad::SpGradientAssVec<T>& WorkVec,
+                    const integer iFirstMomentumIndexNode1,
+                    const sp_grad::SpColVector<doublereal, 3>& M1) {
+     }
+};
+
+template <typename StructNodeType1>
 class UniInPlaneFriction: virtual public Elem, public UserDefinedElem
 {
 public:
@@ -129,7 +272,7 @@ private:
 
      struct ContactPoint
      {
-          inline explicit ContactPoint(const Vec3& offset=Zero3, doublereal s=std::numeric_limits<doublereal>::max());
+          inline explicit ContactPoint(const Vec3& offset = Zero3, doublereal s = std::numeric_limits<doublereal>::max());
 
           inline void AfterConvergence() {
                lambdaPrev = lambda;
@@ -182,7 +325,7 @@ private:
                                      const sp_grad::SpColVector<doublereal, 2>& z,
                                      const sp_grad::SpColVector<doublereal, 2>& zP);
 
-          sp_grad::SpColVectorA<doublereal, 3> o1;
+          typename StructNodeTraits<StructNodeType1>::StructNodeOffsetType1 o1;
           doublereal s;
           doublereal lambda, lambdaPrev, dXn;
           sp_grad::SpColVectorA<doublereal, 2> U, tau, z, zP;
@@ -224,12 +367,10 @@ private:
      } rgPrivData[iNumPrivData];
 
 private:
-     typedef std::vector<ContactPoint> ContactPointVec_t;
-     typedef ContactPointVec_t::iterator ContactPointIter_t;
-     typedef ContactPointVec_t::const_iterator const_ContactPointIter_t;
+     typedef typename StructNodeTraits<StructNodeType1>::template ContactPointTraits<ContactPoint>::ContactPointVecType ContactPointVec_t;
 
      const DataManager* const pDM;
-     const StructNodeAd* pNode1;
+     const typename StructNodeTraits<StructNodeType1>::StructNodeType1* pNode1;
      ContactPointVec_t ContactPoints1;
      const StructNodeAd* pNode2;
      sp_grad::SpColVectorA<doublereal, 3> o2;
@@ -243,7 +384,8 @@ private:
      bool bEnableMCP;
 };
 
-UniInPlaneFriction::ContactPoint::ContactPoint(const Vec3& offset, doublereal s)
+template <typename StructNodeType1>
+UniInPlaneFriction<StructNodeType1>::ContactPoint::ContactPoint(const Vec3& offset, doublereal s)
      :o1(offset),
       s(s),
       lambda(0.),
@@ -257,7 +399,8 @@ UniInPlaneFriction::ContactPoint::ContactPoint(const Vec3& offset, doublereal s)
 
 }
 
-void UniInPlaneFriction::ContactPoint::UpdateReaction(
+template <typename StructNodeType1>
+void UniInPlaneFriction<StructNodeType1>::ContactPoint::UpdateReaction(
      const sp_grad::SpColVector<doublereal, 3>& F1,
      const sp_grad::SpColVector<doublereal, 3>& M1,
      const sp_grad::SpColVector<doublereal, 3>& F2,
@@ -273,10 +416,11 @@ void UniInPlaneFriction::ContactPoint::UpdateReaction(
      this->lambda = lambda;
 }
 
-void UniInPlaneFriction::ContactPoint::UpdateFriction(const sp_grad::SpColVector<doublereal, 2>& U,
-                                                      const sp_grad::SpColVector<doublereal, 2>& tau,
-                                                      const sp_grad::SpColVector<doublereal, 2>& z,
-                                                      const sp_grad::SpColVector<doublereal, 2>& zP)
+template <typename StructNodeType1>
+void UniInPlaneFriction<StructNodeType1>::ContactPoint::UpdateFriction(const sp_grad::SpColVector<doublereal, 2>& U,
+                                                                       const sp_grad::SpColVector<doublereal, 2>& tau,
+                                                                       const sp_grad::SpColVector<doublereal, 2>& z,
+                                                                       const sp_grad::SpColVector<doublereal, 2>& zP)
 {
      this->U = U;
      this->tau = tau;
@@ -284,7 +428,8 @@ void UniInPlaneFriction::ContactPoint::UpdateFriction(const sp_grad::SpColVector
      this->zP = zP;
 }
 
-const UniInPlaneFriction::PrivateData UniInPlaneFriction::rgPrivData[iNumPrivData] =
+template <typename StructNodeType1>
+const typename UniInPlaneFriction<StructNodeType1>::PrivateData UniInPlaneFriction<StructNodeType1>::rgPrivData[iNumPrivData] =
 {
      {"lambda"},
      {"dXn"},
@@ -310,7 +455,8 @@ const UniInPlaneFriction::PrivateData UniInPlaneFriction::rgPrivData[iNumPrivDat
      {"M2z"}
 };
 
-UniInPlaneFriction::UniInPlaneFriction(
+template <typename StructNodeType1>
+UniInPlaneFriction<StructNodeType1>::UniInPlaneFriction(
      unsigned uLabel, const DofOwner *pDO,
      DataManager* pDM, MBDynParser& HP)
      :       Elem(uLabel, flag(0)),
@@ -367,7 +513,7 @@ UniInPlaneFriction::UniInPlaneFriction(
           throw ErrGeneric(MBDYN_EXCEPT_ARGS);
      }
 
-     pNode1 = pDM->ReadNode<StructNodeAd, Node::STRUCTURAL>(HP);
+     pNode1 = pDM->ReadNode<StructNodeType1, Node::STRUCTURAL>(HP);
 
      if (!pNode1) {
           silent_cerr("unilateral in plane(" << GetLabel() << "): structural node expected at line " << HP.GetLineData() << std::endl);
@@ -376,9 +522,10 @@ UniInPlaneFriction::UniInPlaneFriction(
 
      if ( HP.IsKeyWord("offset") )
      {
-          const integer N = HP.GetInt();
+          const size_t N = HP.GetInt();
+          const size_t Nmax = ContactPoints1.max_size();
 
-          if (N < 1)
+          if (N < 1u || N > Nmax)
           {
                silent_cerr("unilateral in plan(" << GetLabel()
                            << "): number of offsets must be greater than zero at line "
@@ -388,24 +535,23 @@ UniInPlaneFriction::UniInPlaneFriction(
 
           const ReferenceFrame refNode1(pNode1);
 
-          ContactPoints1.reserve(N);
+          StructNodeTraits<StructNodeType1>::template ContactPointTraits<ContactPoint>::resize(ContactPoints1, N);
 
-          for (int i = 0; i < N; ++i)
+          for (size_t i = 0u; i < N; ++i)
           {
-               const Vec3 o1 = HP.GetPosRel(refNode1);
-               const doublereal s = HP.IsKeyWord("stiffness") ? HP.GetReal() : std::numeric_limits<doublereal>::max();
-               ContactPoints1.push_back(ContactPoint(o1, s));
+               ContactPoints1[i].o1 = HP.GetPosRel(refNode1);
+               ContactPoints1[i].s = HP.IsKeyWord("stiffness") ? HP.GetReal() : std::numeric_limits<doublereal>::max();
           }
      }
      else
      {
-          ContactPoints1.push_back(ContactPoint(Zero3));
+          StructNodeTraits<StructNodeType1>::template ContactPointTraits<ContactPoint>::resize(ContactPoints1, 1);
      }
 
      if (HP.IsKeyWord("enable" "mcp")) {
           bEnableMCP = HP.GetYesNoOrBool();
      }
-     
+
      if (bEnableMCP) {
           epsilon = 0.;
      } else {
@@ -565,7 +711,7 @@ UniInPlaneFriction::UniInPlaneFriction(
 
      std::ostream& out = pDM->GetLogFile();
 
-     for ( const_ContactPointIter_t it = ContactPoints1.begin(); it != ContactPoints1.end(); ++it )
+     for (auto it = ContactPoints1.begin(); it != ContactPoints1.end(); ++it)
      {
           // FIXME: support for this element to be added to mbdyn2easyanim.awk
           out << "totaljoint: " << GetLabel() << "." << it - ContactPoints1.begin()
@@ -581,17 +727,20 @@ UniInPlaneFriction::UniInPlaneFriction(
      }
 }
 
-UniInPlaneFriction::~UniInPlaneFriction(void)
+template <typename StructNodeType1>
+UniInPlaneFriction<StructNodeType1>::~UniInPlaneFriction(void)
 {
      // destroy private data
 }
 
-unsigned int UniInPlaneFriction::iGetNumDof(void) const
+template <typename StructNodeType1>
+unsigned int UniInPlaneFriction<StructNodeType1>::iGetNumDof(void) const
 {
      return ContactPoints1.size() * (1 + 2 * bEnableFriction);
 }
 
-DofOrder::Order UniInPlaneFriction::GetDofType(unsigned int i) const
+template <typename StructNodeType1>
+DofOrder::Order UniInPlaneFriction<StructNodeType1>::GetDofType(unsigned int i) const
 {
      const int iNumDof = 1 + 2 * bEnableFriction;
 
@@ -610,12 +759,14 @@ DofOrder::Order UniInPlaneFriction::GetDofType(unsigned int i) const
      }
 }
 
-DofOrder::Order UniInPlaneFriction::GetEqType(unsigned int i) const
+template <typename StructNodeType1>
+DofOrder::Order UniInPlaneFriction<StructNodeType1>::GetEqType(unsigned int i) const
 {
      return GetDofType(i);
 }
 
-DofOrder::Equality UniInPlaneFriction::GetEqualityType(unsigned int i) const
+template <typename StructNodeType1>
+DofOrder::Equality UniInPlaneFriction<StructNodeType1>::GetEqualityType(unsigned int i) const
 {
      if (!bEnableMCP) {
           return DofOrder::EQUALITY;
@@ -629,7 +780,8 @@ DofOrder::Equality UniInPlaneFriction::GetEqualityType(unsigned int i) const
      }
 }
 
-std::ostream& UniInPlaneFriction::DescribeDof(std::ostream& out, const char *prefix, bool bInitial) const
+template <typename StructNodeType1>
+std::ostream& UniInPlaneFriction<StructNodeType1>::DescribeDof(std::ostream& out, const char *prefix, bool bInitial) const
 {
      integer iIndex = iGetFirstIndex();
 
@@ -651,7 +803,8 @@ std::ostream& UniInPlaneFriction::DescribeDof(std::ostream& out, const char *pre
      return out;
 }
 
-std::ostream& UniInPlaneFriction::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
+template <typename StructNodeType1>
+std::ostream& UniInPlaneFriction<StructNodeType1>::DescribeEq(std::ostream& out, const char *prefix, bool bInitial) const
 {
      integer iIndex = iGetFirstIndex();
 
@@ -673,12 +826,14 @@ std::ostream& UniInPlaneFriction::DescribeEq(std::ostream& out, const char *pref
      return out;
 }
 
-unsigned int UniInPlaneFriction::iGetNumPrivData(void) const
+template <typename StructNodeType1>
+unsigned int UniInPlaneFriction<StructNodeType1>::iGetNumPrivData(void) const
 {
      return iNumPrivDataGlobal + ContactPoints1.size() * iNumPrivData;
 }
 
-unsigned int UniInPlaneFriction::iGetPrivDataIdx(const char *s) const
+template <typename StructNodeType1>
+unsigned int UniInPlaneFriction<StructNodeType1>::iGetPrivDataIdx(const char *s) const
 {
      if (0 == strcmp(s, "max" "dt"))
      {
@@ -715,13 +870,14 @@ error_return:
      return 0;
 }
 
-doublereal UniInPlaneFriction::dGetPrivData(unsigned int i) const
+template <typename StructNodeType1>
+doublereal UniInPlaneFriction<StructNodeType1>::dGetPrivData(unsigned int i) const
 {
      if (i == 1u)
      {
           doublereal dtmax = std::numeric_limits<doublereal>::max();
 
-          for (const_ContactPointIter_t j = ContactPoints1.begin(); j != ContactPoints1.end(); ++j)
+          for (auto j = ContactPoints1.begin(); j != ContactPoints1.end(); ++j)
           {
                const doublereal dF = j->lambda - j->lambdaPrev;
 
@@ -794,8 +950,9 @@ doublereal UniInPlaneFriction::dGetPrivData(unsigned int i) const
      }
 }
 
+template <typename StructNodeType1>
 void
-UniInPlaneFriction::Output(OutputHandler& OH) const
+UniInPlaneFriction<StructNodeType1>::Output(OutputHandler& OH) const
 {
      if ( bToBeOutput() )
      {
@@ -805,7 +962,7 @@ UniInPlaneFriction::Output(OutputHandler& OH) const
 
                os << std::setw(8) << GetLabel();
 
-               for (const_ContactPointIter_t it = ContactPoints1.begin(); it != ContactPoints1.end(); ++it)
+               for (auto it = ContactPoints1.begin(); it != ContactPoints1.end(); ++it)
                     os << " " << it->dXn << " " << it->F1 << " " << it->M1 << " " << it->F2 << " " << it->M2;
 
                os << std::endl;
@@ -813,18 +970,20 @@ UniInPlaneFriction::Output(OutputHandler& OH) const
      }
 }
 
+template <typename StructNodeType1>
 void
-UniInPlaneFriction::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
+UniInPlaneFriction<StructNodeType1>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 {
      *piNumRows = ContactPoints1.size() * iNumDofGradient;
      *piNumCols = 0;
 }
 
+template <typename StructNodeType1>
 VariableSubMatrixHandler&
-UniInPlaneFriction::AssJac(VariableSubMatrixHandler& WorkMatVar,
-                           doublereal dCoef,
-                           const VectorHandler& XCurr,
-                           const VectorHandler& XPrimeCurr)
+UniInPlaneFriction<StructNodeType1>::AssJac(VariableSubMatrixHandler& WorkMatVar,
+                                            doublereal dCoef,
+                                            const VectorHandler& XCurr,
+                                            const VectorHandler& XPrimeCurr)
 {
      using namespace sp_grad;
 
@@ -833,13 +992,14 @@ UniInPlaneFriction::AssJac(VariableSubMatrixHandler& WorkMatVar,
      return WorkMatVar;
 }
 
+template <typename StructNodeType1>
 void
-UniInPlaneFriction::AssJac(VectorHandler& JacY,
-                           const VectorHandler& Y,
-                           doublereal dCoef,
-                           const VectorHandler& XCurr,
-                           const VectorHandler& XPrimeCurr,
-                           VariableSubMatrixHandler& WorkMat)
+UniInPlaneFriction<StructNodeType1>::AssJac(VectorHandler& JacY,
+                                            const VectorHandler& Y,
+                                            doublereal dCoef,
+                                            const VectorHandler& XCurr,
+                                            const VectorHandler& XPrimeCurr,
+                                            VariableSubMatrixHandler& WorkMat)
 {
      using namespace sp_grad;
 
@@ -852,11 +1012,12 @@ UniInPlaneFriction::AssJac(VectorHandler& JacY,
                                           SpFunctionCall::REGULAR_JAC);
 }
 
+template <typename StructNodeType1>
 SubVectorHandler&
-UniInPlaneFriction::AssRes(SubVectorHandler& WorkVec,
-                           doublereal dCoef,
-                           const VectorHandler& XCurr,
-                           const VectorHandler& XPrimeCurr)
+UniInPlaneFriction<StructNodeType1>::AssRes(SubVectorHandler& WorkVec,
+                                            doublereal dCoef,
+                                            const VectorHandler& XCurr,
+                                            const VectorHandler& XPrimeCurr)
 {
      using namespace sp_grad;
 
@@ -867,13 +1028,14 @@ UniInPlaneFriction::AssRes(SubVectorHandler& WorkVec,
      return WorkVec;
 }
 
+template <typename StructNodeType1>
 template <typename T>
 inline void
-UniInPlaneFriction::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
-                           doublereal dCoef,
-                           const sp_grad::SpGradientVectorHandler<T>& XCurr,
-                           const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
-                           enum sp_grad::SpFunctionCall func)
+UniInPlaneFriction<StructNodeType1>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                            doublereal dCoef,
+                                            const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                            const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+                                            enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
 
@@ -884,8 +1046,12 @@ UniInPlaneFriction::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      const integer N = ContactPoints1.size();
      const doublereal alpha = m_oInitialAssembly.dGet();
 
+     typedef typename StructNodeTraits<StructNodeType1>::template RotationMatrixTraits<T> RotationMatrixTraits1;
+     typedef typename RotationMatrixTraits1::RotationMatrixType1 RotationMatrixType1;
+
      SpColVectorA<T, 3> X1, X2;
-     SpMatrixA<T, 3, 3> R1, R2;
+     RotationMatrixType1 R1;
+     SpMatrixA<T, 3, 3> R2;
      SpColVectorA<T, 2> z, zP, tau;
      T lambda, kappa;
 
@@ -894,13 +1060,13 @@ UniInPlaneFriction::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
           ContactPoint& cont = ContactPoints1[i - 1];
 
           pNode1->GetXCurr(X1, dCoef, func);
-          pNode1->GetRCurr(R1, dCoef, func);
+          RotationMatrixTraits1::GetRCurr(pNode1, R1, dCoef, func);
           pNode2->GetXCurr(X2, dCoef, func);
           pNode2->GetRCurr(R2, dCoef, func);
 
           XCurr.dGetCoef(++iDofIndex, lambda, 1.);
 
-          const SpColVector<doublereal, 3>& o1 = cont.o1;
+          const auto& o1 = cont.o1;
           const SpColVector<T, 3> dX = X1 + R1 * o1 - X2 - R2 * o2;
           const T dXn = Dot(Rp.GetCol(3), Transpose(R2) * dX) - m_oOffset.dGet() + lambda / cont.s;
 
@@ -923,14 +1089,18 @@ UniInPlaneFriction::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
           if (bEnableFriction)
           {
-               SpColVectorA<T, 3> X1P, X2P, omega1, omega2;
+               typedef typename StructNodeTraits<StructNodeType1>::template AngularVelocityTraits<T> AngularVelocityTraits;
+               typedef typename AngularVelocityTraits::AngularVelocityType1 AngularVelocityType1;
+
+               SpColVectorA<T, 3> X1P, X2P, omega2;
+               AngularVelocityType1 omega1;
 
                pNode1->GetVCurr(X1P, dCoef, func);
-               pNode1->GetWCurr(omega1, dCoef, func);
+               AngularVelocityTraits::GetWCurr(pNode1, omega1, dCoef, func);
                pNode2->GetVCurr(X2P, dCoef, func);
                pNode2->GetWCurr(omega2, dCoef, func);
 
-               const SpColVector<T, 3> dXP = X1P + Cross(omega1, R1 * o1) - X2P - Cross(omega2, R2 * o2);
+               const SpColVector<T, 3> dXP = X1P + AngularVelocityTraits::Cross(omega1, R1 * o1) - X2P - Cross(omega2, R2 * o2);
                const SpColVector<T, 2> U = Transpose(SubMatrix<1, 1, 3, 1, 1, 2>(Rp)) * (Transpose(R2) * (dXP + Cross(dX, omega2)));
                const T norm_U2 = Dot(U, U);
 
@@ -983,13 +1153,16 @@ UniInPlaneFriction::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
 
           F1p *= alpha;
 
+          typedef typename StructNodeTraits<StructNodeType1>::template MomentTraits<T> MomentTraits;
+          typedef typename MomentTraits::MomentType1 MomentType1;
+
           const SpColVector<T, 3> F1 = R2 * F1p;
-          const SpColVector<T, 3> M1 = Cross(R1 * o1, F1);
+          const MomentType1 M1 = MomentTraits::Cross(R1 * o1, F1);
           const SpColVector<T, 3> F2 = -F1;
           const SpColVector<T, 3> M2 = Cross(X1 + R1 * o1 - X2, F2);
 
           WorkVec.AddItem(iFirstMomentumIndexNode1 + 1, F1);
-          WorkVec.AddItem(iFirstMomentumIndexNode1 + 4, M1);
+          StructNodeTraits<StructNodeType1>::AddMomentNode1(WorkVec, iFirstMomentumIndexNode1, M1);
           WorkVec.AddItem(iFirstMomentumIndexNode2 + 1, F2);
           WorkVec.AddItem(iFirstMomentumIndexNode2 + 4, M2);
 
@@ -997,35 +1170,39 @@ UniInPlaneFriction::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
      }
 }
 
-void UniInPlaneFriction::AfterConvergence(const VectorHandler& X,
-                                          const VectorHandler& XP)
+template <typename StructNodeType1>
+void UniInPlaneFriction<StructNodeType1>::AfterConvergence(const VectorHandler& X,
+                                                           const VectorHandler& XP)
 {
      tPrev = tCurr;
 
-     for (ContactPointIter_t i = ContactPoints1.begin(); i != ContactPoints1.end(); ++i)
+     for (auto i = ContactPoints1.begin(); i != ContactPoints1.end(); ++i)
      {
           i->AfterConvergence();
      }
 }
 
+template <typename StructNodeType1>
 int
-UniInPlaneFriction::iGetNumConnectedNodes(void) const
+UniInPlaneFriction<StructNodeType1>::iGetNumConnectedNodes(void) const
 {
      return 2;
 }
 
+template <typename StructNodeType1>
 void
-UniInPlaneFriction::GetConnectedNodes(std::vector<const Node *>& connectedNodes) const
+UniInPlaneFriction<StructNodeType1>::GetConnectedNodes(std::vector<const Node *>& connectedNodes) const
 {
      connectedNodes.resize(iGetNumConnectedNodes());
      connectedNodes[0] = pNode1;
      connectedNodes[1] = pNode2;
 }
 
+template <typename StructNodeType1>
 void
-UniInPlaneFriction::SetValue(DataManager *pDM,
-                             VectorHandler& X, VectorHandler& XP,
-                             SimulationEntity::Hints *ph)
+UniInPlaneFriction<StructNodeType1>::SetValue(DataManager *pDM,
+                                              VectorHandler& X, VectorHandler& XP,
+                                              SimulationEntity::Hints *ph)
 {
      const int N = ContactPoints1.size();
 
@@ -1046,20 +1223,23 @@ UniInPlaneFriction::SetValue(DataManager *pDM,
      }
 }
 
+template <typename StructNodeType1>
 std::ostream&
-UniInPlaneFriction::Restart(std::ostream& out) const
+UniInPlaneFriction<StructNodeType1>::Restart(std::ostream& out) const
 {
      return out;
 }
 
+template <typename StructNodeType1>
 unsigned int
-UniInPlaneFriction::iGetInitialNumDof(void) const
+UniInPlaneFriction<StructNodeType1>::iGetInitialNumDof(void) const
 {
      return 0;
 }
 
+template <typename StructNodeType1>
 void
-UniInPlaneFriction::InitialWorkSpaceDim(
+UniInPlaneFriction<StructNodeType1>::InitialWorkSpaceDim(
      integer* piNumRows,
      integer* piNumCols) const
 {
@@ -1067,8 +1247,9 @@ UniInPlaneFriction::InitialWorkSpaceDim(
      *piNumCols = 0;
 }
 
+template <typename StructNodeType1>
 VariableSubMatrixHandler&
-UniInPlaneFriction::InitialAssJac(
+UniInPlaneFriction<StructNodeType1>::InitialAssJac(
      VariableSubMatrixHandler& WorkMat,
      const VectorHandler& XCurr)
 {
@@ -1077,8 +1258,9 @@ UniInPlaneFriction::InitialAssJac(
      return WorkMat;
 }
 
+template <typename StructNodeType1>
 SubVectorHandler&
-UniInPlaneFriction::InitialAssRes(
+UniInPlaneFriction<StructNodeType1>::InitialAssRes(
      SubVectorHandler& WorkVec,
      const VectorHandler& XCurr)
 {
@@ -1089,9 +1271,17 @@ UniInPlaneFriction::InitialAssRes(
 
 bool uni_in_plane_set(void)
 {
-     UserDefinedElemRead *rf = new UDERead<UniInPlaneFriction>;
+     UserDefinedElemRead *rf = new UDERead<UniInPlaneFriction<StructNodeAd>>;
 
-     if (!SetUDE("unilateral" "in" "plane",rf))
+     if (!SetUDE("unilateral" "in" "plane", rf))
+     {
+          delete rf;
+          return false;
+     }
+
+     rf = new UDERead<UniInPlaneFriction<StructDispNodeAd>>;
+
+     if (!SetUDE("unilateral" "disp" "in" "plane", rf))
      {
           delete rf;
           return false;

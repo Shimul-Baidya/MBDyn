@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -55,7 +55,8 @@ SetTimeStepData(const char *name, TimeStepRead * sr) {
 	return TimeStepReadMap.insert(std::make_pair(name, sr)).second;
 }
 
-NoChange::NoChange(Solver *s): s(s) {
+NoChange::NoChange(Solver *_s): s(_s) {
+	(void) s; // silence not used warning
 	NO_OP;
 }
 
@@ -71,11 +72,13 @@ NoChange::Init(integer iMaxIterations, doublereal dMinTimeStep, const DriveOwner
 	dCurrTimeStep = dInitialTimeStep;
 
 	doublereal dInitialMaxTimeStep;
-	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(PostponedDriveCaller)) {
-		dInitialMaxTimeStep = std::numeric_limits<doublereal>::max();
-
-	} else{
-		dInitialMaxTimeStep =  MaxTimeStep.dGet();
+	{
+		auto ts_drv = MaxTimeStep.pGetDriveCaller();
+		if (dynamic_cast<PostponedDriveCaller*>(ts_drv) != 0) {
+			dInitialMaxTimeStep = std::numeric_limits<doublereal>::max();
+		} else{
+			dInitialMaxTimeStep =  MaxTimeStep.dGet();
+		}
 	}
 
 	if (dMinTimeStep > dInitialMaxTimeStep) {
@@ -103,11 +106,12 @@ NoChangeTSR::Read(Solver *s, MBDynParser& HP)
 	return new NoChange(s);
 }
 
-ChangeStep::ChangeStep(Solver *s, DriveCaller* pStrategyChangeDrive)
-: s(s),
+ChangeStep::ChangeStep(Solver *_s, DriveCaller* pStrategyChangeDrive)
+: s(_s),
 pStrategyChangeDrive(pStrategyChangeDrive),
 dMinTimeStep(-1.)
 {
+	(void) s; // silence not used warning
 	NO_OP;
 }
 
@@ -134,11 +138,13 @@ ChangeStep::Init(integer iMaxIterations, doublereal dMinTimeStep, const DriveOwn
 	this->dMinTimeStep = dMinTimeStep;
 
 	doublereal dInitialMaxTimeStep ;
-	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(PostponedDriveCaller)) {
-		dInitialMaxTimeStep = std::numeric_limits<doublereal>::max();
-
-	} else{
-		dInitialMaxTimeStep =  MaxTimeStep.dGet();
+	{
+		auto ts_drv = MaxTimeStep.pGetDriveCaller();
+		if (dynamic_cast<PostponedDriveCaller*>(ts_drv) != 0) {
+			dInitialMaxTimeStep = std::numeric_limits<doublereal>::max();
+		} else{
+			dInitialMaxTimeStep =  MaxTimeStep.dGet();
+		}
 	}
 
 	if (dMinTimeStep > dInitialMaxTimeStep) {
@@ -168,14 +174,14 @@ ChangeStepTSR::Read(Solver *s, MBDynParser& HP)
 	return new ChangeStep(s , HP.GetDriveCaller(true));
 }
 
-Factor::Factor(Solver *s,
+Factor::Factor(Solver *_s,
 	doublereal dReductionFactor,
 	doublereal iStepsBeforeReduction,
 	doublereal dRaiseFactor,
 	doublereal iStepsBeforeRaise,
 	doublereal iMinIters,
 	doublereal iMaxIters)
-: s(s),
+: s(_s),
 dReductionFactor(dReductionFactor),
 iStepsBeforeReduction(iStepsBeforeReduction),
 dRaiseFactor(dRaiseFactor),
@@ -188,6 +194,7 @@ iStepsAfterRaise(0),
 iWeightedPerformedIters(0),
 dMinTimeStep(::dDefaultMinTimeStep)
 {
+	(void) s; // silence not used warning
 	NO_OP;
 }
 
@@ -258,10 +265,13 @@ Factor::Init(integer iMaxIterations, doublereal dMinTimeStep, const DriveOwner& 
 
 	doublereal dInitialMaxTimeStep = MaxTimeStep.dGet();
 
-	if (typeid(*MaxTimeStep.pGetDriveCaller()) == typeid(ConstDriveCaller)
-			&& dInitialMaxTimeStep == std::numeric_limits<doublereal>::max())
 	{
-		silent_cerr("warning: maximum time step not set; the initial time step value " << dInitialTimeStep << " will be used" << std::endl);
+		auto ts_drv = MaxTimeStep.pGetDriveCaller();
+		if (dynamic_cast<ConstDriveCaller*>(ts_drv) != 0
+				&& dInitialMaxTimeStep == std::numeric_limits<doublereal>::max())
+		{
+			silent_cerr("warning: maximum time step not set; the initial time step value " << dInitialTimeStep << " will be used" << std::endl);
+		}
 	}
 
 	if (dMinTimeStep == ::dDefaultMinTimeStep) {

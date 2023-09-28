@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -96,14 +96,13 @@ ViscousBody::OutputPrepare(OutputHandler& OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("viscous body", OH, name);
+			OutputPrepare_int("viscous body", OH);
 
-			Var_v = OH.CreateVar<Vec3>(name + "V",
+			Var_v = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "V",
 				OutputHandler::Dimensions::Velocity,
 				"local relative linear velocity (x, y, z)");
 			
-			Var_omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}

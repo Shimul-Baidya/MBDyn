@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -96,6 +96,14 @@ DataManager::ElemManager(void)
 	ElemData[Elem::PLATE].Desc = "Plate";
 	ElemData[Elem::PLATE].ShortDesc = "plate";
 
+	ElemData[Elem::SOLID].OutFile = OutputHandler::SOLIDS;
+	ElemData[Elem::SOLID].Desc = "Solid";
+	ElemData[Elem::SOLID].ShortDesc = "solid";
+
+	ElemData[Elem::SURFACE_LOAD].OutFile = OutputHandler::SURFACE_LOADS;
+	ElemData[Elem::SURFACE_LOAD].Desc = "SurfaceLoad";
+	ElemData[Elem::SURFACE_LOAD].ShortDesc = "surface" "load";
+
 	ElemData[Elem::AIRPROPERTIES].OutFile = OutputHandler::AIRPROPS;
 	ElemData[Elem::AIRPROPERTIES].Desc = "AirProperties";
 	ElemData[Elem::AIRPROPERTIES].ShortDesc = "airprops";
@@ -107,7 +115,7 @@ DataManager::ElemManager(void)
 
 	ElemData[Elem::INDUCEDVELOCITY].OutFile = OutputHandler::ROTORS;
 	ElemData[Elem::INDUCEDVELOCITY].Desc = "InducedVelocity";
-	ElemData[Elem::INDUCEDVELOCITY].ShortDesc = "indvel";
+	ElemData[Elem::INDUCEDVELOCITY].ShortDesc = "inducedvelocity";
 
 	ElemData[Elem::AEROMODAL].OutFile = OutputHandler::AEROMODALS;
 	ElemData[Elem::AEROMODAL].Desc = "AerodynamicModal";
@@ -115,12 +123,12 @@ DataManager::ElemManager(void)
 
 	ElemData[Elem::AERODYNAMIC].OutFile = OutputHandler::AERODYNAMIC;
 	ElemData[Elem::AERODYNAMIC].Desc = "Aerodynamic";
-	ElemData[Elem::AERODYNAMIC].ShortDesc = "aero";
+	ElemData[Elem::AERODYNAMIC].ShortDesc = "aerodynamic";
 	ElemData[Elem::AERODYNAMIC].uOutputFlags = AerodynamicOutput::OUTPUT_DEFAULT;
 
 	ElemData[Elem::HYDRAULIC].OutFile = OutputHandler::HYDRAULIC;
 	ElemData[Elem::HYDRAULIC].Desc = "Hydraulic";
-	ElemData[Elem::HYDRAULIC].ShortDesc = "hydr";
+	ElemData[Elem::HYDRAULIC].ShortDesc = "hydraulic";
 
 	ElemData[Elem::LOADABLE].OutFile = OutputHandler::LOADABLE;
 	ElemData[Elem::LOADABLE].Desc = "Loadable";
@@ -147,6 +155,8 @@ DataManager::ElemManager(void)
 	ElemData[Elem::FORCE].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::BEAM].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
 	ElemData[Elem::PLATE].iDerivation = ELEM | GRAVITYOWNER | DOFOWNER | INITIALASSEMBLY;
+        ElemData[Elem::SOLID].iDerivation = ELEM | GRAVITYOWNER | INITIALASSEMBLY;
+        ElemData[Elem::SURFACE_LOAD].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::AIRPROPERTIES].iDerivation = ELEM | INITIALASSEMBLY;
 	ElemData[Elem::INDUCEDVELOCITY].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
 	ElemData[Elem::AEROMODAL].iDerivation = ELEM | DOFOWNER | AIRPROPOWNER;
@@ -168,10 +178,12 @@ DataManager::ElemManager(void)
 	ElemData[Elem::JOINT_REGULARIZATION].ToBeUsedInAssembly(true);
 	ElemData[Elem::BEAM].ToBeUsedInAssembly(true);
 	ElemData[Elem::PLATE].ToBeUsedInAssembly(true);
-
+	ElemData[Elem::SOLID].ToBeUsedInAssembly(true);
+        ElemData[Elem::SURFACE_LOAD].ToBeUsedInAssembly(true);
 	/* Aggiungere qui se un tipo genera forze d'inerzia e quindi
 	 * deve essere collegato all'elemento accelerazione di gravita' */
 	ElemData[Elem::BODY].GeneratesInertiaForces(true);
+	ElemData[Elem::SOLID].GeneratesInertiaForces(true);
 	ElemData[Elem::JOINT].GeneratesInertiaForces(true);
 	ElemData[Elem::LOADABLE].GeneratesInertiaForces(true);
 	ElemData[Elem::PLATE].GeneratesInertiaForces(true);
@@ -659,26 +671,58 @@ void
 DataManager::ElemOutputPrepare(OutputHandler& OH)
 {
 #ifdef USE_NETCDF
+	int iNumTypes(0);
 	for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
 		if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
-			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
-			ASSERT(ElemData[et].Desc != 0);
-			ASSERT(ElemData[et].ShortDesc != 0);
+			iNumTypes++;
+		}
+	}
 
-			integer iNumElems = ElemData[et].ElemContainer.size();
+	if (iNumTypes > 0) {
+		ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
-			OutputHandler::AttrValVec attrs(1);
-			attrs[0] = OutputHandler::AttrVal("description", std::string(ElemData[et].Desc) + " elements labels");
+		OutputHandler::AttrValVec attrs(2);
+		attrs[0] = OutputHandler::AttrVal("description", std::string("Element types (in attribute \"types\", semicolon-separated)"));
+		std::string types("");
 
-			OutputHandler::NcDimVec dim(1);
-			dim[0] = OH.CreateDim(std::string(ElemData[et].ShortDesc) + "_elem_labels_dim", iNumElems);
+		for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
+			if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
+				ASSERT(ElemData[et].ShortDesc != 0);
+				if (!types.empty()) {
+					types += ";";
+				}
+				types += ElemData[et].ShortDesc;
+			}
+		}
+		attrs[1] = OutputHandler::AttrVal("types", types);
 
-			MBDynNcVar VarLabels = OH.CreateVar(std::string("elem.") + ElemData[et].ShortDesc, MbNcInt, attrs, dim);
-			ElemContainerType::const_iterator p = ElemData[et].ElemContainer.begin();
-			for (unsigned i = 0; i < unsigned(iNumElems); i++, p++) {
-				const std::vector<size_t> ncStartPos(1,i);
-				const long l = p->second->GetLabel();
-				VarLabels.putVar(ncStartPos, &l);
+		OutputHandler::NcDimVec dim(1);
+		dim[0] = OH.CreateDim("elem_types_dim", 1);
+
+		MBDynNcVar VarTypes = OH.CreateVar(std::string("elem"), MbNcInt, attrs, dim);
+
+		const std::vector<size_t> ncStartPos(1, 0);
+		VarTypes.putVar(ncStartPos, &iNumTypes);
+		
+		for (unsigned et = 0; et < Elem::LASTELEMTYPE; et++) {
+			if (ElemData[et].ElemContainer.size() && OH.UseNetCDF(ElemData[et].OutFile)) {
+				ASSERT(ElemData[et].Desc != 0);
+
+				integer iNumElems = ElemData[et].ElemContainer.size();
+
+				OutputHandler::AttrValVec attrs(1);
+				attrs[0] = OutputHandler::AttrVal("description", std::string(ElemData[et].Desc) + " elements labels");
+
+				OutputHandler::NcDimVec dim(1);
+				dim[0] = OH.CreateDim(std::string(ElemData[et].ShortDesc) + "_elem_labels_dim", iNumElems);
+
+				MBDynNcVar VarLabels = OH.CreateVar(std::string("elem.") + ElemData[et].ShortDesc, MbNcInt, attrs, dim);
+				ElemContainerType::const_iterator p = ElemData[et].ElemContainer.begin();
+				for (unsigned i = 0; i < unsigned(iNumElems); i++, p++) {
+					const std::vector<size_t> ncStartPos(1, i);
+					const long l = p->second->GetLabel();
+					VarLabels.putVar(ncStartPos, &l);
+				}
 			}
 		}
 	}

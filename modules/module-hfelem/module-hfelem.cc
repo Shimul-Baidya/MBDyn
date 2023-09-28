@@ -3,9 +3,9 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -29,7 +29,7 @@
  */
 
 /*
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
  * Pierangelo Masarati <pierangelo.masarati@polimi.it>
  *
@@ -41,6 +41,7 @@
 #include <iostream>
 #include <cfloat>
 
+#include "output.h"
 #include "dataman.h"
 #include "userelem.h"
 
@@ -103,7 +104,7 @@ private:
 	doublereal m_dOmegaMulInc;
 	std::vector<doublereal> m_Omega;
 
-	integer m_iOmegaCnt;
+	unsigned m_iOmegaCnt;
 	integer m_iPeriod;
 	integer m_iPeriodRMS;
 	integer m_iPeriodCnt;
@@ -161,6 +162,14 @@ private:
 	integer m_iWriteAfterConvergenceCount;
 	integer m_iConvergedPeriod;
 
+	std::map<integer, std::string> m_mInputNames;
+#ifdef USE_NETCDF
+	MBDynNcVar Var_dConvTime;
+	MBDynNcVar Var_dOmegaOut;
+	MBDynNcVar Var_iNumPeriods;
+	std::vector<MBDynNcVar> m_vInputNcVars;
+#endif // USE_NETCDF
+
 	struct HFInput {
 		enum {
 			HF_TEST = 0x1U,
@@ -206,6 +215,7 @@ public:
 	virtual ~HarmonicForcingElem(void);
 
 	virtual void Output(OutputHandler& OH) const;
+	virtual void OutputPrepare(OutputHandler& OH);
 	virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
 	VariableSubMatrixHandler& 
 	AssJac(VariableSubMatrixHandler& WorkMat,
@@ -333,6 +343,11 @@ m_iConvergedPeriod(0)
 	m_Input.resize(iNInput);
 	RMSTarget.resize(iNInput);
 	m_pDC_RMSTarget.resize(iNInput);
+
+#ifdef USE_NETCDF
+	m_vInputNcVars.resize(2*iNInput);
+#endif // USE_NETCDF
+       //
 	bool bTest(false);
 	for (integer i = 0; i < iNInput; ++i) {
 		m_Input[i].m_pDC = HP.GetDriveCaller();
@@ -367,6 +382,10 @@ m_iConvergedPeriod(0)
 				break;
 			}
 		}
+		
+		if (HP.IsKeyWord("name")) {
+			m_mInputNames[i] = HP.GetStringWithDelims();
+		}
 
 		if (m_Input[i].m_Flag == 0) {
 			silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): warning, input #" << i << " unused, at line " << HP.GetLineData() << std::endl);
@@ -396,6 +415,7 @@ m_iConvergedPeriod(0)
 		if (HP.IsKeyWord("normalized")) {
 			b_OutputNormalized = true;
 		}
+
 	}
 
 	// block size
@@ -541,7 +561,7 @@ m_iConvergedPeriod(0)
 				silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): Prescribed initial time step "
 					<< pDC->dGet(m_dTInit) <<
 					"\nevaluated at the initial time t = " << m_dTInit <<
-					"is different from initial time step " << m_dDeltaT << std::endl);
+					" is different from initial time step " << m_dDeltaT << std::endl);
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 		}
@@ -710,8 +730,9 @@ m_iConvergedPeriod(0)
 		}
 	}
 
-	if (HP.IsKeyWord("print" "all" "periods"))
+	if (HP.IsKeyWord("print" "all" "periods")) {
 		m_bPrintAllPeriods = true;
+	}
 
 	if (HP.IsKeyWord("write" "after" "convergence" "periods")){
 		try {
@@ -781,6 +802,123 @@ HarmonicForcingElem::~HarmonicForcingElem(void)
 }
 
 void
+HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
+{
+#ifdef USE_NETCDF
+	ASSERT(OH.IsOpen(OutputHandler::NETCDF));
+	if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+
+		OutputHandler::NcDimVec m_vDimHFElem(1);
+		// NetCDF output at each period is disabled in this case
+		switch (m_OmegaInc) {
+			case Inc_ADDITIVE:
+				m_vDimHFElem[0] = OH.CreateDim("HFELEM", std::floor((m_dOmegaMax - m_dOmega0) / m_dOmegaAddInc) + 1);
+				break;
+
+			case Inc_MULTIPLICATIVE:
+				m_vDimHFElem[0] = OH.CreateDim("HFELEM", std::floor(std::log(m_dOmegaMax)/std::log(m_dOmegaMulInc) - std::log(m_dOmega0)/std::log(m_dOmegaMulInc)) + 1);
+				break;
+
+			case Inc_CUSTOM:
+				m_vDimHFElem[0] = OH.CreateDim("HFELEM", m_Omega.size());
+				break;
+
+			default:
+				// impossible
+				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+		}
+
+		std::ostringstream os;
+		os << "elem.loadable." << GetLabel();
+		(void)OH.CreateVar(os.str(), "hfelem");
+
+		std::string m_sOutputBaseName = os.str();
+
+		OutputHandler::AttrValVec attrs(3);
+		attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Time));
+		attrs[1] = OutputHandler::AttrVal("type", "doublereal");
+		attrs[2] = OutputHandler::AttrVal("description", "Time of Convergence");
+		Var_dConvTime = OH.CreateVar(m_sOutputBaseName + "." "cTime",
+				netCDF::NcType::nc_DOUBLE,
+				attrs,
+				m_vDimHFElem);
+
+		attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::AngularVelocity));
+		attrs[1] = OutputHandler::AttrVal("type", "doublereal");
+		attrs[2] = OutputHandler::AttrVal("description", "Angular Frequency");
+		Var_dOmegaOut = OH.CreateVar(m_sOutputBaseName + "." "Omega",
+				netCDF::NcType::nc_DOUBLE,
+				attrs,
+				m_vDimHFElem);
+
+		attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
+		attrs[1] = OutputHandler::AttrVal("type", "integer");
+		attrs[2] = OutputHandler::AttrVal("description", "Number of periods required for convergence");
+		Var_iNumPeriods = OH.CreateVar(m_sOutputBaseName + "." "NumPeriods",
+				netCDF::NcType::nc_INT,
+				attrs,
+				m_vDimHFElem);
+
+		std::ostringstream m_sInputName;
+		for (size_t i = 0; i < m_Input.size(); i++) {
+			if (m_mInputNames.size()) {
+				m_sInputName << m_mInputNames[i];
+			} else {
+				m_sInputName << "X" << i;
+			}
+
+			switch (m_OutputFormat) {
+				case Out_COMPLEX:
+					// not true, but we ignore the real dimensions
+					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
+					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
+					attrs[2] = OutputHandler::AttrVal("description", "Sine part of input <" + m_sInputName.str() + ">");
+					m_vInputNcVars[2*i] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Sin",
+						netCDF::NcType::nc_DOUBLE,
+						attrs, 
+						m_vDimHFElem);
+		
+					// not true, but we ignore the real dimensions
+					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
+					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
+					attrs[2] = OutputHandler::AttrVal("description", "Cosine part of input <" + m_sInputName.str() + ">");
+					m_vInputNcVars[2*i + 1] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Cos",
+						netCDF::NcType::nc_DOUBLE,
+						attrs, 
+						m_vDimHFElem);
+					break;
+				case Out_MAGNITUDE_PHASE:
+					// not true, but we ignore the real dimensions
+					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
+					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
+					attrs[2] = OutputHandler::AttrVal("description", "Amplitude of input <" + m_sInputName.str() + ">");
+					m_vInputNcVars[2*i] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Amplitude",
+						netCDF::NcType::nc_DOUBLE,
+						attrs,
+						m_vDimHFElem);
+			
+					// not true, but we ignore the real dimensions
+					attrs[0] = OutputHandler::AttrVal("units", OH.GetUnits(OutputHandler::Dimensions::Dimensionless));
+					attrs[1] = OutputHandler::AttrVal("type", "doublereal");
+					attrs[2] = OutputHandler::AttrVal("description", "Phase of input <" + m_sInputName.str() + ">");
+					m_vInputNcVars[2*i + 1] =  OH.CreateVar(m_sOutputBaseName + "." + m_sInputName.str() + "Phase",
+						netCDF::NcType::nc_DOUBLE,
+						attrs,
+						m_vDimHFElem);
+					break;
+			}
+
+			// TODO: NetCDF Output with RMS Target
+			
+			m_sInputName.str("");
+			m_sInputName.clear();
+		}
+
+	}
+#endif // USE_NETCDF
+}
+
+void
 HarmonicForcingElem::Output(OutputHandler& OH) const
 {
 	// NOTE: output occurs only at convergence,
@@ -788,28 +926,69 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 	if (bToBeOutput()) {
 		if (((m_iPeriodOut!=0 && m_iPeriod == 0) || (m_bPrintAllPeriods && m_pDM->dGetTime()>m_dTInit))
 			&& m_iPeriodCnt == 0 && m_iCurrentStep == 0) {
-			std::ostream& out = OH.Loadable();
 
-			out << std::setprecision(16) << GetLabel()	// 1:	label
-				<< " " << m_pDM->dGetTime()	// 2:	when
-                << std::setprecision(8);
-			if(m_iPeriod==0) // just converged
-				out << " " << m_dOmegaOut		// 3:	what frequency
-					<< " " << m_iPeriodOut;		// 4:	how many periods required (-1 if not converged?)
-			else
-				out << " " << m_dOmega		// 3:	what frequency
-					<< " " << m_iPeriod;		// 4:	how many periods required (-1 if not converged?)
+			if (OH.UseText(OutputHandler::LOADABLE)) {
+				std::ostream& out = OH.Loadable();
 
+				out << std::setprecision(16) << GetLabel()	// 1:	label
+					<< " " << m_pDM->dGetTime()	// 2:	when
+                		<< std::setprecision(8);
+			}
+			
+			if (m_iPeriod == 0) // just converged
+			{
+				
+				if (OH.UseText(OutputHandler::LOADABLE)) {
+					std::ostream& out = OH.Loadable();
+					out << " " << m_dOmegaOut		// 3:	what frequency
+						<< " " << m_iPeriodOut;		// 4:	how many periods required (-1 if not converged?)
+				}
+#ifdef USE_NETCDF
+				if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+					OH.WriteNcVar(Var_dConvTime, m_pDM->dGetTime(), m_iOmegaCnt - 1);
+					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut, m_iOmegaCnt - 1);
+					OH.WriteNcVar(Var_iNumPeriods, m_iPeriodOut, m_iOmegaCnt - 1);
+				}
+#endif // USE_NETCDF
+			} else {
+				if (OH.UseText(OutputHandler::LOADABLE)) {
+					std::ostream& out = OH.Loadable();
+					out << " " << m_dOmega		// 3:	what frequency
+						<< " " << m_iPeriod;		// 4:	how many periods required (-1 if not converged?)
+				}
+				// NetCDF output will NOT be written, in this case
+			}
 			switch (m_OutputFormat) {
 			case Out_COMPLEX:
 				for (unsigned i = 0; i < m_Input.size(); ++i) {
 					if (m_Input[i].m_Flag & HFInput::HF_OUTPUT) {
+
 						// real imag
 						if (b_OutputNormalized) {
-							out << " " << m_Xsin[i] / m_dAmplitude << " " << m_Xcos[i] / m_dAmplitude;
+							if (OH.UseText(OutputHandler::LOADABLE)) {
+								std::ostream& out = OH.Loadable();
+								out << " " << m_Xsin[i] / m_dAmplitude << " " << m_Xcos[i] / m_dAmplitude;
+							}
+#ifdef USE_NETCDF
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+								OH.WriteNcVar(m_vInputNcVars[2*i], (doublereal)(m_Xsin[i] / m_dAmplitude), m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i] / m_dAmplitude, m_iOmegaCnt - 1);
+							}
+#endif // USE_NETCDF
 						} else {
-							out << " " << m_Xsin[i] << " " << m_Xcos[i];
+							if (OH.UseText(OutputHandler::LOADABLE)) {
+								std::ostream& out = OH.Loadable();
+								out << " " << m_Xsin[i] << " " << m_Xcos[i];
+							}
+#ifdef USE_NETCDF
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+								OH.WriteNcVar(m_vInputNcVars[2*i], m_Xsin[i], m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i], m_iOmegaCnt - 1);
+							}
+#endif // USE_NETCDF
 						}
+
+
 					}
 				}
 				break;
@@ -819,25 +998,51 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 					if (m_Input[i].m_Flag & HFInput::HF_OUTPUT) {
 						// magnitude phase
 						if (b_OutputNormalized) {
-							out << " " << std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude << " " << std::atan2(m_Xcos[i], m_Xsin[i]);
+							if (OH.UseText(OutputHandler::LOADABLE)) {
+								std::ostream& out = OH.Loadable();
+								out << " " << std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude 
+						  	    	<< " " << std::atan2(m_Xcos[i], m_Xsin[i]);
+							}
+#ifdef USE_NETCDF
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude, m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt - 1);
+							}
+#endif // USE_NETCDF
 						} else {
-							out << " " << std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) << " " << std::atan2(m_Xcos[i], m_Xsin[i]);
+							if (OH.UseText(OutputHandler::LOADABLE)) {
+								std::ostream& out = OH.Loadable();
+								out << " " << std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) 
+						  	    	    << " " << std::atan2(m_Xcos[i], m_Xsin[i]);
+							}
+#ifdef USE_NETCDF
+							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
+								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]), m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt - 1);
+							}
+#endif
 						}
 					}
 				}
 				break;
 			}
-			if(bRMSTestTarget){
+
+
+			if (bRMSTestTarget && OH.UseText(OutputHandler::LOADABLE)) {
+				std::ostream& out = OH.Loadable();
 				out << " " << m_dAmplitudeOut;
 				for (unsigned i = 0; i < m_Input.size(); ++i)
 					if (m_Input[i].m_Flag & HFInput::HF_TARGET)
 						out << " " << RMSPrev[0][i];
 			}
-			out << std::endl;
+
+			if (OH.UseText(OutputHandler::LOADABLE)) {
+				std::ostream& out = OH.Loadable();
+				out << std::endl;
+			}
 		}
 	}
 
-	// TODO: NetCDF support
 }
 
 void

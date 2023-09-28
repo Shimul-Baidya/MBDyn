@@ -2,9 +2,9 @@
 % MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
-% Copyright (C) 1996-2017
+% Copyright (C) 1996-2023
 %
-% Pierangelo Masarati  <masarati@aero.polimi.it>
+% Pierangelo Masarati  <pierangelo.masarati@polimi.it>
 %
 % Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 % via La Masa, 34 - 20156 Milano, Italy
@@ -642,3 +642,66 @@ The linearization of forces and moments yields
 \end{align}
 
 
+\subsection{Virtual strain energy}
+\emph{Author: Reinhard Resch}
+The modal element is based on the assumption of small elastic deformations but arbitrary superimposed rigid body motions. Since elastic deformations are small, the virtual strain energy $\delta W$ may be approximated as a linear function of the modal displacement $\T{q}$.
+\begin{equation}
+  \label{eq:modal:linear-elastic} \\
+  \delta W \approx \delta \T{q}^T \, \T{K}_{qq} \, \T{q}
+\end{equation}
+\begin{enumerate}
+  \item[$\T{K}_{qq}$] reduced order linear stiffness matrix
+\end{enumerate}
+\subsubsection{Quasi static corrections for stress stiffening}
+However, there are applications of structures subject to small elastic deformations and linear elastic material, where those linear approximation of the virtual strain energy according equation~\ref{eq:modal:linear-elastic} is not applicable due to significant pre-stress effects. See also \cite{WALLRAPP1998}. Typical examples are:
+\begin{enumerate}
+\item rotor blades of helicopters, wind~turbines and gas~turbines
+\item propellers of airplanes
+\item rotors of turbo chargers for internal combustion engines
+\item connecting~rods of high speed reciprocating engines
+\item slender flexible arms of robots
+\end{enumerate}
+According to the following assumptions, which are described in \cite{WALLRAPP1998}, it is possible to apply a quasi static correction to the virtual strain energy.
+\begin{enumerate}
+\item The flexible body should have low stiffness in some directions but high stiffness in other directions.
+\item There are only low loads applied in directions of low stiffness. So, the deformations will remain small despite of low stiffness in those directions.
+\item There are also high loads applied in directions of high stiffness. Because of such a high stiffness in those directions, the deformations will remain small. However, those high loads will cause high stresses which are affecting the stiffness in other directions. 
+\end{enumerate}
+Based on those assumptions, the corrected expression for the virtual strain energy according \cite{WALLRAPP1998} is:
+\begin{equation}
+  \delta W \approx \delta \T{q}^T \, \left( \T{K}_{qq} + \T{K}_{qq_{geo}} \right) \, \T{q} \label{eq:modal:strain-energy}
+\end{equation}
+In equation~\ref{eq:modal:strain-energy} the matrix $\T{K}_{qq_{geo}}$ is called ``geometrical stiffness matrix'' or ``stress stiffening matrix''. According to \cite{WALLRAPP1998}, $\T{K}_{qq_{geo}}$ can be written as a linear combination of a set of constant matrices.
+\begin{align}
+  \T{K}_{qq_{geo}} = &\sum_{i=1,3} \left(\tilde{\ddot{x}}_{0_i} - \tilde{g}_{i}\right) \, \T{K}_{{0t}_i} 
+  + \sum_{i=1,3} \tilde{\dot{\omega}}_{0_i} \, \T{K}_{{0r}_i} 
+  + \sum_{m=1,6} \tilde{\omega}_{q_m} \, \T{K}_{{0\omega}_m} \\ \nonumber
+  +& \sum_{i=1,3} \sum_{j=1,M} \tilde{F}_{P_{ij}} \, \T{K}_{{0F}_{ij}}
+  + \sum_{i=1,3} \sum_{j=1,M} \tilde{M}_{P_{ij}} \, \T{K}_{{0M}_{ij}}
+\end{align}
+So, $\T{K}_{qq_{geo}}$ is a function of the rigid body motion of the modal node, and also a function of the Lagrange multipliers applied at the interface nodes.
+\begin{align}
+  \tilde{\ddot{\T{x}}}_0 = & \T{R}_0^T \, \ddot{\T{x}}_0 \\
+  \tilde{\dot{\T{\omega}}}_0 = & \T{R}_0^T \, \dot{\T{\omega}}_0 \\
+  \tilde{\T{\omega}}_q = & \begin{pmatrix}
+    \tilde{\omega}_{0_1}^2 &
+    \tilde{\omega}_{0_2}^2 &
+    \tilde{\omega}_{0_3}^2 &
+    \tilde{\omega}_{0_1} \, \tilde{\omega}_{0_2} &
+    \tilde{\omega}_{0_2} \, \tilde{\omega}_{0_3} &
+    \tilde{\omega}_{0_1} \, \tilde{\omega}_{0_3}
+  \end{pmatrix}^T \\
+  \tilde{\T{\omega}}_{0} = & \T{R}_0^T \, \T{\omega}_0 \\
+  \tilde{\T{F}}_{P_j} = & -\T{R}_0^T \, \T{\lambda}_j \\
+  \tilde{\T{M}}_{P_j} = & -\T{R}_0^T \, \T{R}_N \, \T{\alpha}_j
+\end{align}
+Those matrices are also called ``pre-stress stiffness matrices'' and can be a determined a priori based on the stress field for various static unit loads.
+\begin{enumerate}
+\item[$\T{K}_{{0t}_i}$] A unit linear acceleration is applied in direction $x_i$
+\item[$\T{K}_{{0r}_i}$] A unit angular acceleration is applied along the $x_i$ axis
+\item[$\T{K}_{{0\omega}_m}$] Can be computed from six angular velocity loads
+\item[$\T{K}_{{0F}_{ij}}$] A unit force is applied in $x_i$ direction at interface node~$j$
+\item[$\T{K}_{{0M}_{ij}}$] A unit moment is applied along the $x_i$ axis at interface node~$j$
+\end{enumerate}
+In theory, any structural Finite~Element solver like ANSYS, ABAQUS or NASTRAN could be used to generate those matrices. For a comprehensive description of the underlying procedure, the reader is referred to \cite{BATHE2016}.
+Probably, the most convenient solution to get those matrices and all the modal element data is, to use a dedicated toolkit like \href{https://github.com/octave-user/mboct-fem-pkg}{mboct-fem-pkg} with builtin support for MBDyn's input files.

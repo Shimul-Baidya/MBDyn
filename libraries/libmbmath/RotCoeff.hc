@@ -2,7 +2,7 @@
 /*
  * HmFe (C) is a FEM analysis code. 
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
  * Marco Morandini  <morandini@aero.polimi.it>
  * Teodoro Merlini  <merlini@aero.polimi.it>
@@ -21,12 +21,12 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  * 
  * This code is a partial merge of HmFe and MBDyn.
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -173,43 +173,43 @@ RotCo(const Int cid, const T1 &phi, const Vec3 &p, T2 *const cf)
 	cf[5]=(cf[2]-cf[1]-(cf[3]*4.))/phi2;  // f = (c-b-4*d)/phi2
 	//if (cid == 6) return; inutile
 	return;
-};
+}
 
 // Coefficients:            up to a     (COEFF_A)
 template<class T1, class T2>
 void CoeffA(const T1 &phi, const Vec3 &p, T2 *const coeff) {
     RotCo(COEFF_A,phi,p,coeff);
-};
+}
 
 // Coefficients:            up to b     (COEFF_B)
 template<class T1, class T2>
 void CoeffB(const T1 &phi, const Vec3 &p, T2 *const coeff) {
     RotCo(COEFF_B,phi,p,coeff);
-};
+}
 
 // Coefficients:            up to c     (COEFF_C)
 template<class T1, class T2>
 void CoeffC(const T1 &phi, const Vec3 &p, T2 *const coeff) {
     RotCo(COEFF_C,phi,p,coeff);
-};
+}
 
 // Coefficients:            up to d     (COEFF_D)
 template<class T1, class T2>
 void CoeffD(const T1 &phi, const Vec3 &p, T2 *const coeff) {
     RotCo(COEFF_D,phi,p,coeff);
-};
+}
 
 // Coefficients:            up to e     (COEFF_E)
 template<class T1, class T2>
 void CoeffE(const T1 &phi, const Vec3 &p, T2 *const coeff) {
     RotCo(COEFF_E,phi,p,coeff);
-};
+}
 
 // Coefficients:            up to f     (COEFF_F)
 template<class T1, class T2>
 void CoeffF(const T1 &phi, const Vec3 &p, T2 *const coeff) {
     RotCo(COEFF_F,phi,p,coeff);
-};
+}
 
 // Starred coefficients:    up to c*    (COEFF_C_STAR)
 // Coefficients:            up to d     (COEFF_D)
@@ -218,7 +218,7 @@ void CoeffCStar(const T1 &phi, const Vec3 &p,
 			T2 *const coeff, T2 *const coeffs) {
     RotCo(COEFF_D,phi,p,coeff);
     coeffs[0]=-coeff[3]/(coeff[1]*2.);
-};
+}
 
 // Starred coefficients:    up to e*    (COEFF_E_STAR)
 // Coefficients:            up to f     (COEFF_F)
@@ -228,7 +228,7 @@ void CoeffEStar(const T1 &phi, const Vec3 &p,
     RotCo(COEFF_F,phi,p,coeff);
     coeffs[0]=-coeff[3]/(coeff[1]*2.);
     coeffs[1]=-(coeff[4]+coeff[5])/(coeff[1]*4.);
-};
+}
 
 
 

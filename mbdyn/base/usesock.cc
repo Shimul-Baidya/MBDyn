@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -190,8 +190,8 @@ UseSocket::PostConnect(void)
 		int save_errno = WSAGetLastError();
 		char *msg = strerror(save_errno);
 
-      		silent_cerr("UseSocket::PostConnect: setsockopt() failed "
-			"(" << save_errno << ": " << msg << ")"
+		silent_cerr("UseSocket::PostConnect: setsockopt(SOL_SOCKET, SO_LINGER, {l_onoff=" << lin.l_onoff << ", l_linger=" << lin.l_linger << "}) failed "
+			"(" << save_errno << ": " << msg << "; note: it could be a permission problem if the process does not have sufficient privileges)"
 			<< std::endl);
       		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}

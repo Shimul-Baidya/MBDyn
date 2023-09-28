@@ -1,34 +1,34 @@
-# MBDyn (C) is a multibody analysis code. 
+# MBDyn (C) is a multibody analysis code.
 # http://www.mbdyn.org
-# 
-# Copyright (C) 1996-2021
-# 
-# Pierangelo Masarati	<masarati@aero.polimi.it>
-# Paolo Mantegazza	<mantegazza@aero.polimi.it>
-# 
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
 # Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
 # via La Masa, 34 - 20156 Milano, Italy
 # http://www.aero.polimi.it
-# 
+#
 # Changing this copyright notice is forbidden.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation (version 2 of the License).
-# 
-# 
+#
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
 ## AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-## Copyright (C) 2013(-2022) all rights reserved.
+## Copyright (C) 2013(-2023) all rights reserved.
 ##
 ## The copyright of this code is transferred
 ## to Pierangelo Masarati and Paolo Mantegazza
@@ -36,28 +36,28 @@
 ## in the GNU Public License version 2.1
 
 begin: data;
-	problem: initial value; 
+        problem: initial value;
 end: data;
 
 begin: initial value;
-	initial time: (-0.040678);
-	final time: (0.040678);
+        initial time: (-0.040678);
+        final time: (0.040678);
 
-	time step: (5.66893e-05);
+        time step: (5.66893e-05);
 
-	max iterations: 100;
-	tolerance: 1e-6, test, norm, 1e-6, test, norm;
-        method: ss4, 0.0;
+        max iterations: 100;
+        tolerance: 1e-6, test, norm, 1e-6, test, norm;
+        method: ms4, 0.6;
 
-	enforce constraint equations: constraint violations;
-        
-        derivatives tolerance: 1e-3, 1e-3;
-	derivatives max iterations: 20;
-	derivatives coefficient: 1e-5;
+        enforce constraint equations: constraint violations;
+
+        derivatives tolerance: 1e-6, 1e-6;
+        derivatives max iterations: 3;
+        derivatives coefficient: 1e-6, auto;
 
         ## set: bool enable_mcp = TRUE;
         ## linear solver: umfpack, grad, scale, row max column max, always, max iterations, 10;
-        ## nonlinear solver: mcp newton min fb, print convergence info, yes, lambda min, 0., tolerance x, 1e-7;
+        ##nonlinear solver: mcp newton min fb, print convergence info, no, lambda min, 0., tolerance x, 1e-7;
 
         ## set: bool enable_mcp = TRUE;
         ## linear solver: siconos dense;
@@ -65,14 +65,14 @@ begin: initial value;
 
         ## set: bool enable_mcp = FALSE;
         ## linear solver: umfpack, grad, scale, row max column max, always, max iterations, 10;
-        ## nonlinear solver: line search, modified, 0, default solver options, heavy nonlinear, print convergence info, yes, lambda min, 0., tolerance x, 1e-7;
+        ##nonlinear solver: line search, modified, 0, default solver options, heavy nonlinear, print convergence info, no, lambda min, 0., tolerance x, 1e-7;
 
         ## set: bool enable_mcp = TRUE;
         ## linear solver: siconos dense;
         ## nonlinear solver: siconos mcp newton min fb, lambda min, 1e-16;
 
-        set: bool enable_mcp = FALSE;
-        linear solver: umfpack, grad;
+        ## set: bool enable_mcp = FALSE;
+        ## linear solver: umfpack, grad;
 
         nonlinear solver: nox,
         modified, 100,
@@ -86,16 +86,26 @@ begin: initial value;
         print convergence info, no,
         verbose, yes,
         minimum step, 1e-12,
+        recovery step, 1e-6,
         linear solver tolerance, 1e-12,
-        linear solver max iterations, 300,
-        krylov subspace size, 20;
-        
+        linear solver max iterations, 30,
+        krylov subspace size, 30,
+        verbose, yes;
+
         threads: assembly, 1;
         threads: solver, 1;
         output: iterations, solver condition number, stat, yes;
 end: initial value;
 
 begin: control data;
+       print: dof stats, to file;
+       print: dof description, to file;
+       print: equation description, to file;
+       print: element connection, to file;
+       print: node connection, to file;
+
+       ##finite difference jacobian meter: one, coefficient, 1e-5, order, 1, output, none, matrices, no, statistics iteration, yes, statistics, yes;
+       ##finite difference jacobian meter: one, forward mode automatic differentiation, output, none, statistics, yes, statistics iteration, yes, matrices, no;
        use automatic differentiation;
        skip initial joint assembly;
        max iterations: 10;
@@ -110,118 +120,118 @@ begin: control data;
 end: control data;
 
 reference: (5001),
-	
-	reference, global, null,
-	
-	reference, global, eye,
-	
-	reference, global, null,
-	
-	reference, global, null;
+
+        reference, global, null,
+
+        reference, global, eye,
+
+        reference, global, null,
+
+        reference, global, null;
 
 reference: (5002),
-	
-	reference, (5001), null,
-	
-	reference, (5001), matr,
-						cos((3.21889)), -sin((3.21889)),   0.,
-						sin((3.21889)),  cos((3.21889)),   0.,
-						0.,         0.,   1.,
-							      
-	
-	reference, (5001), null,
-	
-	reference, (5001), 0., 0., (-308.923);
+
+        reference, (5001), null,
+
+        reference, (5001), matr,
+                                                cos((3.21889)), -sin((3.21889)),   0.,
+                                                sin((3.21889)),  cos((3.21889)),   0.,
+                                                0.,         0.,   1.,
+
+
+        reference, (5001), null,
+
+        reference, (5001), 0., 0., (-308.923);
 
 reference: (5003),
-	
-	reference, (5002), (0.0075), 0., 0.,
-	
-	reference, (5002), eye,
-	
-	reference, (5002), null,
-	
-	reference, (5002), null;
+
+        reference, (5002), (0.0075), 0., 0.,
+
+        reference, (5002), eye,
+
+        reference, (5002), null,
+
+        reference, (5002), null;
 
 reference: (5004),
-	
-	reference, (5001), ((0.0334)*sqrt(cos(2*(3.21889))*(0.0075)^2-(0.0075)^2+4*(0.002)*sin((3.21889))*7.5e-3+2*(0.0334)^2-2*(0.002)^2))/(sqrt(2)*abs((0.0334)))+cos((3.21889))*(0.0075),
-						  (0.002), 
-						  0.,
-	
-	reference, (5001), eye,
-	
-	reference, (5001), ((0.0334)*(4*(0.002)*(0.0075)*cos((3.21889))*((-308.923))-2*(0.0075)^2*((-308.923))*sin(2*(3.21889))))/(2*sqrt(2)*abs((0.0334))*sqrt((0.0075)^2*cos(2*(3.21889))+4*(0.002)*(0.0075)*sin((3.21889))-(0.0075)^2+2*(0.0334)^2-2*(0.002)^2))-(0.0075)*sin((3.21889))*((-308.923)), 
-						  0., 
-						  0.,
-	
-	reference, (5001), null;
+
+        reference, (5001), ((0.0334)*sqrt(cos(2*(3.21889))*(0.0075)^2-(0.0075)^2+4*(0.002)*sin((3.21889))*7.5e-3+2*(0.0334)^2-2*(0.002)^2))/(sqrt(2)*abs((0.0334)))+cos((3.21889))*(0.0075),
+                                                  (0.002),
+                                                  0.,
+
+        reference, (5001), eye,
+
+        reference, (5001), ((0.0334)*(4*(0.002)*(0.0075)*cos((3.21889))*((-308.923))-2*(0.0075)^2*((-308.923))*sin(2*(3.21889))))/(2*sqrt(2)*abs((0.0334))*sqrt((0.0075)^2*cos(2*(3.21889))+4*(0.002)*(0.0075)*sin((3.21889))-(0.0075)^2+2*(0.0334)^2-2*(0.002)^2))-(0.0075)*sin((3.21889))*((-308.923)),
+                                                  0.,
+                                                  0.,
+
+        reference, (5001), null;
 
 reference: (5005),
-	
-	reference, (5003), null,
-	
-	reference, (5001),  matr,
-						cos((0.077297)), -sin((0.077297)),		0.,
-						sin((0.077297)),  cos((0.077297)),   	0.,
-						0.,		               			   0.,   	1.,
-	
-	reference, (5001), -(0.0075) * (-308.923) * sin((3.21889)), (0.0075) * (-308.923) * cos((3.21889)), 0.,
-	
-	reference, (5001), 0., 0., -((0.0075)*cos((3.21889))*((-308.923)))/((0.0334)*sqrt(1-((0.0075)*sin((3.21889))-(0.002))^2/(0.0334)^2));
+
+        reference, (5003), null,
+
+        reference, (5001),  matr,
+                                                cos((0.077297)), -sin((0.077297)),		0.,
+                                                sin((0.077297)),  cos((0.077297)),      0.,
+                                                0.,                                                0.,          1.,
+
+        reference, (5001), -(0.0075) * (-308.923) * sin((3.21889)), (0.0075) * (-308.923) * cos((3.21889)), 0.,
+
+        reference, (5001), 0., 0., -((0.0075)*cos((3.21889))*((-308.923)))/((0.0334)*sqrt(1-((0.0075)*sin((3.21889))-(0.002))^2/(0.0334)^2));
 
 reference: (5006),
-	
-	reference, (5005), (0.00922163), 0., 0.,
-	
-	reference, (5005), eye,
-	
-	reference, (5005), null,
-	
-	reference, (5005), null;
+
+        reference, (5005), (0.00922163), 0., 0.,
+
+        reference, (5005), eye,
+
+        reference, (5005), null,
+
+        reference, (5005), null;
 
 begin: nodes;
 
-	structural: (1002), static, 
-		
-		reference, (5003), null, 
-		
-		reference, (5003), eye, 
-		
-		reference, (5003), null,
-		
-		reference, (5003), null;		
-		
-	structural: (1003), dynamic, 
-		
-		reference, (5005), null, 
-		
-		reference, (5005), eye, 
-		
-		reference, (5005), null,
-		
-		reference, (5005), null;
-		
-	structural: (1004), dynamic, 
-		
-		reference, (5004), null, 
-		
-		reference, (5004), eye, 
-		
-		reference, (5004), null,
-		
-		reference, (5004), null;
+        structural: (1002), static,
+
+                reference, (5003), null,
+
+                reference, (5003), eye,
+
+                reference, (5003), null,
+
+                reference, (5003), null;
+
+        structural: (1003), dynamic,
+
+                reference, (5005), null,
+
+                reference, (5005), eye,
+
+                reference, (5005), null,
+
+                reference, (5005), null;
+
+        structural: (1004), dynamic,
+
+                reference, (5004), null,
+
+                reference, (5004), eye,
+
+                reference, (5004), null,
+
+                reference, (5004), null;
 end: nodes;
 
 begin: elements;
-	drive caller: (8002),
-		string, "(3.21889) + (-308.923) * ( Time - (-0.040678) )";
- 		
-	drive caller: (8003),
-		piecewise linear,
-			
-			361,
-			
+        drive caller: (8002),
+                string, "(3.21889) + (-308.923) * ( Time - (-0.040678) )";
+
+        drive caller: (8003),
+                piecewise linear,
+
+                        361,
+
          -3.14159265358979,1.47698034798355,
          -3.12413936106985,1.52194778092788,
          -3.10668606854991,1.5660263903215,
@@ -584,127 +594,127 @@ begin: elements;
          3.12413936106985,1.43114401720569,
          3.14159265358979,1.47698034798355;
 
-	set: [node,Phi_crank_pin,(1002),structural,string="Phi[3]"];
+        set: [node,Phi_crank_pin,(1002),structural,string="Phi[3]"];
 
-	drive caller: (8001),
+        drive caller: (8001),
             drive,
-                reference, (8003), 
-                string, "Phi_crank_pin";		
-	
+                reference, (8003),
+                string, "Phi_crank_pin";
+
         force: (4001), absolute,
-                (1004), 
+                (1004),
                 position,reference,node,null,
-							1.,0.,0.,
-                reference,(8001);		
-		
-	joint: (3002), total pin joint,
-			(1002),
-				position,				reference, (5002), null,
-				position orientation, 	reference, (5002), eye,
-				rotation orientation, 	reference, (5002), eye,
-			position, 			 reference, (5001), null,
-			position orientation, reference, (5001), eye,
-			rotation orientation, reference, (5001), eye,
-			position constraint, 
-					active, 
-					active, 
-					active,
-				component, const, 0.,
-					   const, 0.,
-					   const, 0.,
-			orientation constraint,
-					active,
-					active,
-					active,
-				component, const, 0.,
-					   const, 0.,
-					   reference, (8002);					   
+                                                        1.,0.,0.,
+                reference,(8001);
 
-	joint: (3004), total pin joint,
-			(1004),
-				position,				reference, (5004), null,
-				position orientation, 	reference, (5004), eye,
-				rotation orientation, 	reference, (5004), eye,
-			position, 			 reference, (5004), null,
-			position orientation, reference, (5004), eye,
-			rotation orientation, reference, (5004), eye,				
-			position constraint, 
-					inactive, 
-					active, 
-					active,
-				component, const, 0.,
-						    const, 0.,
-						    const, 0.,
-			orientation constraint,
-					active,
-					active,
-					active,
-				component, const, 0.,
-						    const, 0.,
-						    const, 0.;
-					   
+        joint: (3002), total pin joint,
+                        (1002),
+                                position,				reference, (5002), null,
+                                position orientation,   reference, (5002), eye,
+                                rotation orientation,   reference, (5002), eye,
+                        position,                        reference, (5001), null,
+                        position orientation, reference, (5001), eye,
+                        rotation orientation, reference, (5001), eye,
+                        position constraint,
+                                        active,
+                                        active,
+                                        active,
+                                component, const, 0.,
+                                           const, 0.,
+                                           const, 0.,
+                        orientation constraint,
+                                        active,
+                                        active,
+                                        active,
+                                component, const, 0.,
+                                           const, 0.,
+                                           reference, (8002);
+
+        joint: (3004), total pin joint,
+                        (1004),
+                                position,				reference, (5004), null,
+                                position orientation,   reference, (5004), eye,
+                                rotation orientation,   reference, (5004), eye,
+                        position,                        reference, (5004), null,
+                        position orientation, reference, (5004), eye,
+                        rotation orientation, reference, (5004), eye,
+                        position constraint,
+                                        inactive,
+                                        active,
+                                        active,
+                                component, const, 0.,
+                                                    const, 0.,
+                                                    const, 0.,
+                        orientation constraint,
+                                        active,
+                                        active,
+                                        active,
+                                component, const, 0.,
+                                                    const, 0.,
+                                                    const, 0.;
 
 
-	joint: (3003), total joint,
-			(1004),
-				position,				reference, (5004), null,
-				position orientation, 	reference, (5004), eye,
-				rotation orientation, 	reference, (5004), eye,
+
+        joint: (3003), total joint,
+                        (1004),
+                                position,				reference, (5004), null,
+                                position orientation,   reference, (5004), eye,
+                                rotation orientation,   reference, (5004), eye,
                         (1003),
-			position, 			 reference, (5004), null,
-			position orientation, reference, (5004), eye,
-			rotation orientation, reference, (5004), eye,				
-			position constraint, 
-					active, 
-					active, 
-					active,
-				component, const, 0.,
-				           const, 0.,
-					   const, 0.,
-			orientation constraint,
-					active,
-					active,
-					inactive,
-				component, const, 0.,
-					   const, 0.,
-					   const, 0.;
+                        position,                        reference, (5004), null,
+                        position orientation, reference, (5004), eye,
+                        rotation orientation, reference, (5004), eye,
+                        position constraint,
+                                        active,
+                                        active,
+                                        active,
+                                component, const, 0.,
+                                           const, 0.,
+                                           const, 0.,
+                        orientation constraint,
+                                        active,
+                                        active,
+                                        inactive,
+                                component, const, 0.,
+                                           const, 0.,
+                                           const, 0.;
 
 
-	body: (2001), (1003), 
-                
+        body: (2001), (1003),
+
                 (0.006907),
-                
+
                 reference, (5006), null,
-                
+
                 diag, 0.,  0., (1.54001e-06),
-		orientation, reference, (5006), eye;
+                orientation, reference, (5006), eye;
 
-	body: (2002), (1004), 
-                
+        body: (2002), (1004),
+
                 (0.013093),
-                
-                reference, (5004), null,
-                
-                null,
-		orientation, reference, (5004), eye;
 
-    hydraulic fluid: (6001), incompressible, 
+                reference, (5004), null,
+
+                null,
+                orientation, reference, (5004), eye;
+
+    hydraulic fluid: (6001), incompressible,
         density, (950),
-        viscosity, (0.0015),
+        viscosity, (0.0015/4.),
         pressure, (10000);
 
-    ## hydraulic fluid: (6001), linear compressible, 
+    ## hydraulic fluid: (6001), linear compressible,
     ##     density, (950),
     ##     1.,
     ##     0.,
     ##     viscosity, (0.0015);
 
-    user defined: (7001), 
+    user defined: (7001),
         hydrodynamic plain bearing2,
             hydraulic fluid, reference, (6001),
             viscosity vapor, (1.5e-06),
-            ##mesh, linear finite difference,
             mesh, quadratic finite element,
+            ##mesh, linear finite difference,
             ## enable mcp, enable_mcp,
             ## pressure step integrator, implicit euler,
             ## density step integrator, implicit euler,
@@ -729,10 +739,26 @@ begin: elements;
                     pressure, (10000),
                     position, (0.01) * pi * 71. / 360., 0.,
                     rectangle, width, 1.38e-3, height, 0.8 * (0.0062),
+            contact model,
+                        greenwood tripp,
+                                E1, 175000e6,
+                                nu1, 0.275,
+                                E2, 120000e6,
+                                nu2, 0.3,
+                                base unit, meters,
+                                        M0, 4e-14,
+                                        M2, 0.017352,
+                                        M4, 4.54044e+10,
+                                        offset, 3e-7,
+                friction model, lugre,
+                        method, implicit euler,
+                        coulomb friction coefficient, 0.05,
+                        micro slip stiffness, 1e6,
             theta dof scale, 1e6,
             pressure dof scale, 1e9,
-            equation scale, 5e-5,            
+            equation scale, 1,
             output pressure, yes,
+            output contact pressure, yes,
             output density, yes,
             output friction loss, yes,
             output clearance, yes,

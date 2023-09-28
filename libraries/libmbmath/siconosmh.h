@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2022(-2022) all rights reserved.
+        Copyright (C) 2022(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -87,6 +87,8 @@ public:
      SiconosVectorHandler(integer iSize = 0, doublereal* pdTmpVec = nullptr, const SiconosIndexMap* pIndexMap = nullptr);
      virtual ~SiconosVectorHandler();
 
+     using MyVectorHandler::operator=;
+
      virtual SiconosVectorHandler& operator=(const VectorHandler& VH) override final;
 
      virtual SiconosVectorHandler& ScalarAddMul(const VectorHandler& VH, const doublereal& d) override final;
@@ -123,6 +125,7 @@ private:
 public:
      SiconosMatrixHandler(NM_types eStorageType, integer iNumRows, integer iNumCols, integer iNumNz, const SiconosIndexMap* pIndexMap);
      virtual ~SiconosMatrixHandler();
+     using MatrixHandler::operator=;
 
 #ifdef DEBUG
      virtual void IsValid() const override final;

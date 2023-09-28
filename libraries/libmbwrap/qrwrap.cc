@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2019
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -497,7 +497,7 @@ void QrDenseSolutionManager::SolveR()
 CholModVectorHandler::CholModVectorHandler(integer iSize, CholModCommon& oCommon)
         :oCommon(oCommon)
 {
-        static_assert(sizeof(doublereal) == sizeof(double));
+        static_assert(sizeof(doublereal) == sizeof(double), "data type does not match");
 
         v = cholmod_l_zeros(iSize, 1, CHOLMOD_REAL, oCommon);
 

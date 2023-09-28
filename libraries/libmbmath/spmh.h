@@ -3,12 +3,12 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 2003-2017
+ * Copyright (C) 2003-2023
  *
  * This code is a partial merge of HmFe and MBDyn.
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -197,6 +197,7 @@ public:
 	/* Estrae una colonna da una matrice */
 	virtual VectorHandler& GetCol(integer icol,
 				      VectorHandler& out) const = 0;
+	using MatrixHandler::operator=;
 };
 
 /* Sparse Matrix in compact form */
@@ -218,6 +219,8 @@ public:
 
 	/* used to sum CC matrices with identical indices */
         virtual void AddUnchecked(const CompactSparseMatrixHandler& m) = 0;
+
+	using MatrixHandler::operator=;
 };
 
 /* Sparse Matrix in compact form */
@@ -235,6 +238,7 @@ public:
 				       const std::vector<idx_type>& i,
 				       const std::vector<idx_type>& p);
 	virtual ~CompactSparseMatrixHandler_tpl(void);
+	using MatrixHandler::operator=;
 
 	class const_iterator {
 	private:
@@ -260,21 +264,21 @@ protected:
 	MatrixHandler&
 	MatMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 	MatrixHandler&
 	MatTMatMul_base(void (MatrixHandler::*op)(integer iRow, integer iCol,
 				const doublereal& dCoef),
-			MatrixHandler& out, const MatrixHandler& in) const;
+			MatrixHandler& out, const MatrixHandler& in) const override;
 
 	/* Matrix Vector product */
 	virtual VectorHandler&
 	MatVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 	virtual VectorHandler&
 	MatTVecMul_base(void (VectorHandler::*op)(integer iRow,
 				const doublereal& dCoef),
-			VectorHandler& out, const VectorHandler& in) const;
+			VectorHandler& out, const VectorHandler& in) const override;
 
 protected:
         CompactSparseMatrixHandler_tpl<off, idx_type>::const_iterator m_end;
@@ -289,7 +293,7 @@ public:
 	};
 
 	/* Restituisce un puntatore all'array di reali della matrice */
-        virtual const doublereal* pdGetMat(void) const;
+        virtual const doublereal* pdGetMat(void) const override;
 
      	virtual void Reset(void) override;
 

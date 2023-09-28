@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2022(-2022) all rights reserved.
+        Copyright (C) 2022(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -134,6 +134,8 @@ StaticStructDispNodeAd::iGetInitialFirstIndexPrime() const
      return iGetFirstIndex() + 3;
 }
 
+constexpr sp_grad::SpGradExpDofMapHelper<sp_grad::GpGradProd> StructNodeAd::oDofMap_gradp;
+
 StructNodeAd::StructNodeAd(unsigned int uL,
                            const DofOwner* pDO,
                            const Vec3& X0,
@@ -150,7 +152,8 @@ StructNodeAd::StructNodeAd(unsigned int uL,
 :StructDispNode(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
  StructNode(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
  StructDispNodeAd(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
- eCurrFunc(sp_grad::UNKNOWN_FUNC),
+ eCurrFunc(sp_grad::SpFunctionCall::UNKNOWN_FUNC),
+ ePrevFunc(sp_grad::SpFunctionCall::UNKNOWN_FUNC),
  gY(::Zero3),
  bNeedRotation(false),
  bUpdateRotation(true),
@@ -194,39 +197,25 @@ inline void StructNodeAd::GetWCurrInitAss(sp_grad::SpColVector<sp_grad::SpGradie
 
 inline void StructNodeAd::GetWCurrInitAss(sp_grad::SpColVector<sp_grad::GpGradProd, 3>& W, doublereal dCoef, sp_grad::SpFunctionCall func) const
 {
-     // FIXME: Should be eliminated
+     // Since the initial assembly procedure uses it's own nonlinear solver,
+     // and this solver does not use a Krylov subspace method, this function will not be called.
+     SP_GRAD_ASSERT(false);
+
      throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
 }
 
 template <typename T>
-void StructNodeAd::UpdateRotation(const Mat3x3& RRef, const Vec3& WRef, const sp_grad::SpColVector<T, 3>& g, const sp_grad::SpColVector<T, 3>& gP, sp_grad::SpMatrix<T, 3, 3>& R, sp_grad::SpColVector<T, 3>& W, doublereal dCoef, sp_grad::SpFunctionCall func) const
+void StructNodeAd::UpdateRotation(const Mat3x3& RRef, const Vec3& WRef, const sp_grad::SpColVector<T, 3>& g, const sp_grad::SpColVector<T, 3>& gP, sp_grad::SpMatrix<T, 3, 3>& R, sp_grad::SpColVector<T, 3>& W, doublereal dCoef, sp_grad::SpFunctionCall func, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const
 {
      SP_GRAD_ASSERT(bNeedRotation);
 
      using namespace sp_grad;
 
-     const T d = 4. / (4. + Dot(g, g));
+     SpMatrix<T, 3, 3> RDelta(3, 3, 3);
 
-     SpMatrix<T, 3, 3> RDelta(3, 3, 8);
+     MatRVec(g, RDelta, oDofMap);
 
-     const T tmp1 = -g(3) * g(3);
-     const T tmp2 = -g(2) * g(2);
-     const T tmp3 = -g(1) * g(1);
-     const T tmp4 = g(1) * g(2) * 0.5;
-     const T tmp5 = g(2) * g(3) * 0.5;
-     const T tmp6 = g(1) * g(3) * 0.5;
-
-     RDelta(1,1) = (tmp1 + tmp2) * d * 0.5 + 1;
-     RDelta(1,2) = (tmp4 - g(3)) * d;
-     RDelta(1,3) = (tmp6 + g(2)) * d;
-     RDelta(2,1) = (g(3) + tmp4) * d;
-     RDelta(2,2) = (tmp1 + tmp3) * d * 0.5 + 1.;
-     RDelta(2,3) = (tmp5 - g(1)) * d;
-     RDelta(3,1) = (tmp6 - g(2)) * d;
-     RDelta(3,2) = (tmp5 + g(1)) * d;
-     RDelta(3,3) = (tmp2 + tmp3) * d * 0.5 + 1.;
-
-     R = EvalUnique(RDelta * RRef);
+     R.MapAssign(RDelta * RRef, oDofMap);
 
      switch (func) {
      case SpFunctionCall::INITIAL_ASS_JAC:
@@ -236,23 +225,12 @@ void StructNodeAd::UpdateRotation(const Mat3x3& RRef, const Vec3& WRef, const sp
      case SpFunctionCall::INITIAL_DER_JAC:
      case SpFunctionCall::REGULAR_JAC:
      {
-          SpMatrix<T, 3, 3> G(3, 3, 8);
+          SpMatrix<T, 3, 3> G(3, 3, 3);
 
-          const T tmp7 = 0.5 * g(1) * d;
-          const T tmp8 = 0.5 * g(2) * d;
-          const T tmp9 = 0.5 * g(3) * d;
+          MatGVec(g, G, oDofMap);
 
-          G(1,1) = d;
-          G(1,2) = -tmp9;
-          G(1,3) = tmp8;
-          G(2,1) = tmp9;
-          G(2,2) = d;
-          G(2,3) = -tmp7;
-          G(3,1) = -tmp8;
-          G(3,2) = tmp7;
-          G(3,3) = d;
-
-          W = EvalUnique(G * gP + RDelta * WRef); // Note that the first index of gP and g must be the same in order to work!
+          W.MapAssign(G * gP, oDofMap); // Note that the first index of gP and g must be the same in order to work!
+          W.Add(RDelta * WRef, oDofMap);
      }
      break;
 
@@ -271,7 +249,18 @@ void StructNodeAd::UpdateRotation(doublereal dCoef) const
           GetgCurr(gCurr_grad, dCoef, eCurrFunc);
           GetgPCurr(gPCurr_grad, dCoef, eCurrFunc);
 
-          UpdateRotation(RRef, WRef, gCurr_grad, gPCurr_grad, RCurr_grad, WCurr_grad, dCoef, eCurrFunc);
+          if (ePrevFunc != eCurrFunc) {
+               oDofMap_grad.ResetDofStat();
+               oDofMap_grad.GetDofStat(gCurr_grad);
+               oDofMap_grad.GetDofStat(gPCurr_grad);
+               oDofMap_grad.Reset();
+               oDofMap_grad.InsertDof(gCurr_grad);
+               oDofMap_grad.InsertDof(gPCurr_grad);
+               oDofMap_grad.InsertDone();
+               ePrevFunc = eCurrFunc;
+          }
+
+          UpdateRotation(RRef, WRef, gCurr_grad, gPCurr_grad, RCurr_grad, WCurr_grad, dCoef, eCurrFunc, oDofMap_grad);
 
 #if defined(DEBUG)
           {
@@ -355,8 +344,7 @@ void StructNodeAd::UpdateRotation(const VectorHandler& Y, doublereal dCoef) cons
 
           GetgCurr(gCurr_gradp, dCoef, eCurrFunc);
           GetgPCurr(gPCurr_gradp, dCoef, eCurrFunc);
-
-          UpdateRotation(RRef, WRef, gCurr_gradp, gPCurr_gradp, RCurr_gradp, WCurr_gradp, dCoef, eCurrFunc);
+          UpdateRotation(RRef, WRef, gCurr_gradp, gPCurr_gradp, RCurr_gradp, WCurr_gradp, dCoef, eCurrFunc, oDofMap_gradp);
           bUpdateRotationGradProd = false;
      }
 }
@@ -471,7 +459,7 @@ DynamicStructNodeAd::DynamicStructNodeAd(unsigned int uL,
 :StructDispNode(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
  DynamicStructDispNode(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
  StructNode(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
- StructDispNodeAd(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut), 
+ StructDispNodeAd(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
  DynamicStructNode(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
  StructNodeAd(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut)
 {
@@ -513,7 +501,7 @@ StaticStructNodeAd::StaticStructNodeAd(unsigned int uL,
                                        flag fOut)
 :StructDispNode(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
  StaticStructDispNode(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
- StructNode(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut), 
+ StructNode(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
  StructDispNodeAd(uL, pDO, X0, V0, pRN, pRBK, dPosStiff, dVelStiff, ood, fOut),
  StaticStructNode(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
  StructNodeAd(uL, pDO, X0, R0, V0, W0, pRN, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut)
@@ -556,7 +544,7 @@ ModalNodeAd::ModalNodeAd(unsigned int uL,
 :StructDispNode(uL, pDO, X0, V0, 0, pRBK, dPosStiff, dVelStiff, ood, fOut),
  DynamicStructDispNode(uL, pDO, X0, V0, 0, pRBK, dPosStiff, dVelStiff, ood, fOut),
  StructNode(uL, pDO, X0, R0, V0, W0, 0, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
- StructDispNodeAd(uL, pDO, X0, V0, 0, pRBK, dPosStiff, dVelStiff, ood, fOut), 
+ StructDispNodeAd(uL, pDO, X0, V0, 0, pRBK, dPosStiff, dVelStiff, ood, fOut),
  ModalNode(uL, pDO, X0, R0, V0, W0, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
  StructNodeAd(uL, pDO, X0, R0, V0, W0, 0, pRBK, dPosStiff, dVelStiff, bOmRot, ood, fOut),
  XPPY(::Zero3), WPY(::Zero3)

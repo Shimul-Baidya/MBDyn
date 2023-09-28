@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -88,6 +88,8 @@
 
 #include "membrane.h"
 #include "shell.h"
+#include "solid.h"
+#include "solidpress.h"
 
 static int iNumTypes[Elem::LASTELEMTYPE];
 
@@ -111,7 +113,20 @@ enum KeyWords {
 	MEMBRANE4EAS,
 	SHELL4EAS,
 	SHELL4EASANS,
-
+        HEXAHEDRON8,
+        HEXAHEDRON20,
+        HEXAHEDRON20R,
+        PENTAHEDRON15,
+        TETRAHEDRON10,
+        PRESSUREQ4,
+        PRESSUREQ8,
+        PRESSUREQ8R,
+        PRESSURET6,
+        TRACTIONQ4,
+        TRACTIONQ8,
+        TRACTIONQ8R,
+        TRACTIONT6,
+        
 	AIRPROPERTIES,
 	GUST,
 	INDUCEDVELOCITY,
@@ -179,6 +194,19 @@ DataManager::ReadElems(MBDynParser& HP)
 		"membrane4eas",
 		"shell4eas",
 		"shell4easans",
+                "hexahedron8",
+                "hexahedron20",
+                "hexahedron20r",
+                "pentahedron15",
+                "tetrahedron10",
+                "pressureq4",
+                "pressureq8",
+                "pressureq8r",
+                "pressuret6",
+                "tractionq4",
+                "tractionq8",
+                "tractionq8r",
+                "tractiont6",
 
 		"air" "properties",
 		"gust",
@@ -361,7 +389,30 @@ DataManager::ReadElems(MBDynParser& HP)
 				break;
 			}
 
-			case INDUCEDVELOCITY:
+                        case HEXAHEDRON8:
+                        case HEXAHEDRON20:
+                        case HEXAHEDRON20R:
+                        case PENTAHEDRON15:
+                        case TETRAHEDRON10: {
+                             DEBUGLCOUT(MYDEBUG_INPUT, "solids\n");
+                             Typ = Elem::SOLID;
+                             break;
+                        }
+
+                        case PRESSUREQ4:
+                        case PRESSUREQ8:
+                        case PRESSUREQ8R:
+                        case PRESSURET6:
+                        case TRACTIONQ4:
+                        case TRACTIONQ8:
+                        case TRACTIONQ8R:
+                        case TRACTIONT6: {
+                             DEBUGLCOUT(MYDEBUG_INPUT, "surface loads\n");
+                             Typ = Elem::SURFACE_LOAD;
+                             break;
+                        }
+
+                        case INDUCEDVELOCITY:
 			case ROTOR: {
 				DEBUGLCOUT(MYDEBUG_INPUT, "induced velocity elements" << std::endl);
 				Typ = Elem::INDUCEDVELOCITY;
@@ -548,8 +599,27 @@ DataManager::ReadElems(MBDynParser& HP)
 				case SHELL4EASANS:
 					t = Elem::PLATE;
 					break;
+                                        
+                                case HEXAHEDRON8:
+                                case HEXAHEDRON20:
+                                case HEXAHEDRON20R:
+                                case PENTAHEDRON15:
+                                case TETRAHEDRON10:
+                                        t = Elem::SOLID;
+                                        break;
 
-				case INDUCEDVELOCITY:
+                                case PRESSUREQ4:
+                                case PRESSUREQ8:
+                                case PRESSUREQ8R:
+                                case PRESSURET6:
+                                case TRACTIONQ4:
+                                case TRACTIONQ8:
+                                case TRACTIONQ8R:
+                                case TRACTIONT6:                                     
+                                        t = Elem::SURFACE_LOAD;
+                                        break;
+
+                                case INDUCEDVELOCITY:
 				case ROTOR:
 					t = Elem::INDUCEDVELOCITY;
 					break;
@@ -866,7 +936,19 @@ DataManager::ReadElems(MBDynParser& HP)
 					case HBEAM:
 					case SHELL4EAS:
 					case SHELL4EASANS:
-
+                                        case HEXAHEDRON8:
+                                        case HEXAHEDRON20:
+                                        case HEXAHEDRON20R:
+                                        case PENTAHEDRON15:
+                                        case TETRAHEDRON10:
+                                        case PRESSUREQ4:
+                                        case PRESSUREQ8:
+                                        case PRESSUREQ8R:
+                                        case PRESSURET6:
+                                        case TRACTIONQ4:
+                                        case TRACTIONQ8:
+                                        case TRACTIONQ8R:
+                                        case TRACTIONT6:
 					case INDUCEDVELOCITY:
 					case ROTOR:
 					case AERODYNAMICBODY:
@@ -953,6 +1035,25 @@ DataManager::ReadElems(MBDynParser& HP)
 						case SHELL4EASANS:
 							ppE = ppFindElem(Elem::PLATE, uLabel);
 							break;
+
+                                                case HEXAHEDRON8:
+                                                case HEXAHEDRON20:
+                                                case HEXAHEDRON20R:
+                                                case PENTAHEDRON15:
+                                                case TETRAHEDRON10:
+                                                        ppE = ppFindElem(Elem::SOLID, uLabel);
+                                                        break;
+
+                                                case PRESSUREQ4:
+                                                case PRESSUREQ8:
+                                                case PRESSUREQ8R:
+                                                case PRESSURET6:
+                                                case TRACTIONQ4:
+                                                case TRACTIONQ8:
+                                                case TRACTIONQ8R:
+                                                case TRACTIONT6:                                                     
+                                                        ppE = ppFindElem(Elem::SURFACE_LOAD, uLabel);
+                                                        break;
 
 						case INDUCEDVELOCITY:
 						case ROTOR:
@@ -1096,6 +1197,19 @@ DataManager::ReadElems(MBDynParser& HP)
 				case MEMBRANE4EAS:
 				case SHELL4EAS:
 				case SHELL4EASANS:
+                                case HEXAHEDRON8:
+                                case HEXAHEDRON20:
+                                case HEXAHEDRON20R:
+                                case PENTAHEDRON15:
+                                case TETRAHEDRON10:
+                                case PRESSUREQ4:
+                                case PRESSUREQ8:
+                                case PRESSUREQ8R:
+                                case PRESSURET6:
+                                case TRACTIONQ4:
+                                case TRACTIONQ8:
+                                case TRACTIONQ8R:
+                                case TRACTIONT6:
 
 				case GUST:
 				case INDUCEDVELOCITY:
@@ -1598,6 +1712,160 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 		break;
 	}
 
+        case HEXAHEDRON8:
+        case HEXAHEDRON20:
+        case HEXAHEDRON20R:
+        case PENTAHEDRON15:
+        case TETRAHEDRON10: {
+                static constexpr char sType[][14] = {
+                        "hexahedron8",
+                        "hexahedron20",
+                        "hexahedron20r",
+                        "pentahedron15",
+                        "tetrahedron10"
+                };
+
+                constexpr integer iNumElemTypes = sizeof(sType) / sizeof(sType[0]);
+
+                static_assert(HEXAHEDRON20 - HEXAHEDRON8 < iNumElemTypes, "index out of range");
+                static_assert(HEXAHEDRON20R - HEXAHEDRON8 < iNumElemTypes, "index out of range");
+                static_assert(PENTAHEDRON15 - HEXAHEDRON8 < iNumElemTypes, "index out of range");
+                static_assert(TETRAHEDRON10 - HEXAHEDRON8 < iNumElemTypes, "index out of range");
+
+                ASSERT(CurrType - HEXAHEDRON8 < iNumElemTypes);
+
+                if (!bUseAutoDiff()) {
+                     silent_cerr("element type " << sType[CurrType - HEXAHEDRON8] << " requires support for automatic differentiation at line " << HP.GetLineData()
+                                 << "\nadd the statement \"use automatic differentiation;\" inside the control data section in order to enable it!\n");
+                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (iNumTypes[Elem::SOLID]-- <= 0) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
+                                "exceeds solid elements number" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (pFindElem(Elem::SOLID, uLabel) != NULL) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - HEXAHEDRON8] << "(" << uLabel << ") "
+                                "already defined" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                switch (CurrType) {
+                case HEXAHEDRON8:
+                     pE = ReadSolid<Hexahedron8, Gauss2x2x2>(this, HP, uLabel);
+                     break;
+                case HEXAHEDRON20:
+                     pE = ReadSolid<Hexahedron20, Gauss3x3x3>(this, HP, uLabel);
+                     break;
+                case HEXAHEDRON20R:
+                     pE = ReadSolid<Hexahedron20r, GaussH20r>(this, HP, uLabel);
+                     break;
+                case PENTAHEDRON15:
+                     pE = ReadSolid<Pentahedron15, CollocPenta15>(this, HP, uLabel);
+                     break;
+                case TETRAHEDRON10:
+                     pE = ReadSolid<Tetrahedron10h, CollocTet10h>(this, HP, uLabel);
+                     break;
+                default:
+                     ASSERT(0);
+                }
+
+                if (pE) {
+                        ppE = InsertElem(ElemData[Elem::SOLID], uLabel, pE);
+                }
+
+                break;
+        }
+
+        case PRESSUREQ4:
+        case PRESSUREQ8:
+        case PRESSUREQ8R:
+        case PRESSURET6:
+        case TRACTIONQ4:
+        case TRACTIONQ8:
+        case TRACTIONQ8R:
+        case TRACTIONT6: {
+                static constexpr char sType[][12] = {
+                        "pressureq4",
+                        "pressureq8",
+                        "pressureq8r",
+                        "pressuret6",
+                        "tractionq4",
+                        "tractionq8",
+                        "tractionq8r",
+                        "tractiont6"
+                };
+
+#ifdef DEBUG
+                constexpr integer iNumElemTypes = sizeof(sType) / sizeof(sType[0]);
+
+                ASSERT(CurrType - PRESSUREQ4 < iNumElemTypes);
+#endif
+                if (!bUseAutoDiff()) {
+                     silent_cerr("element type " << sType[CurrType - PRESSUREQ4] << " requires support for automatic differentiation at line " << HP.GetLineData()
+                                 << "\nadd the statement \"use automatic differentiation;\" inside the control data section in order to enable it!\n");
+                     throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (iNumTypes[Elem::SURFACE_LOAD]-- <= 0) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - PRESSUREQ4] << "(" << uLabel << ") "
+                                "exceeds surface load elements number" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                if (pFindElem(Elem::SURFACE_LOAD, uLabel) != nullptr) {
+                        DEBUGCERR("");
+                        silent_cerr("line " << HP.GetLineData() << ": "
+                                << sType[CurrType - PRESSUREQ4] << "(" << uLabel << ") "
+                                "already defined" << std::endl);
+
+                        throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                switch (CurrType) {
+                case PRESSUREQ4:
+                     pE = ReadPressureLoad<Quadrangle4, Gauss2x2>(this, HP, uLabel);
+                     break;
+                case PRESSUREQ8:
+                     pE = ReadPressureLoad<Quadrangle8, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case PRESSUREQ8R:
+                     pE = ReadPressureLoad<Quadrangle8r, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case PRESSURET6:
+                     pE = ReadPressureLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);
+                     break;
+                case TRACTIONQ4:
+                     pE = ReadTractionLoad<Quadrangle4, Gauss2x2>(this, HP, uLabel);
+                     break;
+                case TRACTIONQ8:
+                     pE = ReadTractionLoad<Quadrangle8, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case TRACTIONQ8R:
+                     pE = ReadTractionLoad<Quadrangle8r, Gauss3x3>(this, HP, uLabel);
+                     break;
+                case TRACTIONT6:
+                     pE = ReadTractionLoad<Triangle6h, CollocTria6h>(this, HP, uLabel);
+                     break;
+                default:
+                     ASSERT(0);
+                }
+
+                if (pE) {
+                        ppE = InsertElem(ElemData[Elem::SURFACE_LOAD], uLabel, pE);
+                }
+        } break;
 	/* Elementi aerodinamici: rotori */
 	case ROTOR:
 	case INDUCEDVELOCITY: {
@@ -2162,6 +2430,8 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 			} else if (HP.IsKeyWord("user" "defined") || HP.IsKeyWord("loadable")) {
 				Type = Elem::LOADABLE;
 
+                        } else if (HP.IsKeyWord("solid")) {
+				Type = Elem::SOLID;
 #if 0
 			} else if (HP.IsKeyWord("...")) {
 				/* other types with inertia */

@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -31,7 +31,7 @@
 
  /*
   *
-  * Copyright (C) 2003-2017
+  * Copyright (C) 2003-2023
   * Giuseppe Quaranta	<quaranta@aero.polimi.it>
   *
   * Classe che gestisce la soluzione del problema:
@@ -97,7 +97,9 @@ public:
   		int EndCode;
   	public:
  		EndOfSimulation(const int e, MBDYN_EXCEPT_ARGS_DECL_NODEF) :
- 		MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU), EndCode(e) {};
+		MBDynErrBase(MBDYN_EXCEPT_ARGS_PASSTHRU), EndCode(e) {
+			(void) EndCode; // silence unused warning
+		};
   	};
 
 protected:
@@ -170,18 +172,28 @@ public:
 
 		// text output precision control
 		int iMatrixPrecision;
-		int iResultsPrecision;
+                int iResultsPrecision;
 
-		// ARPACK specific
-		struct ARPACK {
-			integer iNEV;
-			integer iNCV;
-			doublereal dTOL;
-			ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.) { NO_OP; };
-		} arpack;
+                enum EigenvalueType {
+                     LM = 0,
+                     SM,
+                     LR,
+                     SR,
+                     LI,
+                     SI
+                } eWhichEigVal;
+             
+                // ARPACK specific
+                struct ARPACK {
+                        integer iNEV;
+                        integer iNCV;
+                        doublereal dTOL;
+                        integer iMaxIterations;
+                     ARPACK(void) : iNEV(0), iNCV(0), dTOL(0.), iMaxIterations(300) { NO_OP; };
+                } arpack;
 
-		// JDQZ specific
-		struct JDQZ {
+                // JDQZ specific
+                struct JDQZ {
 			doublereal eps;
 			integer kmax;
 			integer jmax;
@@ -215,7 +227,8 @@ public:
 		iFNameWidth(0),
 		iFNameFormat(),
 		dUpperFreq(std::numeric_limits<doublereal>::max()),
-		dLowerFreq(-1.)
+                dLowerFreq(-1.),
+                eWhichEigVal(SM)
 		{
 			currAnalysis = Analyses.end();
 		};

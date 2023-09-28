@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -463,7 +463,7 @@ Actuator::AssRes(SubVectorHandler& WorkVec,
 
 void Actuator::Output(OutputHandler& OH) const
 {
-   if (bToBeOutput()) { 
+   if (bToBeOutput() && OH.UseText(OutputHandler::HYDRAULIC)) { 
       std::ostream& out = OH.Hydraulic();
       out << std::setw(8) << GetLabel()
 	<< " " << flow1  << " " << flow2 
@@ -473,6 +473,8 @@ void Actuator::Output(OutputHandler& OH) const
 	<< " " << density1 << " " << density2
 	<< std::endl;
    }  
+
+   // TODO: NetCDF output...
 }
 
 

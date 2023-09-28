@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2013
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
- * Paolo Mantegazza     <mantegazza@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -31,7 +31,7 @@
 
 /*
   AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-  Copyright (C) 2013(-2022) all rights reserved.
+  Copyright (C) 2023(-2023) all rights reserved.
 
   The copyright of this code is transferred
   to Pierangelo Masarati and Paolo Mantegazza
@@ -70,13 +70,13 @@ public:
      BallBearingContact(unsigned uLabel, const DofOwner *pDO,
                         DataManager* pDM, MBDynParser& HP);
      virtual ~BallBearingContact(void);
-     virtual void Output(OutputHandler& OH) const;
-     virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
+     virtual void Output(OutputHandler& OH) const override;
+     virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
      VariableSubMatrixHandler&
      AssJac(VariableSubMatrixHandler& WorkMat,
             doublereal dCoef,
             const VectorHandler& XCurr,
-            const VectorHandler& XPrimeCurr);
+            const VectorHandler& XPrimeCurr) override;
      virtual void
      AssJac(VectorHandler& JacY,
             const VectorHandler& Y,
@@ -88,7 +88,7 @@ public:
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
             const VectorHandler& XCurr,
-            const VectorHandler& XPrimeCurr);
+            const VectorHandler& XPrimeCurr) override;
      template <typename T>
      inline void
      AssRes(SpGradientAssVec<T>& WorkVec,
@@ -98,30 +98,30 @@ public:
             enum SpFunctionCall func);
      virtual void
      AfterConvergence(const VectorHandler& X,
-                      const VectorHandler& XP);
-     virtual unsigned int iGetNumPrivData(void) const;
-     virtual unsigned int iGetPrivDataIdx(const char *s) const;
-     virtual doublereal dGetPrivData(unsigned int i) const;
+                      const VectorHandler& XP) override;
+     virtual unsigned int iGetNumPrivData(void) const override;
+     virtual unsigned int iGetPrivDataIdx(const char *s) const override;
+     virtual doublereal dGetPrivData(unsigned int i) const override;
      int iGetNumConnectedNodes(void) const;
-     void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const;
-     void SetValue(DataManager *pDM, VectorHandler& X, VectorHandler& XP,
-                   SimulationEntity::Hints *ph);
-     std::ostream& Restart(std::ostream& out) const;
-     virtual unsigned int iGetNumDof(void) const;
+     virtual void GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override;
+     virtual void SetValue(DataManager *pDM, VectorHandler& X, VectorHandler& XP,
+                           SimulationEntity::Hints *ph) override;
+     virtual std::ostream& Restart(std::ostream& out) const override;
+     virtual unsigned int iGetNumDof(void) const override;
      virtual std::ostream& DescribeDof(std::ostream& out,
-                                       const char *prefix, bool bInitial) const;
+                                       const char *prefix, bool bInitial) const override;
      virtual std::ostream& DescribeEq(std::ostream& out,
-                                      const char *prefix, bool bInitial) const;
-     virtual DofOrder::Order GetDofType(unsigned int) const;
-     virtual DofOrder::Order GetEqType(unsigned int i) const;
-     virtual unsigned int iGetInitialNumDof(void) const;
+                                      const char *prefix, bool bInitial) const override;
+     virtual DofOrder::Order GetDofType(unsigned int) const override;
+     virtual DofOrder::Order GetEqType(unsigned int i) const override;
+     virtual unsigned int iGetInitialNumDof(void) const override;
      virtual void
-     InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const;
-     VariableSubMatrixHandler&
+     InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const override;
+     virtual VariableSubMatrixHandler&
      InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                   const VectorHandler& XCurr);
-     SubVectorHandler&
-     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
+                   const VectorHandler& XCurr) override;
+     virtual SubVectorHandler&
+     InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
 
 private:
      const DataManager* const pDM;

@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -255,6 +255,7 @@ public:
 	AfterConvergence(const VectorHandler& X, const VectorHandler& XP);
 
 	/* assemblaggio jacobiano */
+	using Elem::AssMats;
 	virtual void
 	AssMats(VariableSubMatrixHandler& WorkMatA,
 		VariableSubMatrixHandler& WorkMatB,
@@ -262,6 +263,7 @@ public:
 		const VectorHandler& XPrimeCurr);
 
 	/* Inverse Dynamics Jacobian matrix assembly */
+	using DeformableJoint::AssJac;
 	VariableSubMatrixHandler&
 	AssJac(VariableSubMatrixHandler& WorkMat,
 		const VectorHandler& XCurr);
@@ -287,35 +289,6 @@ public:
 	InitialAssJac(VariableSubMatrixHandler& WorkMat,
 		const VectorHandler& XCurr);
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableJoint::ParseHint(pDM, s);
-	};
-
-	virtual unsigned int
-	iGetNumPrivData(void) const {
-		return DeformableJoint::iGetNumPrivData();
-	};
-
-	virtual unsigned int
-	iGetPrivDataIdx(const char *s) const {
-		return DeformableJoint::iGetPrivDataIdx(s);
-	};
-
-	virtual doublereal
-	dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 };
 
 /* ElasticJoint - end */
@@ -377,35 +350,6 @@ public:
 	InitialAssJac(VariableSubMatrixHandler& WorkMat,
 		const VectorHandler& XCurr);
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableJoint::ParseHint(pDM, s);
-	};
-
-	virtual unsigned int
-	iGetNumPrivData(void) const {
-		return DeformableJoint::iGetNumPrivData();
-	};
-
-	virtual unsigned int
-	iGetPrivDataIdx(const char *s) const {
-		return DeformableJoint::iGetPrivDataIdx(s);
-	};
-
-	virtual doublereal
-	dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 };
 
 /* ElasticJoint - end */
@@ -416,6 +360,7 @@ class ViscousJoint : virtual public Elem, public DeformableJoint {
 protected:
 	Mat6x6 FDEPrime;
 
+	using Elem::AssMats;
 	void AssMats(FullSubMatrixHandler& WMA,
 		FullSubMatrixHandler& WMB,
 		doublereal dCoef);
@@ -459,35 +404,6 @@ public:
 	InitialAssJac(VariableSubMatrixHandler& WorkMat,
 		const VectorHandler& XCurr);
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableJoint::ParseHint(pDM, s);
-	};
-
-	virtual unsigned int
-	iGetNumPrivData(void) const {
-		return DeformableJoint::iGetNumPrivData();
-	};
-
-	virtual unsigned int
-	iGetPrivDataIdx(const char *s) const {
-		return DeformableJoint::iGetPrivDataIdx(s);
-	};
-
-	virtual doublereal
-	dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 };
 
 /* ViscousJoint - end */
@@ -503,6 +419,7 @@ protected:
 	Mat6x6 FDE;
 	Mat6x6 FDEPrime;
 
+	using Elem::AssMats;
 	void AssMats(FullSubMatrixHandler& WorkMatA,
 		FullSubMatrixHandler& WorkMatB,
 		doublereal dCoef);
@@ -546,35 +463,6 @@ public:
 	InitialAssJac(VariableSubMatrixHandler& WorkMat,
 		const VectorHandler& XCurr);
 
-#ifdef MBDYN_X_WORKAROUND_GCC_3_2
-	virtual void SetValue(DataManager *pDM,
-		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0)
-	{
-		DeformableJoint::SetValue(pDM, X, XP, ph);
-	};
-
-	virtual Hint *
-	ParseHint(DataManager *pDM, const char *s) const
-	{
-		return DeformableJoint::ParseHint(pDM, s);
-	};
-
-	virtual unsigned int
-	iGetNumPrivData(void) const {
-		return DeformableJoint::iGetNumPrivData();
-	};
-
-	virtual unsigned int
-	iGetPrivDataIdx(const char *s) const {
-		return DeformableJoint::iGetPrivDataIdx(s);
-	};
-
-	virtual doublereal
-	dGetPrivData(unsigned int i) const {
-		return dGetPrivData(i);
-	};
-#endif /* MBDYN_X_WORKAROUND_GCC_3_2 */
 };
 
 /* ViscoElasticJoint - end */

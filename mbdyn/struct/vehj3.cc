@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -113,23 +113,22 @@ DeformableJoint::OutputPrepare(OutputHandler &OH)
 	if (bToBeOutput()) {
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
-			std::string name;
-			OutputPrepare_int("Deformable joint", OH, name);
-			Var_tilde_d = OH.CreateVar<Vec3>(name + "d",
+			OutputPrepare_int("Deformable joint", OH);
+			Var_tilde_d = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "d",
 				OutputHandler::Dimensions::Length,
 				"relative position in local frame (x, y, z)");
-			Var_tilde_dPrime = OH.CreateVar<Vec3>(name + "dPrime",
+			Var_tilde_dPrime = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "dPrime",
 				OutputHandler::Dimensions::Velocity,
 				"relative linear velocity in local frame (x, y, z)");
-			Var_d = OH.CreateVar<Vec3>(name + "D",
+			Var_d = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "D",
 				OutputHandler::Dimensions::Length,
 				"relative position in global frame (x, y, z)");
-			Var_dPrime = OH.CreateVar<Vec3>(name + "DPrime",
+			Var_dPrime = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "DPrime",
 				OutputHandler::Dimensions::Velocity,
 				"relative linear velocity in global frame (x, y, z)");
-			Var_Phi = OH.CreateRotationVar(name, "", od, 
+			Var_Phi = OH.CreateRotationVar(m_sOutputNameBase, "", od, 
 				"relative orientation, in joint reference frame");
-			Var_Omega = OH.CreateVar<Vec3>(name + "Omega",
+			Var_Omega = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Omega",
 				OutputHandler::Dimensions::AngularVelocity,
 				"local relative angular velocity (x, y, z)");
 		}

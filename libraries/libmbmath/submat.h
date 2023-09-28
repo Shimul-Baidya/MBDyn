@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -81,6 +81,7 @@ public:
       */
      virtual ~SubMatrixHandler(void);
 
+     using MatrixHandler::operator=;
 
      /* Metodi di servizio */
 
@@ -101,13 +102,13 @@ public:
       * Nota: nell'implementazione corrente le dimensioni possono essere solamente
       * inferiori alle dimensioni massime con cui e' stata dimensionata.
       */
-     virtual void Resize(integer, integer) = 0;
+     virtual void Resize(integer, integer) override = 0;
 
      /*
       * Ridimensiona ed inizializza.
       * Combina le due funzioni precedenti in una chiamata.
       */
-     virtual void ResizeReset(integer, integer) = 0;
+     virtual void ResizeReset(integer, integer) override = 0;
 
      /* Gestione dei vettori di incidenza */
 
@@ -229,6 +230,8 @@ public:
       */
      virtual ~FullSubMatrixHandler(void);
 
+     using MatrixHandler::operator=;
+
      /* Metodi di servizio */
 
 #ifdef DEBUG
@@ -242,14 +245,14 @@ public:
      /*
       * Numero di righe della sottomatrice
       */
-     integer iGetNumRows(void) const {
+     integer iGetNumRows(void) const override {
           return iNumRows;
      };
 
      /*
       * Numero di colonne della sottomatrice
       */
-     integer iGetNumCols(void) const {
+     integer iGetNumCols(void) const override {
           return iNumCols;
      };
 
@@ -258,15 +261,15 @@ public:
      /*
       * Inizializza la porzione utilizzata con il valore desiderato
       */
-     void Reset(void);
+     void Reset(void) override;
 
      /*
       * Modifica le dimensioni correnti
       */
-     void Resize(integer iNewRow, integer iNewCol);
+     void Resize(integer iNewRow, integer iNewCol) override;
 
      /* Ridimensiona ed inizializza. */
-     virtual void ResizeReset(integer, integer);
+     virtual void ResizeReset(integer, integer) override;
 
      /*
       * Collega la matrice Full alla memoria che gli viene passata
@@ -292,26 +295,26 @@ public:
       * the matrix, as the #if 0'ed code does.
       */
      inline void
-     PutCoef(integer iRow, integer iCol, const doublereal& dCoef);
+     PutCoef(integer iRow, integer iCol, const doublereal& dCoef) override;
 
      /* Incrementa un coefficiente - se non esiste lo crea */
      inline void
-     IncCoef(integer iRow, integer iCol, const doublereal& dCoef);
+     IncCoef(integer iRow, integer iCol, const doublereal& dCoef) override;
 
      /* Decrementa un coefficiente - se non esiste lo crea */
      inline void
-     DecCoef(integer iRow, integer iCol, const doublereal& dCoef);
+     DecCoef(integer iRow, integer iCol, const doublereal& dCoef) override;
 
      /* Restituisce un coefficiente - zero se non e' definito */
      inline const doublereal&
-     dGetCoef(integer iRow, integer iCol) const;
+     dGetCoef(integer iRow, integer iCol) const override;
 
 // FIXME: disambiguate operator()
      inline const doublereal&
-     operator () (integer iRow, integer iCol) const;
+     operator () (integer iRow, integer iCol) const override;
 
      inline doublereal&
-     operator () (integer iRow, integer iCol);
+     operator () (integer iRow, integer iCol) override;
 // end of FIXME: disambiguate operator()
 
      /* Gestione degli indici */
@@ -320,7 +323,7 @@ public:
       * Scrive un indice di riga
       */
      inline void
-     PutRowIndex(integer iSubRow, integer iRow) {
+     PutRowIndex(integer iSubRow, integer iRow) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -334,7 +337,7 @@ public:
       * Scrive un indice di colonna
       */
      inline void
-     PutColIndex(integer iSubCol, integer iCol) {
+     PutColIndex(integer iSubCol, integer iCol) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -348,7 +351,7 @@ public:
       * Legge un indice di riga
       */
      inline integer
-     iGetRowIndex(integer iSubRow) const {
+     iGetRowIndex(integer iSubRow) const override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -362,7 +365,7 @@ public:
       * Legge un indice di colonna
       */
      inline integer
-     iGetColIndex(integer iSubCol) const {
+     iGetColIndex(integer iSubCol) const override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -641,12 +644,12 @@ public:
      /*
       * Somma la matrice ad un matrix handler usando i metodi generici
       */
-     MatrixHandler& AddTo(MatrixHandler& MH) const;
+     MatrixHandler& AddTo(MatrixHandler& MH) const override;
 
      /*
       * Somma la matrice, trasposta, ad un matrix handler usando i metodi generici
       */
-     MatrixHandler& AddToT(MatrixHandler& MH) const;
+     MatrixHandler& AddToT(MatrixHandler& MH) const override;
 
      /*
       * Somma la matrice ad un FullMatrixHandler
@@ -662,12 +665,12 @@ public:
      /*
       * Sottrae la matrice da un matrix handler usando i metodi generici
       */
-     MatrixHandler& SubFrom(MatrixHandler& MH) const;
+     MatrixHandler& SubFrom(MatrixHandler& MH) const override;
 
      /*
       * Sottrae la matrice, trasposta, da un matrix handler usando i metodi generici
       */
-     MatrixHandler& SubFromT(MatrixHandler& MH) const;
+     MatrixHandler& SubFromT(MatrixHandler& MH) const override;
 
      /*
       * Sottrae la matrice da un FullMatrixHandler
@@ -745,6 +748,7 @@ public:
                             integer iDoubleSize, doublereal* pdTmpMat,
                             integer iMaxCols, doublereal **ppdCols);
      FullSubMatrixHandlerAd(integer iNR, integer iNC);
+     using MatrixHandler::operator=;
 
      virtual MatrixHandler&
      AddTo(MatrixHandler& MH) const override final;
@@ -818,6 +822,8 @@ public:
       */
      virtual ~SparseSubMatrixHandler(void);
 
+     using MatrixHandler::operator=;
+
      /* Metodi di servizio */
 
 #ifdef DEBUG
@@ -832,7 +838,7 @@ public:
       * Numero di righe della sottomatrice.
       * Nota: rappresenta il numero totale di entries della sottomatrice.
       */
-     integer iGetNumRows(void) const {
+     integer iGetNumRows(void) const override {
           return iNumItems;
      };
 
@@ -841,7 +847,7 @@ public:
       * Nota: e' sempre 1, ovvero la matrice e' interpretata
       * come un vettore.
       */
-     integer iGetNumCols(void) const {
+     integer iGetNumCols(void) const override {
           return 1;
      };
 
@@ -854,16 +860,16 @@ public:
       * Questo metodo deve essere chiamato prima di qualsiasi
       * operazione sulla matrice.
       */
-     void Resize(integer iNewRow, integer iNewCol);
+     void Resize(integer iNewRow, integer iNewCol) override;
 
      /*
       * Ridimensiona ed inizializza.
       * Unione dei due metodi precedenti
       */
-     void ResizeReset(integer iNewRow, integer iNewCol);
+     void ResizeReset(integer iNewRow, integer iNewCol) override;
 
      /* Azzera */
-     void Reset(void);
+     void Reset(void) override;
 
      /*
       * Collega la matrice sparsa alla memoria che gli viene passata
@@ -877,7 +883,7 @@ public:
       * Scrive un coefficiente in base ai sottoindici.
       */
      inline void
-     PutCoef(integer iSubIt, integer iDmy, const doublereal& dCoef) {
+     PutCoef(integer iSubIt, integer iDmy, const doublereal& dCoef) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -891,7 +897,7 @@ public:
       * Incrementa un coefficiente in base ai sottoindici.
       */
      inline void
-     IncCoef(integer iSubIt, integer iDmy, const doublereal& dCoef) {
+     IncCoef(integer iSubIt, integer iDmy, const doublereal& dCoef) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -904,7 +910,7 @@ public:
       * Decrementa un coefficiente in base ai sottoindici.
       */
      inline void
-     DecCoef(integer iSubIt, integer iDmy, const doublereal& dCoef) {
+     DecCoef(integer iSubIt, integer iDmy, const doublereal& dCoef) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -917,7 +923,7 @@ public:
       * Ottiene un coefficiente in base ai sottoindici.
       */
      inline const doublereal&
-     dGetCoef(integer iSubIt, integer iDmy) const {
+     dGetCoef(integer iSubIt, integer iDmy) const override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -931,7 +937,7 @@ public:
       * Ottiene un coefficiente in base ai sottoindici.
       */
      inline const doublereal&
-     operator () (integer iSubIt, integer iDmy) const {
+     operator () (integer iSubIt, integer iDmy) const override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -945,7 +951,7 @@ public:
       * Ottiene un coefficiente in base ai sottoindici.
       */
      inline doublereal&
-     operator () (integer iSubIt, integer iDmy) {
+     operator () (integer iSubIt, integer iDmy) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -959,7 +965,7 @@ public:
       * Scrive un indice di riga
       */
      inline void
-     PutRowIndex(integer iSubIt, integer iRow) {
+     PutRowIndex(integer iSubIt, integer iRow) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -972,7 +978,7 @@ public:
       * Scrive un indice di colonna
       */
      inline void
-     PutColIndex(integer iSubIt, integer iCol) {
+     PutColIndex(integer iSubIt, integer iCol) override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -985,7 +991,7 @@ public:
       * Ottiene un indice di riga
       */
      inline integer
-     iGetRowIndex(integer iSubIt) const {
+     iGetRowIndex(integer iSubIt) const override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -999,7 +1005,7 @@ public:
       * Ottiene un indice di colonna
       */
      inline integer
-     iGetColIndex(integer iSubIt) const {
+     iGetColIndex(integer iSubIt) const override {
 #ifdef DEBUG
           IsValid();
 #endif /* DEBUG */
@@ -1082,12 +1088,12 @@ public:
      /*
       * Somma la matrice ad un matrix handler usando i metodi generici
       */
-     MatrixHandler& AddTo(MatrixHandler& MH) const;
+     MatrixHandler& AddTo(MatrixHandler& MH) const override;
 
      /*
       * Somma la matrice, trasposta, ad un matrix handler usando i metodi generici
       */
-     MatrixHandler& AddToT(MatrixHandler& MH) const;
+     MatrixHandler& AddToT(MatrixHandler& MH) const override;
 
      /*
       * Somma la matrice ad un FullMatrixHandler
@@ -1104,12 +1110,12 @@ public:
      /*
       * Sottrae la matrice da un matrix handler usando i metodi generici
       */
-     MatrixHandler& SubFrom(MatrixHandler& MH) const;
+     MatrixHandler& SubFrom(MatrixHandler& MH) const override;
 
      /*
       * Sottrae la matrice, trasposta, da un matrix handler usando i metodi generici
       */
-     MatrixHandler& SubFromT(MatrixHandler& MH) const;
+     MatrixHandler& SubFromT(MatrixHandler& MH) const override;
 
      /*
       * Sottrae la matrice da un FullMatrixHandler
@@ -1129,6 +1135,8 @@ public:
 
      explicit SparseSubMatrixHandlerAd(integer iNumItems);
 
+     using MatrixHandler::operator=;
+
      virtual MatrixHandler&
      AddTo(MatrixHandler& MH) const override final;
 };
@@ -1137,6 +1145,7 @@ class SpGradientSubMatrixHandler: public SubMatrixHandler {
 public:
      explicit SpGradientSubMatrixHandler(integer iNumItemsMax);
      virtual ~SpGradientSubMatrixHandler();
+     using MatrixHandler::operator=;
      virtual void Resize(integer, integer) override;
      virtual void Reset() override;
      virtual void ResizeReset(integer, integer) override;
@@ -1151,7 +1160,7 @@ public:
      virtual MatrixHandler& AddTo(MatrixHandler& HM) const override;
      virtual MatrixHandler& SubFrom(MatrixHandler& HM) const override;
      virtual MatrixHandler& AddToT(MatrixHandler& HM) const override;
-     VectorHandler& MultAddTo(VectorHandler& A, const VectorHandler& Y) const;
+     VectorHandler& MultAddTo(VectorHandler& A, const VectorHandler& Y) const override;
      virtual MatrixHandler& SubFromT(MatrixHandler& HM) const override;
 
 #ifdef DEBUG
@@ -1400,6 +1409,8 @@ public:
           NO_OP;
      };
 
+     using VectorHandler::operator=;
+
      /* Metodi di servizio */
 
 #ifdef DEBUG
@@ -1490,6 +1501,9 @@ public:
      virtual ~MySubVectorHandler(void) {
           Detach();
      };
+
+     using VectorHandler::operator=;
+     using MyVectorHandler::operator=;
 
      /*
       * Tutti questi metodi sono richiesti perche'

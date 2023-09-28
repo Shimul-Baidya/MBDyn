@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code. 
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -645,7 +645,7 @@ const Param_Manip Param;
 const MatR_Manip MatR;
 const MatG_Manip MatG;
 const MatGm1_Manip MatGm1;
-};
+}
 
 
 Vec3 operator - (const Vec3& v)
@@ -671,7 +671,7 @@ Mat3x3 operator - (const Mat3x3& m)
 }
 
 
-const char sForm[] = "%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e";
+//const char sForm[] = "%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e%15.6e";
 const char sDefFill[] = " ";
 
 /* output di matrici */
@@ -1033,7 +1033,7 @@ EulerAngles123_2MatR(const Vec3& v)
 		dSinBeta,
 		-dSinAlpha*dCosBeta,
 		dCosAlpha*dCosBeta);
-};
+}
 
 Mat3x3
 EulerAngles313_2MatR(const Vec3& v)

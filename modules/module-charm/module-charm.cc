@@ -3,9 +3,9 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -29,9 +29,9 @@
  */
 
 /*
- * Copyright (C) 2010-2017
+ * Copyright (C) 2010-2023
  *
- * Pierangelo Masarati  <masarati@aero.polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
  *
  * All rights reserved.
  *
@@ -486,7 +486,7 @@ iDebug(0), iDebugCount(0)
 		silent_cout(
 "\n"
 "Module:        CHARM\n"
-"Author:        Pierangelo Masarati <masarati@aero.polimi.it>\n"
+"Author:        Pierangelo Masarati <pierangelo.masarati@polimi.it>\n"
 "Organization:  Dipartimento di Ingegneria Aerospaziale\n"
 "               Politecnico di Milano\n"
 "               http://www.aero.polimi.it/\n"

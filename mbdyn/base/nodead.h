@@ -2,10 +2,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2022
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2022(-2022) all rights reserved.
+        Copyright (C) 2022(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -42,13 +42,13 @@
 #define NODEAD_H
 
 #include "myassert.h"
-#include "node.h"
+#include "scalarnode.h"
 #include "sp_gradient.h"
 
 class ScalarNodeAd: virtual public ScalarNode {
 public:
      ScalarNodeAd(unsigned int uL, const DofOwner* pDO, flag fOut);
-     virtual ~ScalarNodeAd();
+     virtual ~ScalarNodeAd(void);
 
      inline void GetX(doublereal& dX, doublereal dCoef, sp_grad::SpFunctionCall func) const;
      inline void GetX(sp_grad::SpGradient& dX, doublereal dCoef, sp_grad::SpFunctionCall func) const;
@@ -63,7 +63,7 @@ class ScalarDifferentialNodeAd: virtual public ScalarDifferentialNode, public Sc
 public:
      ScalarDifferentialNodeAd(unsigned int uL, const DofOwner* pDO,
                               const doublereal& dx, const doublereal& dxp, flag fOut);
-     virtual ~ScalarDifferentialNodeAd();
+     virtual ~ScalarDifferentialNodeAd(void);
 
      inline void GetXPrime(doublereal& dXPrime, doublereal dCoef, sp_grad::SpFunctionCall func) const;
      inline void GetXPrime(sp_grad::SpGradient& dXPrime, doublereal dCoef, sp_grad::SpFunctionCall func) const;
@@ -75,7 +75,7 @@ public:
      ScalarAlgebraicNodeAd(unsigned int uL, const DofOwner* pDO,
                            doublereal dx, flag fOut);
 
-     virtual ~ScalarAlgebraicNodeAd();
+     virtual ~ScalarAlgebraicNodeAd(void);
 };
 
 inline void ScalarNodeAd::GetX(doublereal& dX, doublereal dCoef, sp_grad::SpFunctionCall func) const

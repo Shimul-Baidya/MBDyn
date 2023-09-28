@@ -3,10 +3,10 @@
  * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
- * Copyright (C) 1996-2017
+ * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<masarati@aero.polimi.it>
- * Paolo Mantegazza	<mantegazza@aero.polimi.it>
+ * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -63,7 +63,7 @@ public:
 	virtual Drive::Type GetDriveType(void) const override;
 
 	/* Scrive il contributo del DriveCaller al file di restart */
-	virtual std::ostream& Restart(std::ostream& out) const = 0;
+	virtual std::ostream& Restart(std::ostream& out) const override = 0;
 
 	virtual inline integer iGetNumDrives(void) const;
 
