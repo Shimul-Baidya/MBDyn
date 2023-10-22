@@ -101,20 +101,6 @@ Mass::dGetM(void) const
 	return dMass;
 }
 
-/* momento statico */
-Vec3
-Mass::GetS(void) const
-{
-	return GetS_int();
-}
-
-/* momento d'inerzia */
-Mat3x3
-Mass::GetJ(void) const
-{
-	return GetJ_int();
-}
-
 /* nodo */
 const StructDispNode *
 Mass::pGetNode(void) const
@@ -472,6 +458,14 @@ DynamicMass::GetB_int(void) const
 	return V*dMass;
 }
 
+Vec3 DynamicMass::GetG_int(void) const
+{
+	const Vec3& X(pNode->GetXCurr());
+	const Vec3& V(pNode->GetVCurr());
+
+	// NOTE: with respect to the origin of the global reference frame!
+	return (X * dMass).Cross(V);
+}
 /* DynamicMass - end */
 
 
@@ -800,20 +794,6 @@ doublereal
 Body::dGetM(void) const
 {
 	return dMass;
-}
-
-/* momento statico */
-Vec3
-Body::GetS(void) const
-{
-	return GetS_int();
-}
-
-/* momento d'inerzia */
-Mat3x3
-Body::GetJ(void) const
-{
-	return GetJ_int();
 }
 
 /* nodo */
