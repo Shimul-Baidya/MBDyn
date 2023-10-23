@@ -12961,6 +12961,7 @@ namespace {
 
      void ComplianceModelNodalDouble::Initialize()
      {
+#if defined(USE_LAPACK) && defined(HAVE_DGETRF) && defined(HAVE_DGETRS)
           ComplianceModel::Initialize();
 
           dPressDofScale = pGetMesh()->pGetParent()->dGetScale(HydroRootElement::SCALE_PRESSURE_DOF);
@@ -13164,6 +13165,10 @@ namespace {
                     HYDRO_TRACE(std::endl);
                }
           }
+#endif
+#else
+          silent_cerr("module-hydrodynamic_plain_bearing2 is not fully functional because LAPACK's dgetrf and dgetrs functions were not found.\n");
+          throw ErrNotAvailableYet(MBDYN_EXCEPT_ARGS);
 #endif
      }
 

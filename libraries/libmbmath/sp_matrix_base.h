@@ -49,6 +49,7 @@
 #include "matvec3n.h"
 #include "RotCoeff.hh"
 #include "Rot.hh"
+#include "tpls.h"
 
 #include "sp_matrix_base_fwd.h"
 #include "sp_gradient.h"
@@ -5468,6 +5469,12 @@ namespace sp_grad {
           return sqrt(Dot(u, u));
      }
 
+     template <typename Value, typename Expr>
+     inline constexpr Value Norm(const SpMatElemExprBase<Value, Expr>& u, const SpGradExpDofMapHelper<Value>& oDofMap) {
+          using std::sqrt;
+          return oDofMap.MapEval(sqrt(Dot(u, u, oDofMap)));
+     }
+
      template <typename ValueType, typename Expr>
      inline constexpr SpSubMatDynExpr<ValueType, const SpMatElemExprBase<ValueType, Expr>&>
      SubMatrix(const SpMatElemExprBase<ValueType, Expr>& A, index_type iRowStart, index_type iRowStep, index_type iNumRows, index_type iColStart, index_type iColStep, index_type iNumCols) {
@@ -5966,6 +5973,66 @@ namespace sp_grad {
 
           return os;
      }
+}
+
+template <typename ValueType, typename DerivedType>
+std::ostream&
+Write(std::ostream& out, const sp_grad::SpMatElemExprBase<ValueType, DerivedType>& m, const char* sFill = " ", const char* sFill2 = nullptr)
+{
+     using namespace sp_grad;
+
+     if (!sFill2) {
+          sFill2 = sFill;
+     }
+
+     for (index_type i = 1; i <= m.iGetNumRows(); ++i) {
+          const bool bLastRow = (i == m.iGetNumRows());
+
+          for (index_type j = 1; j <= m.iGetNumCols(); ++j) {
+               out << m.dGetValue(i, j);
+
+               const bool bLastCol = (j == m.iGetNumCols());
+
+               if (bLastCol && !bLastRow) {
+                    out << sFill2;
+               } else if (!bLastCol) {
+                    out << sFill;
+               }
+          }
+     }
+
+     return out;
+}
+
+// Required for ConstitutiveLaw7D
+template <>
+inline const sp_grad::SpColVector<doublereal, 7>&
+mb_zero<sp_grad::SpColVector<doublereal, 7>>() {
+     static const sp_grad::SpColVector<doublereal, 7> Zero7(7, 0);
+
+     return Zero7;
+}
+
+template <>
+inline const sp_grad::SpMatrix<doublereal, 7, 7>&
+mb_zero<sp_grad::SpMatrix<doublereal, 7, 7>>() {
+     static const sp_grad::SpMatrix<doublereal, 7, 7> Zero7x7(7, 7, 0);
+
+     return Zero7x7;
+}
+
+template <>
+inline sp_grad::SpMatrix<doublereal, 7, 7>
+mb_deye<sp_grad::SpMatrix<doublereal, 7, 7>>(const doublereal d) {
+     using namespace sp_grad;
+
+     SpMatrix<doublereal, 7, 7> A(7, 7, 0);
+
+     for (index_type i = 1; i <= A.iGetNumRows(); ++i) {
+          A(i, i) = d;
+     }
+
+     return A;
 }
 
 #endif

@@ -37,32 +37,32 @@ in the opposite direction of the surface normal vector. So, it is important, tha
 when creating the mesh (e.g. use \emph{ReorientMesh} in \htmladdnormallink{\texttt{Gmsh}}{https://gmsh.info/}).
 See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
 \begin{Verbatim}[commandchars=\\\{\}]
-  \bnt{elem_type} ::= \{ \kw{pressureq4} | \kw{pressureq8} | \kw{pressureq8r} | \kw{pressuret6} \}
+  \bnt{elem_type} ::= \{ \kw{pressureq4} | \kw{pressureq8} | \kw{pressureq8r} | \kw{pressureq9} | \kw{pressuret6} \}
 
-    \bnt{normal_arglist} ::=
-        \bnt{struct_node_data} , \bnt{pressure_load_data} ;
+  \bnt{normal_arglist} ::=
+  \bnt{struct_node_data} , \bnt{pressure_load_data} ;
 
-     \bnt{struct_node_data} :: =
-        (\ty{StructDispNode}) \bnt{struct_node_1_label} ,
-        (\ty{StructDispNode}) \bnt{struct_node_2_label} ,
-        ... ,
-        (\ty{StructDispNode}) \bnt{struct_node_N_label}
+  \bnt{struct_node_data} :: =
+  (\ty{StructDispNode}) \bnt{struct_node_1_label} ,
+  (\ty{StructDispNode}) \bnt{struct_node_2_label} ,
+  ... ,
+  (\ty{StructDispNode}) \bnt{struct_node_N_label}
 
-     \bnt{pressure_load_data} :: =
-        \{ \kw{from drives} , \bnt{press_drive_data} |
-           \kw{from nodes}  , \bnt{press_node_data} \}
+  \bnt{pressure_load_data} :: =
+  \{ \kw{from drives} , \bnt{press_drive_data} |
+  \kw{from nodes}  , \bnt{press_node_data} \}
 
-      \bnt{pressure_drive_data} :: =
-        (\hty{DriveCaller}) \bnt{press_drive_1} ,
-        (\hty{DriveCaller}) \bnt{press_drive_2} ,
-        ... ,
-        (\hty{DriveCaller}) \bnt{press_drive_N}
+  \bnt{pressure_drive_data} :: =
+  (\hty{DriveCaller}) \bnt{press_drive_1} ,
+  (\hty{DriveCaller}) \bnt{press_drive_2} ,
+  ... ,
+  (\hty{DriveCaller}) \bnt{press_drive_N}
 
-      \bnt{pressure_node_data} :: =
-        (\ty{AbstractNode}) \bnt{press_node_1} ,
-        (\ty{AbstractNode}) \bnt{press_node_2} ,
-        ... ,
-        (\ty{AbstractNode}) \bnt{press_node_N}
+  \bnt{pressure_node_data} :: =
+  (\ty{AbstractNode}) \bnt{press_node_1} ,
+  (\ty{AbstractNode}) \bnt{press_node_2} ,
+  ... ,
+  (\ty{AbstractNode}) \bnt{press_node_N}
 
 \end{Verbatim}
 
@@ -91,29 +91,29 @@ or deformed during the simulation. In contradiction to that, relative surface tr
 to the global reference frame, but their direction and magnitude is changed similar to pressure loads, if the surface is deformed or moved.
 See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
 \begin{Verbatim}[commandchars=\\\{\}]
-  \bnt{elem_type} ::= \{ \kw{tractionq4} | \kw{tractionq8} | \kw{tractionq8r} | \kw{tractiont6} \}
+  \bnt{elem_type} ::= \{ \kw{tractionq4} | \kw{tractionq8} | \kw{tractionq8r} | \kw{tractionq9} | \kw{tractiont6} \}
 
-    \bnt{normal_arglist} ::=
-        [ \kw{absolute} , ] \bnt{struct_node_data} , \kw{from drives} , \bnt{traction_load_data}
-        [ , \kw{orientation}, \bnt{traction_orient_data} ] ;
+  \bnt{normal_arglist} ::=
+      [ \kw{absolute} , ] \bnt{struct_node_data} , \kw{from drives} , \bnt{traction_load_data}
+      [ , \kw{orientation}, \bnt{traction_orient_data} ] ;
 
-     \bnt{struct_node_data} :: =
-        (\ty{StructDispNode}) \bnt{struct_node_1_label} ,
-        (\ty{StructDispNode}) \bnt{struct_node_2_label} ,
-        ... ,
-        (\ty{StructDispNode}) \bnt{struct_node_N_label}
+      \bnt{struct_node_data} :: =
+      (\ty{StructDispNode}) \bnt{struct_node_1_label} ,
+      (\ty{StructDispNode}) \bnt{struct_node_2_label} ,
+      ... ,
+      (\ty{StructDispNode}) \bnt{struct_node_N_label}
 
-     \bnt{traction_load_data} :: =
-        (\htybty{TplDriveCaller}{Vec3}) \bnt{traction_stress_1} ,
-        (\htybty{TplDriveCaller}{Vec3}) \bnt{traction_stress_2} ,
-        ... ,
-        (\htybty{TplDriveCaller}{Vec3}) \bnt{traction_stress_N}
+      \bnt{traction_load_data} :: =
+      (\htybty{TplDriveCaller}{Vec3}) \bnt{traction_stress_1} ,
+      (\htybty{TplDriveCaller}{Vec3}) \bnt{traction_stress_2} ,
+      ... ,
+      (\htybty{TplDriveCaller}{Vec3}) \bnt{traction_stress_N}
 
-     \bnt{traction_orient_data} :: =
-        (\hty{OrientationMatrix}) \bnt{orientation_matrix_1} ,
-        (\hty{OrientationMatrix}) \bnt{orientation_matrix_2} ,
-        ... ,
-        (\hty{OrientationMatrix}) \bnt{orientation_matrix_M}
+      \bnt{traction_orient_data} :: =
+      (\hty{OrientationMatrix}) \bnt{orientation_matrix_1} ,
+      (\hty{OrientationMatrix}) \bnt{orientation_matrix_2} ,
+      ... ,
+      (\hty{OrientationMatrix}) \bnt{orientation_matrix_M}
 \end{Verbatim}
 
 \subsubsection{Example:}
@@ -152,48 +152,57 @@ See also table~\ref{sec:EL:SURFLOAD:elemtypes} for a list of supported elements.
 \end{verbatim}
 
 \begin{table}[h!tp]
-\begin{tabular}[t]{|c|c|c|c|c|c|c|}
-  \hline
-  element type pressure & element type traction & nodes & node order & integration points & order & references \tabularnewline
-  \hline
-  \kw{pressureq4} & \kw{tractionq4} & 4 & \ref{fig:EL:SURFLOAD:QUADRANGLE4} & 4 & 1 & \cite{BATHE2016} \tabularnewline
-  \hline
-  \kw{pressureq8} & \kw{tractionq8} & 8 & \ref{fig:EL:SURFLOAD:QUADRANGLE8} & 9 & 2 & \cite{BATHE2016} \tabularnewline
-  \hline
-  \kw{pressureq8r} & \kw{tractionq8r} & 8 & \ref{fig:EL:SURFLOAD:QUADRANGLE8R} & 9 & 2 & \cite{DHONDT2004} \tabularnewline
-  \hline
-  \kw{pressuret6} & \kw{tractiont6} & 6 & \ref{fig:EL:SURFLOAD:TRIANGLE6H} & 7 & 2 & \cite{CODEASTERR30301} \tabularnewline
-  \hline
-\end{tabular}
+  \begin{tabular}[t]{|c|c|c|c|c|c|c|}
+    \hline
+    element type pressure & element type traction & nodes & node order & integration points & order & references \tabularnewline
+    \hline
+    \kw{pressureq4} & \kw{tractionq4} & 4 & \ref{fig:EL:SURFLOAD:QUADRANGLE4} & 4 & 1 & \cite{BATHE2016} \tabularnewline
+    \hline
+    \kw{pressureq8} & \kw{tractionq8} & 8 & \ref{fig:EL:SURFLOAD:QUADRANGLE8} & 9 & 2 & \cite{BATHE2016} \tabularnewline
+    \hline
+    \kw{pressureq8r} & \kw{tractionq8r} & 8 & \ref{fig:EL:SURFLOAD:QUADRANGLE8R} & 9 & 2 & \cite{DHONDT2004} \tabularnewline
+    \hline
+    \kw{pressureq9} & \kw{tractionq9} & 9 & \ref{fig:EL:SURFLOAD:QUADRANGLE9} & 9 & 2 & \cite{CODEASTERR30301} \tabularnewline
+    \hline
+    \kw{pressuret6} & \kw{tractiont6} & 6 & \ref{fig:EL:SURFLOAD:TRIANGLE6H} & 7 & 2 & \cite{CODEASTERR30301} \tabularnewline
+    \hline
+  \end{tabular}
   \caption{Finite Element Types for surface loads}
   \label{sec:EL:SURFLOAD:elemtypes}
 \end{table}
 
 \begin{figure}[htb]
-\centering
-\includegraphics[width=.25\textwidth]{quadrangle4}
-\caption{Node order: \kw{pressureq4}, \kw{tractionq4}}
-\label{fig:EL:SURFLOAD:QUADRANGLE4}
-\end{figure}
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=.25\textwidth]{quadrangle8}
-\caption{Node order: \kw{pressureq8}, \kw{tractionq8}}
-\label{fig:EL:SURFLOAD:QUADRANGLE8}
-\end{figure}
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=.25\textwidth]{quadrangle8r}
-\caption{Node order: \kw{pressureq8r}, \kw{tractionq8r}}
-\label{fig:EL:SURFLOAD:QUADRANGLE8R}
-\end{figure}
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=.25\textwidth]{triangle6h}
-\caption{Node order: \kw{pressuret6}, \kw{tractiont6}}
-\label{fig:EL:SURFLOAD:TRIANGLE6H}
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{quadrangle4}
+    \caption{\kw{pressureq4}, \kw{tractionq4}}
+    \label{fig:EL:SURFLOAD:QUADRANGLE4}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{quadrangle8}
+    \caption{\kw{pressureq8}, \kw{tractionq8}}
+    \label{fig:EL:SURFLOAD:QUADRANGLE8}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{quadrangle8r}
+    \caption{\kw{pressureq8r}, \kw{tractionq8r}}
+    \label{fig:EL:SURFLOAD:QUADRANGLE8R}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{quadrangle9}
+    \caption{\kw{pressureq9}, \kw{tractionq9}}
+    \label{fig:EL:SURFLOAD:QUADRANGLE9}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{triangle6h}
+    \caption{\kw{pressuret6}, \kw{tractiont6}}
+    \label{fig:EL:SURFLOAD:TRIANGLE6H}
+  \end{subfigure}
+  \caption{Node order: surface loads}
+  \label{fig:EL:SURFLOAD:NODE_ORDER}
 \end{figure}
 \clearpage

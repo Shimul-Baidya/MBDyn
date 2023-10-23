@@ -2797,7 +2797,7 @@ ReadStructuralForce(DataManager* pDM,
 
 	TplDriveCaller<Vec3>* pDC = 0;
 	if (bLegacy) {
-		pDC = DC2TDC(HP.GetDriveCaller(), Dir);
+               pDC = DC2TDC(pDM->pGetDrvHdl(), HP.GetDriveCaller(), Dir);
 
 	} else {
 		if (bFollower) {

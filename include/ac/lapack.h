@@ -345,6 +345,16 @@ __FC_DECL__(dtrtrs)(const char* UPLO,
                     const integer* LDB,
                     integer* INFO);
 
+/* Subroutine */ extern int
+__FC_DECL__(dsyev)(const char* JOBZ,
+                   const char* UPLO,
+                   const integer* N,
+                   doublereal* A,
+                   const integer* LDA,
+                   doublereal* W,
+                   doublereal* WORK,
+                   const integer* LWORK,
+                   integer* INFO);
 
 #endif /* USE_LAPACK */
 

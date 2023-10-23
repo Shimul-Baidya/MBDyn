@@ -4316,6 +4316,92 @@ namespace sp_grad_test {
           sp_grad_assert_equal(f45, fref, dTol);
           sp_grad_assert_equal(f46, fref, dTol);
      }
+
+
+     void test20()
+     {
+          using namespace std;
+
+          cerr << __PRETTY_FUNCTION__ << ":\n";
+
+          Mat3x3 A1;
+
+          for (index_type i = 1; i <= A1.iGetNumRows(); ++i) {
+               for (index_type j = 1; j <= A1.iGetNumCols(); ++j) {
+                    A1(i, j) = 10. * i + j;
+               }
+          }
+
+          Vec3 C1 = A1.GetCol(2);
+          Vec3 D1 = A1.GetCol(3);
+
+          SpMatrix<doublereal, 3, 3> A2(A1);
+
+          SpColVector<doublereal, 3> C2(A2.GetCol(2));
+          SpColVector<doublereal, 3> D2(A2.GetCol(3));
+
+          Vec3 C3(C2);
+          Vec3 D3(D2);
+
+          assert(C3.IsExactlySame(C1));
+          assert(D3.IsExactlySame(D1));
+          assert(Dot(C2, D2) == C1.Dot(D1));
+
+          Mat3x3 A3(A2);
+
+          assert(A3.IsExactlySame(A1));
+
+          Mat3x3 B1 = A1 * A1.Transpose();
+          SpMatrix<doublereal, 3, 3> B2 = A2 * Transpose(A2);
+          Mat3x3 B3(B2);
+
+          assert(B3.IsExactlySame(B1));
+     }
+
+     void test20a()
+     {
+          using namespace std;
+
+          cerr << __PRETTY_FUNCTION__ << ":\n";
+
+          Mat6x6 A1;
+
+          for (index_type i = 1; i <= A1.iGetNumRows(); ++i) {
+               for (index_type j = 1; j <= A1.iGetNumCols(); ++j) {
+                    A1(i, j) = 10. * i + j;
+               }
+          }
+
+          Vec6 C1;
+          Vec6 D1;
+
+          for (index_type i = 1; i <= A1.iGetNumRows(); ++i) {
+               C1(i) = A1(i, 2);
+               D1(i) = A1(i, 3);
+          }
+
+          SpMatrix<doublereal, 6, 6> A2(A1);
+
+          SpColVector<doublereal, 6> C2(A2.GetCol(2));
+          SpColVector<doublereal, 6> D2(A2.GetCol(3));
+
+          Vec6 C3(C2);
+          Vec6 D3(D2);
+
+          assert(C3.IsExactlySame(C1));
+          assert(D3.IsExactlySame(D1));
+          assert(Dot(C2, D2) == C1.Dot(D1));
+
+          Mat6x6 A3(A2);
+
+          assert(A3.IsExactlySame(A1));
+
+          Mat6x6 B1 = A1 * A1.Transpose();
+          SpMatrix<doublereal, 6, 6> B2 = A2 * Transpose(A2);
+          Mat6x6 B3(B2);
+
+          assert(B3.IsExactlySame(B1));
+     }
 }
 
 int main(int argc, char* argv[])
@@ -4452,6 +4538,8 @@ int main(int argc, char* argv[])
           if (SP_GRAD_RUN_TEST(19.1)) test19();
           if (SP_GRAD_RUN_TEST(19.2)) test19b();
           if (SP_GRAD_RUN_TEST(19.3)) test19c();
+          if (SP_GRAD_RUN_TEST(20.1)) test20();
+          if (SP_GRAD_RUN_TEST(20.2)) test20a();
 
           cerr << "All tests passed\n"
                << "\n\tloops performed: " << inumloops

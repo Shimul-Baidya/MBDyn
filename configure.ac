@@ -1927,6 +1927,34 @@ if test $ol_with_lapack != no ; then
                            AC_DEFINE(HAVE_DTRTRS,1,[define to use LAPACK's dtrtrs in SPQR])],[])
 	fi
 
+        AC_CHECK_FUNC(dgelsd,[have_dgelsd=yes],[have_dgelsd=no])
+        AC_CHECK_FUNC(dgelsd_,[have_dgelsd_=yes],[have_dgelsd_=no])
+
+        if test "$have_dgelsd" = "yes" -o "$have_dgelsd_" = "yes"; then
+           AC_DEFINE(HAVE_DGELSD,1,[define to use LAPACK's dgelsd function])
+        fi
+
+        AC_CHECK_FUNC(dgetrs,[have_dgetrs=yes],[have_dgetrs=no])
+        AC_CHECK_FUNC(dgetrs_,[have_dgetrs_=yes],[have_dgetrs_=no])
+
+        if test "$have_dgetrs" = "yes" -o "$have_dgetrs_" = "yes"; then
+           AC_DEFINE(HAVE_DGETRS,1,[define to use LAPACK's dgetrs function])
+        fi
+
+        AC_CHECK_FUNC(dgetri,[have_dgetri=yes],[have_dgetri=no])
+        AC_CHECK_FUNC(dgetri_,[have_dgetri_=yes],[have_dgetri_=no])
+
+        if test "$have_dgetri" = "yes" -o "$have_dgetri_" = "yes"; then
+           AC_DEFINE(HAVE_DGETRI,1,[define to use LAPACK's dgetri function])
+        fi
+
+        AC_CHECK_FUNC(dsyev,[have_dsyev=yes],[have_dsyev=no])
+        AC_CHECK_FUNC(dsyev_,[have_dsyev_=yes],[have_dsyev_=no])
+
+        if test "$have_dsyev" = "yes" -o "$have_dsyev_" = "yes"; then
+           AC_DEFINE(HAVE_DSYEV,1,[define to use LAPACK's dsyev function])
+        fi
+
 	if test "$have_lapack" = "yes" ; then
 		ol_link_lapack=yes
 		AC_MSG_RESULT([yes])

@@ -102,6 +102,7 @@
 #ifndef MBPAR_H
 #define MBPAR_H
 
+#include <memory>
 #include <stack>
 
 #include "parsinc.h"
@@ -118,6 +119,7 @@ extern const ReferenceFrame AbsRefFrame;
 #include "aerodata.h"
 
 #include "constltp.h"
+#include "c81data.h"
 #include "ScalarFunctions.h"
 
 /* Deals with license and disclaimer output */
@@ -159,7 +161,7 @@ public:
 
 	/* Struttura e dati per la linked list di reference frames */
 public:
-	typedef std::map<unsigned, const ReferenceFrame *> RFType;
+        typedef std::map<unsigned, std::unique_ptr<const ReferenceFrame>> RFType;
 	const RFType& GetReferenceFrameContainer(void) const;
 
 	void GetRefByLabel(ReferenceFrame& rf);
@@ -174,7 +176,7 @@ friend struct RefFrameDR;
 
 	/* Struttura e dati per la linked list di hydraulic fluids */
 public:
-	typedef std::map<unsigned, const HydraulicFluid *> HFType;
+        typedef std::map<unsigned, std::unique_ptr<const HydraulicFluid>> HFType;
 	const HFType& GetHydraulicFluidContainer(void) const;
 
 protected:
@@ -183,9 +185,16 @@ protected:
 	bool HydraulicFluid_int(void);
 friend struct HFluidDR;
 
-	/* Struttura e dati per la linked list di c81 data */
 public:
-	typedef std::map<unsigned, C81Data *> ADType;
+     /* Struttura e dati per la linked list di c81 data */
+     struct C81DataDestroy {
+          void operator()(C81Data* p) const {
+               c81_data_destroy(p);
+               SAFEDELETE(p);
+          }
+     };
+     
+        typedef std::map<unsigned, std::unique_ptr<C81Data, C81DataDestroy>> ADType;
 	const ADType& GetC81DataContainer(void) const;
 
 protected:
@@ -194,19 +203,20 @@ protected:
 	bool C81Data_int(void);
 friend struct C81DataDR;
 
-	typedef std::map<unsigned, const ConstitutiveLaw1D *> CL1DType;
-	typedef std::map<unsigned, const ConstitutiveLaw3D *> CL3DType;
-	typedef std::map<unsigned, const ConstitutiveLaw6D *> CL6DType;
+        typedef std::map<unsigned, std::unique_ptr<const ConstitutiveLaw1D>> CL1DType;
+        typedef std::map<unsigned, std::unique_ptr<const ConstitutiveLaw3D>> CL3DType;
+        typedef std::map<unsigned, std::unique_ptr<const ConstitutiveLaw6D>> CL6DType;
+        typedef std::map<unsigned, std::unique_ptr<const ConstitutiveLaw7D>> CL7DType;     
 	CL1DType CL1D;
 	CL3DType CL3D;
 	CL6DType CL6D;
-
+        CL7DType CL7D;
 	bool ConstitutiveLaw_int(void);
 friend struct ConstLawDR;
 
 	/* Drives */
 public:
-	typedef std::map<unsigned, const DriveCaller *> DCType;
+        typedef std::map<unsigned, std::unique_ptr<const DriveCaller>> DCType;
 	const DCType& GetDriveCallerContainer(void) const;
 
 protected:
@@ -217,11 +227,11 @@ friend struct DriveCallerDR;
 
 public:
 	/* Template drives */
-	typedef std::map<unsigned, const TplDriveCaller<doublereal> *> DC1DType;
-	typedef std::map<unsigned, const TplDriveCaller<Vec3> *> DC3DType;
-	typedef std::map<unsigned, const TplDriveCaller<Vec6> *> DC6DType;
-	typedef std::map<unsigned, const TplDriveCaller<Mat3x3> *> DC3x3DType;
-	typedef std::map<unsigned, const TplDriveCaller<Mat6x6> *> DC6x6DType;
+        typedef std::map<unsigned, std::unique_ptr<const TplDriveCaller<doublereal>>> DC1DType;
+        typedef std::map<unsigned, std::unique_ptr<const TplDriveCaller<Vec3>>> DC3DType;
+        typedef std::map<unsigned, std::unique_ptr<const TplDriveCaller<Vec6>>> DC6DType;
+        typedef std::map<unsigned, std::unique_ptr<const TplDriveCaller<Mat3x3>>> DC3x3DType;
+        typedef std::map<unsigned, std::unique_ptr<const TplDriveCaller<Mat6x6>>> DC6x6DType;
 
 	const DC1DType& GetDriveCaller1DContainer(void) const;
 	const DC3DType& GetDriveCaller3DContainer(void) const;
@@ -240,7 +250,7 @@ protected:
 friend struct TplDriveCallerDR;
 
 	/* Scalar functions */
-	typedef std::map<std::string, const BasicScalarFunction *> SFType;
+        typedef std::map<std::string, std::unique_ptr<const BasicScalarFunction>> SFType;
 	SFType SF;
 
 	bool ScalarFunction_int(void);
@@ -306,12 +316,10 @@ public:
 	virtual Vec6 GetVec6(const Vec6& vDef);
 	virtual Mat6x6 GetMat6x6(void);
 	virtual Mat6x6 GetMat6x6(const Mat6x6& mDef);
-
 public:
 	virtual void GetMat6xN(Mat3xN& m1, Mat3xN& m2, integer iNumCols);
 	virtual void GetMatNx6(MatNx3& m1, MatNx3& m2, integer iNumRows);
 	virtual void GetMatNxN(MatNxN& m, integer iNumRows);
-
 	/*
 	 * Lettura di posizioni, vettori e matrici di rotazione
 	 * relative ed assolute rispetto ad un riferimento
@@ -396,6 +404,9 @@ public:
 	virtual Mat3x3 Get(const Mat3x3& m);
 	virtual Vec6 Get(const Vec6& v);
 	virtual Mat6x6 Get(const Mat6x6& m);
+        template <sp_grad::index_type NRows, sp_grad::index_type NCols>
+        sp_grad::SpMatrix<doublereal, NRows, NCols>
+        Get(const sp_grad::SpMatrixBase<doublereal, NRows, NCols>& m);
 
 	void OutputFrames(std::ostream& out) const;
 
@@ -406,6 +417,7 @@ public:
 	ConstitutiveLaw1D* GetConstLaw1D(ConstLawType::Type& clt);
 	ConstitutiveLaw3D* GetConstLaw3D(ConstLawType::Type& clt);
 	ConstitutiveLaw6D* GetConstLaw6D(ConstLawType::Type& clt);
+	ConstitutiveLaw7D* GetConstLaw7D(ConstLawType::Type& clt);     
 	const DriveCaller* GetDrive(unsigned uLabel) const;
 	void SetDrive(unsigned uLabel, const DriveCaller *pDC);
 
@@ -417,6 +429,61 @@ public:
 	const BasicScalarFunction* GetScalarFunction(const std::string &s);
 	bool SetScalarFunction(const std::string &s, const BasicScalarFunction *sf);
 };
+
+template <sp_grad::index_type NRows, sp_grad::index_type NCols>
+sp_grad::SpMatrix<doublereal, NRows, NCols>
+MBDynParser::Get(const sp_grad::SpMatrixBase<doublereal, NRows, NCols>& mDef)
+{
+     using namespace sp_grad;
+     const index_type iNumRows = mDef.iGetNumRows();
+     const index_type iNumCols = mDef.iGetNumCols();
+
+     SpMatrix<doublereal, NRows, NCols> m(iNumRows, iNumCols, 0);
+
+     if (IsKeyWord("null")) {
+          return m;
+     } else if (IsKeyWord("default")) {
+          return mDef;
+     }
+
+     if (IsKeyWord("eye")) {
+          for (index_type i = 1; i <= std::min(iNumRows, iNumCols); ++i) {
+               m(i, i) = 1.;
+          }
+     } else if (IsKeyWord("diag")) {
+          for (index_type i = 1; i <= std::min(iNumRows, iNumCols); ++i) {
+               m(i, i) = GetReal(mDef.dGetValue(i, i));
+          }
+     } else if (IsKeyWord("sym")) {
+          for (index_type i = 1; i <= iNumRows; ++i) {
+               for (index_type j = i; j <= iNumCols; ++j) {
+                    m(i, j) = GetReal(mDef.dGetValue(i, j));
+
+                    if (i != j && j <= iNumRows && i <= iNumCols) {
+                         m(j, i) = m(i, j);
+                    }
+               }
+          }
+     } else {
+          if (IsKeyWord("matr")) {
+               /* eat it; not required */
+               NO_OP;
+          }
+
+          for (index_type i = 1; i <= iNumRows; ++i) {
+               for (index_type j = 1; j <= iNumCols; ++j) {
+                    m(i, j) = GetReal(mDef.dGetValue(i, j));
+               }
+          }
+
+     }
+
+     if (IsKeyWord("scale")) {
+          m *= GetReal(1.);
+     }
+
+     return m;
+}
 
 /*
  * Le funzioni:
