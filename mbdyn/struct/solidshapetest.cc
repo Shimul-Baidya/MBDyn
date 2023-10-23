@@ -48,7 +48,7 @@ template <typename ElementType, sp_grad::index_type iDim>
 bool bCheckShapeFunction()
 {
      std::cout << "element type: \"" << ElementType::ElementName() << "\"\n";
-     
+
      bool bRes = true;
      using namespace sp_grad;
 
@@ -57,16 +57,55 @@ bool bCheckShapeFunction()
 
      for (index_type i = 1; i <= ElementType::iNumNodes; ++i) {
           std::cout << "node: " << i << "\n";
-          
+
           ElementType::NodalPosition(i, r);
           ElementType::ShapeFunction(r, h);
 
           std::cout << "r = {" << r << "}\n";
           std::cout << "h = {" << h << "}\n";
-          
+
           for (index_type j = 1; j <= ElementType::iNumNodes; ++j) {
                if (h(j) != (i == j)) {
                     bRes = false;
+               }
+          }
+     }
+
+     return bRes;
+}
+
+template <typename ElementType, sp_grad::index_type iDim>
+bool bCheckShapeFunctionUPC()
+{
+     std::cout << "element type: \"" << ElementType::ElementName() << "\"\n";
+
+     bool bRes = true;
+     using namespace sp_grad;
+
+     SpColVectorA<doublereal, iDim> r;
+     SpColVectorA<doublereal, ElementType::iNumNodes> h;
+     SpColVectorA<doublereal, ElementType::iNumNodesPressure> g;
+
+     for (index_type i = 1; i <= ElementType::iNumNodes; ++i) {
+          std::cout << "node: " << i << "\n";
+
+          ElementType::NodalPosition(i, r);
+          ElementType::ShapeFunction(r, h);
+          ElementType::ElemTypePressureUPC::ShapeFunction(r, g);
+
+          std::cout << "r = {" << r << "}\n";
+          std::cout << "h = {" << h << "}\n";
+          std::cout << "g = {" << g << "}\n";
+
+          for (index_type j = 1; j <= ElementType::iNumNodes; ++j) {
+               if (h(j) != (i == j)) {
+                    bRes = false;
+               }
+
+               if (i <= ElementType::iNumNodesPressure && j <= ElementType::iNumNodesPressure) {
+                    if (g(j) != (i == j)) {
+                         bRes = false;
+                    }
                }
           }
      }
@@ -78,18 +117,24 @@ int main(int argc, char* argv[])
 {
      assert((bCheckShapeFunction<Quadrangle4, 2>()));
      assert((bCheckShapeFunction<Quadrangle8, 2>()));
+     assert((bCheckShapeFunction<Quadrangle9, 2>()));
      assert((bCheckShapeFunction<Quadrangle8r, 2>()));
      assert((bCheckShapeFunction<Triangle6h, 2>()));
      assert((bCheckShapeFunction<Hexahedron8, 3>()));
+     assert((bCheckShapeFunction<Hexahedron8p, 3>()));
      assert((bCheckShapeFunction<Hexahedron20, 3>()));
+     assert((bCheckShapeFunction<Hexahedron27, 3>()));
+     assert((bCheckShapeFunctionUPC<Hexahedron20upc, 3>()));
      assert((bCheckShapeFunction<Hexahedron20r, 3>()));
+     assert((bCheckShapeFunctionUPC<Hexahedron20upcr, 3>()));
+     assert((bCheckShapeFunction<Pentahedron6, 3>()));
      assert((bCheckShapeFunction<Pentahedron15, 3>()));
+     assert((bCheckShapeFunctionUPC<Pentahedron15upc, 3>()));
+     assert((bCheckShapeFunction<Tetrahedron4h, 3>()));
      assert((bCheckShapeFunction<Tetrahedron10h, 3>()));
+     assert((bCheckShapeFunctionUPC<Tetrahedron10upc, 3>()));
 
      std::cout << argv[0] << ": all tests passed\n";
-     
+
      return 0;
 }
-
-
-

@@ -7171,10 +7171,10 @@ of elements to be computed.
 
         \bnt{type_subset} ::= \bnt{type} , \{ \kw{all} | \bnt{label} [ , ... ] \}
 
-        \bnt{type} ::= \{ \kw{body} | \kw{joint} | \kw{loadable} \}
+        \bnt{type} ::= \{ \kw{body} | \kw{joint} | \kw{solid} | \kw{loadable} \}
 \end{Verbatim}
 %\end{verbatim}
-where \kw{type} currently can be \kw{body}, \kw{joint} and \kw{loadable}, 
+where \kw{type} currently can be \kw{body}, \kw{joint}, \kw{solid} and \kw{loadable}, 
 although more elements associated with inertia might participate in the future.
 All elements whose labels are listed must exist, and duplicates
 are detected and considered errors.

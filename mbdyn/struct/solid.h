@@ -47,10 +47,17 @@
 
 // 3D elements
 class Hexahedron8;
+class Hexahedron8upc;
 class Hexahedron20;
+class Hexahedron20upc;
+class Hexahedron20upcr;
 class Hexahedron20r;
+class Hexahedron27;
+class Pentahedron6;
 class Pentahedron15;
+class Pentahedron15upc;
 class Tetrahedron10h;
+class Tetrahedron10upc;
 
 // 3D collocation rules
 class Gauss2x2x2;

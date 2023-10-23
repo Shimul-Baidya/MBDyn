@@ -4049,10 +4049,11 @@ octave_value_list OctaveDriveCaller::MakeArgList(doublereal dVar) const
 
 template <class T>
 OctaveTplDriveCaller<T>::OctaveTplDriveCaller(const std::string& strFunction, OctaveInterface* pInterface, int iFlags, const octave_value_list& args)
-        :strFunction(strFunction),
-         pInterface(pInterface),
-         iFlags(iFlags),
-         args(args)
+     :TplDriveCaller<T>(pInterface->GetDataManager()->pGetDrvHdl()),
+      strFunction(strFunction),
+      pInterface(pInterface),
+      iFlags(iFlags),
+      args(args)
 {
         TRACE("constructor");
 

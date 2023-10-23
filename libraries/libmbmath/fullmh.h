@@ -95,7 +95,7 @@ public:
 	};
 
 private:
-#ifdef USE_LAPACK
+#ifdef HAVE_BLAS
         typedef void (VectorHandler::*VectorOperation)(integer iRow, const doublereal& dCoef);
         typedef void (MatrixHandler::*MatrixOperation)(integer iRow, integer iCol, const doublereal& dCoef);
         

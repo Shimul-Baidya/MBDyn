@@ -177,7 +177,14 @@ class Vec3: public sp_grad::SpConstMatElemAdapter<Vec3>
    Vec3(const Vec3_Manip& Manip, const Mat3x3& m) {
       Manip.Manipulate(*this, m);
    };
-   
+
+   template <typename DERIVED>
+   explicit Vec3(const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& v)
+        :Vec3(v.begin()) {
+      typedef sp_grad::SpMatElemExprBase<doublereal, DERIVED> VecType;
+      static_assert(VecType::iNumRowsStatic == 3, "size mismatch");
+      static_assert(VecType::iNumColsStatic == 1, "size mismatch");
+   }
    /*
     Distruttore banale: non fa nulla.
     */
@@ -751,7 +758,15 @@ class Mat3x3: public sp_grad::SpConstMatElemAdapter<Mat3x3>
       pdMat[M23] = -v.pdVec[V1];
       pdMat[M33] = d;
    };
-   
+
+   template <typename DERIVED>
+   explicit Mat3x3(const sp_grad::SpMatElemExprBase<doublereal, DERIVED>& m)
+        :Mat3x3(m.begin(), m.iGetColOffset()) {
+      typedef sp_grad::SpMatElemExprBase<doublereal, DERIVED> MatType;
+      static_assert(MatType::iNumRowsStatic == 3, "size mismatch");
+      static_assert(MatType::iNumColsStatic == 3, "size mismatch");
+   }
+
    /*
     Distruttore banale.
     */

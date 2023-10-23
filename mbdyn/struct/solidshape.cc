@@ -45,35 +45,65 @@
 constexpr sp_grad::index_type Quadrangle4::iNumNodes;
 constexpr doublereal Quadrangle4::ri[];
 constexpr doublereal Quadrangle4::si[];
+
 constexpr sp_grad::index_type Quadrangle8::iNumNodes;
 constexpr doublereal Quadrangle8::ri[];
 constexpr doublereal Quadrangle8::si[];
+
+constexpr sp_grad::index_type Quadrangle9::iNumNodes;
+constexpr doublereal Quadrangle9::ri[];
+constexpr doublereal Quadrangle9::si[];
+
 constexpr sp_grad::index_type Quadrangle8r::iNumNodes;
 constexpr doublereal Quadrangle8r::ri[];
 constexpr doublereal Quadrangle8r::si[];
+
 constexpr sp_grad::index_type Triangle6h::iNumNodes;
 constexpr doublereal Triangle6h::ri[];
 constexpr doublereal Triangle6h::si[];
+
+constexpr sp_grad::index_type Hexahedron1p::iNumNodes;
+constexpr sp_grad::index_type Hexahedron1p::iNumNodesExtrap;
+constexpr doublereal Hexahedron1p::ri[];
+constexpr doublereal Hexahedron1p::si[];
+constexpr doublereal Hexahedron1p::ti[];
+
 constexpr sp_grad::index_type Hexahedron8::iNumNodes;
 constexpr sp_grad::index_type Hexahedron8::iNumNodesExtrap;
 constexpr doublereal Hexahedron8::ri[];
 constexpr doublereal Hexahedron8::si[];
 constexpr doublereal Hexahedron8::ti[];
+
+constexpr sp_grad::index_type Hexahedron8p::iNumNodes;
+constexpr sp_grad::index_type Hexahedron8p::iNumNodesExtrap;
+constexpr doublereal Hexahedron8p::ri[];
+constexpr doublereal Hexahedron8p::si[];
+constexpr doublereal Hexahedron8p::ti[];
+
 constexpr sp_grad::index_type Hexahedron20::iNumNodes;
 constexpr sp_grad::index_type Hexahedron20::iNumNodesExtrap;
 constexpr doublereal Hexahedron20::ri[];
 constexpr doublereal Hexahedron20::si[];
 constexpr doublereal Hexahedron20::ti[];
+
+constexpr sp_grad::index_type Hexahedron27::iNumNodes;
+constexpr sp_grad::index_type Hexahedron27::iNumNodesExtrap;
+constexpr doublereal Hexahedron27::ri[];
+constexpr doublereal Hexahedron27::si[];
+constexpr doublereal Hexahedron27::ti[];
+
 constexpr sp_grad::index_type Hexahedron20r::iNumNodes;
 constexpr sp_grad::index_type Hexahedron20r::iNumNodesExtrap;
 constexpr doublereal Hexahedron20r::ri[];
 constexpr doublereal Hexahedron20r::si[];
 constexpr doublereal Hexahedron20r::ti[];
+
 constexpr sp_grad::index_type Pentahedron15::iNumNodes;
 constexpr sp_grad::index_type Pentahedron15::iNumNodesExtrap;
 constexpr doublereal Pentahedron15::ri[];
 constexpr doublereal Pentahedron15::si[];
 constexpr doublereal Pentahedron15::ti[];
+
 constexpr sp_grad::index_type Tetrahedron10h::iNumNodes;
 constexpr sp_grad::index_type Tetrahedron10h::iNumNodesExtrap;
 constexpr doublereal Tetrahedron10h::ri[];
