@@ -117,6 +117,12 @@ AerodynamicModal::~AerodynamicModal(void)
 	if (pxaPrime != 0) {
 		SAFEDELETE(pxaPrime);
 	}
+        if (pgs) {
+             SAFEDELETE(pgs);
+        }
+        if (pgsPrime) {
+             SAFEDELETE(pgsPrime);
+        }
 	if (pA != 0) {
 		SAFEDELETE(pA);
 	}

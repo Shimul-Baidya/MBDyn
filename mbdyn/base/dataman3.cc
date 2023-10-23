@@ -2710,9 +2710,7 @@ ReadScalarDof(const DataManager* pDM, MBDynParser& HP, bool bDof, bool bOrder)
 	if (iMaxIndex > 1) {
 		NodeDof nd(iIndex - 1, pNode);
 
-		pNode = 0;
-		/* Chi dealloca questa memoria? ci vorrebbe l'handle */
-		SAFENEWWITHCONSTRUCTOR(pNode, Node2Scalar, Node2Scalar(nd));
+		pNode = Node2Scalar::pAllocateStatic(nd);
 	}
 
 	return ScalarDof(dynamic_cast<ScalarNode *>(pNode), iOrder, iIndex);

@@ -490,12 +490,15 @@ class Node2Scalar : public ScalarNode {
 protected:
 	/* Struttura che punta ad un DoF di un nodo */
 	NodeDof ND;
-
+     
+     	/* Costruttore */
+	explicit Node2Scalar(const NodeDof& nd);
 public:
-	/* Costruttori */
+        Node2Scalar(const Node2Scalar&) = delete;
 
-	/* Costruttore */
-	Node2Scalar(const NodeDof& nd);
+	/* Costruttori */
+        static Node2Scalar* pAllocateStatic(const NodeDof& nd);
+     
 	/* Distruttore */
 	virtual ~Node2Scalar(void);
 

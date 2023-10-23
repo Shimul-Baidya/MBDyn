@@ -60,13 +60,13 @@ private:
 	const Vec3 f2;
 
 	Mat3x3 GammaInv;
-	Mat3x3 R1, R2, R1R1h, R2R2h;
+	Mat3x3 R1, R2, R1R1h;
 	Vec3 R1f1, R2f2, e1hz, D;
 	Vec3 F1, C1, C2;
 
 	/* friction related data */
-	BasicShapeCoefficient *const Sh_c;
-	BasicFriction *const fc;
+	BasicShapeCoefficient* Sh_c;
+	BasicFriction* fc;
 	doublereal cos_pitch_angle_r;
 	doublereal M3diff;
 	doublereal vrel;

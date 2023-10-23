@@ -359,7 +359,17 @@ public:
 	
 	virtual
 	~ShockAbsorberConstitutiveLaw(void) {
-		NO_OP;
+             if (pAreaPinPlus) {
+                  SAFEDELETE(pAreaPinPlus);
+             }
+
+             if (pAreaPinMinus) {
+                  SAFEDELETE(pAreaPinMinus);
+             }
+
+             if (pAreaOrifices) {
+                  SAFEDELETE(pAreaOrifices);
+             }
 	};
 
 	virtual ConstitutiveLaw<doublereal, doublereal>*
