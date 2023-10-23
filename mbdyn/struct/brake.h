@@ -74,8 +74,8 @@ class Brake : virtual public Elem, public Joint {
    mutable doublereal dTheta;
 
    /* friction related data */
-   BasicShapeCoefficient *const Sh_c;
-   BasicFriction *const fc;
+   BasicShapeCoefficient* Sh_c;
+   BasicFriction* fc;
    const doublereal preF;
    const doublereal r;
    DriveOwner brakeForce;

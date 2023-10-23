@@ -85,13 +85,25 @@ Joint(uL, pDO, fOut),
 nRotConstr(0), nBeams(nB), iCurrBeam(0), iType(iT),
 pNode(pN), ppBeam(ppB),
 f(fTmp), R(RTmp),
-F(Zero3), M(Zero3),
+F(Zero3), F_res(Zero3), m(Zero3), M(Zero3),
 sRef(0.), s(0.),
 dL(dl),
-x(Zero3), l(Zero3),
+dW{0.},
+xNod{Zero3, Zero3, Zero3},
+fTmp{Zero3, Zero3, Zero3},
+xTmp{Zero3, Zero3, Zero3},
+dN{0.},
+dNp{0.},
+dNpp{0.},  
+x(Zero3), l(Zero3), lp(Zero3), fb(Zero3), xc(Zero3), Rb(Zero3x3),
+VNod{Zero3, Zero3, Zero3},
 Sh_c(sh),
 fc(f),
 preF(pref),
+F3(0.),
+v_rel(Zero3),
+sRef_dot(0.),
+v_rel_scalar(0.),
 NumSelfDof(4)
 {
 	ASSERT(pNode != NULL);
@@ -151,6 +163,12 @@ BeamSliderJoint::~BeamSliderJoint(void)
 	if (fc) {
 		delete fc;
 	}
+
+        for (unsigned i = 0; i < nBeams; ++i) {
+             delete ppBeam[i];
+        }
+        
+        delete [] ppBeam;
 }
 
 std::ostream& 

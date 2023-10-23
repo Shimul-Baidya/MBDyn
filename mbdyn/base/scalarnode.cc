@@ -720,6 +720,15 @@ NodeDof::~NodeDof(void)
 	NO_OP;
 }
 
+Node2Scalar* Node2Scalar::pAllocateStatic(const NodeDof& nd)
+{
+     static std::vector<std::unique_ptr<Node2Scalar>> rgNodes;
+
+     rgNodes.emplace_back(new Node2Scalar(nd));
+
+     return rgNodes.back().get();
+}
+
 Node2Scalar::Node2Scalar(const NodeDof& nd)
 : ScalarNode(nd.pNode->GetLabel(), nd.pNode->pGetDofOwner(), 0), ND(nd)
 {

@@ -37,14 +37,14 @@
 #include "dofpgin.h"
 
 DofPlugIn::DofPlugIn(MathParser& mp, DataManager *pDM)
-: MathParser::PlugIn(mp), pDM(pDM), bPrev(false)
+     : MathParser::PlugIn(mp), pDM(pDM), bPrev(false)
 {
 	ASSERT(pDM != NULL);
 }
 	
 DofPlugIn::~DofPlugIn(void) 
 {
-	NO_OP;
+     NO_OP;
 }
 
 const char *
@@ -120,13 +120,7 @@ DofPlugIn::Read(int argc, char *argv[])
 		iOrder = ReadDofOrder(pNode, iIndex, argv[3]);
 
 		NodeDof nd(iIndex-1, pNode);
-		pNode = 0;
-		/* Chi dealloca questa memoria? ci vorrebbe l'handle */
-		SAFENEWWITHCONSTRUCTOR(pNode, Node2Scalar, Node2Scalar(nd));
-		pedantic_cerr(psNodeNames[pNode->GetNodeType()]
-			<< "(" << pNode->GetLabel() << "): "
-			"possibly allocating a NodeDof "
-		 	"that nobody will delete" << std::endl);
+		pNode = Node2Scalar::pAllocateStatic(nd);
 		break;
 	}
 	}
