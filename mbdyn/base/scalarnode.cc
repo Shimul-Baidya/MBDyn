@@ -722,11 +722,8 @@ NodeDof::~NodeDof(void)
 
 Node2Scalar* Node2Scalar::pAllocateStatic(const NodeDof& nd)
 {
-     static std::vector<std::unique_ptr<Node2Scalar>> rgNodes;
-
-     rgNodes.emplace_back(new Node2Scalar(nd));
-
-     return rgNodes.back().get();
+     // FIXME: pointer must be deleted by the caller
+     return new Node2Scalar(nd);
 }
 
 Node2Scalar::Node2Scalar(const NodeDof& nd)
