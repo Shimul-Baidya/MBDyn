@@ -111,6 +111,7 @@ dnl             we try not to use this for much
 AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([subdir-objects])
+AM_SILENT_RULES([yes])
 
 dnl We use autoconf features new to 2.13.
 dnl aclocal.m4 should be built using aclocal from automake 1.4
