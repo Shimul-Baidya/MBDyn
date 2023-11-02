@@ -20,6 +20,7 @@ merge requests. Please contact us through the
 access to the Gitlab repository while we work out a better solution. Be advised,
 however, that we are not willing to grant project membership to everyone.
 This is because pushing random binary blobs into the Gitlab repository
+(yes, this happened: someone commited executables and object files) 
 slows everyone's work, and requires substantial cleanup effort on our side.
 Thus, we are willing to give write access to the repository once we are sure that we can
 trust your work. In the meantime, you can always work on your own fork and host it
