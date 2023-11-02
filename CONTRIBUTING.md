@@ -14,10 +14,17 @@ Gitlab functionalities for external users is limited: we're working with
 the ITC department of [POLIMI](https://www.polimi.it/) to improve it. 
 However, in the meantime, it is **necessary,
 even for registered POLIMI or Google users, to be registered as Project Members**
-for them to be able to open issues, fork the project and therefore also to submit
+for them to be able to fork the project and therefore also to submit
 merge requests. Please contact us through the 
 [MBDyn users mailing list](https://www.mbdyn.org/?Mailing_Lists) to the granted
-access to the Gitlab repository while we work out a better solution
+access to the Gitlab repository while we work out a better solution. Be advised,
+however, that we are not willing to grant project membership to everyone.
+This is because pushing random binary blobs into the Gitlab repository
+slows everyone's work, and requires substantial cleanup effort on our side.
+Thus, we are willing to give write access to the repository once we are sure that we can
+trust your work. In the meantime, you can always work on your own fork and host it
+on e.g. Github, Gitlab, or wherever it's best for you. And, of course, you can open
+issues, ask for feedback and to merge your work into develop.
 
 # MBDyn Developers Guidelines
 MBDyn is developed primarily by _internal_ developers at Politecnico di 
