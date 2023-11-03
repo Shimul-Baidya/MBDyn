@@ -10,11 +10,13 @@ There are many ways to contribute to MBDyn:
 The MBDyn main repository was recently moved to this Gitlab repository, 
 hosted on 
 [POLIMI](https://www.polimi.it/) servers. At the moment, access to some
-Gitlab functionalities for external users is limited; we're working with 
+Gitlab functionalities for external users is limited. 
+~~we're working with 
 the ITC department of [POLIMI](https://www.polimi.it/) to improve it. 
 However, in the meantime,
 **even for registered POLIMI or Google users it is necessary to be registered as Project Members**
-to be able to fork the project and therefore also to submit merge requests.
+to be able to fork the project and therefore also to submit merge requests.~~
+
 
 Be advised, however, that we are not willing to grant easy project membership,
 because it may have critical drawbacks; for example,
@@ -46,9 +48,14 @@ and pushing changes.
 ## Guidelines for _external_ developers
 As a general rule, before starting to write your piece of code, consider opening an 
 [issue](https://gitlab.com/help/user/project/issues/index.md), to discuss your intentions
-with other developers. This, at the moment, **requires you to be
+with other developers. 
+~~This, at the moment, **requires you to be
 recognised as Project Member**, so please ask us to activate your account by 
-writing to the [MBDyn users mailing list](https://www.mbdyn.org/?Mailing_Lists).
+writing to the [MBDyn users mailing list](https://www.mbdyn.org/?Mailing_Lists).~~
+
+To open an issue, you only have to be signed in to the website: you can do it either with 
+your Google or [POLIMI](https://www.polimi.it/) account.
+
 
 Developers that would like to contribute to MBDyn but are not in the project
 regulars must:
