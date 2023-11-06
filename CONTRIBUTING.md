@@ -31,7 +31,7 @@ issues, ask for feedback and request us to merge your work into our develop bran
 
 While we work out a better solution, to be granted
 access to the Gitlab repository please contact us through the 
-[MBDyn users mailing list](https://www.mbdyn.org/?Mailing_Lists).
+[MBDyn users mailing list](https://www.mbdyn.org/Mailing.html).
 
 # MBDyn Developers Guidelines
 MBDyn is developed primarily by _internal_ developers at Politecnico di 
