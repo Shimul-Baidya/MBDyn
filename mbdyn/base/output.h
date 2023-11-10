@@ -69,6 +69,32 @@ typedef netCDF::NcType MBDynNcType;
 
 class MBDynParser;
 
+namespace MBDynNetCDF {
+     template <typename T>
+     struct is_NcVar {
+          static constexpr bool value = false;
+     };
+
+     template <>
+     struct is_NcVar<integer> {
+          static constexpr bool value = true;
+     };
+
+     template <>
+     struct is_NcVar<doublereal> {
+          static constexpr bool value = true;
+     };
+                
+     template <>
+     struct is_NcVar<Vec3> {
+          static constexpr bool value = true;
+     };
+
+     template <>
+     struct is_NcVar<Mat3x3> {
+          static constexpr bool value = true;
+     };
+}
 /* OutputHandler - begin */
 
 class OutputHandler : public FileName {
@@ -110,6 +136,7 @@ public:
 		TRACES,
                 SOLIDS,
                 SURFACE_LOADS,
+                INERTIA_ELEMENTS,
 		EIGENANALYSIS,			// NOTE: ALWAYS LAST!
 		LASTFILE			// 35
 	};
@@ -249,6 +276,7 @@ private:
 	std::ofstream ofTraces;
         std::ofstream ofSolids;
         std::ofstream ofSurfaceLoads;
+        std::ofstream ofInertiaElements;
 	std::ofstream ofEigenanalysis;
 
 	int iCurrWidth;
@@ -345,6 +373,7 @@ public:
 	inline std::ostream& Traces(void) const;
         inline std::ostream& Solids(void) const;
         inline std::ostream& SurfaceLoads(void) const;
+        inline std::ostream& InertiaElements(void) const;
 	inline std::ostream& Eigenanalysis(void) const;
 
 	inline int iW(void) const;
@@ -414,11 +443,11 @@ public:
 	WriteNcVar(const MBDynNcVar&, const Tvar&, 
 			const std::vector<Tstart>&, 
 			const std::vector<size_t>& = std::vector<size_t>(1,1));
-	
+
 	MBDynNcVar
 	CreateVar(const std::string& name, const std::string& type);
 
-	template <class T>
+        template <class T, typename std::enable_if<MBDynNetCDF::is_NcVar<T>::value, bool>::type = true>
 	MBDynNcVar
 	CreateVar(const std::string& name,
 		const Dimensions phys_dim, const std::string& description);
@@ -441,11 +470,13 @@ private:
 }; /* End class OutputHandler */
 
 #ifdef USE_NETCDF
-template <class T>
+template <class T, typename std::enable_if<MBDynNetCDF::is_NcVar<T>::value, bool>::type>
 MBDynNcVar
 OutputHandler::CreateVar(const std::string& name,
 	const Dimensions phys_dim, const std::string& description)
 {
+        static_assert(MBDynNetCDF::is_NcVar<T>::value);
+        
 	AttrValVec attrs(3);
 	NcDimVec dims(1);
 
@@ -454,22 +485,28 @@ OutputHandler::CreateVar(const std::string& name,
 	attrs[2] = AttrVal("description", description);
 	dims[0] = DimTime();
 	
-	if (typeid(T) == typeid(integer)) {
+	if constexpr (std::is_same<T, integer>::value) {
 		attrs[1] = AttrVal("type", "integer");
 		return CreateVar(name, MbNcInt, attrs, dims); // put this one inside if because couldn't figure out how to assign type inside if while declaring it outside of if.. alternative would be to create a pointer and change CreateVar function to copy type parameter instead of passing by reference (because type cannot be delete in CreateVar since addVar passes it by reference to netcdf)...
 
-	} else if (typeid(T) == typeid(doublereal)) {
+        } else if constexpr (std::is_same<T, doublereal>::value) {
 		attrs[1] = AttrVal("type", "doublereal");
 		return CreateVar(name, MbNcDouble, attrs, dims); // see comment above
 
-	} else if (typeid(T) == typeid(Vec3)) {
+        } else if constexpr(std::is_same<T, Vec3>::value) {
 		attrs[1] = AttrVal("type", "Vec3");
 		dims.resize(2);
 		dims[1] = DimV3();
 		return CreateVar(name, MbNcDouble, attrs, dims); // see comment above
 
-	} else {
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+        } else {
+                static_assert(std::is_same<T, Mat3x3>::value);
+                
+		attrs[1] = AttrVal("type", "Mat3x3");
+		dims.resize(3);
+		dims[1] = DimV3();
+                dims[2] = DimV3();
+		return CreateVar(name, MbNcDouble, attrs, dims); // see comment above
 	}
 }
 
@@ -736,6 +773,13 @@ OutputHandler::SurfaceLoads(void) const
 {
 	ASSERT(IsOpen(SURFACE_LOADS));
 	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofSurfaceLoads));
+}
+
+inline std::ostream&
+OutputHandler::InertiaElements(void) const
+{
+	ASSERT(IsOpen(INERTIA_ELEMENTS));
+	return const_cast<std::ostream &>(dynamic_cast<const std::ostream &>(ofInertiaElements));
 }
 
 inline std::ostream&

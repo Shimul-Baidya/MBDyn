@@ -39,6 +39,7 @@
 #include <limits>
 
 #include "matvec3.h"
+#include <ac/lapack.h>
 
 /* noteworthy constant */
 const doublereal Zero1(0.);
@@ -275,9 +276,34 @@ Mat3x3::EigSym(Vec3& EigenValues,
 }
 #endif
 
+#define EIG_SYM_USE_LAPACK
+
 bool
 Mat3x3::EigSym(Vec3& EigenValues, Mat3x3& EigenVectors) const
 {
+        const doublereal dTol = std::numeric_limits<doublereal>::epsilon() * Trace(); // Use Trace instead of Norm because it will work also for indefinite matrices
+
+#if defined(USE_LAPACK) && defined(HAVE_DSYEV) && defined(EIG_SYM_USE_LAPACK)
+        // eigenvalues from LAPACK will be sorted in ascending order
+        if (!IsSymmetric(dTol)) {
+                ASSERT(0);
+                return false;
+        }
+
+        constexpr integer N = iNumRowsStatic;
+        constexpr integer LDA = N;
+        constexpr integer LWORK = 3 * N - 1;
+        doublereal WORK[LWORK];
+        integer INFO;
+
+        EigenVectors = *this;
+
+        __FC_DECL__(dsyev)("V", "U", &N, EigenVectors.pGetMat(), &LDA, EigenValues.pGetVec(), WORK, &LWORK, &INFO);
+
+        ASSERT(INFO == 0);
+
+        return (INFO == 0);
+#else
 	// From:
 	// W.M. Scherzinger, C.R. Dohrmann,
 	// `A robust algorithm for finding the eigenvalues and eigenvectors
@@ -285,11 +311,11 @@ Mat3x3::EigSym(Vec3& EigenValues, Mat3x3& EigenVectors) const
 	// Comput. Methods Appl. Mech. Engrg. 2008
 	// doi:10.1016/j.cma.2008.03.031
 
-	if (!IsSymmetric(std::numeric_limits<doublereal>::epsilon())) {
+	if (!IsSymmetric(dTol)) {
 		return false;
 	}
 
-	if (IsDiag(std::numeric_limits<doublereal>::epsilon())) {
+	if (IsDiag(dTol)) {
 		EigenVectors = Eye3;
 		EigenValues = Vec3(pdMat[M11], pdMat[M22], pdMat[M33]);
 
@@ -435,8 +461,43 @@ Mat3x3::EigSym(Vec3& EigenValues, Mat3x3& EigenVectors) const
 	EigenVectors.PutVec(idx3, v1.Cross(v2));
 
 	return true;
+#endif
 }
 
+bool
+Mat3x3::PrincipalAxes(Vec3& J_princ, Mat3x3& R_princ) const
+{
+     if (!EigSym(J_princ, R_princ)) {
+          return false;
+     }
+
+     const Vec3 e1xe2 = R_princ.GetCol(1).Cross(R_princ.GetCol(2));
+     const Vec3 e3 = R_princ.GetCol(3);
+
+     if ((e1xe2 - e3).Dot() > (e1xe2 + e3).Dot()) {
+          for (integer i = 1; i <= 3; ++i) {
+               // Make sure that we have a right-handed coordinate system!
+               // Otherwise RotManip::VecRot might return an incorrect result!
+               R_princ(i, 3) *= -1.;
+          }
+     }
+
+     ASSERT(fabs(R_princ.GetCol(1).Dot() - 1.) < pow(std::numeric_limits<doublereal>::epsilon(), 0.9));
+     ASSERT(fabs(R_princ.GetCol(2).Dot() - 1.) < pow(std::numeric_limits<doublereal>::epsilon(), 0.9));
+     ASSERT(fabs(R_princ.GetCol(3).Dot() - 1.) < pow(std::numeric_limits<doublereal>::epsilon(), 0.9));
+     ASSERT(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(2))) < pow(std::numeric_limits<doublereal>::epsilon(), 0.9));
+     ASSERT(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(3))) < pow(std::numeric_limits<doublereal>::epsilon(), 0.9));
+     ASSERT(fabs(R_princ.GetCol(2).Dot(R_princ.GetCol(3))) < pow(std::numeric_limits<doublereal>::epsilon(), 0.9));
+     ASSERT(fabs(Trace() - Mat3x3(Mat3x3Diag, J_princ).Trace()) < pow(std::numeric_limits<doublereal>::epsilon(), 0.9) * fabs(Trace()));
+     ASSERT(R_princ.GetCol(1).Cross(R_princ.GetCol(2)).IsSame(R_princ.GetCol(3), pow(std::numeric_limits<doublereal>::epsilon(), 0.9)));
+     ASSERT(R_princ.GetCol(3).Cross(R_princ.GetCol(1)).IsSame(R_princ.GetCol(2), pow(std::numeric_limits<doublereal>::epsilon(), 0.9)));
+     ASSERT(R_princ.GetCol(2).Cross(R_princ.GetCol(3)).IsSame(R_princ.GetCol(1), pow(std::numeric_limits<doublereal>::epsilon(), 0.9)));
+     ASSERT(R_princ.MulTM(R_princ).IsSame(Eye3, pow(std::numeric_limits<doublereal>::epsilon(), 0.9)));
+     ASSERT(R_princ.MulMT(R_princ).IsSame(Eye3, pow(std::numeric_limits<doublereal>::epsilon(), 0.9)));
+     ASSERT(R_princ.MulTM(*this * R_princ).IsSame(Mat3x3(Mat3x3Diag, J_princ), pow(std::numeric_limits<doublereal>::epsilon(), 0.9) * J_princ.Norm()));
+
+     return true;
+}
 /**
  * multiply by another matrix, transposed: this * m^T
  */
