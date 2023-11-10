@@ -7174,23 +7174,23 @@ of elements to be computed.
         \bnt{type} ::= \{ \kw{body} | \kw{joint} | \kw{solid} | \kw{loadable} \}
 \end{Verbatim}
 %\end{verbatim}
-where \kw{type} currently can be \kw{body}, \kw{joint}, \kw{solid} and \kw{loadable}, 
+where \kw{type} currently can be \kw{body}, \kw{joint}, \kw{solid} and \kw{loadable},
 although more elements associated with inertia might participate in the future.
 All elements whose labels are listed must exist, and duplicates
 are detected and considered errors.
-The keyword \kw{all} causes all the elements of type \nt{type} 
+The keyword \kw{all} causes all the elements of type \nt{type}
 to be included in the list.
 
 \noindent
 The only effect of the \kw{inertia} statement is to log
 each \kw{inertia} entry in the \texttt{.log} file in a self explanatory form,
 referred both to the \kw{global} reference frame and to a reference frame
-originating from \nt{reference\_position} and oriented 
+originating from \nt{reference\_position} and oriented
 as \nt{reference\_orientation}.
-The optional parameter \kw{output} may be used to alter the default 
+The optional parameter \kw{output} may be used to alter the default
 behavior:
 \begin{itemize}
-\item \kw{no} disables the output, making the \kw{inertia} 
+\item \kw{no} disables the output, making the \kw{inertia}
 statement essentially ineffective;
 \item \kw{yes} enables output to standard output;
 \item \kw{log} enables output to the \texttt{.log} file (the default);
@@ -7202,7 +7202,68 @@ The number of inertia elements declared in the \kw{control data} section must ma
 the number of \kw{inertia} cards in the \kw{elements} block whose output is set to \kw{always}.
 \end{itemize}
 
+\paragraph{Private Data}
+The following private data is available for all inertia elements with \kw{output}, \kw{always} enabled:
+\begin{enumerate}
+\item \kw{"X[1]"} position of the center of mass with respect to the global reference frame
+\item \kw{"X[2]"}
+\item \kw{"X[3]"}
+\item \kw{"Phi[1]"} orientation vector of principal axes with respect to the global reference frame
+\item \kw{"Phi[2]"}
+\item \kw{"Phi[3]"}
+\item \kw{"V[1]"} velocity of center of mass with respect to the global reference frame
+\item \kw{"V[2]"}
+\item \kw{"V[3]"}
+\item \kw{"Omega[1]"} angular velocity with respect to the global reference frame
+\item \kw{"Omega[2]"}
+\item \kw{"Omega[3]"}
+\item \kw{"J[1][1]"} total matrix of inertia with respect to \nt{reference\_position} and \nt{reference\_orientation}
+\item \kw{"J[1][2]"}
+\item \kw{"J[1][3]"}
+\item \kw{"J[2][1]"}
+\item \kw{"J[2][2]"}
+\item \kw{"J[2][3]"}
+\item \kw{"J[3][1]"}
+\item \kw{"J[3][2]"}
+\item \kw{"J[3][3]"}
+\item \kw{"Jcg[1][1]"} total matrix of inertia with respect to center of mass and the global reference frame
+\item \kw{"Jcg[1][2]"}
+\item \kw{"Jcg[1][3]"}
+\item \kw{"Jcg[2][1]"}
+\item \kw{"Jcg[2][2]"}
+\item \kw{"Jcg[2][3]"}
+\item \kw{"Jcg[3][1]"}
+\item \kw{"Jcg[3][2]"}
+\item \kw{"Jcg[3][3]"}
+\item \kw{"JP[1]"} total principal moments of inertia
+\item \kw{"JP[2]"}
+\item \kw{"JP[3]"}
+\item \kw{"m"} total mass
+\item \kw{"beta[1]"} total momentum with respect to the global reference frame
+\item \kw{"beta[2]"}
+\item \kw{"beta[3]"}
+\item \kw{"gamma[1]"} total momenta moment with respect to the center of mass and the global reference frame
+\item \kw{"gamma[2]"}
+\item \kw{"gamma[3]"}
+\end{enumerate}
 
+\paragraph{Output}
+The following output is available in the \texttt{.inl} file for all inertia elements with \kw{output}, \kw{always} enabled:
+\begin{enumerate}
+\item column 1: element label
+\item columns 2--4: total momentum
+\item columns 5--7: total momenta moment with respect to center of mass
+\item column 8: total mass
+\item column 9--11: center of mass
+\item column 12-14: velocity of center of mass
+\item column 15-17: angular velocity
+\item column 18-20: position of center of mass with respect to \nt{reference\_position}
+\item column 21-23: position of center of mass with respect to \nt{reference\_position} and \nt{reference\_orientation}
+\item column 24-26: principal moments of inertia
+\item column 27-29: orientation vector of principal axes with respect to the global reference frame
+\item column 30-38: moment of inertia at center of mass
+\item column 39-47: moment of inertia with respect to \nt{reference\_position} and \nt{reference\_orientation}
+\end{enumerate}
 
 \subsection{Output}\label{sec:EL:MISC:OUTPUT}
 This card does not instantiate any \kw{element}; it rather enables

@@ -4402,6 +4402,152 @@ namespace sp_grad_test {
 
           assert(B3.IsExactlySame(B1));
      }
+
+     void check_PrincipalAxes(const Vec3& J_princ, const Mat3x3& R_princ, const Vec3& Jp, const Mat3x3& J_cm, const doublereal dTol)
+     {
+          assert(fabs(R_princ.GetCol(1).Dot() - 1.) < dTol);
+          assert(fabs(R_princ.GetCol(2).Dot() - 1.) < dTol);
+          assert(fabs(R_princ.GetCol(3).Dot() - 1.) < dTol);
+          assert(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(2))) < dTol);
+          assert(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(3))) < dTol);
+          assert(fabs(R_princ.GetCol(2).Dot(R_princ.GetCol(3))) < dTol);
+          assert(fabs(J_cm.Trace() - Mat3x3(Mat3x3Diag, J_princ).Trace()) < dTol * fabs(J_cm.Trace()));
+          assert(R_princ.GetCol(1).Cross(R_princ.GetCol(2)).IsSame(R_princ.GetCol(3), dTol));
+          assert(R_princ.GetCol(3).Cross(R_princ.GetCol(1)).IsSame(R_princ.GetCol(2), dTol));
+          assert(R_princ.GetCol(2).Cross(R_princ.GetCol(3)).IsSame(R_princ.GetCol(1), dTol));
+          assert(R_princ.MulTM(R_princ).IsSame(Eye3, dTol));
+          assert(R_princ.MulMT(R_princ).IsSame(Eye3, dTol));
+          assert(R_princ.MulTM(J_cm * R_princ).IsSame(Mat3x3(Mat3x3Diag, J_princ), dTol * J_princ.Norm()) || (R_princ*J_cm.MulMT(R_princ)).IsSame(Mat3x3(Mat3x3Diag, J_princ), dTol * J_princ.Norm()));
+          assert(R_princ.IsSame(RotManip::Rot(RotManip::VecRot(R_princ)), dTol * M_PI));
+          assert(J_princ.IsSame(Jp, dTol * Jp.Norm()));
+     }
+
+     void test21(index_type num_loops)
+     {
+          using namespace std;
+
+          random_device rd;
+          mt19937 gen(rd());
+          uniform_real_distribution<doublereal> randnorm(-1., 1.);
+          uniform_real_distribution<doublereal> randphi(-M_PI, M_PI);
+
+          const Vec3 Jp(1., 2., 3.);
+          const Mat3x3 J0(Mat3x3Diag, Jp);
+          const doublereal dTol = pow(std::numeric_limits<doublereal>::epsilon(), 0.9);
+
+          for (index_type iloop = 0; iloop < num_loops; ++iloop) {
+               Vec3 n;
+
+               for (index_type i = 1; i <= 3; ++i) {
+                    n(i) = randnorm(gen);
+               }
+
+               if (n.Norm() == 0.) {
+                    continue;
+               }
+
+               n /= n.Norm();
+
+               const doublereal phi = randphi(gen);
+
+               const Mat3x3 R1 = RotManip::Rot(n * phi);
+               const Mat3x3 R2 = R1.Transpose();
+               const Mat3x3 J1 = R1.MulTM(J0 * R1).Symm();
+               const Mat3x3 J2 = R2.MulTM(J0 * R2).Symm();
+
+               static constexpr doublereal s1[] = {1., -1., -1., 1.};
+               static constexpr doublereal s2[] = {1., 1., -1., -1.};
+
+               Mat3x3 R_princ1[4], R_princ2[4];
+               Vec3 J_princ1, J_princ2;
+
+               const bool status1 = J1.PrincipalAxes(J_princ1, R_princ1[0]);
+               const bool status2 = J2.PrincipalAxes(J_princ2, R_princ2[0]);
+
+               for (index_type i = 1; i < 4; ++i) {
+                    for (index_type j = 1; j <= 3; ++j) {
+                         R_princ1[i](j, 1) = R_princ1[0](j, 1) * s1[i];
+                         R_princ1[i](j, 2) = R_princ1[0](j, 2) * s2[i];
+                         R_princ1[i](j, 3) = R_princ1[0](j, 3);
+
+                         R_princ2[i](j, 1) = R_princ2[0](j, 1) * s1[i];
+                         R_princ2[i](j, 2) = R_princ2[0](j, 2) * s2[i];
+                         R_princ2[i](j, 3) = R_princ2[0](j, 3);
+                    }
+
+                    Vec3 e1 = R_princ1[i].GetCol(1);
+                    Vec3 e2 = R_princ1[i].GetCol(2);
+                    Vec3 e3 = R_princ1[i].GetCol(3);
+
+                    if ((e1.Cross(e2) - e3).Norm() > (e1.Cross(e2) + e3).Norm()) {
+                         for (index_type j = 1; j <= 3; ++j) {
+                              R_princ1[i](j, 3) *= -1;
+                         }
+                    }
+
+                    e1 = R_princ2[i].GetCol(1);
+                    e2 = R_princ2[i].GetCol(2);
+                    e3 = R_princ2[i].GetCol(3);
+
+                    if ((e1.Cross(e2) - e3).Norm() > (e1.Cross(e2) + e3).Norm()) {
+                         for (index_type j = 1; j <= 3; ++j) {
+                              R_princ2[i](j, 3) *= -1;
+                         }
+                    }
+               }
+
+               assert(status1);
+               assert(status2);
+
+               for (index_type i = 0; i < 4; ++i) {
+                    check_PrincipalAxes(J_princ1, R_princ1[i], Jp, J1, dTol);
+                    check_PrincipalAxes(J_princ2, R_princ2[i], Jp, J2, dTol);
+               }
+
+               bool bValid1 = false;
+
+               Mat3x3 R_princ1_v;
+
+               for (index_type i = 0; i < 4; ++i) {
+                    if (R_princ1[i].IsSame(R1, dTol)) {
+                         R_princ1_v = R_princ1[i];
+                         bValid1 = true;
+                         break;
+                    }
+
+                    if (R_princ1[i].Transpose().IsSame(R1, dTol)) {
+                         R_princ1_v = R_princ1[i].Transpose();
+                         bValid1 = true;
+                         break;
+                    }
+               }
+
+               assert(bValid1);
+
+               bool bValid2 = false;
+
+               Mat3x3 R_princ2_v;
+
+               for (index_type i = 0; i < 4; ++i) {
+                    if (R_princ2[i].IsSame(R2, dTol)) {
+                         R_princ2_v = R_princ2[i];
+                         bValid2 = true;
+                         break;
+                    }
+
+                    if (R_princ2[i].Transpose().IsSame(R2, dTol)) {
+                         R_princ2_v = R_princ2[i].Transpose();
+                         bValid2 = true;
+                         break;
+                    }
+               }
+
+               assert(bValid2);
+
+               check_PrincipalAxes(J_princ1, R_princ1_v, Jp, J1, dTol);
+               check_PrincipalAxes(J_princ2, R_princ2_v, Jp, J2, dTol);
+          }
+     }
 }
 
 int main(int argc, char* argv[])
@@ -4540,6 +4686,7 @@ int main(int argc, char* argv[])
           if (SP_GRAD_RUN_TEST(19.3)) test19c();
           if (SP_GRAD_RUN_TEST(20.1)) test20();
           if (SP_GRAD_RUN_TEST(20.2)) test20a();
+          if (SP_GRAD_RUN_TEST(21.1)) test21(inumloops);
 
           cerr << "All tests passed\n"
                << "\n\tloops performed: " << inumloops

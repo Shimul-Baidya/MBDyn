@@ -1495,8 +1495,8 @@ DataManager::ReadElems(MBDynParser& HP)
 Elem**
 DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string& sName, int CurrType)
 {
-	Elem* pE = 0;
-	Elem** ppE = 0;
+	Elem* pE = nullptr;
+	Elem** ppE = nullptr;
 
 	switch (KeyWords(CurrType)) {
 	/* forza */
@@ -2560,16 +2560,15 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 			 */
 
 			if (HP.IsKeyWord("all")) {
-				for (ElemContainerType::const_iterator i = ElemData[Type].ElemContainer.begin();
-					i != ElemData[Type].ElemContainer.end(); ++i)
+                             for (const auto& oTmpEl: ElemData[Type].ElemContainer)
 				{
-					ElemGravityOwner *pEl = dynamic_cast<ElemGravityOwner *>(i->second);
-					if (pEl == 0) {
+					ElemGravityOwner *pEl = dynamic_cast<ElemGravityOwner *>(oTmpEl.second);
+					if (!pEl) {
 						silent_cerr(psElemNames[Type]
-							<< "(" << i->second->GetLabel() << "): "
+							<< "(" << oTmpEl.second->GetLabel() << "): "
 							"not a gravity related element "
 							"at line " << HP.GetLineData()
-							<< std::endl);
+							<< "\n");
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
 
@@ -2577,7 +2576,7 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 						silent_cerr(psElemNames[Type]
 							<< "(" << pEl->GetLabel() << "): "
 							" duplicate label at line "
-							<< HP.GetLineData() << std::endl);
+							<< HP.GetLineData() << "\n");
 						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 					}
 					elements.insert(pEl);
@@ -2595,13 +2594,13 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 				}
 
 				ElemGravityOwner *pEl = dynamic_cast<ElemGravityOwner *>(pTmpEl);
-				if (pEl == 0) {
+				if (!pEl) {
 					silent_cerr("Inertia(" << uLabel << "): "
 						<< psElemNames[Type]
 						<< "(" << uL << "): "
 						"not a gravity related element "
 						"at line " << HP.GetLineData()
-						<< std::endl);
+						<< "\n");
 					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 				}
 
@@ -2617,12 +2616,12 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 			}
 		}  /* end while (HP.IsArg()) */ 
 
-		flag fOut = fReadOutput(HP, Elem::BODY);
+		flag fOut = fReadOutput(HP, Elem::INERTIA);
 		if (bLog) {
-			fOut |= Inertia::OUTPUT_LOG; // was 0x2
+			fOut |= Inertia::OUTPUT_LOG;
 		}
 		if (bOut) {
-			fOut |= Inertia::OUTPUT_OUT; // was 0x4
+			fOut |= Inertia::OUTPUT_OUT;
 		}
 		if (bAlways) {
 			if (iNumTypes[Elem::INERTIA]-- <= 0) {
@@ -2635,7 +2634,7 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 			}
 
 			/* verifica che non sia gia' definito */
-			if (pFindElem(Elem::INERTIA, uLabel) != NULL) {
+			if (pFindElem(Elem::INERTIA, uLabel)) {
 				DEBUGCERR("");
 				silent_cerr("line " << HP.GetLineData() << ": "
 					"Inertia(" << uLabel << ") "
@@ -2647,19 +2646,30 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
 			fOut |= Inertia::OUTPUT_ALWAYS; // was 0x8
 		}
 
+                Inertia* pInertia = nullptr;
 
-		SAFENEWWITHCONSTRUCTOR(pE, Inertia,
-			Inertia(uLabel, sName, elements, x, R, OutHdl.Log(), fOut));
-		if (pE != 0) {
-			if (bAlways) {
-				ppE = InsertElem(ElemData[Elem::INERTIA], uLabel, pE);
-			} else {
-				SAFEDELETE(pE);
-				pE = 0;
-			}
-		}
+                SAFENEWWITHCONSTRUCTOR(pInertia, Inertia,
+                                       Inertia(uLabel, sName, std::move(elements), x, R, fOut));
 
-		break;
+                if ((fOut & Inertia::OUTPUT_OUT) && (!silent_output)) {
+                     pInertia->OutputLog(std::cout);
+                }
+
+                if (fOut & Inertia::OUTPUT_LOG) {
+                     pInertia->OutputLog(OutHdl.Log());
+                }
+
+                if (pInertia) {
+                        if (bAlways) {
+                                pE = pInertia;
+                                ppE = InsertElem(ElemData[Elem::INERTIA], uLabel, pE);
+                        } else {
+                                SAFEDELETE(pInertia);
+                                pInertia = nullptr;
+                        }
+                }
+
+                break;
 	}
 
 	/* In case the element type is not correct */
