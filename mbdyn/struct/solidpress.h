@@ -89,4 +89,7 @@ template <typename ElementType, typename CollocationType>
 SurfaceLoadElem*
 ReadTractionLoad(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
 
+template<typename ElementType, typename CollocationType>
+SurfaceLoadElem*
+ReadUnilateralInPlaneContact(DataManager* pDM, MBDynParser& HP, unsigned int uLabel);
 #endif
