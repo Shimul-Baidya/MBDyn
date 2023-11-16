@@ -415,7 +415,7 @@ ReadSparseMappingMatrix(MBDynParser& HP, integer& nRows, integer& nCols)
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
 
-	doublereal dThreshold = 0.;
+	doublereal dThreshold(0.);
 	if (HP.IsKeyWord("threshold")) {
 		dThreshold = HP.GetReal();
 		if (dThreshold < 0.) {
@@ -423,6 +423,11 @@ ReadSparseMappingMatrix(MBDynParser& HP, integer& nRows, integer& nCols)
 				<< " at line " << HP.GetLineData() << std::endl);
 			throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 		}
+	}
+
+	bool bTranspose(false);
+	if (!bSparse && HP.IsKeyWord("transpose")) {
+		bTranspose = true;
 	}
 	
 	const char *sFileName = HP.GetFileName();
@@ -570,7 +575,11 @@ ReadSparseMappingMatrix(MBDynParser& HP, integer& nRows, integer& nCols)
 					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 				}
 				if (std::abs(d) > dThreshold) {
-					(*pH)(ir, ic) = d;
+					if (bTranspose) {
+						(*pH)(ic, ir) = d;
+					} else {
+						(*pH)(ir, ic) = d;
+					}
 					nzcnt++;
 				}
 			}

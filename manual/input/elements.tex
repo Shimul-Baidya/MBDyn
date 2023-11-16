@@ -2212,6 +2212,7 @@ for the \kw{external modal} case.
         \kw{modes number} , \{ \kw{from file} | \bnt{num_modes} \} ,
         \{ \kw{full} | \kw{sparse} \} \kw{mapping file} , " \bnt{mapping_file_name} "
             [ , \kw{threshold} , \bnt{threshold} ]
+            [ , \kw{transpose} ]
 \end{Verbatim}
 %\end{verbatim}
 \nt{ref\_node\_label} is the label of the reference node
@@ -2220,7 +2221,11 @@ if the modes express the motion relative to a specific node.
 The mapping file contains the matrix that maps the nodal and modal
 displacements, velocities and forces.
 When \kw{full mapping file} is used, a file containing
-$\nt{num\_modes} \times (6\times\nt{num\_nodes}$) coefficients is expected.
+$\nt{num\_modes} \times (6\times\nt{num\_nodes})$ coefficients is expected.
+
+When the optional \kw{transpose} keyword is used, the file is expected to contain
+the same number of coefficients, but organized as $(6\times\nt{num\_nodes}) \times \nt{num\_modes}$ coefficients.
+
 When \kw{sparse mapping file} is used, a file containing
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -2232,11 +2237,14 @@ and $1 \le \nt{col} \le 6\times\nt{num\_nodes}$.
 Both files may start with an arbitrary number of lines beginning
 with a hash mark (`\texttt{\#}').
 They are treated as comments and ignored.
+
 If a \kw{threshold} is given, only elements whose absolute value
 is larger than threshold are retained.
 The value of \nt{threshold} defaults to 0.
+
 The mapping matrix is internally stored and handled as sparse,
 regardless of the file format.
+
 When the keyword \kw{from file} is used, the number of modes \nt{num\_modes}
 is computed from the matrix contained in the file \nt{mapping\_file\_name}.
 
