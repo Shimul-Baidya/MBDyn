@@ -49,13 +49,13 @@ protected:
         doublereal dMass;
 
         /* momento statico */
-        Vec3 GetS_int(void) const;
+        Vec3 GetS_int(void) const override;
 
         /* momento d'inerzia */
-        Mat3x3 GetJ_int(void) const;
+        Mat3x3 GetJ_int(void) const override;
 
         /* Scrive il contributo dell'elemento al file di restart */
-        virtual std::ostream& Restart(std::ostream& out) const;
+        virtual std::ostream& Restart(std::ostream& out) const override;
 
         void
         AssVecRBK_int(SubVectorHandler& WorkVec);
@@ -74,45 +74,39 @@ public:
         virtual ~Mass(void);
 
         /* massa totale */
-        doublereal dGetM(void) const;
-
-        /* momento statico */
-        Vec3 GetS(void) const;
-
-        /* momento d'inerzia */
-        Mat3x3 GetJ(void) const;
+        doublereal dGetM(void) const override;
 
         /* nodo */
         const StructDispNode *pGetNode(void) const;
 
         /* Tipo dell'elemento (usato solo per debug ecc.) */
-        virtual Elem::Type GetElemType(void) const {
+        virtual Elem::Type GetElemType(void) const override {
                 return Elem::BODY;
-        };
+        }
 
 	/* Deformable element */
-	virtual bool bIsDeformable() const {
+	virtual bool bIsDeformable() const override {
 		return true;
-	};
+	}
 
         /* Numero gdl durante l'assemblaggio iniziale */
-        virtual unsigned int iGetInitialNumDof(void) const {
+        virtual unsigned int iGetInitialNumDof(void) const override {
                 return 0;
-        };
+        }
 
         /* Accesso ai dati privati */
-        virtual unsigned int iGetNumPrivData(void) const;
-        virtual unsigned int iGetPrivDataIdx(const char *s) const;
-        virtual doublereal dGetPrivData(unsigned int i) const;
+        virtual unsigned int iGetNumPrivData(void) const override;
+        virtual unsigned int iGetPrivDataIdx(const char *s) const override;
+        virtual doublereal dGetPrivData(unsigned int i) const override;
 
         /******** PER IL SOLUTORE PARALLELO *********/
         /* Fornisce il tipo e la label dei nodi che sono connessi all'elemento
          * utile per l'assemblaggio della matrice di connessione fra i dofs */
         virtual void
-        GetConnectedNodes(std::vector<const Node *>& connectedNodes) const {
+        GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override {
                 connectedNodes.resize(1);
                 connectedNodes[0] = pNode;
-        };
+        }
         /**************************************************/
 };
 
@@ -124,8 +118,8 @@ class DynamicMass :
 virtual public Elem, public Mass {
 private:
 
-        Vec3 GetB_int(void) const;
-
+        virtual Vec3 GetB_int(void) const override;
+        virtual Vec3 GetG_int(void) const override;
         /* Assembla le due matrici necessarie per il calcolo degli
          * autovalori e per lo jacobiano */
         void AssMats(FullSubMatrixHandler& WorkMatA,
@@ -141,27 +135,27 @@ public:
 
         virtual ~DynamicMass(void);
 
-        void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
+        virtual void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override {
                 *piNumRows = 3;
                 *piNumCols = 3;
-        };
+        }
 
         virtual VariableSubMatrixHandler&
         AssJac(VariableSubMatrixHandler& WorkMat,
                 doublereal dCoef,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         void AssMats(VariableSubMatrixHandler& WorkMatA,
                 VariableSubMatrixHandler& WorkMatB,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         virtual SubVectorHandler&
         AssRes(SubVectorHandler& WorkVec,
                 doublereal dCoef,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         /* Dimensione del workspace durante l'assemblaggio iniziale.
          * Occorre tener conto del numero di dof che l'elemento definisce
@@ -169,24 +163,24 @@ public:
          * Sono considerati dof indipendenti la posizione e la velocita'
          * dei nodi */
         virtual void
-        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
+        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const override {
                 *piNumRows = 3;
                 *piNumCols = 3;
-        };
+        }
 
         /* Contributo allo jacobiano durante l'assemblaggio iniziale */
         virtual VariableSubMatrixHandler&
         InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                const VectorHandler& XCurr);
+                const VectorHandler& XCurr) override;
 
         /* Contributo al residuo durante l'assemblaggio iniziale */
         virtual SubVectorHandler&
-        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
+        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
 
         /* Usata per inizializzare la quantita' di moto */
         virtual void SetValue(DataManager *pDM,
                 VectorHandler& X, VectorHandler& XP,
-                SimulationEntity::Hints *ph = 0);
+                SimulationEntity::Hints *ph = 0) override;
 };
 
 /* DynamicMass - end */
@@ -209,30 +203,30 @@ public:
 
         virtual ~StaticMass(void);
 
-        void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
+        void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override {
                 *piNumRows = 3;
                 *piNumCols = 3;
-        };
+        }
 
         virtual VariableSubMatrixHandler&
         AssJac(VariableSubMatrixHandler& WorkMat,
                 doublereal dCoef,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         void AssMats(VariableSubMatrixHandler& WorkMatA,
                 VariableSubMatrixHandler& WorkMatB,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         virtual SubVectorHandler&
         AssRes(SubVectorHandler& WorkVec,
                 doublereal dCoef,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         /* inverse dynamics capable element */
-        virtual bool bInverseDynamics(void) const;
+        virtual bool bInverseDynamics(void) const override;
 
         /* Inverse Dynamics: */
         virtual SubVectorHandler&
@@ -240,7 +234,7 @@ public:
                 const VectorHandler& /* XCurr */ ,
                 const VectorHandler& /* XPrimeCurr */ ,
                 const VectorHandler& /* XPrimePrimeCurr */ ,
-                InverseDynamics::Order iOrder = InverseDynamics::INVERSE_DYNAMICS);
+                InverseDynamics::Order iOrder = InverseDynamics::INVERSE_DYNAMICS) override;
 
         /* Dimensione del workspace durante l'assemblaggio iniziale.
          * Occorre tener conto del numero di dof che l'elemento definisce
@@ -248,24 +242,24 @@ public:
          * Sono considerati dof indipendenti la posizione e la velocita'
          * dei nodi */
         virtual void
-        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
+        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const override {
                 *piNumRows = 3;
                 *piNumCols = 3;
-        };
+        }
 
         /* Contributo allo jacobiano durante l'assemblaggio iniziale */
         virtual VariableSubMatrixHandler&
         InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                const VectorHandler& XCurr);
+                const VectorHandler& XCurr) override;
 
         /* Contributo al residuo durante l'assemblaggio iniziale */
         virtual SubVectorHandler&
-        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
+        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
 
         /* Usata per inizializzare la quantita' di moto */
         virtual void SetValue(DataManager *pDM,
                 VectorHandler& X, VectorHandler& XP,
-                SimulationEntity::Hints *ph = 0);
+                SimulationEntity::Hints *ph = 0) override;
 };
 
 /* StaticMass - end */
@@ -285,10 +279,10 @@ protected:
 	mutable Mat3x3 JTmp;
 
 	/* momento statico */
-	Vec3 GetS_int(void) const;
+	Vec3 GetS_int(void) const override;
 
 	/* momento d'inerzia */
-	Mat3x3 GetJ_int(void) const;
+	Mat3x3 GetJ_int(void) const override;
 
 	void
 	AssVecRBK_int(SubVectorHandler& WorkVec);
@@ -309,50 +303,44 @@ public:
         virtual ~Body(void);
 
         /* Scrive il contributo dell'elemento al file di restart */
-        virtual std::ostream& Restart(std::ostream& out) const;
+        virtual std::ostream& Restart(std::ostream& out) const override;
 
         /* massa totale */
-        doublereal dGetM(void) const;
-
-        /* momento statico */
-        Vec3 GetS(void) const;
-
-        /* momento d'inerzia */
-        Mat3x3 GetJ(void) const;
+        doublereal dGetM(void) const override;
 
         /* nodo */
         const StructNode *pGetNode(void) const;
 
         /* Tipo dell'elemento (usato solo per debug ecc.) */
-        virtual Elem::Type GetElemType(void) const {
+        virtual Elem::Type GetElemType(void) const override {
                 return Elem::BODY;
-        };
+        }
 
 	/* Deformable element */
-	virtual bool bIsDeformable() const {
+	virtual bool bIsDeformable() const override {
 		return true;
-	};
+	}
 
         /* Numero gdl durante l'assemblaggio iniziale */
-        virtual unsigned int iGetInitialNumDof(void) const {
+        virtual unsigned int iGetInitialNumDof(void) const override {
                 return 0;
-        };
+        }
 
-        virtual void AfterPredict(VectorHandler& X, VectorHandler& XP);
+        virtual void AfterPredict(VectorHandler& X, VectorHandler& XP) override;
 
         /* Accesso ai dati privati */
-        virtual unsigned int iGetNumPrivData(void) const;
-        virtual unsigned int iGetPrivDataIdx(const char *s) const;
-        virtual doublereal dGetPrivData(unsigned int i) const;
+        virtual unsigned int iGetNumPrivData(void) const override;
+        virtual unsigned int iGetPrivDataIdx(const char *s) const override;
+        virtual doublereal dGetPrivData(unsigned int i) const override;
 
         /******** PER IL SOLUTORE PARALLELO *********/
         /* Fornisce il tipo e la label dei nodi che sono connessi all'elemento
          * utile per l'assemblaggio della matrice di connessione fra i dofs */
         virtual void
-        GetConnectedNodes(std::vector<const Node *>& connectedNodes) const {
+        GetConnectedNodes(std::vector<const Node *>& connectedNodes) const override {
                 connectedNodes.resize(1);
                 connectedNodes[0] = pNode;
-        };
+        }
         /**************************************************/
 };
 
@@ -501,30 +489,30 @@ public:
 
         virtual ~StaticBody(void);
 
-        void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
+        void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const override {
                 *piNumRows = 6;
                 *piNumCols = 6;
-        };
+        }
 
         virtual VariableSubMatrixHandler&
         AssJac(VariableSubMatrixHandler& WorkMat,
                 doublereal dCoef,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         void AssMats(VariableSubMatrixHandler& WorkMatA,
                 VariableSubMatrixHandler& WorkMatB,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         virtual SubVectorHandler&
         AssRes(SubVectorHandler& WorkVec,
                 doublereal dCoef,
                 const VectorHandler& XCurr,
-                const VectorHandler& XPrimeCurr);
+                const VectorHandler& XPrimeCurr) override;
 
         /* inverse dynamics capable element */
-        virtual bool bInverseDynamics(void) const;
+        virtual bool bInverseDynamics(void) const override;
 
         /* Inverse Dynamics: */
         virtual SubVectorHandler&
@@ -532,7 +520,7 @@ public:
                 const VectorHandler& /* XCurr */ ,
                 const VectorHandler& /* XPrimeCurr */ ,
                 const VectorHandler& /* XPrimePrimeCurr */ ,
-                InverseDynamics::Order iOrder = InverseDynamics::INVERSE_DYNAMICS);
+                InverseDynamics::Order iOrder = InverseDynamics::INVERSE_DYNAMICS) override;
 
         /* Dimensione del workspace durante l'assemblaggio iniziale.
          * Occorre tener conto del numero di dof che l'elemento definisce
@@ -540,24 +528,24 @@ public:
          * Sono considerati dof indipendenti la posizione e la velocita'
          * dei nodi */
         virtual void
-        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
+        InitialWorkSpaceDim(integer* piNumRows, integer* piNumCols) const override {
                 *piNumRows = 6;
                 *piNumCols = 6;
-        };
+        }
 
         /* Contributo allo jacobiano durante l'assemblaggio iniziale */
         virtual VariableSubMatrixHandler&
         InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                const VectorHandler& XCurr);
+                const VectorHandler& XCurr) override;
 
         /* Contributo al residuo durante l'assemblaggio iniziale */
         virtual SubVectorHandler&
-        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr);
+        InitialAssRes(SubVectorHandler& WorkVec, const VectorHandler& XCurr) override;
 
         /* Usata per inizializzare la quantita' di moto */
         virtual void SetValue(DataManager *pDM,
                 VectorHandler& X, VectorHandler& XP,
-                SimulationEntity::Hints *ph = 0);
+                SimulationEntity::Hints *ph = 0) override;
 };
 
 /* StaticBody - end */

@@ -5,8 +5,8 @@
  *
  * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
- * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -41,53 +41,58 @@
 template <class T>
 class ZeroTplDriveCaller : public TplDriveCaller<T> {
 public:
-	ZeroTplDriveCaller(void) {
-		NO_OP;
-	};
+        explicit ZeroTplDriveCaller(const DriveHandler* pDH = nullptr)
+             :TplDriveCaller<T>(pDH) {
+                NO_OP;
+        }
 
-	~ZeroTplDriveCaller(void) {
-		NO_OP;
-	};
+        ~ZeroTplDriveCaller(void) {
+                NO_OP;
+        }
 
-	/* copia */
-	virtual TplDriveCaller<T>* pCopy(void) const {
-		typedef ZeroTplDriveCaller<T> dc;
-		TplDriveCaller<T>* pDC = 0;
+        /* copia */
+        virtual TplDriveCaller<T>* pCopy(void) const override {
+                typedef ZeroTplDriveCaller<T> dc;
+                TplDriveCaller<T>* pDC = 0;
 
-		SAFENEW(pDC, dc);
+                SAFENEWWITHCONSTRUCTOR(pDC, dc, dc(this->pDrvHdl));
 
-		return pDC;
-	};
+                return pDC;
+        }
 
-	/* Scrive il contributo del DriveCaller al file di restart */
-	virtual std::ostream& Restart(std::ostream& out) const {
-		return out << "zero";
-	};
+        /* Scrive il contributo del DriveCaller al file di restart */
+        virtual std::ostream& Restart(std::ostream& out) const override {
+                return out << "zero";
+        }
 
-	virtual std::ostream& Restart_int(std::ostream& out) const {
-		return out;
-	};
+        virtual std::ostream& Restart_int(std::ostream& out) const override {
+                return out;
+        }
 
-	inline T Get(const doublereal& dVar) const {
-		return mb_zero<T>();
-	};
+        inline T Get(const doublereal&) const override {
+                return Get();
+        }
 
-	inline T Get(void) const {
-		return mb_zero<T>();
-	};
+        inline T Get(void) const override {
+                return mb_zero<T>();
+        }
 
-	/* this is about drives that are differentiable */
-	inline bool bIsDifferentiable(void) const {
-		return true;
-	};
+        /* this is about drives that are differentiable */
+        inline bool bIsDifferentiable(void) const override {
+                return true;
+        }
 
-	inline T GetP(void) const {
-		return mb_zero<T>();
-	};
+        inline T GetP(const doublereal&) const override {
+                return GetP();
+        }
 
-	inline int getNDrives(void) const {
-		return 0;
-	};
+        inline T GetP() const override {
+                return mb_zero<T>();
+        }
+
+        inline int getNDrives(void) const override {
+                return 0;
+        }
 };
 
 /* ZeroTplDriveCaller - end */
@@ -97,60 +102,56 @@ public:
 template <class T>
 class SingleTplDriveCaller : public TplDriveCaller<T>, public DriveOwner {
 protected:
-	T t;
+        T t;
 
 public:
-	SingleTplDriveCaller(const DriveCaller* pDC, const T& x)
-	: DriveOwner(pDC), t(const_cast<T&>(x)) {
-		NO_OP;
-	};
+        SingleTplDriveCaller(const DriveHandler* pDH, const DriveCaller* pDC, const T& x)
+        : TplDriveCaller<T>(pDH), DriveOwner(pDC), t(const_cast<T&>(x)) {
+                NO_OP;
+        }
 
-	~SingleTplDriveCaller(void) {
-		NO_OP;
-	};
+        ~SingleTplDriveCaller(void) {
+                NO_OP;
+        }
 
-	/* copia */
-	virtual TplDriveCaller<T>* pCopy(void) const {
-		typedef SingleTplDriveCaller<T> dc;
-		TplDriveCaller<T>* pDC = 0;
+        /* copia */
+        virtual TplDriveCaller<T>* pCopy(void) const override {
+                typedef SingleTplDriveCaller<T> dc;
+                TplDriveCaller<T>* pDC = 0;
 
-		SAFENEWWITHCONSTRUCTOR(pDC, dc, dc(pGetDriveCaller()->pCopy(), t));
+                SAFENEWWITHCONSTRUCTOR(pDC, dc, dc(this->pDrvHdl, pGetDriveCaller()->pCopy(), t));
 
-		return pDC;
-	};
+                return pDC;
+        }
 
-	/* Scrive il contributo del DriveCaller al file di restart */
-	virtual std::ostream& Restart(std::ostream& out) const {
-		out << "single, ",
-		Write(out, t, ", ") << ", ";
-		return pGetDriveCaller()->Restart(out);
-	};
+        /* Scrive il contributo del DriveCaller al file di restart */
+        virtual std::ostream& Restart(std::ostream& out) const override {
+                out << "single, ",
+                Write(out, t, ", ") << ", ";
+                return pGetDriveCaller()->Restart(out);
+        }
 
-	virtual std::ostream& Restart_int(std::ostream& out) const {
-		Write(out, t, ", ") << ", ";
-		return pGetDriveCaller()->Restart(out);
-	};
+        virtual std::ostream& Restart_int(std::ostream& out) const override {
+                Write(out, t, ", ") << ", ";
+                return pGetDriveCaller()->Restart(out);
+        }
 
-	inline T Get(const doublereal& dVar) const {
-		return t*dGet(dVar);
-	};
+        inline T Get(const doublereal& dVar) const override {
+                return t*dGet(dVar);
+        }
 
-	inline T Get(void) const {
-		return t*dGet();
-	};
+        /* this is about drives that are differentiable */
+        inline bool bIsDifferentiable(void) const override {
+                return DriveOwner::bIsDifferentiable();
+        }
 
-	/* this is about drives that are differentiable */
-	inline bool bIsDifferentiable(void) const {
-		return DriveOwner::bIsDifferentiable();
-	};
+        inline T GetP(const doublereal& dVar) const override {
+                return t * dGetP(dVar);
+        }
 
-	inline T GetP(void) const {
-		return t*dGetP();
-	};
-
-	inline int getNDrives(void) const {
-		return 1;
-	};
+        inline int getNDrives(void) const override {
+                return 1;
+        }
 };
 
 /* Nota: in caso scalare, viene semplificata la classe in modo da
@@ -160,69 +161,64 @@ template<>
 class SingleTplDriveCaller<doublereal>
 : public TplDriveCaller<doublereal>, public DriveOwner {
 public:
-	SingleTplDriveCaller(const DriveCaller* pDC, const doublereal& = 0.)
-	: DriveOwner(pDC) {
-		NO_OP;
-	};
+        SingleTplDriveCaller(const DriveHandler* pDH, const DriveCaller* pDC, const doublereal& = 0.)
+        : TplDriveCaller<doublereal>(pDH), DriveOwner(pDC) {
+                NO_OP;
+        }
 
-	~SingleTplDriveCaller(void) {
-		NO_OP;
-	};
+        ~SingleTplDriveCaller(void) {
+                NO_OP;
+        }
 
-	/* copia */
-	virtual TplDriveCaller<doublereal>* pCopy(void) const {
-		TplDriveCaller<doublereal>* pDC = 0;
+        /* copia */
+        virtual TplDriveCaller<doublereal>* pCopy(void) const override {
+                TplDriveCaller<doublereal>* pDC = 0;
 
-		typedef SingleTplDriveCaller<doublereal> dc;
-		SAFENEWWITHCONSTRUCTOR(pDC, dc, dc(pGetDriveCaller()->pCopy()));
+                typedef SingleTplDriveCaller<doublereal> dc;
+                SAFENEWWITHCONSTRUCTOR(pDC, dc, dc(pDrvHdl, pGetDriveCaller()->pCopy()));
 
-		return pDC;
-	};
+                return pDC;
+        }
 
-	/* Scrive il contributo del DriveCaller al file di restart */
-	virtual std::ostream& Restart(std::ostream& out) const {
-		out << "single, ";
-		return pGetDriveCaller()->Restart(out);
-	};
+        /* Scrive il contributo del DriveCaller al file di restart */
+        virtual std::ostream& Restart(std::ostream& out) const override {
+                out << "single, ";
+                return pGetDriveCaller()->Restart(out);
+        }
 
-	virtual std::ostream& Restart_int(std::ostream& out) const {
-		return pGetDriveCaller()->Restart(out);
-	};
+        virtual std::ostream& Restart_int(std::ostream& out) const override {
+                return pGetDriveCaller()->Restart(out);
+        }
 
-	inline doublereal Get(const doublereal& dVar) const {
-		return dGet(dVar);
-	};
+        inline doublereal Get(const doublereal& dVar) const override {
+                return dGet(dVar);
+        }
 
-	inline doublereal Get(void) const {
-		return dGet();
-	};
+        inline bool bIsDifferentiable(void) const override {
+                return DriveOwner::bIsDifferentiable();
+        }
 
-	inline bool bIsDifferentiable(void) const {
-		return DriveOwner::bIsDifferentiable();
-	};
+        inline doublereal GetP(const doublereal& dVar) const override {
+                return dGetP(dVar);
+        }
 
-	inline doublereal GetP(void) const {
-		return dGetP();
-	};
-
-	inline int getNDrives(void) const {
-		return 1;
-	};
+        inline int getNDrives(void) const override {
+                return 1;
+        };
 };
 
 template <class T>
 TplDriveCaller<T> *
-DC2TDC(DriveCaller *pDC, T& t)
+DC2TDC(const DriveHandler* pDH, DriveCaller *pDC, const T& t)
 {
-	typedef SingleTplDriveCaller<T> STDC;
+        typedef SingleTplDriveCaller<T> STDC;
 
-	TplDriveCaller<T> *p = 0;
-	SAFENEWWITHCONSTRUCTOR(p, STDC, STDC(pDC, t));
-	return p;
+        TplDriveCaller<T> *p = 0;
+        SAFENEWWITHCONSTRUCTOR(p, STDC, STDC(pDH, pDC, t));
+        return p;
 }
 
 
 /* SingleTplDriveCaller - end */
 
 #endif // TPLDRIVE_IMPL_H
-

@@ -70,7 +70,7 @@ GiNaCDriveCaller::GiNaCDriveCaller(const DriveHandler* pDH,
 
 GiNaCDriveCaller::~GiNaCDriveCaller(void)
 {
-	NO_OP;
+     delete gVar;
 }
 
 /* Copia */

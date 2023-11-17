@@ -84,6 +84,7 @@ const char* psExt[] = {
 	".trc",
         ".sol",
         ".prl",
+        ".inl",
 	".m",		// NOTE: ALWAYS LAST!
 	NULL		// 35
 };
@@ -535,6 +536,11 @@ OutputHandler::OutputHandler_int(void)
              | OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;
 
         OutData[SURFACE_LOADS].pof = &ofSurfaceLoads;
+
+        OutData[INERTIA_ELEMENTS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
+             | OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT
+             | OUTPUT_MAY_USE_NETCDF;
+        OutData[INERTIA_ELEMENTS].pof = &ofInertiaElements;
         
 	OutData[EIGENANALYSIS].flags = OUTPUT_USE_DEFAULT_PRECISION | OUTPUT_USE_SCIENTIFIC
 			| OUTPUT_MAY_USE_TEXT | OUTPUT_USE_TEXT;

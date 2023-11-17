@@ -72,7 +72,13 @@ isForce(isforce), Dir(dir) */
 /* Distruttore banale */
 Brake::~Brake(void)
 {
-   NO_OP;
+     if (Sh_c) {
+          SAFEDELETE(Sh_c);
+     }
+
+     if (fc) {
+          SAFEDELETE(fc);
+     }
 };
 
 void

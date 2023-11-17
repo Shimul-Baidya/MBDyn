@@ -306,7 +306,6 @@ Real values are stored with the maximum precision allowed by the underlying
 \kw{real} type (by default, double precision, 64 bit).
 
 \begin{figure}
-\label{fig:MBDYN-H}
 \centering
 \small
 \begin{minipage}{120mm}
@@ -353,6 +352,7 @@ MBDyn terminated normally
 \end{verbatim}
 \end{minipage}
 \caption{Predefined constants in math parser}
+\label{fig:MBDYN-H}
 \end{figure}
 
 The variable \kw{Time} is declared, defined and initialized\footnote{
@@ -1299,7 +1299,7 @@ They are:
 \end{Verbatim}
 %\end{verbatim}
 Constitutive laws are grouped by their dimensionality \nt{dim},
-which (up to now) can be any of 1, 3 and 6.
+which (up to now) can be any of 1, 3, 6 and 7.
 The \nt{constitutive\_law} is parsed according to the rules
 described in Section~\ref{sec:ConstitutiveLaw},
 and can be referenced later when it needs to be used.
@@ -3813,9 +3813,10 @@ The ``deformable'' elements at present are:
 \item \htmlref{\kw{deformable hinge}}{sec:EL:JOINT:DEFORMABLEHINGE}
 	and \htmlref{\kw{deformable displacement joint}}{sec:EL:JOINT:DEFORMABLEDISP}
 	elements (3D);
-\item \htmlref{\kw{deformable joint}}{sec:EL:JOINT:DEFORMABLEJOINT}
-	and \htmlref{\kw{beam}}{sec:EL:BEAM}
-	elements (6D).
+\item \htmlref{\kw{deformable joint}}{sec:EL:JOINT:DEFORMABLEJOINT}, \htmlref{\kw{beam}}{sec:EL:BEAM} and \htmlref{\kw{solid}}{sec:EL:SOLID}
+        elements (6D).
+\item \htmlref{\kw{solid}}{sec:EL:SOLID}
+	elements for incompressible constitutive laws (7D).
 \end{itemize}
 
 Constitutive laws are also used in non-structural components,
@@ -3830,7 +3831,7 @@ Table~\ref{tab:CONST-LAW-DIM} shows the availability of each constitutive law.
 The meaning of the input and output parameters of a constitutive law
 is dictated by the entity that uses it.
 In general, the user should refer to the element the constitutive law
-is being instantiated for in order to understand what the input
+is being instantiated for, in order to understand what the input
 and the output parameters are supposed to be.
 
 Usually, constitutive laws can be directly defined when required,
@@ -3856,65 +3857,69 @@ in Section~\ref{sec:CONSTITUTIVE-LAW}.
     \setlength{\constlawwidth}{70mm}
     \centering
     \caption{Constitutive laws dimensionality}\label{tab:CONST-LAW-DIM}
-    \begin{tabular}{l|c|c|c} 
+    \begin{tabular}{l|c|c|c|c} 
         \hline
         \multicolumn{1}{c}{\textbf{Constitutive law}} &
 	\multicolumn{1}{c}{\textbf{1D}} &
 	\multicolumn{1}{c}{\textbf{3D}} &
-	\multicolumn{1}{c}{\textbf{6D}} \\ 
+	\multicolumn{1}{c}{\textbf{6D}} &
+        \multicolumn{1}{c}{\textbf{7D}} \\ 
 	\hline
-	\kw{linear elastic}, \kw{linear elastic isotropic}			& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear elastic generic}						& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear elastic generic axial torsion coupling}			&         &         & $\surd$ \\
-	\kw{cubic elastic generic}						& $\surd$ & $\surd$ &         \\
-	\kw{inverse square elastic}						& $\surd$ &         &         \\
-	\kw{log elastic}							& $\surd$ &         &         \\
-	\kw{linear elastic bistop}						& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{double linear elastic}						& $\surd$ & $\surd$ &         \\
-	\kw{isotropic hardening elastic}					& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{scalar function elastic}, \kw{scalar function elastic isotropic}	& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{scalar function elastic orthotropic}				& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear viscous}, \kw{linear viscous isotropic}			& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear viscous generic}						& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear viscoelastic}, \kw{linear viscoelastic isotropic}		& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear viscoelastic generic}					& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear time variant viscoelastic generic}				& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{linear viscoelastic generic axial torsion coupling}			&         &         & $\surd$ \\
-	\kw{cubic viscoelastic generic}						& $\surd$ & $\surd$ &         \\
-	\kw{double linear viscoelastic}						& $\surd$ & $\surd$ &         \\
-	\kw{turbulent viscoelastic}						& $\surd$ &         &         \\
-	\kw{linear viscoelastic bistop}						& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{shock absorber}							& $\surd$ &         &         \\
-	\kw{symbolic elastic}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{symbolic viscous}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{symbolic viscoelastic}						& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{ann elastic}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{ann viscoelastic}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{nlsf elastic}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{nlsf viscous}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{nlsf viscoelastic}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{nlp elastic}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{nlp viscous}							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{nlp viscoelastic}							& $\surd$ & $\surd$ & $\surd$ \\
-        \kw{neo hookean elastic}                                                &         &         & $\surd$ \\
-        \kw{neo hookean viscoelastic}                                           &         &         & $\surd$ \\
-        \kw{mooney rivlin elastic}                                              &         &         & $\surd$ \\        
-        \kw{bilinear isotropic hardening}                                       &         &         & $\surd$ \\
-        \kw{linear viscoelastic maxwell 1}                                      &         & $\surd$ & $\surd$ \\
-        \kw{linear viscoelastic maxwell n}                                      &         & $\surd$ & $\surd$ \\
+	\kw{linear elastic}, \kw{linear elastic isotropic}			& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear elastic generic}						& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear elastic generic axial torsion coupling}			&         &         & $\surd$ &         \\
+	\kw{cubic elastic generic}						& $\surd$ & $\surd$ &         &         \\
+	\kw{inverse square elastic}						& $\surd$ &         &         &         \\
+	\kw{log elastic}							& $\surd$ &         &         &         \\
+	\kw{linear elastic bistop}						& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{double linear elastic}						& $\surd$ & $\surd$ &         &         \\
+	\kw{isotropic hardening elastic}					& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{scalar function elastic}, \kw{scalar function elastic isotropic}	& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{scalar function elastic orthotropic}				& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear viscous}, \kw{linear viscous isotropic}			& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear viscous generic}						& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear viscoelastic}, \kw{linear viscoelastic isotropic}		& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear viscoelastic generic}					& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear time variant viscoelastic generic}				& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{linear viscoelastic generic axial torsion coupling}			&         &         & $\surd$ &         \\
+	\kw{cubic viscoelastic generic}						& $\surd$ & $\surd$ &         &         \\
+	\kw{double linear viscoelastic}						& $\surd$ & $\surd$ &         &         \\
+	\kw{turbulent viscoelastic}						& $\surd$ &         &         &         \\
+	\kw{linear viscoelastic bistop}						& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{shock absorber}							& $\surd$ &         &         &         \\
+	\kw{symbolic elastic}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{symbolic viscous}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{symbolic viscoelastic}						& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{ann elastic}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{ann viscoelastic}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{nlsf elastic}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{nlsf viscous}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{nlsf viscoelastic}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{nlp elastic}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{nlp viscous}							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{nlp viscoelastic}							& $\surd$ & $\surd$ & $\surd$ &         \\
+        \kw{hookean linear elastic isotropic}                                   &         &         & $\surd$ & $\surd$ \\
+        \kw{hookean linear viscoelastic isotropic}                              &         &         & $\surd$ &         \\        
+        \kw{neo hookean elastic}                                                &         &         & $\surd$ &         \\
+        \kw{neo hookean viscoelastic}                                           &         &         & $\surd$ &         \\
+        \kw{mooney rivlin elastic}                                              &         &         & $\surd$ & $\surd$ \\
+        \kw{bilinear isotropic hardening}                                       &         &         & $\surd$ & $\surd$ \\
+        \kw{linear viscoelastic maxwell 1}                                      &         & $\surd$ & $\surd$ &         \\
+        \kw{linear viscoelastic maxwell n}                                      &         & $\surd$ & $\surd$ &         \\
         \hline
-	\multicolumn{4}{c}{} \\
+	\multicolumn{5}{c}{} \\
 	\hline
         \multicolumn{1}{c}{\textbf{Constitutive law wrapper}} &
 	\multicolumn{1}{c}{\textbf{1D}} &
 	\multicolumn{1}{c}{\textbf{3D}} &
-	\multicolumn{1}{c}{\textbf{6D}} \\ 
+	\multicolumn{1}{c}{\textbf{6D}} &
+        \multicolumn{1}{c}{\textbf{7D}} \\ 
 	\hline
-	\kw{array} (wrapper)							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{axial} (wrapper)							&         & $\surd$ &         \\
-	\kw{bistop} (wrapper)							& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{drive caller} (wrapper)						& $\surd$ & $\surd$ & $\surd$ \\
-	\kw{invariant angular} (wrapper)					&         & $\surd$ &         \\
+	\kw{array} (wrapper)							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{axial} (wrapper)							&         & $\surd$ &         &         \\
+	\kw{bistop} (wrapper)							& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{drive caller} (wrapper)						& $\surd$ & $\surd$ & $\surd$ &         \\
+	\kw{invariant angular} (wrapper)					&         & $\surd$ &         &         \\
         \hline
     \end{tabular}
 \end{table}
@@ -4817,11 +4822,72 @@ and that of the \kw{nlsf viscoelastic} one
 is essentially identical, their behavior may be quite different,
 as indicated by Equations~(\ref{eq:nlsf-cl}) and~(\ref{eq:nlp-cl}).
 
+\subsection{Hookean linear elastic isotropic}
+\label{sec:CL:hookean:linear:elastic:isotropic}
+\emph{Author: Reinhard Resch} The hookean linear elastic isotropic constitutive law implements the classical
+three dimensional form of Hooke's law for solid materials.
+See \cite{BATHE2016} or \cite{WALLRAPP1998} for example.
+For this constitutive law, there are an elastic variant, a viscoelastic variant
+and an elastic variant for displacement/pressure (u/p-c) formulations.
+The latter formulation is supporting also fully incompressible materials (e.g. $\nt{nu} = \frac{1}{2}$).
+Those constitutive laws are valid only for solid elements. See also section~\ref{sec:EL:SOLID}.
+
+\paragraph{Syntax.}
+The syntax is
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{specific_const_law} ::= \kw{hookean linear elastic isotropic} ,
+      \kw{E} , (\ty{real}) \bnt{E} ,
+      \kw{nu} , (\ty{real}) \bnt{nu}
+\end{Verbatim}
+
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{specific_const_law} ::= \kw{hookean linear viscoelastic isotropic} ,
+      \kw{E} , (\ty{real}) \bnt{E} ,
+      \kw{nu} , (\ty{real}) \bnt{nu},
+      \kw{beta}, (\ty{real}) \bnt{beta}
+\end{Verbatim}
+
+\begin{description}
+\item[\nt{E}] Young's modulus
+\item[\nt{nu}] Poisson's ratio
+\item[\nt{beta}] Damping coefficient
+\end{description}
+In case of a Total~Lagrangian~Formulation, the relation between Second~Piola-Kirchhoff stress tensor $\boldsymbol{S}$
+and Green-Lagrange strain tensor $\boldsymbol{G}$ is:
+\begin{eqnarray}
+  \boldsymbol{S}_{ij} & = & 2 \, \mu \, \left(\boldsymbol{G}_{ij} + \nt{beta} \, \dot{\boldsymbol{G}}_{ij}^{\star} \right) + \lambda \, \delta_{ij} \left( \, \trace{\boldsymbol{G}} + \nt{beta} \, \trace{\dot{\boldsymbol{G}}^{\star}}\right) \label{SEC:CL:hookean:sigma} \\
+  \mu & = & \frac{\nt{E}}{2 \, \left(1 + \nt{nu}\right)} \\
+  \lambda & = & \frac{\nt{E} \, \nt{nu}}{\left(1 + \nt{nu}\right) \, \left(1 - 2 \, \nt{nu} \right)}
+\end{eqnarray}
+See also equation~\ref{sec:EL:SOLID:constlaw}.
+
+\paragraph{Example.} \
+\begin{verbatim}
+    constitutive law: 1000, name, "steel", 6, ## usable only for non u/p-c elements
+                 hookean linear elastic isotropic,
+                     E, 200000e6,
+                     nu, 0.3;
+
+    constitutive law: 1000, name, "steel", 7, ## usable only for u/p-c elements
+                 hookean linear elastic isotropic,
+                     E, 200000e6,
+                     nu, 0.3;
+
+    constitutive law: 1001, name, "steel", 6, ## usable only for non u/p-c elements
+                 hookean linear viscoelastic isotropic,
+                     E, 200000e6,
+                     nu, 0.3,
+                     beta, 1e-6;
+\end{verbatim}
+
 \subsection{Neo-Hookean}
 \label{sec:CL:neo-hookean}
 \emph{Author: Reinhard Resch}
 Neo-Hookean isotropic hyperelastic constitutive laws can be used to model rubber~like materials with solid elements.
 See also section~\ref{sec:EL:SOLID}.
+
+\paragraph{Syntax.}
+The syntax is
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{specific_const_law} ::= \kw{neo hookean elastic} ,
       \kw{E} , (\ty{real}) \bnt{E} ,
@@ -4834,15 +4900,13 @@ See also section~\ref{sec:EL:SOLID}.
       \kw{nu} , (\ty{real}) \bnt{nu} ,
       \kw{beta} , (\ty{real}) \bnt{beta}
 \end{Verbatim}
-
-The implementation is based on \cite{KUEBLER2005}. Input parameters for Neo-Hookean materials are Young's modulus \nt{E} and Poisson's ratio \nt{nu}.
+The implementation is based on \cite{KUEBLER2005}. Input parameters for Neo-Hookean materials are Young's modulus \nt{E}
+and Poisson's ratio \nt{nu}.
 For the viscoelastic variant, there is an additional input parameter \nt{beta} which is a damping coefficient.
-In contradiction to \cite{KUEBLER2005}, damping effects are always considered proportional to initial stiffness in MBDyn.
-Since fully incompressible constitutive laws are not yet supported, the condition $0 \le \nt{nu} < \frac{1}{2}$ must hold.
+In contradiction to \cite{KUEBLER2005}, damping effects are always considered proportional to initial stiffness.
 The Neo-Hookean constitutive law is describing the relation between
-Second Piola Kirchhoff stress tensor $\boldsymbol{S}$ and Right Cauchy Green strain tensor $\boldsymbol{C}$.
-In the elastic case $\nt{beta}=0$, whereas in the viscoelastic case $\nt{beta}>0$ and the scaled time derivative of the Right Cauchy Green strain tensor
-$\dot{\boldsymbol{C}}^{\star}=\frac{1}{2}\dot{\boldsymbol{G}}^{\star}$ is considered. See also equation~\ref{sec:EL:SOLID:constlaw}.
+Second~Piola-Kirchhoff stress tensor $\boldsymbol{S}$ and Right~Cauchy-Green strain tensor $\boldsymbol{C}$.
+See also equation~\ref{sec:EL:SOLID:constlaw}.
 
 \begin{eqnarray}
   S_{ij} & = & \mu \, \delta_{ij} + \left[\lambda \, \left(III_C - \sqrt{III_C} \right) - \mu\right] \, \left[ \boldsymbol{C}^{-1} \right]_{ij}
@@ -4872,7 +4936,10 @@ $\dot{\boldsymbol{C}}^{\star}=\frac{1}{2}\dot{\boldsymbol{G}}^{\star}$ is consid
 \subsection{Mooney-Rivlin}
 \label{sec:CL:mooney-rivlin}
 \emph{Author: Reinhard Resch}
-Mooney-Rivlin constitutive laws are similar to Neo-Hookean constitutive laws, but they have an additional parameter.
+Mooney-Rivlin constitutive laws, which are based on \cite{BATHE2016}, are commonly used for rubber materials.
+They are similar to Neo-Hookean constitutive laws.
+\paragraph{Syntax.}
+The syntax is
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{specific_const_law} ::= \kw{mooney rivlin elastic} ,
       \{ \kw{C1} , (\ty{real}) \bnt{C1} ,
@@ -4883,25 +4950,28 @@ Mooney-Rivlin constitutive laws are similar to Neo-Hookean constitutive laws, bu
          [ , \kw{delta} , (\ty{real}) \bnt{delta} ]
        \}
 \end{Verbatim}
-
 There are two alternative sets of input parameters.
 Either Young's modulus \nt{E}, Poisson's ratio \nt{nu} and the optional ratio \nt{delta},
 or Mooney-Rivlin parameters \nt{C1}, \nt{C2} and the bulk modulus \nt{kappa} may be provided.
-If $\nt{delta}=0$ or $\nt{C2}=0$, a classical Neo-Hookean constitutive law is obtained.
-Equation~\ref{eq:CL:mooney-rivlin:param} shows the relations between those parameters.
-Currently fully incompressible constitutive laws are not yet supported in MBDyn.
+If $\nt{delta}=0$ or $\nt{C2}=0$, a classical Neo-Hookean constitutive law is obtained \cite{BATHE2016}.
+In the compressible case, this is not exactly the same as the constitutive law described
+in section~\ref{sec:CL:neo-hookean}.
+Equations~\ref{eq:CL:mooney-rivlin:param1} to \ref{eq:CL:mooney-rivlin:param4} show the relations between the material parameters.
+Mooney Rivlin constitutive laws may be used for pure displacement based formulations
+as well as for displacement/pressure (u/p-c) formulations.
+In the latter case, even fully incompressible materials (e.g. $\nt{nu} = \frac{1}{2}$) may be used.
 
 \begin{eqnarray}
-  G & = & \frac{\nt{E}}{2\,\left(1 + \nt{nu}\right)} \\
+  G & = & \frac{\nt{E}}{2\,\left(1 + \nt{nu}\right)} \label{eq:CL:mooney-rivlin:param1} \\
   \nt{C1} & = & \frac{G}{2\,\left(1 + \nt{delta}\right)} \\
   \nt{C2} & = & \nt{delta}\,\nt{C1} \\
   \nt{kappa} & = & \frac{\nt{E}}{3\,\left(1 - 2\,\nt{nu}\right)}
-  \label{eq:CL:mooney-rivlin:param}
+  \label{eq:CL:mooney-rivlin:param4}
 \end{eqnarray}
-
-Equation~\ref{eq:CL:mooney-rivlin:stress} is based on \cite{BATHE2016} and shows the relationship between the Right Cauchy Green tensor $\boldsymbol{C}$ and the Second Piola Kirchhoff stress tensor $\boldsymbol{S}$.
+Equation~\ref{eq:CL:mooney-rivlin:stress} is based on \cite{BATHE2016} and shows the relationship
+between the Right~Cauchy-Green tensor $\boldsymbol{C}$ and the Second~Piola-Kirchhoff stress tensor $\boldsymbol{S}$.
 \begin{eqnarray}
-  \boldsymbol{S} & = & 2\,\left\{ \nt{C1} \, III_C^{-\frac{1}{3}} \, \boldsymbol{I} + \nt{C2} \, III_C^{-\frac{2}{3}} \, \left(I_C \, \boldsymbol{I} - \boldsymbol{C} \right)\right. \nonumber \\ 
+  \boldsymbol{S} & = & 2\,\left\{ \nt{C1} \, III_C^{-\frac{1}{3}} \, \boldsymbol{I} + \nt{C2} \, III_C^{-\frac{2}{3}} \, \left(I_C \, \boldsymbol{I} - \boldsymbol{C} \right)\right. \nonumber \\
   & &  \left.+\left[ \frac{1}{2} \, \nt{kappa} \,\left(III_C - \sqrt{III_C}\right) - \frac{1}{3} \, \nt{C1} \, I_C \, III_C^{-\frac{1}{3}} - \frac{2}{3} \, \nt{C2} \, II_C \, III_C^{-\frac{2}{3}} \right]\, \boldsymbol{C}^{-1}\right\}
     \label{eq:CL:mooney-rivlin:stress} \\
   I_C & = & \trace\left(\boldsymbol{C}\right) \\
@@ -4911,16 +4981,28 @@ Equation~\ref{eq:CL:mooney-rivlin:stress} is based on \cite{BATHE2016} and shows
 
 \paragraph{Example.} \
 \begin{verbatim}
-    constitutive law: 1000, name, "rubber 1", 6,
+    constitutive law: 1001, name, "rubber 1", 6, ## usable only for non u/p-c elements
                  mooney rivlin elastic,
                      C1, 5e6,
                      C2, 1.25e6,
-                     kappa, 1200e6;
+                     kappa, 1200e6; ## nearly incompressible
 
-    constitutive law: 1001, name, "rubber 2", 6,
+    constitutive law: 1002, name, "rubber 2", 6, ## usable only for non u/p-c elements
                  mooney rivlin elastic,
                      E, 37.5e6,
-                     nu, 0.4948,
+                     nu, 0.4948, ## nearly incompressible
+                     delta, 0.25;
+
+    constitutive law: 1001, name, "rubber 3", 7, ## usable only for u/p-c elements
+                 mooney rivlin elastic,
+                     E, 37.5e6,
+                     nu, 0.4948,   ## nearly incompressible
+                     delta, 0.25;
+
+    constitutive law: 1002, name, "rubber 4", 7, ## usable only for u/p-c elements
+                 mooney rivlin elastic,
+                     E, 37.5e6,
+                     nu, 0.5,   ## fully incompressible
                      delta, 0.25;
 \end{verbatim}
 
@@ -4941,6 +5023,12 @@ E_P & = & \frac{\nt{E} \, \nt{ET}}{\nt{E} - \nt{ET}}
 \end{eqnarray}
 $\nt{ET}=0$ gives an ideal plastic material without any hardening effect.
 
+\paragraph{Displacement/pressure (u/p-c) formulations}
+Also bilinear isotropic hardening constitutive laws may be used for pure displacement based formulations
+as well as displacement/pressure (u/p-c) formulations. Usually u/p-c formulations are preferred because
+the plastic volumetric strains are zero, which can also lead to nearly incompressible behavior \cite{BATHE2016}.
+\paragraph{Syntax.}
+The syntax is
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{specific_const_law} ::= \kw{bilinear isotropic hardening} ,
       \kw{E} , (\ty{real}) \bnt{E} ,
@@ -4951,7 +5039,14 @@ $\nt{ET}=0$ gives an ideal plastic material without any hardening effect.
 
 \paragraph{Example.} \
 \begin{verbatim}
-    constitutive law: 1000, name, "steel", 6,
+    constitutive law: 1000, name, "steel", 6, ## usable only for non u/p-c elements
+                 bilinear isotropic hardening,
+                          E, 210000e6,
+                          nu, 0.3,
+                          ET, 2000e6,
+                          sigmayv, 235e6;
+
+    constitutive law: 1000, name, "steel", 7, ## usable only for u/p-c elements
                  bilinear isotropic hardening,
                           E, 210000e6,
                           nu, 0.3,
@@ -4964,7 +5059,8 @@ $\nt{ET}=0$ gives an ideal plastic material without any hardening effect.
 \emph{Author: Reinhard Resch}
 This viscoelastic constitutive law is also called ``Generalized Maxwell model'' or ``Wiechert'' model.
 It is based on \cite{bleyer2018numericaltours}.
-
+\paragraph{Syntax.}
+The syntax is
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{specific_const_law} ::= \kw{linear viscoelastic maxwell n} ,
         \kw{E0} , (\ty{real}) \bnt{E0} ,
@@ -4977,7 +5073,6 @@ It is based on \cite{bleyer2018numericaltours}.
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{maxwell_element} ::= \kw{E1} , \bnt{E1} , \kw{eta1} , \bnt{eta1}
 \end{Verbatim}
-
 There is also a simplified variant which uses only a single Maxwell element. It is also called ``Zener'' model.
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{specific_const_law} ::= \kw{linear viscoelastic maxwell 1} ,
@@ -4985,7 +5080,6 @@ There is also a simplified variant which uses only a single Maxwell element. It 
         \bnt{maxwell_element} ,
         \kw{C}, (\ty{DerivativeOfEntity}) \bnt{C}
 \end{Verbatim}
-
 The linear viscoelastic Maxwell constitutive law can be used to consider creep and relaxation effects of polymeric materials with beam- and solid-elements.
 For that purpose it is required to fit the constants $\nt{E0}$, $\nt{E1}_1$, \ldots $\,\nt{E1}_{\nt{num\_elem}}$ to experimental data.
 The stress and strain rates of the Maxwell constitutive law are described by equation~\ref{sec:CSL:Maxwell:stress} and equation~\ref{sec:CSL:Maxwell:strain_rate} respectively.
@@ -4993,7 +5087,6 @@ The stress and strain rates of the Maxwell constitutive law are described by equ
   \boldsymbol{\sigma} &=& \nt{E0} \, \nt{C} \, \boldsymbol{\varepsilon} + \sum_{i=1}^{\nt{num\_elem}} \nt{E1}_i \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right) \label{sec:CSL:Maxwell:stress} \\
   \dot{\boldsymbol{\varepsilon}}_i^v &=& \frac{\nt{E1}_i}{\nt{eta1}_i} \, \nt{C} \, \left(\boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}_i^v\right) \label{sec:CSL:Maxwell:strain_rate}
 \end{eqnarray}
-
 If the constitutive law is isotropic, and it is used for solid elements, then the following expression, which is equivalent to Hooke's law, can be used for \nt{C}.
 \begin{eqnarray}
   \nt{C} &=& \frac{1}{\left(1 + \nu\right)\left(1 - 2 \, \nu\right)} \, \begin{pmatrix}

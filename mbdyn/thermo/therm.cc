@@ -71,13 +71,13 @@ Elem::Type Thermal::GetElemType(void) const
 	return Elem::THERMAL;
 }
 
-/* Electric - end */
+/* Thermal - end */
 
 
 
 
 
-/* Legge un elemento elettrico */
+/* Legge un elemento termico */
 
 Elem* ReadThermal(DataManager* pDM,
 			MBDynParser& HP,
@@ -106,7 +106,7 @@ Elem* ReadThermal(DataManager* pDM,
 	/* tabella delle parole chiave */
 	KeyTable K(HP, sKeyWords);
 
-	/* lettura del tipo di elemento elettrico */
+	/* lettura del tipo di elemento termico */
 	KeyWords CurrKeyWord = KeyWords(HP.GetWord());
 
 #ifdef DEBUG
@@ -125,7 +125,7 @@ Elem* ReadThermal(DataManager* pDM,
 			const ThermalNode* pThNode1 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
 			const ThermalNode* pThNode2 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
 			doublereal r = HP.GetReal();
-			flag fOut = pDM->fReadOutput(HP, Elem::ELECTRIC);
+			flag fOut = pDM->fReadOutput(HP, Elem::THERMAL);
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				ThermalResistance,
 				ThermalResistance(uLabel, pDO,
@@ -143,7 +143,7 @@ Elem* ReadThermal(DataManager* pDM,
 		case THERMALCAPACITANCE: {
 			const ThermalNode* pThNode1 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
 			doublereal c = HP.GetReal();
-			flag fOut = pDM->fReadOutput(HP, Elem::ELECTRIC);
+			flag fOut = pDM->fReadOutput(HP, Elem::THERMAL);
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				ThermalCapacitance,
 				ThermalCapacitance(uLabel, pDO, pThNode1, c, fOut));
@@ -158,7 +158,7 @@ Elem* ReadThermal(DataManager* pDM,
 		case THERMALSOURCE: {
 			const ThermalNode* pThNode1 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
 			DriveCaller* pDC = HP.GetDriveCaller();
-			flag fOut = pDM->fReadOutput(HP, Elem::ELECTRIC);
+			flag fOut = pDM->fReadOutput(HP, Elem::THERMAL);
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				ThermalSource,
 				ThermalSource(uLabel, pDO, pThNode1, pDC, fOut));
@@ -170,7 +170,7 @@ Elem* ReadThermal(DataManager* pDM,
 			break;
 		}
 
-		/* Aggiungere altri elementi elettrici */
+		/* Aggiungere altri elementi termici */
 
 		default: {
 			silent_cerr("unknown thermal element type in thermal element " << uLabel

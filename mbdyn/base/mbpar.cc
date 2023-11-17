@@ -241,47 +241,6 @@ MBDynParser::~MBDynParser(void)
 	DestroyFileDriveContentTypes();
 	DestroyFileDriveCallerTypes();
 
-	for (SFType::iterator i = SF.begin(); i != SF.end(); ++i) {
-		SAFEDELETE(i->second);
-	}
-	SF.clear();
-
-	for (RFType::iterator i = RF.begin(); i != RF.end(); ++i) {
-		SAFEDELETE(i->second);
-	}
-	RF.clear();
-
-	for (HFType::iterator i = HF.begin(); i != HF.end(); ++i) {
-		SAFEDELETE(i->second);
-	}
-	HF.clear();
-
-	for (ADType::iterator i = AD.begin(); i != AD.end(); ++i) {
-		c81_data_destroy(i->second);
-		SAFEDELETE(i->second);
-	}
-	AD.clear();
-
-	for (CL1DType::iterator i = CL1D.begin(); i != CL1D.end(); ++i) {
-		SAFEDELETE(i->second);
-	}
-	CL1D.clear();
-
-	for (CL3DType::iterator i = CL3D.begin(); i != CL3D.end(); ++i) {
-		SAFEDELETE(i->second);
-	}
-	CL3D.clear();
-
-	for (CL6DType::iterator i = CL6D.begin(); i != CL6D.end(); ++i) {
-		SAFEDELETE(i->second);
-	}
-	CL6D.clear();
-
-	for (DCType::iterator i = DC.begin(); i != DC.end(); ++i) {
-		SAFEDELETE(i->second);
-	}
-	DC.clear();
-
 	if (!bEmptyManip()) {
 		silent_cerr("MBDynParser::~MBDynParser: "
 			"manipulators' stack not empty" << std::endl);
@@ -307,7 +266,7 @@ MBDynParser::SetDataManager(DataManager *pdm)
 	} else {
 		/* add the drive handler to the drive callers... */
 		for (DCType::const_iterator i = DC.begin(); i != DC.end(); ++i) {
-			const_cast<DriveCaller *>(i->second)->SetDrvHdl(pDH);
+                     const_cast<DriveCaller *>(i->second.get())->SetDrvHdl(pDH);
 		}
 	}
 }
@@ -817,6 +776,38 @@ MBDynParser::ConstitutiveLaw_int(void)
 		}
 		break;
 	}
+
+        case 7:
+        {
+                /* allow "reference" (copy cached constitutive law) */
+                ConstitutiveLaw7D *pCL = GetConstLaw7D(clt);
+                if (pCL == NULL) {
+                        silent_cerr("unable to read constitutive law 7D "
+                                        << uLabel);
+                        if (!sName.empty()) {
+                                silent_cerr(" (" << sName << ")");
+                        }
+                        silent_cerr(" at line " << GetLineData()
+                                        << std::endl);
+                        throw MBDynParser::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
+                pCL->PutLabel(uLabel);
+                if (!sName.empty()) {
+                        pCL->PutName(sName);
+                }
+
+                if (!CL7D.insert(CL7DType::value_type(uLabel, pCL)).second) {
+                        silent_cerr("constitutive law 7D " << uLabel);
+                        if (!sName.empty()) {
+                                silent_cerr(" (" << sName << ")");
+                        }
+                        silent_cerr(" already defined at line "
+                                        << GetLineData() << std::endl);
+                        throw MBDynParser::ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+                break;
+        }
 
 	default:
 		silent_cerr("unknown constitutive law dimensionality " 
@@ -1950,7 +1941,7 @@ MBDynParser::GetC81Data(unsigned profile) const
 		throw MBDynParser::ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
 
-	return i->second;
+	return i->second.get();
 }
 
 ConstitutiveLaw1D *
@@ -2034,6 +2025,33 @@ MBDynParser::GetConstLaw6D(ConstLawType::Type& clt)
 	return i->second->pCopy();
 }
 
+ConstitutiveLaw7D *
+MBDynParser::GetConstLaw7D(ConstLawType::Type& clt)
+{
+	if (pDM == 0) {
+		silent_cerr("constitutive law parsing at line "
+				<< GetLineData() << " allowed "
+				"only after control data block" << std::endl);
+		throw MBDynParser::ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	if (!IsKeyWord("reference")) {
+		return ReadCL7D(pDM, *this, clt);
+	}
+
+	unsigned int uLabel = GetInt();
+	auto i = CL7D.find(uLabel);
+	if (i == CL7D.end()) {
+		silent_cerr("constitutive law 7D " << uLabel
+                            << " is undefined at line "
+                            << GetLineData() << "\n");
+		throw MBDynParser::ErrGeneric(MBDYN_EXCEPT_ARGS);
+	}
+
+	clt = i->second->GetConstLawType();
+	return i->second->pCopy();
+}
+
 const DriveCaller *
 MBDynParser::GetDrive(unsigned uLabel) const
 {
@@ -2042,7 +2060,7 @@ MBDynParser::GetDrive(unsigned uLabel) const
 		return 0;
 	}
 
-	return i->second;
+	return i->second.get();
 }
 
 void
@@ -2094,7 +2112,7 @@ MBDynParser::GetTplDrive(unsigned uLabel) const
 			return 0;
 		}
 
-		return dynamic_cast<const TplDriveCaller<T> *>(i->second);
+		return dynamic_cast<const TplDriveCaller<T> *>(i->second.get());
 
 	} else if (typeid(T) == typeid(Vec3)) {
 		DC3DType::const_iterator i = DC3D.find(uLabel);
@@ -2102,7 +2120,7 @@ MBDynParser::GetTplDrive(unsigned uLabel) const
 			return 0;
 		}
 
-		return dynamic_cast<const TplDriveCaller<T> *>(i->second);
+		return dynamic_cast<const TplDriveCaller<T> *>(i->second.get());
 
 	} else if (typeid(T) == typeid(Vec6)) {
 		DC6DType::const_iterator i = DC6D.find(uLabel);
@@ -2110,7 +2128,7 @@ MBDynParser::GetTplDrive(unsigned uLabel) const
 			return 0;
 		}
 
-		return dynamic_cast<const TplDriveCaller<T> *>(i->second);
+		return dynamic_cast<const TplDriveCaller<T> *>(i->second.get());
 
 	} else if (typeid(T) == typeid(Mat3x3)) {
 		DC3x3DType::const_iterator i = DC3x3D.find(uLabel);
@@ -2118,7 +2136,7 @@ MBDynParser::GetTplDrive(unsigned uLabel) const
 			return 0;
 		}
 
-		return dynamic_cast<const TplDriveCaller<T> *>(i->second);
+		return dynamic_cast<const TplDriveCaller<T> *>(i->second.get());
 
 	} else if (typeid(T) == typeid(Mat6x6)) {
 		DC6x6DType::const_iterator i = DC6x6D.find(uLabel);
@@ -2126,7 +2144,7 @@ MBDynParser::GetTplDrive(unsigned uLabel) const
 			return 0;
 		}
 
-		return dynamic_cast<const TplDriveCaller<T> *>(i->second);
+		return dynamic_cast<const TplDriveCaller<T> *>(i->second.get());
 	}
 
 	return 0;
@@ -2195,7 +2213,7 @@ MBDynParser::GetScalarFunction(const std::string &s)
 {
 	SFType::const_iterator i = SF.find(s);
 	if (i != SF.end()) {
-		return i->second;
+             return i->second.get();
 	}
 	return 0;
 }

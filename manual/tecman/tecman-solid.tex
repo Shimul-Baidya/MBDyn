@@ -25,7 +25,9 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 \emph{Author: Reinhard Resch} \\
-Solid elements are intended to model general three dimensional structures subject to large deformations, large strain and nonlinear material.
+Solid elements are intended to model general three dimensional structures with complex shapes,
+subject to large deformations, large strain and nonlinear constitutive laws.
+Even fully incompressible constitutive laws are supported.
 \paragraph{Files.} \
 It is implemented in files\\
 \begin{tabular}{l}
@@ -33,6 +35,7 @@ It is implemented in files\\
 \texttt{mbdyn/struct/solid.cc} \\
 \texttt{mbdyn/struct/solidshape.h} \\
 \texttt{mbdyn/struct/solidshape.cc} \\
+\texttt{mbdyn/struct/solidshapetest.cc} \\
 \texttt{mbdyn/struct/solidinteg.h} \\
 \texttt{mbdyn/struct/solidinteg.cc} \\
 \texttt{mbdyn/struct/solidpress.h} \\
@@ -43,6 +46,8 @@ It is implemented in files\\
 \subsection{Kinematics}
 \label{sec:solid:interpol}
 MBDyn's solid elements are based on the classical displacement based isoparametric Finite Element formulation \cite{BATHE2016}.
+For enhancements, required for nearly or fully incompressible constitutive laws, see section~\ref{sec:solid:upc}.
+\paragraph{Interpolation}
 The three dimensional global Cartesian coordinates $\T{x}$ and the displacements $\T{u}=\T{x} - {^0}\T{x}$, of a particle inside an element,
 are interpolated between coordinates $\hat{\T{x}}$ and displacements $\hat{\T{u}}$ at element nodes by means of shape functions $\T{h}=\mathit{f}\left(\T{r}\right)$ \cite{BATHE2016}, \cite{KUEBLER2005}.
 \begin{eqnarray}
@@ -80,7 +85,7 @@ The following types of elements are currently implemented:
 \item Pentahedrons with quadratic shape functions \cite{CODEASTERR30301}
 \item Tetrahedrons with quadratic shape functions \cite{CODEASTERR30301}
 \end{itemize}
-See also MBDyn's input-manual for further information.
+See also MBDyn's \emph{input-manual} for further information.
 
 \paragraph{Deformation gradient}
 Because MBDyn's solid elements are based on a Total~Lagrangian~Formulation, the deformation gradient $\T{F}$ is evaluated with respect to the undeformed state ${^0}\T{x}$.
@@ -112,7 +117,7 @@ As a consequence, the Jacobian matrix ${^0}\T{J}$ and the gradient operator $\T{
 \paragraph{If elements become excessively distorted}
 It is required that the deformation gradient $\T{F}$ and the Jacobian matrix ${^0}\T{J}$ are always invertible \cite{BATHE2016}, \cite{KUEBLER2005}.
 For that reason $\det{\left(\T{F}\right)}>0$ will be checked by the solver at every iteration, and $\det{\left({^0}\T{J}\right)}>0$ will be checked
-when the mesh is loaded. An exception will be thrown by the solver if any elements become excessively distorted and those conditions do not hold.
+once, when the mesh is loaded. An exception will be thrown by the solver, if any element becomes excessively distorted and those conditions are not valid any more.
 
 \paragraph{Strain tensor and stress tensor}
 In order to derive the expressions for virtual strain energy, the Green-Lagrange strain tensor $\T{G}$ and the 2nd~Piola-Kirchhoff stress tensor $\T{S}$ are used.
@@ -138,20 +143,23 @@ In case of viscoelastic constitutive laws, the strain rates $\dot{\T{G}}$ are sc
 The relationship between stress tensor $\T{S}$ and strain tensor $\T{G}$ is determined by a specific constitutive law.
 Right now, the following types of constitutive laws are implemented:
 \begin{itemize}
-\item linear elastic generic
-\item linear viscoelastic Kelvin-Voigt \cite{KUEBLER2005}
-\item linear viscoelastic Maxwell \cite{bleyer2018numericaltours}
+\item linear elastic generic (isotropic or anisotropic)
+\item linear Kelvin-Voigt viscoelastic generic (isotropic or anisotropic) \cite{KUEBLER2005}
+\item Hookean linear elastic isotropic
+\item Hookean linear Kelvin-Voigt viscoelastic isotropic
+\item linear viscoelastic generalized Maxwell (isotropic or anisotropic) \cite{bleyer2018numericaltours}
 \item nonlinear hyperelastic Neo-Hookean \cite{KUEBLER2005}
+\item nonlinear Kelvin-Voigt viscoelastic Neo-Hookean \cite{KUEBLER2005}
 \item nonlinear hyperelastic Mooney-Rivlin \cite{BATHE2016}
 \item bilinear elasto-plastic with isotropic hardening \cite{BATHE2016}
 \end{itemize}
-See MBDyn's input-manual for further information about constitutive laws usable for solid elements.
+See MBDyn's \emph{input-manual} for further information about constitutive laws usable for solid elements.
 
 \subsection{The principle of virtual displacements}
 The equations of motion for displacement based Finite Element methods can be derived from the principle of virtual displacements \cite{WALLRAPP1998}, \cite{BATHE2016}, \cite{KUEBLER2005}.
 \begin{eqnarray}
 \underbrace{\bigcup_{e=1}^{N_e}\int_{^0V} {^0}\rho \, \left[\sum_{i=1}^3 \delta\T{u}_i\,\left(\ddot{\T{u}}_i - \T{b}_i\right) \right]\, d^0V}_{\delta ^mW} + \underbrace{\bigcup_{e=1}^{N_e}\int_{^0V} \left(\sum_{i=1}^3\sum_{j=1}^3 \delta\T{G}_{ij}\,\T{S}_{ij} \right) \, d^0V}_{\delta^iW} \nonumber \\
-= \underbrace{\bigcup_{e=1}^{N_e}\int_{A} \sum_{i=1}^3 \delta\T{u}_i\,^A\T{f}_i \,dA}_{\delta^eW}
+= \underbrace{\bigcup_{e=1}^{N_e}\int_{A} \sum_{i=1}^3 \delta\T{u}_i\,^A\T{f}_i \,dA}_{\delta^eW} \label{eq:solid:pdVA}
 \end{eqnarray}
 
 \begin{description}
@@ -201,12 +209,12 @@ Finally equation~\ref{eq:solid:deltaG_F} is substituted into equation~\ref{eq:so
 \paragraph{Internal elastic reactions due to internal stress}
 Because equation~\ref{eq:solid:deltaWi_u} and equation~\ref{eq:solid:deltaWi} must be valid for arbitrary virtual displacements $\delta\hat{\T{u}}$, we can get $^i\hat{\T{k}}$ just by comparing the coefficients of those two equations.
 \begin{eqnarray}
-^i\hat{\T{k}}_{kl} & = & \frac{1}{2} \, \int_{^0V} \left[ \sum_{i=1}^3 \sum_{j=1}^3 \left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij} \right] \, d^0V
+^i\hat{\T{k}}_{kl} & = & \frac{1}{2} \, \int_{^0V} \left[ \sum_{i=1}^3 \sum_{j=1}^3 \left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij} \right] \, d^0V \label{eq:solid:ki}
 \end{eqnarray}
 
 \paragraph{Numerical integration}
 Finally standard numerical integration schemes (e.g. Gauss-Legendre) are applied, which sum up the weighted integrand at several integration points \cite{BATHE2016}, \cite{KUEBLER2005}.
-Also in this case the values of $\det{\left({^0}\T{J}\right)}$ are constant for each integration point~$g$ because a Total Lagrangian Formulation is used.
+Also in this case the values of $\det{\left({^0}\T{J}\right)}$ for each integration point~$g$ are constant with respect to time, because a Total Lagrangian Formulation is used.
 \begin{eqnarray}
 ^i\hat{\T{k}}_{kl} & \approx & \frac{1}{2} \sum_{g=1}^{N_g} \left.\left[ \sum_{i=1}^3 \sum_{j=1}^3 \left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij}  \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g}
 \end{eqnarray}
@@ -216,6 +224,112 @@ Also in this case the values of $\det{\left({^0}\T{J}\right)}$ are constant for 
 \item{$\vert_g$} Expression is evaluated at integration point $g$
 \end{description}
 
+\subsection{Displacement/Pressure (u/p-c) formulation}
+\label{sec:solid:upc}
+In case of nearly incompressible constitutive laws, pure displacement based formulations are not effective.
+For that reason, it is necessary to introduce the hydrostatic pressure $\tilde{p}$ as an additional unknown.
+For a detailed discussion see also \cite{BATHE2016} section~4.4.3.
+In order to derive the u/p-c formulation for large displacements, the following modified strain energy potential
+per unit volume is assumed for isotropic materials \cite{BATHE2016}:
+\begin{eqnarray}
+^i\mathbb{W} = ^i\bar{\mathbb{W}} - \frac{1}{2\kappa}\left(\bar{p} - \tilde{p}\right)^2 \label{eq:solid:upc:W}
+\end{eqnarray}
+See also \cite{BATHE2016} section~6.4.1, equation~6.136.
+
+\paragraph{Strain energy potential per unit volume}
+Within this section, $^i\mathbb{W}$ denotes strain energy potential per unit volume, whereas $^iW$ denotes overall strain energy potential.
+They are related as follows:
+\begin{eqnarray}
+^iW = \bigcup_{e=1}^{N_e}\int_{^0V} {}^i\mathbb{W} \, d^0V
+\end{eqnarray}
+\begin{description}
+\item[$^iW$] modified strain energy potential for the u/p-c formulation
+\item[$^i\bar{W}$] strain energy potential for the pure displacement based formulation which is equal to equation~\ref{eq:solid:deltaWi}
+\item[$^i\mathbb{W}$] modified strain energy potential per unit volume for the u/p-c formulation
+\item[$^i\bar{\mathbb{W}}$] strain energy potential per unit volume for the pure displacement based formulation equivalent to equation~\ref{eq:solid:deltaWi}
+\item[$\bar{p}$] hydrostatic pressure obtained from the pure displacement based formulation
+\item[$\tilde{p}$] hydrostatic pressure interpolated from the element nodes
+\item[$\kappa$] bulk modulus of the material
+\end{description}
+In order to enhance the principle of virtual-displacements equation~\ref{eq:solid:pdVA},
+the virtual perturbation of the modified strain-energy potential $^i\mathbb{W}$ is derived
+with respect to the new unknowns (displacement $\hat{\T{u}}$ and hydrostatic pressure $\hat{\T{p}}$ at element nodes).
+This is equivalent to the application of the ``Hu-Washizu'' variational-principle. See also \cite{BATHE2016} section~4.4.3.
+\begin{eqnarray}
+\delta^i\mathbb{W} & = & \delta^i\bar{\mathbb{W}} - \frac{1}{\kappa}\left(\bar{p} - \tilde{p}\right)\left(\delta\bar{p} - \delta\tilde{p}\right) \label{eq:solid:upc:deltaW}
+\end{eqnarray}
+As a next step, the virtual perturbations of the hydrostatic pressure $\bar{p}$ and $\tilde{p}$ are derived.
+\begin{eqnarray}
+\delta\bar{p} & = & \sum_{i=1}^{3}\sum_{j=1}^{3}\frac{\partial \bar{p}}{\partial \boldsymbol{G}_{ij}}\,\delta\boldsymbol{G}_{ij} \label{eq:solid:upc:delta:p:bar} \\
+\delta\tilde{p} & = & \sum_{i=1}^{N_p}\frac{\partial \tilde{p}}{\partial \hat{\T{p}}_i}\,\delta\hat{\T{p}}_i \label{eq:solid:upc:delta:p:tilde}
+\end{eqnarray}
+\begin{description}
+\item[$N_p$] number element nodes for hydrostatic pressure
+\end{description}
+The displacement based hydrostatic pressure $\bar{p}$ is depending only on the strain tensor $\T{G}$
+whereas the hydrostatic pressure $\tilde{p}$ is depending only on the assumed hydrostatic pressure at element nodes $\hat{\T{p}}$.
+\paragraph{Reformulation in terms of the modified stress tensor}
+In the following step, equation~\ref{eq:solid:upc:delta:p:bar} and equation~\ref{eq:solid:upc:delta:p:tilde} are substituted into equation~\ref{eq:solid:upc:deltaW}.
+\begin{eqnarray}
+\delta^i\mathbb{W} & = &\delta^i\bar{\mathbb{W}} - \frac{1}{\kappa}\left(\bar{p} - \tilde{p}\right)\left(\sum_{i=1}^{3}\sum_{j=1}^{3}\frac{\partial \bar{p}}{\partial \boldsymbol{G}_{ij}}\,\delta\boldsymbol{G}_{ij} - \sum_{i=1}^{N_p}\frac{\partial \tilde{p}}{\partial \hat{\T{p}}_i}\,\delta\hat{\T{p}}_i\right) \label{eq:solid:upc:deltaW:Gp}
+\end{eqnarray}
+Furthermore we can use the expression for the virtual perturbation of the displacement based strain energy from equation~\ref{eq:solid:deltaWi}.
+Within this section, $\bar{\boldsymbol{S}}$ denotes the displacement based stress tensor and $\T{S}$ denotes the modified stress tensor.
+\begin{eqnarray}
+\delta^i\bar{\mathbb{W}} & = & \sum_{i=1}^{3}\sum_{j=1}^{3} \delta\boldsymbol{G}_{ij}\,\bar{\boldsymbol{S}}_{ij} \label{eq:solid:upc:deltaWi:bar}
+\end{eqnarray}
+When comparing equation~\ref{eq:solid:upc:deltaW:Gp} to equation~\ref{eq:solid:upc:deltaWi:bar}, it is obvious that the modified stress tensor $\T{S}$ may be defined as:
+\begin{eqnarray}
+\boldsymbol{S}_{ij} & = & \bar{\boldsymbol{S}}_{ij} - \frac{1}{\kappa}\left(\bar{p} - \tilde{p}\right)\frac{\partial \bar{p}}{\partial \boldsymbol{G}_{ij}} \label{eq:solid:upc:S}
+\end{eqnarray}
+The derivation of equation~\ref{eq:solid:upc:S} is specific to a particular type of constitutive law.
+At the moment, the following types of constitutive laws area available for u/p-c formulations:
+\begin{itemize}
+\item Hookean linear elastic isotropic
+\item nonlinear hyperelastic Mooney-Rivlin
+\item bilinear-elastoplastic with isotropic hardening
+\end{itemize}
+Since the modified stress tensor is depending not only on the strain tensor $\T{G}$, but also on the hydrostatic pressure $\tilde{p}$,
+specialized types of constitutive laws are required. Furthermore, it is required that those constitutive laws
+must return also the condition of volumetric compatibility $\frac{1}{\kappa}\left(\bar{p} - \tilde{p}\right)$.
+See also MBDyn's \emph{input-manual} for further information about constitutive laws usable for solid elements based on u/p-c formulations.
+\paragraph{Using the modified stress tensor and the condition of volumetric compatibility}
+Now equation~\ref{eq:solid:upc:S} and equation~\ref{eq:solid:upc:deltaWi:bar} are substituted into equation~\ref{eq:solid:upc:deltaW:Gp}.
+\begin{eqnarray}
+\delta^i\mathbb{W} & = & \sum_{i=1}^{3}\sum_{j=1}^{3} \delta\boldsymbol{G}_{ij}\,\boldsymbol{S}_{ij} + \frac{1}{\kappa}\left(\bar{p} - \tilde{p}\right)\sum_{i=1}^{N_p}\frac{\partial \tilde{p}}{\partial \hat{\T{p}}_i}\,\delta\hat{\T{p}}_i \label{eq:solid:upc:deltaWi:V}
+\end{eqnarray}
+Since we are using isoparametric shape functions $\T{g}$ in order to interpolate the hydrostatic pressure $\tilde{p}$, the following simplification can be applied:
+\begin{eqnarray}
+\tilde{p} & = & \sum_{i=1}^{N_p} \T{g}_i \, \hat{\T{p}}_i \\
+\frac{\partial \tilde{p}}{\partial \hat{\T{p}}_i} & = & \T{g}_i
+\end{eqnarray}
+If the order of interpolation for the hydrostatic pressure $\hat{\T{p}}$ is too high compared to the order of interpolation for displacements $\hat{\T{u}}$,
+then the resulting element may behave like an displacement based element which will not be effective \cite{BATHE2016}.
+So, a lower order of interpolation is used for the hydrostatic pressure in MBDyn.
+For example, linear elements are using a constant hydrostatic pressure, whereas quadratic elements
+are using a linear interpolation of the hydrostatic pressure based on the pressure at corner nodes.
+See also MBDyn's \emph{input-manual} for further information about the node layout.
+\paragraph{Integration over the volume of all elements}
+In the next step, we integrate the virtual perturbation of the modified strain energy over the element volume,
+and sum up the contributions of all the elements.
+\begin{eqnarray}
+\delta^iW & = & \bigcup_{e=1}^{N_e}\int_{^0V} \delta^i\mathbb{W} \, d^0V \label{eq:solid:upc:deltaWi:tot}
+\end{eqnarray}
+Finally we can substitute equation~\ref{eq:solid:upc:deltaWi:V} into equation~\ref{eq:solid:upc:deltaWi:tot}.
+\begin{eqnarray}
+\delta^iW & = & \bigcup_{e=1}^{N_e}\int_{^0V} \sum_{i=1}^{3}\sum_{j=1}^{3} \delta\boldsymbol{G}_{ij}\,\boldsymbol{S}_{ij} \, d^0V
+          + \bigcup_{e=1}^{N_e}\int_{^0V} \frac{1}{\kappa}\left(\bar{p} - \tilde{p}\right)\sum_{i=1}^{N_p} \T{g}_i \, \delta\hat{\T{p}}_i \, d^0V
+\end{eqnarray}
+In the end, we can use the same formula for the internal force vector ${}^i\hat{\T{k}}$ as equation~\ref{eq:solid:ki},
+just by replacing the displacement based stress tensor $\bar{\T{S}}$ by the modified stress tensor $\T{S}$.
+In addition to that, equation~\ref{eq:solid:upc:c} is required, which represents the weak form of the condition of volumetric compatibility.
+\begin{eqnarray}
+^i\hat{\T{k}}_{kl} & = & \frac{1}{2} \, \int_{^0V} \left[ \sum_{i=1}^3 \sum_{j=1}^3 \left(\T{h}_{0d_{li}} \, \T{F}_{kj} + \T{h}_{0d_{lj}} \, \T{F}_{ki}\right) \, \T{S}_{ij} \right] \, d^0V \\
+\hat{\T{c}}_i & = &\int_{^0V} \frac{1}{\kappa}\left(\bar{p} - \tilde{p}\right) \, \T{g}_i \, d^0V \label{eq:solid:upc:c} \\
+\delta^iW & = & \bigcup_{e=1}^{N_e}\sum_{k=1}^{3} \sum_{l=1}^{N_n} \delta \hat{\T{u}}_{kl} \, ^i\hat{\T{k}}_{kl}
+            +  \bigcup_{e=1}^{N_e} \sum_{i=1}^{N_p} \delta\hat{\T{p}}_i \, \hat{\T{c}}_i
+\end{eqnarray}
+Those expressions will be used in order to formulate the global equations of motion \ref{eq:solid:global_eq1} and \ref{eq:solid:global_eq1c} in section~\ref{sec:solid:global_eq}.
 \subsection{Virtual work of inertia terms and body loads}
 Also accelerations $\ddot{\hat{\T{u}}}$ and virtual displacements $\delta\hat{\T{u}}$ are interpolated by the same shape functions $\T{h}$.
 \begin{eqnarray}
@@ -241,7 +355,7 @@ As a consequence, solid elements may be used also for typical rotor-dynamic anal
 \paragraph{Mass matrix and body load vector}
 When equation~\ref{eq:solid:delta_u} and equation~\ref{eq:solid:delta_ddotu} are substituted into equation~\ref{eq:solid:delta_Wm},
 the virtual work $\delta^mW$ can be written in terms of the consistent mass matrix $\T{M}$ and body load vector $^b\hat{\T{f}}$.
-Because of the isoparametric approach, the consistent mass matrix $\T{M}$ is constant and needs to be evaluated only once \cite{BATHE2016}, \cite{KUEBLER2005}.
+Because of the isoparametric approach, the consistent mass matrix $\T{M}$ is constant with respect to time and needs to be evaluated only once \cite{BATHE2016}, \cite{KUEBLER2005}.
 In contradiction to that, the actual magnitudes of $\T{b}$ and $^b\hat{\T{f}}$ may be time dependent.
 \begin{eqnarray}
 \hat{\T{M}}_{kl} & = & \int_{^0V} {^0}\rho \, \T{h}_k \, \T{h}_l \, d^0V \approx \sum_{g=1}^{N_g} \left.\left[{^0}\rho \, \T{h}_k \, \T{h}_l \, \alpha \, \det{\left({^0}\T{J}\right)}\right]\right\vert_{g} \\
@@ -270,16 +384,24 @@ If a lumped mass matrix is used, the virtual work of the inertia terms becomes:
 \end{eqnarray}
 
 \subsection{Reformulation of inertia terms required for a first order DAE solver}
-Since MBDyn does not use accelerations for the solution of equations of motion, a reformulation of the equations of motion is required for solid elements.
-It is required also because rigid bodies might be present in the same model, and those rigid bodies might share common nodes with solid elements.
-The principle of virtual displacements leads to the following expression, which is using accelerations $\ddot{\hat{\T{u}}}$.
-So, it cannot be implemented directly.
+\label{sec:solid:global_eq}
+The principle of virtual displacements equation~\ref{eq:solid:pdVA} leads to the following system of second order ordinary differential equations.
 \begin{eqnarray}
 \bigcup_{e=1}^{N_e} \left(\T{M} \, \ddot{\hat{\T{u}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} - {^e}\hat{\T{f}}\right) = \T{0} \label{eq:solid:global_eq1}
 \end{eqnarray}
+\paragraph{The special case of u/p-c formulations}
+In case of an u/p-c formulation, an additional set of algebraic equations~\ref{eq:solid:upc:c} is required in order to determine the hydrostatic pressure $\hat{\T{p}}$.
+\begin{eqnarray}
+\bigcup_{e=1}^{N_e} \hat{\T{c}} = \T{0} \label{eq:solid:global_eq1c}
+\end{eqnarray}
+As a consequence, the whole system of equations becomes Differential Algebraic, even if it is unconstrained.
+\paragraph{Implementation issues in MBDyn}
+Since MBDyn does not use accelerations for the solution of equations of motion, a reformulation of the equations of motion is required for solid elements.
+It is required also because rigid bodies might be present in the same model, and those rigid bodies might share common nodes with solid elements.
+So, equation~\ref{eq:solid:global_eq1} cannot be implemented directly.
 
 \paragraph{Introducing the momentum}
-Since the mass matrix $\T{M}$ is constant,
+Since the mass matrix $\T{M}$ is constant with respect to time,
 equation~\ref{eq:solid:global_eq1} can be easily reformulated as a system of two first order ODE's
 using the momentum $\hat{\T{\beta}}$ as a new unknown.
 This approach is strictly consistent with MBDyn's conventions for rigid bodies.
@@ -294,14 +416,19 @@ This approach is strictly consistent with MBDyn's conventions for rigid bodies.
 
 With equation~\ref{eq:solid:beta} and equation~\ref{eq:solid:betadot} the global system of equations is formulated as:
 \begin{eqnarray}
-\bigcup_{e=1}^{N_e} \left(\hat{\T{\beta}} - \T{M} \, \dot{\hat{\T{u}}}\right) = \T{0} \\
--\bigcup_{e=1}^{N_e} \left(\dot{\hat{\T{\beta}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} - {^e}\hat{\T{f}}\right) = \T{0}
+\bigcup_{e=1}^{N_e} \left(\hat{\T{\beta}} - \T{M} \, \dot{\hat{\T{u}}}\right) = \T{0} \label{eq:solid:global:beta_assembly} \\
+-\bigcup_{e=1}^{N_e} \left(\dot{\hat{\T{\beta}}} + {^i}\hat{\T{k}} - {^b}\hat{\T{f}} - {^e}\hat{\T{f}}\right) = \T{0} \label{eq:solid:global:betadot_assembly} \\
+-\bigcup_{e=1}^{N_e} \hat{\T{c}} = \T{0} \label{eq:solid:global_eq1c_assembly}
 \end{eqnarray}
+In equation~\ref{eq:solid:global:beta_assembly} to \ref{eq:solid:global_eq1c_assembly},
+MBDyn's sign conventions are applied in order to ensure compatiblity with other elements.
+Equation~\ref{eq:solid:global_eq1c_assembly} is present only in case of u/p-c based formulations.
 
 \paragraph{Limitations}
 The only remaining limitation of this approach is, that it is not possible to compute accelerations
 for a model using solid elements, unless a lumped mass matrix is used for all solid elements in the model.
-See the MBDyn's input-manual for further information.
+See the MBDyn's \emph{input-manual} for further information on how to activate a lumped mass matrix
+instead of a consistent mass matrix.
 
 \subsection{Elements for surface loads}
 In order to apply surface loads at solid elements, dedicated surface elements are required.
@@ -323,7 +450,7 @@ The following types of elements are currently implemented:
 \item Quadrangular elements with linear and quadratic shape functions \cite{BATHE2016}, \cite{DHONDT2004}
 \item Triangular elements with quadratic shape functions \cite{CODEASTERR30301}
 \end{itemize}
-See also MBDyn's input-manual for further information.
+See also MBDyn's \emph{input-manual} for further information about the node layout of different surface elements.
 
 \paragraph{Virtual work of surface loads}
 In order to derive the expressions for external virtual work, surface loads must be expressed in terms of
@@ -352,7 +479,8 @@ p & = & \sum_{k=1}^{N_n} \T{h}_{k} \, \hat{\T{p}}_k \\
 Finally, the virtual work of pressure loads can be evaluated by numerical integration across the surface area.
 Due to the fact, that the surface may be moved or deformed during the simulation, pressure loads will not be constant,
 even if the nodal pressures are constant values. In addition to that, pressure loads do contribute to the global stiffness matrix,
-and they will change the natural frequencies of structures they are applied to.
+and they will directly (e.g. due to the deformation of the surface) and indirectly
+(e.g. due to the stress in solid elements) affect mode shapes and natural frequencies of the structures they are applied to.
 \begin{eqnarray}
 \delta{^e}W & = & -\bigcup_{e=1}^{N_e}\int_{A} \left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, {^A}\T{n}_i \, \frac{p}{\left\Vert{^A}\T{n}\right\Vert}\right) \, dA \\
  & \approx & -\bigcup_{e=1}^{N_e}\sum_{g=1}^{N_g} \left.\left(\sum_{i=1}^3 \sum_{k=1}^{N_n} \delta\hat{\T{u}}_{ik} \, \T{h}_{k} \, p \, {^A}\T{n}_i \, \alpha \right)\right\vert_{g}

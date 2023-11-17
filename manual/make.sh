@@ -29,6 +29,14 @@ while test x$1 != x ; do
 	--src=yes|--src) MAKESRC=yes ; shift ;;
 	--all) MAKEPDF=yes ; MAKEHTML=yes; MAKESRC=yes ; shift ;;
 	--tgt) shift; TGT=$1; shift ;;
+	-h|--help) echo "usage: make.sh [option(s)]
+		--ps={no|yes}		do (not) build postscript version(s)
+		--pdf={no|yes}		do (not) build pdf version(s)
+		--html={no|yes}		do (not) build html version(s) (obsolete!)
+		--src={no|yes}		do (not) build code documentation from sources (needs doxygen and dot)
+	        --all			build all documentation types
+		--tgt {input|install|tecman} only build specific document (or documents, in case of space-separated list)
+		" ; exit 0 ;;
 	*) echo "unknown arg $1" ; exit 1 ;;
 	esac
 done
@@ -121,17 +129,23 @@ for IN in $TGT; do
 	cd -
 done
 
-which doxygen > /dev/null 2>&1
-RC1=$?
-which dot > /dev/null 2>&1
-RC2=$?
-if [ "$RC1" != 0 ] ; then
-	echo "unable to find doxygen"
-elif [ "$RC2" != 0 ] ; then
-	echo "unable to find dot"
-else
-	if test $MAKESRC = yes ; then
-		echo "Generating html source documentation...."
-		doxygen
+if test $MAKESRC = yes ; then
+	which doxygen > /dev/null 2>&1
+	RC1=$?
+	which dot > /dev/null 2>&1
+	RC2=$?
+	RC=0
+	if [ "$RC1" != 0 ] ; then
+		echo "unable to find doxygen! aborting..."
+		RC=1
+	elif [ "$RC2" != 0 ] ; then
+		echo "unable to find dot! aborting..."
+		RC=1
 	fi
+	if [ "$RC" != 0 ] ; then
+		exit $RC
+	fi
+	echo "Generating html source documentation...."
+	doxygen
 fi
+

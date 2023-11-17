@@ -5,8 +5,8 @@
  *
  * Copyright (C) 1996-2023
  *
- * Pierangelo Masarati	<pierangelo.masarati@polimi.it>
- * Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+ * Pierangelo Masarati  <pierangelo.masarati@polimi.it>
+ * Paolo Mantegazza     <paolo.mantegazza@polimi.it>
  *
  * Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
  * via La Masa, 34 - 20156 Milano, Italy
@@ -44,32 +44,44 @@ class ReferenceFrame;
 template <class T>
 class TplDriveCaller {
 public:
-	virtual ~TplDriveCaller(void) {
-		NO_OP;
-	};
+     explicit TplDriveCaller(const DriveHandler* pDrvHdl)
+          :pDrvHdl(pDrvHdl) {
+     }
 
-	/* copia */
-	virtual TplDriveCaller<T>* pCopy(void) const = 0;
+     virtual ~TplDriveCaller(void) {
+          NO_OP;
+     }
 
-	/* Scrive il contributo del DriveCaller al file di restart */
-	virtual std::ostream& Restart(std::ostream& out) const = 0;
-	virtual std::ostream& Restart_int(std::ostream& out) const = 0;
+     /* copia */
+     virtual TplDriveCaller<T>* pCopy(void) const = 0;
 
-	/* Restituisce il valore del driver */
-	virtual T Get(const doublereal& dVar) const = 0;
-	virtual T Get(void) const {
-		return Get(0.);
-	};
+     /* Scrive il contributo del DriveCaller al file di restart */
+     virtual std::ostream& Restart(std::ostream& out) const = 0;
+     virtual std::ostream& Restart_int(std::ostream& out) const = 0;
 
-	/* this is about drives that are differentiable */
-	virtual bool bIsDifferentiable(void) const {
-		return false;
-	};
-	virtual T GetP(void) const {
-		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-	};
+     /* Restituisce il valore del driver */
+     virtual T Get(const doublereal& dVar) const = 0;
 
-	virtual int getNDrives(void) const = 0;
+     virtual T Get(void) const {
+          return Get(pDrvHdl->dGetTime());
+     }
+
+     /* this is about drives that are differentiable */
+     virtual bool bIsDifferentiable(void) const {
+          return false;
+     }
+
+     virtual T GetP(const doublereal& dVar) const {
+          throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
+
+     virtual T GetP(void) const {
+          return GetP(pDrvHdl->dGetTime());
+     }
+
+     virtual int getNDrives(void) const = 0;
+protected:
+     const DriveHandler* const pDrvHdl;
 };
 
 /* TplDriveCaller - end */
@@ -80,47 +92,52 @@ public:
 template <class T>
 class TplDriveOwner {
 protected:
-	mutable TplDriveCaller<T>* pTplDriveCaller;
+     mutable TplDriveCaller<T>* pTplDriveCaller;
 
 public:
-	TplDriveOwner(const TplDriveCaller<T>* pDC = 0)
-	: pTplDriveCaller(const_cast<TplDriveCaller<T> *>(pDC)) {
-		NO_OP;
-	};
+     TplDriveOwner(const TplDriveCaller<T>* pDC = 0)
+          : pTplDriveCaller(const_cast<TplDriveCaller<T> *>(pDC)) {
+          NO_OP;
+     }
 
-	virtual ~TplDriveOwner(void) {
-		if (pTplDriveCaller != 0) {
-			SAFEDELETE(pTplDriveCaller);
-		}
-	};
+     virtual ~TplDriveOwner(void) {
+          if (pTplDriveCaller != 0) {
+               SAFEDELETE(pTplDriveCaller);
+          }
+     }
 
-	void Set(const TplDriveCaller<T>* pDC) {
-		ASSERT(pDC != 0);
-		if (pTplDriveCaller != 0) {
-			SAFEDELETE(pTplDriveCaller);
-		}
-		pTplDriveCaller = const_cast<TplDriveCaller<T>*>(pDC);
-	};
+     void Set(const TplDriveCaller<T>* pDC) {
+          ASSERT(pDC != 0);
+          if (pTplDriveCaller != 0) {
+               SAFEDELETE(pTplDriveCaller);
+          }
+          pTplDriveCaller = const_cast<TplDriveCaller<T>*>(pDC);
+     }
 
-	TplDriveCaller<T>* pGetDriveCaller(void) const {
-		return pTplDriveCaller;
-	};
+     TplDriveCaller<T>* pGetDriveCaller(void) const {
+          return pTplDriveCaller;
+     }
 
-	T Get(const doublereal& dVar) const {
-		return pTplDriveCaller->Get(dVar);
-	};
+     T Get(const doublereal& dVar) const {
+          return pTplDriveCaller->Get(dVar);
+     }
 
-	T Get(void) const {
-		return pTplDriveCaller->Get();
-	};
+     T Get(void) const {
+          return pTplDriveCaller->Get();
+     }
 
-	/* this is about drives that are differentiable */
-	virtual bool bIsDifferentiable(void) const {
-		return pTplDriveCaller->bIsDifferentiable();
-	};
-	virtual T GetP(void) const {
-		return pTplDriveCaller->GetP();
-	};
+     /* this is about drives that are differentiable */
+     virtual bool bIsDifferentiable(void) const {
+          return pTplDriveCaller->bIsDifferentiable();
+     }
+
+     virtual T GetP(void) const {
+          return pTplDriveCaller->GetP();
+     }
+
+     virtual T GetP(const doublereal& dVar) const {
+          return pTplDriveCaller->GetP(dVar);
+     }
 };
 
 /* TplDriveOwner - end */
@@ -145,9 +162,9 @@ ReadDCVecAbs(const DataManager* pDM, MBDynParser& HP, const ReferenceFrame& rf);
 /* prototype of the template functional object: reads a template drive caller */
 template <class T>
 struct TplDriveCallerRead {
-	virtual ~TplDriveCallerRead<T>( void ) { NO_OP; };
-	virtual TplDriveCaller<T> *
-	Read(const DataManager* pDM, MBDynParser& HP) = 0;
+     virtual ~TplDriveCallerRead<T>( void ) { NO_OP; };
+     virtual TplDriveCaller<T> *
+     Read(const DataManager* pDM, MBDynParser& HP) = 0;
 };
 
 /* template drive caller registration functions: call to register one */
@@ -167,4 +184,3 @@ extern void InitTplDC(void);
 extern void DestroyTplDC(void);
 
 #endif /* TPLDRIVE_H */
-

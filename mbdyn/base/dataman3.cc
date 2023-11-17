@@ -694,6 +694,13 @@ DataManager::ReadControl(MBDynParser& HP,
                                                 << std::endl);
                                         break;
 
+                                case INERTIA:
+                                        DEBUGLCOUT(MYDEBUG_INPUT,
+                                                "Inertia elements will be used "
+                                                "in initial joint assembly\n");
+                                        ElemData[Elem::INERTIA].ToBeUsedInAssembly(true);
+                                        break;
+
                                 case AERODYNAMICELEMENTS:
 					ElemData[Elem::AERODYNAMIC].ToBeUsedInAssembly(true);
 					DEBUGLCOUT(MYDEBUG_INPUT,
@@ -1207,6 +1214,10 @@ EndOfUse:
 					ElemData[Elem::BODY].DefaultOut(true);
 					break;
 
+                                case INERTIA:
+                                        ElemData[Elem::INERTIA].DefaultOut(true);
+                                        break;
+
 				case THERMALELEMENTS:
 					ElemData[Elem::THERMAL].DefaultOut(true);
 					break;
@@ -1646,6 +1657,7 @@ EndOfUse:
 		OutHdl.SetNetCDF(OutputHandler::LOADABLE);
 		OutHdl.SetNetCDF(OutputHandler::FORCES);
 		OutHdl.SetNetCDF(OutputHandler::GRAVITY);
+                OutHdl.SetNetCDF(OutputHandler::INERTIA_ELEMENTS);
 		// OutHdl.SetNetCDF(OutputHandler::PLATES);
 	}
 
@@ -2710,9 +2722,7 @@ ReadScalarDof(const DataManager* pDM, MBDynParser& HP, bool bDof, bool bOrder)
 	if (iMaxIndex > 1) {
 		NodeDof nd(iIndex - 1, pNode);
 
-		pNode = 0;
-		/* Chi dealloca questa memoria? ci vorrebbe l'handle */
-		SAFENEWWITHCONSTRUCTOR(pNode, Node2Scalar, Node2Scalar(nd));
+		pNode = Node2Scalar::pAllocateStatic(nd);
 	}
 
 	return ScalarDof(dynamic_cast<ScalarNode *>(pNode), iOrder, iIndex);

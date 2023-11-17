@@ -720,6 +720,12 @@ NodeDof::~NodeDof(void)
 	NO_OP;
 }
 
+Node2Scalar* Node2Scalar::pAllocateStatic(const NodeDof& nd)
+{
+     // FIXME: pointer must be deleted by the caller
+     return new Node2Scalar(nd);
+}
+
 Node2Scalar::Node2Scalar(const NodeDof& nd)
 : ScalarNode(nd.pNode->GetLabel(), nd.pNode->pGetDofOwner(), 0), ND(nd)
 {

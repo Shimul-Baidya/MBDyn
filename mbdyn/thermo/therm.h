@@ -28,18 +28,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* elementi elettrici, tipo: Elem::ELECTRIC */
+/* elementi termici, tipo: Elem::THERMAL */
 
 #ifndef THERM_H
 #define THERM_H
 
 #include "elem.h"
       
-/* Electric - begin */
+/* Thermal - begin */
 
 class Thermal : virtual public Elem, public ElemWithDofs {
  public:
-   /* Tipi di elementi elettrici */
+   /* Tipi di elementi termici */
    enum Type {
       UNKNOWN = -1,
       
@@ -63,11 +63,11 @@ class Thermal : virtual public Elem, public ElemWithDofs {
    /* Tipo dell'elemento (usato solo per debug ecc.) */
    virtual Elem::Type GetElemType(void) const;
 
-   /* Tipo di elemento elettrico (usato solo per debug ecc.) */
+   /* Tipo di elemento termico (usato solo per debug ecc.) */
    virtual Thermal::Type GetThermalType(void) const = 0;
 };
 
-/* Electric - end */
+/* Thermal - end */
 
 class DataManager;
 class MBDynParser;

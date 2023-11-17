@@ -104,6 +104,10 @@ DataManager::ElemManager(void)
 	ElemData[Elem::SURFACE_LOAD].Desc = "SurfaceLoad";
 	ElemData[Elem::SURFACE_LOAD].ShortDesc = "surface" "load";
 
+        ElemData[Elem::INERTIA].OutFile = OutputHandler::INERTIA_ELEMENTS;
+        ElemData[Elem::INERTIA].Desc = "InertiaElement";
+        ElemData[Elem::INERTIA].ShortDesc = "inertia" "element";
+
 	ElemData[Elem::AIRPROPERTIES].OutFile = OutputHandler::AIRPROPS;
 	ElemData[Elem::AIRPROPERTIES].Desc = "AirProperties";
 	ElemData[Elem::AIRPROPERTIES].ShortDesc = "airprops";

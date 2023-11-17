@@ -94,7 +94,8 @@ f1(f1Tmp), f2(f2Tmp),
 GammaInv(Eye3),
 F1(Zero3), C1(Zero3), C2(Zero3),
 Sh_c(sh),
-fc(f)
+fc(f),
+M3diff(0.)
 {
 	ASSERT(pNode1 != NULL);
 	ASSERT(pNode2 != NULL);
@@ -132,7 +133,13 @@ fc(f)
 /* Distruttore */
 ScrewJoint::~ScrewJoint(void)
 {
-	NO_OP;
+     if (fc) {
+          SAFEDELETE(fc);
+     }
+
+     if (Sh_c) {
+          SAFEDELETE(Sh_c);
+     }
 }
 
 

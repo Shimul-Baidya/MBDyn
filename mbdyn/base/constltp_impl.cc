@@ -61,33 +61,42 @@
 typedef std::map<std::string, ConstitutiveLawRead<doublereal, doublereal> *, ltstrcase> CL1DFuncMapType;
 typedef std::map<std::string, ConstitutiveLawRead<Vec3, Mat3x3> *, ltstrcase> CL3DFuncMapType;
 typedef std::map<std::string, ConstitutiveLawRead<Vec6, Mat6x6> *, ltstrcase> CL6DFuncMapType;
+typedef std::map<std::string, ConstitutiveLawRead<Vec7, Mat7x7> *, ltstrcase> CL7DFuncMapType;
 
 static CL1DFuncMapType CL1DFuncMap;
 static CL3DFuncMapType CL3DFuncMap;
 static CL6DFuncMapType CL6DFuncMap;
+static CL7DFuncMapType CL7DFuncMap;
 
 /* constitutive law parsing checkers */
 struct CL1DWordSetType : public HighParser::WordSet {
 	bool IsWord(const std::string& s) const {
-		return CL1DFuncMap.find(std::string(s)) != CL1DFuncMap.end();
+		return CL1DFuncMap.find(s) != CL1DFuncMap.end();
 	};
 };
 
 struct CL3DWordSetType : public HighParser::WordSet {
 	bool IsWord(const std::string& s) const {
-		return CL3DFuncMap.find(std::string(s)) != CL3DFuncMap.end();
+		return CL3DFuncMap.find(s) != CL3DFuncMap.end();
 	};
 };
 
 struct CL6DWordSetType : public HighParser::WordSet {
 	bool IsWord(const std::string& s) const {
-		return CL6DFuncMap.find(std::string(s)) != CL6DFuncMap.end();
+		return CL6DFuncMap.find(s) != CL6DFuncMap.end();
+	};
+};
+
+struct CL7DWordSetType : public HighParser::WordSet {
+	bool IsWord(const std::string& s) const {
+		return CL7DFuncMap.find(s) != CL7DFuncMap.end();
 	};
 };
 
 static CL1DWordSetType CL1DWordSet;
 static CL3DWordSetType CL3DWordSet;
 static CL6DWordSetType CL6DWordSet;
+static CL7DWordSetType CL7DWordSet;
 
 /* constitutive law registration functions: call to register one */
 bool
@@ -112,6 +121,13 @@ SetCL6D(const char *name, ConstitutiveLawRead<Vec6, Mat6x6> *rf)
 	pedantic_cout("registering constitutive law 6D \"" << name << "\""
 		<< std::endl );
 	return CL6DFuncMap.insert(CL6DFuncMapType::value_type(name, rf)).second;
+}
+
+bool
+SetCL7D(const char *name, ConstitutiveLawRead<Vec7, Mat7x7> *rf)
+{
+	pedantic_cout("registering constitutive law 7D \"" << name << "\"\n");
+	return CL7DFuncMap.insert(CL7DFuncMapType::value_type(name, rf)).second;
 }
 
 /* function that reads a constitutive law */
@@ -195,6 +211,29 @@ ReadCL6D(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType)
 	}
 
 	return func->second->Read(pDM, HP, CLType);
+}
+
+ConstitutiveLaw<Vec7, Mat7x7> *
+ReadCL7D(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType)
+{
+        const char* s = HP.IsWord(CL7DWordSet);
+
+        if (!s) {
+                silent_cerr("unknown constitutive law 7D type "
+                            "at line " << HP.GetLineData() << "\n");
+                throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+        }
+
+        auto func = CL7DFuncMap.find(std::string(s));
+
+        if (func == CL7DFuncMap.end()) {
+                silent_cerr("unknown constitutive law 7D type "
+                            "\"" << s << "\" "
+                            "at line " << HP.GetLineData() << "\n");
+                throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
+        }
+
+        return func->second->Read(pDM, HP, CLType);
 }
 
 /* specific functional object(s) */
@@ -1603,4 +1642,9 @@ DestroyCL(void)
 		delete i->second;
 	}
 	CL6DFuncMap.clear();
+
+        for (auto& c:CL7DFuncMap) {
+                delete c.second;
+        }
+        CL7DFuncMap.clear();
 }
