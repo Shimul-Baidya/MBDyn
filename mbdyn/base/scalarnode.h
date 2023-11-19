@@ -281,9 +281,10 @@ protected:
 
 	/* Valore del DoF al passo precedente */
 	doublereal dXPrev;
-
+        const DofOrder::Equality eEqualityType;
+     
 	/* scrive l'output */
-	virtual std::ostream& Output(std::ostream& out) const;
+	virtual std::ostream& Output(std::ostream& out) const override;
 
 #ifdef USE_NETCDF
 	MBDynNcVar m_Var_dX;
@@ -301,7 +302,7 @@ public:
 
 	/* Costruttore */
 	ScalarAlgebraicNode(unsigned int uL, const DofOwner* pDO,
-		doublereal dx, flag fOut);
+                            doublereal dx, DofOrder::Equality eEqualityType, flag fOut);
 
 	/* Distruttore */
 	virtual ~ScalarAlgebraicNode(void);
@@ -309,27 +310,28 @@ public:
 	/* Metodi di servizio */
 
 	/* Tipo di nodo */
-	virtual Node::Type GetNodeType(void) const;
+	virtual Node::Type GetNodeType(void) const override;
 
 	/*
 	 * Esegue operazioni sui DoF di proprieta' dell'elemento.
 	 * In particolare ritorna il tipo di DoF in base all'indice i.
 	 */
-	virtual DofOrder::Order GetDofType(unsigned int i) const;
+	virtual DofOrder::Order GetDofType(unsigned int i) const override;
 
+        virtual DofOrder::Equality GetEqualityType(unsigned int i) const override;
 	/* Metodi che operano sul valore del DoF */
 
 	/*
 	 * Restituisce il valore del DoF iDof.
 	 * Se differenziale, iOrder puo' essere = 1 per ottenere la derivata
 	 */
-	virtual const doublereal& dGetDofValue(int iDof, int iOrder = 0) const;
+	virtual const doublereal& dGetDofValue(int iDof, int iOrder = 0) const override;
 
 	/*
 	 * Restituisce il valore del DoF iDof al passo precedente.
 	 * Se differenziale, iOrder puo' essere = 1 per ottenere la derivata
 	 */
-	virtual const doublereal& dGetDofValuePrev(int iDof, int iOrder = 0) const;
+	virtual const doublereal& dGetDofValuePrev(int iDof, int iOrder = 0) const override;
 
 	/*
 	 * Setta il valore del DoF iDof a dValue.
@@ -337,45 +339,45 @@ public:
 	 */
 	virtual void SetDofValue(const doublereal& dValue,
 		unsigned int iDof,
-		unsigned int iOrder = 0);
+		unsigned int iOrder = 0) override;
 
 	/*
 	 * Funzione che consente l'accesso diretto ai dati privati.
 	 * Sono state definite perche' i nodi astratti sono usati nei
 	 * modi piu' strani e quindi puo' essere necessario l'accesso diretto
 	 */
-	virtual void SetX(const doublereal& d);
+	virtual void SetX(const doublereal& d) override;
 
 	/* Ottiene il valore del DoF. Vedi SetX() */
-	virtual inline const doublereal& dGetX(void) const;
+	virtual inline const doublereal& dGetX(void) const override;
 
 	/* Non definito per nodi algebrici */
-	virtual void SetXPrime(const doublereal& d);
+	virtual void SetXPrime(const doublereal& d) override;
 
 	/* Non definito per nodi algebrici */
-	virtual inline const doublereal& dGetXPrime(void) const;
+	virtual inline const doublereal& dGetXPrime(void) const override;
 
 	/* Consente di settare il valore iniziale nel vettore della soluzione */
 	virtual void SetValue(DataManager *pDM,
 		VectorHandler& X, VectorHandler& XP,
-		SimulationEntity::Hints *ph = 0);
+		SimulationEntity::Hints *ph = 0) override;
 
 	/* Aggiorna i valori interni */
-	virtual void Update(const class VectorHandler&, const class VectorHandler&);
+	virtual void Update(const class VectorHandler&, const class VectorHandler&) override;
 
 	/* restart */
-	std::ostream& Restart(std::ostream& out) const;
+	std::ostream& Restart(std::ostream& out) const override;
 
-	virtual OutputHandler::OutFiles GetOutputType(void) const { return OutputHandler::ABSTRACT; };
-	virtual void OutputPrepare(OutputHandler& OH);
-	virtual void Output(OutputHandler& OH) const;
+	virtual OutputHandler::OutFiles GetOutputType(void) const override { return OutputHandler::ABSTRACT; };
+	virtual void OutputPrepare(OutputHandler& OH) override;
+	virtual void Output(OutputHandler& OH) const override;
 
 	/*
 	 * Maps a string (possibly with substrings) to a private data;
 	 * returns a valid index ( > 0 && <= iGetNumPrivData()) or 0 
 	 * in case of unrecognized data; error must be handled by caller
 	 */
-	virtual unsigned int iGetPrivDataIdx(const char *s) const;
+	virtual unsigned int iGetPrivDataIdx(const char *s) const override;
 };
 
 inline const doublereal&

@@ -41,7 +41,7 @@
 
 class PressureNode : virtual public ScalarAlgebraicNode {
 public:
-     PressureNode(unsigned int uL, const DofOwner* pDO, doublereal dx, flag fOut); 
+     PressureNode(unsigned int uL, const DofOwner* pDO, doublereal dx, DofOrder::Equality eEqualityType, flag fOut); 
    
      virtual ~PressureNode();
    

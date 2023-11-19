@@ -428,10 +428,11 @@ ScalarDifferentialNode::DescribeEq(std::ostream& out, const char *prefix, bool b
 /* ScalarAlgebraicNode - begin */
 
 ScalarAlgebraicNode::ScalarAlgebraicNode(unsigned int uL,
-	const DofOwner* pDO,
-	doublereal dx,
-	flag fOut)
-: ScalarNode(uL, pDO, fOut), dX(dx), dXPrev(dx)
+                                         const DofOwner* pDO,
+                                         doublereal dx,
+                                         DofOrder::Equality eEqualityType,
+                                         flag fOut)
+: ScalarNode(uL, pDO, fOut), dX(dx), dXPrev(dx), eEqualityType(eEqualityType)
 {
 	NO_OP;
 }
@@ -458,6 +459,13 @@ ScalarAlgebraicNode::GetDofType(unsigned int i) const
 {
 	ASSERT(i < iGetNumDof());
 	return DofOrder::ALGEBRAIC;
+}
+
+DofOrder::Equality ScalarAlgebraicNode::GetEqualityType(unsigned int i) const
+{
+     ASSERT(i < iGetNumDof());
+     
+     return eEqualityType;
 }
 
 /* Restituisce il valore del dof iDof;
@@ -624,7 +632,7 @@ ParameterNode::ParameterNode(unsigned int uL,
 	doublereal dx,
 	flag fOut)
      : ScalarNode(uL, pDO, fOut),
-       ScalarAlgebraicNode(uL, pDO, dx, fOut)
+       ScalarAlgebraicNode(uL, pDO, dx, DofOrder::EQUALITY, fOut)
 {
 	NO_OP;
 }

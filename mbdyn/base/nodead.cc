@@ -76,9 +76,10 @@ ScalarDifferentialNodeAd::~ScalarDifferentialNodeAd(void)
 ScalarAlgebraicNodeAd::ScalarAlgebraicNodeAd(unsigned int uL,
                                              const DofOwner* pDO,
                                              doublereal dx,
+                                             DofOrder::Equality eEqualityType,
                                              flag fOut)
      :ScalarNode(uL, pDO, fOut),
-      ScalarAlgebraicNode(uL, pDO, dx, fOut),
+      ScalarAlgebraicNode(uL, pDO, dx, eEqualityType, fOut),
       ScalarNodeAd(uL, pDO, fOut)      
 {
 }

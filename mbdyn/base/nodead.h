@@ -73,7 +73,7 @@ public:
 class ScalarAlgebraicNodeAd: virtual public ScalarAlgebraicNode, public ScalarNodeAd {
 public:
      ScalarAlgebraicNodeAd(unsigned int uL, const DofOwner* pDO,
-                           doublereal dx, flag fOut);
+                           doublereal dx, DofOrder::Equality eEqualityType, flag fOut);
 
      virtual ~ScalarAlgebraicNodeAd(void);
 };

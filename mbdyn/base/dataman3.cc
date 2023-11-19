@@ -2088,7 +2088,8 @@ DataManager::ReadNodes(MBDynParser& HP)
 					<< std::endl);
 
 				bool bAlgebraic(false);
-
+                                
+                                DofOrder::Equality eEqualityType = DofOrder::EQUALITY;
 				/*
 				 * verifica che non siano gia' stati letti tutti
 				 * quelli previsti
@@ -2102,8 +2103,10 @@ DataManager::ReadNodes(MBDynParser& HP)
 
 				if (HP.IsKeyWord("algebraic")) {
 					bAlgebraic = true;
-
-				} else if (!HP.IsKeyWord("differential")) {
+				} else if (HP.IsKeyWord("inequality")) {
+                                        bAlgebraic = true; // FIXME: inequalities are not yet supported for differential degrees of freedom
+                                        eEqualityType = DofOrder::INEQUALITY;
+                                } else if (!HP.IsKeyWord("differential")) {
 					pedantic_cout("unspecified "
 						<< psNodeNames[Node::ABSTRACT] << "(" << uLabel << ") "
 						"at line " << HP.GetLineData() << "; "
@@ -2134,11 +2137,11 @@ DataManager::ReadNodes(MBDynParser& HP)
                                         if (bUseAutoDiff()) {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarAlgebraicNodeAd,
-                                                                       ScalarAlgebraicNodeAd(uLabel, pDO, dx, fOut));
+                                                                       ScalarAlgebraicNodeAd(uLabel, pDO, dx, eEqualityType, fOut));
                                         } else {
                                                 SAFENEWWITHCONSTRUCTOR(pN,
                                                                        ScalarAlgebraicNode,
-                                                                       ScalarAlgebraicNode(uLabel, pDO, dx, fOut));
+                                                                       ScalarAlgebraicNode(uLabel, pDO, dx, eEqualityType, fOut));
                                         }
                                 } else {
                                         if (bUseAutoDiff()) {
@@ -2297,6 +2300,7 @@ DataManager::ReadNodes(MBDynParser& HP)
 					throw DataManager::ErrGeneric(MBDYN_EXCEPT_ARGS);
 				}
 
+                                const DofOrder::Equality eEqualityType = HP.IsKeyWord("inequality") ? DofOrder::INEQUALITY : DofOrder::EQUALITY;
 				/* lettura dei dati specifici */
 				doublereal dx(0.);
 				ReadScalarAlgebraicNode(HP, uLabel, Node::ABSTRACT, dx);
@@ -2314,11 +2318,11 @@ DataManager::ReadNodes(MBDynParser& HP)
                                 if (bUseAutoDiff()) {
                                      SAFENEWWITHCONSTRUCTOR(pN,
                                                             PressureNodeAd,
-                                                            PressureNodeAd(uLabel, pDO, dx, fOut));
+                                                            PressureNodeAd(uLabel, pDO, dx, eEqualityType, fOut));
                                 } else {
                                      SAFENEWWITHCONSTRUCTOR(pN,
                                                             PressureNode,
-                                                            PressureNode(uLabel, pDO, dx, fOut));
+                                                            PressureNode(uLabel, pDO, dx, eEqualityType, fOut));
                                 }
                                 
 				if (pN != 0) {

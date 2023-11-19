@@ -42,9 +42,9 @@
 
 #include "presnode.h"
 
-PressureNode::PressureNode(unsigned int uL, const DofOwner* pDO, doublereal dx, flag fOut) 
+PressureNode::PressureNode(unsigned int uL, const DofOwner* pDO, doublereal dx, DofOrder::Equality eEqualityType, flag fOut) 
      :ScalarNode(uL, pDO, fOut),
-      ScalarAlgebraicNode(uL, pDO, dx, fOut)
+      ScalarAlgebraicNode(uL, pDO, dx, eEqualityType, fOut)
 {
      NO_OP;
 }

@@ -1200,7 +1200,15 @@ struct UnilateralContactParam {
      const doublereal pref;
 };
 
-template <typename ElementType, typename CollocationType>
+struct ContactTraitsEquality {
+     static constexpr DofOrder::Equality eEqualityType = DofOrder::EQUALITY;
+};
+
+struct ContactTraitsInequality {
+     static constexpr DofOrder::Equality eEqualityType = DofOrder::INEQUALITY;
+};
+
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 class UnilateralInPlaneContact: public SurfaceLoad<ElementType, CollocationType, PressureFromNodes<ElementType::iNumNodes>>, private UnilateralContactParam  {
      typedef SurfaceLoad<ElementType, CollocationType, PressureFromNodes<ElementType::iNumNodes>> BaseType;
 public:
@@ -1287,15 +1295,15 @@ protected:
      sp_grad::SpColVector<doublereal, 3> F0tot, M0tot;
 };
 
-template <typename ElementType, typename CollocationType>
-UnilateralInPlaneContact<ElementType, CollocationType>::UnilateralInPlaneContact(unsigned uLabel,
-                                                                                 const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
-                                                                                 const StructNodeAd* pNode0,
-                                                                                 const Mat3x3& Rn0,
-                                                                                 const Vec3& o0,
-                                                                                 const UnilateralContactParam& oContactParam,
-                                                                                 PressureFromNodes<iNumNodes>&& oPressureTmp,
-                                                                                 flag fOut)
+template <typename ElementType, typename CollocationType, typename ContactTraits>
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::UnilateralInPlaneContact(unsigned uLabel,
+                                                                                                const std::array<const StructDispNodeAd*, iNumNodes>& rgNodesTmp,
+                                                                                                const StructNodeAd* pNode0,
+                                                                                                const Mat3x3& Rn0,
+                                                                                                const Vec3& o0,
+                                                                                                const UnilateralContactParam& oContactParam,
+                                                                                                PressureFromNodes<iNumNodes>&& oPressureTmp,
+                                                                                                flag fOut)
 :Elem(uLabel, fOut),
  BaseType(uLabel, rgNodesTmp, std::move(oPressureTmp), fOut),
  UnilateralContactParam(oContactParam),
@@ -1310,36 +1318,36 @@ UnilateralInPlaneContact<ElementType, CollocationType>::UnilateralInPlaneContact
      gref *= sqrt(this->A0);
 }
 
-template <typename ElementType, typename CollocationType>
-UnilateralInPlaneContact<ElementType, CollocationType>::~UnilateralInPlaneContact()
+template <typename ElementType, typename CollocationType, typename ContactTraits>
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::~UnilateralInPlaneContact()
 {
 }
 
-template <typename ElementType, typename CollocationType>
-void UnilateralInPlaneContact<ElementType, CollocationType>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
+template <typename ElementType, typename CollocationType, typename ContactTraits>
+void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::WorkSpaceDim(integer* piNumRows, integer* piNumCols) const
 {
      *piNumRows = iNumNodes * (3 + 1) + 6;
      *piNumCols = 0;
 }
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 template <typename T>
 inline void
-UnilateralInPlaneContact<ElementType, CollocationType>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                               doublereal dCoef,
-                                                               const sp_grad::SpGradientVectorHandler<T>& XCurr,
-                                                               const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
-                                                               enum sp_grad::SpFunctionCall func)
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssRes(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                              doublereal dCoef,
+                                                                              const sp_grad::SpGradientVectorHandler<T>& XCurr,
+                                                                              const sp_grad::SpGradientVectorHandler<T>& XPrimeCurr,
+                                                                              enum sp_grad::SpFunctionCall func)
 {
      AssContactLoad(WorkVec, dCoef, func);
 }
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 template <typename T>
 inline void
-UnilateralInPlaneContact<ElementType, CollocationType>::AssContactLoad(sp_grad::SpGradientAssVec<T>& WorkVec,
-                                                                       doublereal dCoef,
-                                                                       enum sp_grad::SpFunctionCall func)
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssContactLoad(sp_grad::SpGradientAssVec<T>& WorkVec,
+                                                                                      doublereal dCoef,
+                                                                                      enum sp_grad::SpFunctionCall func)
 {
      using namespace sp_grad;
      using std::pow;
@@ -1376,32 +1384,62 @@ UnilateralInPlaneContact<ElementType, CollocationType>::AssContactLoad(sp_grad::
      SpColVector<T, 3> F0(3, oDofMap);
      SpColVector<T, 3> M0(3, oDofMap);
      SpColVector<T, 3> xi(3, iNumNodes * 3);
-     SpColVector<T, iNumNodes> w(iNumNodes, oDofMap);
+     SpColVector<T, iNumNodes> g(iNumNodes, 0);
 
      const SpColVector<T, 3> n0(R0 * Rn0.GetCol(3), oDofMap);
 
      for (index_type i = 1; i <= iNumNodes; ++i) {
-          const T g = Dot(Rn0.GetCol(3), Transpose(R0) * (SubMatrix<3, 1>(x, (i - 1) * 3 + 1, 1, 1, 1) - X0) - o0, oDofMap);
-          oDofMap.MapAssign(w(i), 0.5 * (g / gref + p(i) / pref) - sqrt(pow(0.5 * (g / gref - p(i) / pref), 2) + epsilon));
+          SpColVector<doublereal, 2> r(2, 0);
+          SpMatrix<doublereal, iNumNodes, 2> hd(iNumNodes, 2, 0);
+          SpMatrix<doublereal, 3, iNumDof> dHf_dr(3, iNumDof, 0), dHf_ds(3, iNumDof, 0);
+
+          ElementType::NodalPosition(i, r);
+          ElementType::ShapeFunctionDeriv(r, hd);
+
+          for (index_type k = 1; k <= iNumNodes; ++k) {
+               for (index_type j = 1; j <= 3; ++j) {
+                    dHf_dr(j, (k - 1) * 3 + j) = hd(k, 1);
+                    dHf_ds(j, (k - 1) * 3 + j) = hd(k, 2);
+               }
+          }
+
+          n1.MapAssign(dHf_dr * x, oDofMap);
+          n2.MapAssign(dHf_ds * x, oDofMap);
+
+          const SpColVector<T, 3> n3 = Cross(n1, n2, oDofMap);
+          const SpColVector<T, 3> e3(n3 / Norm(n3, oDofMap), oDofMap);
+          const T giproj = Dot(Rn0.GetCol(3), Transpose(R0) * (X0 - SubMatrix<3, 1>(x, 3 * (i - 1) + 1, 1, 1, 1)) + o0, oDofMap);
+
+          T cosPhii = Dot(e3, n0, oDofMap);
+
+          if (cosPhii == 0.) {
+               cosPhii += std::numeric_limits<doublereal>::epsilon(); // FIXME: avoid division by zero if n0 is normal to e3
+          }
+
+          oDofMap.MapAssign(g(i), giproj / cosPhii);
      }
 
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
           const doublereal alpha = CollocationType::dGetWeight(i);
 
           const T p_i = Dot(rgCollocData[i].HA, p);
-          const T w_i = Dot(rgCollocData[i].HA, w);
 
           n1.MapAssign(rgCollocData[i].dHf_dr * x, oDofMap);
           n2.MapAssign(rgCollocData[i].dHf_ds * x, oDofMap);
           xi.MapAssign(rgCollocData[i].Hf * x, oDofMap);
+          const SpColVector<T, 3> n3 = Cross(n1, n2, oDofMap);
+          const T detJA = Norm(n3, oDofMap);
 
-          const T detJA = Norm(Cross(n1, n2, oDofMap), oDofMap);
+          if constexpr(ContactTraits::eEqualityType == DofOrder::EQUALITY) {
+               const T g_i = Dot(rgCollocData[i].HA, g);
+               const T w_i = oDofMap.MapEval((0.5 * (g_i / gref + p_i / pref) - sqrt(pow(0.5 * (g_i / gref - p_i / pref), 2) + epsilon)) * detJA);
 
-          for (index_type k = 1; k <= iNumNodes; ++k) {
-               oDofMap.Add(Rc(k), rgCollocData[i].HA(k) * alpha * dContactScale / dCoef * w_i  * detJA);
+               for (index_type k = 1; k <= iNumNodes; ++k) {
+                    oDofMap.Add(Rc(k), rgCollocData[i].HA(k) * alpha * dContactScale / dCoef * w_i);
+               }
           }
 
-          dF.MapAssign(n0 * (alpha * p_i * detJA), oDofMap);
+          dF.MapAssign(n3 * (-alpha * p_i), oDofMap);
 
           for (index_type k = 1; k <= iNumDof; ++k) {
                for (index_type j = 1; j <= 3; ++j) {
@@ -1415,6 +1453,10 @@ UnilateralInPlaneContact<ElementType, CollocationType>::AssContactLoad(sp_grad::
 
      this->AssVector(WorkVec, Rp, &StructDispNodeAd::iGetFirstMomentumIndex);
 
+     if constexpr(ContactTraits::eEqualityType != DofOrder::EQUALITY) {
+           Rc.MapAssign(g * (dContactScale * this->A0 / (gref * dCoef)), oDofMap);
+     }
+
      for (index_type i = 1; i <= iNumNodes; ++i) {
           WorkVec.AddItem(this->oPressure.pGetNode(i - 1)->iGetFirstIndex() + 1, Rc(i));
      }
@@ -1425,12 +1467,12 @@ UnilateralInPlaneContact<ElementType, CollocationType>::AssContactLoad(sp_grad::
      UpdateTotalForceRigidBody(F0, M0);
 }
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 SubVectorHandler&
-UnilateralInPlaneContact<ElementType, CollocationType>::AssRes(SubVectorHandler& WorkVec,
-                                                               doublereal dCoef,
-                                                               const VectorHandler& XCurr,
-                                                               const VectorHandler& XPrimeCurr)
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssRes(SubVectorHandler& WorkVec,
+                                                                              doublereal dCoef,
+                                                                              const VectorHandler& XCurr,
+                                                                              const VectorHandler& XPrimeCurr)
 {
      DEBUGCOUTFNAME("PressureLoad::AssRes");
 
@@ -1444,12 +1486,12 @@ UnilateralInPlaneContact<ElementType, CollocationType>::AssRes(SubVectorHandler&
      return WorkVec;
 }
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 VariableSubMatrixHandler&
-UnilateralInPlaneContact<ElementType, CollocationType>::AssJac(VariableSubMatrixHandler& WorkMat,
-                                                               doublereal dCoef,
-                                                               const VectorHandler& XCurr,
-                                                               const VectorHandler& XPrimeCurr)
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssJac(VariableSubMatrixHandler& WorkMat,
+                                                                              doublereal dCoef,
+                                                                              const VectorHandler& XCurr,
+                                                                              const VectorHandler& XPrimeCurr)
 {
      DEBUGCOUTFNAME("UnilateralInPlaneContact::AssJac");
 
@@ -1462,14 +1504,14 @@ UnilateralInPlaneContact<ElementType, CollocationType>::AssJac(VariableSubMatrix
      return WorkMat;
 }
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 void
-UnilateralInPlaneContact<ElementType, CollocationType>::AssJac(VectorHandler& JacY,
-                                                               const VectorHandler& Y,
-                                                               doublereal dCoef,
-                                                               const VectorHandler& XCurr,
-                                                               const VectorHandler& XPrimeCurr,
-                                                               VariableSubMatrixHandler& WorkMat)
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssJac(VectorHandler& JacY,
+                                                                              const VectorHandler& Y,
+                                                                              doublereal dCoef,
+                                                                              const VectorHandler& XCurr,
+                                                                              const VectorHandler& XPrimeCurr,
+                                                                              VariableSubMatrixHandler& WorkMat)
 {
      using namespace sp_grad;
 
@@ -1483,37 +1525,37 @@ UnilateralInPlaneContact<ElementType, CollocationType>::AssJac(VectorHandler& Ja
 }
 
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 VariableSubMatrixHandler&
-UnilateralInPlaneContact<ElementType, CollocationType>::InitialAssJac(VariableSubMatrixHandler& WorkMat,
-                                                                      const VectorHandler& XCurr)
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::InitialAssJac(VariableSubMatrixHandler& WorkMat,
+                                                                                     const VectorHandler& XCurr)
 {
      WorkMat.SetNullMatrix();
 
      return WorkMat;
 }
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 SubVectorHandler&
-UnilateralInPlaneContact<ElementType, CollocationType>::InitialAssRes(SubVectorHandler& WorkVec,
-                                                                      const VectorHandler& XCurr)
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::InitialAssRes(SubVectorHandler& WorkVec,
+                                                                                     const VectorHandler& XCurr)
 {
      WorkVec.ResizeReset(0);
 
      return WorkVec;
 }
 
-template <typename ElementType, typename CollocationType>
+template <typename ElementType, typename CollocationType, typename ContactTraits>
 void
-UnilateralInPlaneContact<ElementType, CollocationType>::InitialWorkSpaceDim(integer* piNumRows,
-                                                                            integer* piNumCols) const
+UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::InitialWorkSpaceDim(integer* piNumRows,
+                                                                                           integer* piNumCols) const
 {
      *piNumRows = 0;
      *piNumCols = 0;
 }
 
-template <typename ElementType, typename CollocationType>
-void UnilateralInPlaneContact<ElementType, CollocationType>::Output(OutputHandler& OH) const
+template <typename ElementType, typename CollocationType, typename ContactTraits>
+void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Output(OutputHandler& OH) const
 {
      using namespace sp_grad;
 
@@ -1721,7 +1763,8 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
 
      constexpr index_type iNumNodes = ElementType::iNumNodes;
 
-     typedef UnilateralInPlaneContact<ElementType, CollocationType> UnilateralInPlaneElem;
+     typedef UnilateralInPlaneContact<ElementType, CollocationType, ContactTraitsEquality> UnilateralInPlaneElemEquality;
+     typedef UnilateralInPlaneContact<ElementType, CollocationType, ContactTraitsInequality> UnilateralInPlaneElemInequality;
 
      std::array<const StructDispNodeAd*, iNumNodes> rgNodes;
 
@@ -1731,8 +1774,19 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
           rgNodes[i] = pDM->ReadNode<const StructDispNodeAd, Node::STRUCTURAL>(HP);
      }
 
+     DofOrder::Equality eEqualityType = DofOrder::EQUALITY;
+
      for (index_type i = 0; i < iNumNodes; ++i) {
-          oPressureFromNodes.SetNode(i, pDM->ReadNode<const ScalarNodeAd, Node::ABSTRACT>(HP));
+          oPressureFromNodes.SetNode(i, pDM->ReadNode<const ScalarAlgebraicNodeAd, Node::ABSTRACT>(HP));
+
+          const DofOrder::Equality eEqualityTypeNode = oPressureFromNodes.pGetNode(i)->GetEqualityType(0);
+
+          if (i == 0) {
+               eEqualityType = eEqualityTypeNode;
+          } else if (eEqualityType != eEqualityTypeNode) {
+               silent_cerr("unilateral in plane contact(" << uLabel << "): all the nodes must be either equality or inequality nodes at line " << HP.GetLineData() << "\n");
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
      }
 
      const StructNodeAd* const pNode0 = pDM->ReadNode<const StructNodeAd, Node::STRUCTURAL>(HP);
@@ -1781,9 +1835,21 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
 
      SurfaceLoadElem* pElem = nullptr;
 
-     SAFENEWWITHCONSTRUCTOR(pElem,
-                            UnilateralInPlaneElem,
-                            UnilateralInPlaneElem(uLabel, rgNodes, pNode0, Rn0, o0, UnilateralContactParam(epsilon, dContactScale, gref, pref), std::move(oPressureFromNodes), fOut));
+     switch (eEqualityType) {
+     case DofOrder::EQUALITY:
+          SAFENEWWITHCONSTRUCTOR(pElem,
+                                 UnilateralInPlaneElemEquality,
+                                 UnilateralInPlaneElemEquality(uLabel, rgNodes, pNode0, Rn0, o0, UnilateralContactParam(epsilon, dContactScale, gref, pref), std::move(oPressureFromNodes), fOut));
+          break;
+     case DofOrder::INEQUALITY:
+          SAFENEWWITHCONSTRUCTOR(pElem,
+                                 UnilateralInPlaneElemInequality,
+                                 UnilateralInPlaneElemInequality(uLabel, rgNodes, pNode0, Rn0, o0, UnilateralContactParam(epsilon, dContactScale, gref, pref), std::move(oPressureFromNodes), fOut));
+          break;
+     default:
+          ASSERT(0);
+          throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+     }
 
      return pElem;
 }
