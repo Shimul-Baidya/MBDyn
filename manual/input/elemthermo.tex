@@ -31,13 +31,40 @@
 \subsection{Capacitance}
 \label{sec:EL:THERMO:CAPACITANCE}
 
+This element implements a simple linear thermal capacitance associated with a thermal node.
+It computes the heat flow into the capacitance node as
+\begin{align*}
+	q &= -\nt{dCapacitance} \cdot \dot{T}
+\end{align*}
+
+The input format is:
+%\begin{verbatim}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{elem_type} ::= \kw{capacitance}
+
+    \bnt{normal_arglist} ::= 
+        \bnt{node_label} , 
+        (\ty{real}) \bnt{dCapacitance}
+\end{Verbatim}
+%\end{verbatim}
+where \nt{node\_label} is the thermal node the thermal capacitance is connected to, and \nt{dCapacitance} is the (positive) value of the thermal capacitance.
+
+\paragraph{Example.} \
+\begin{verbatim}
+    thermal: 99, capacitance,
+        11,    # node label
+        0.11;  # capacitance
+\end{verbatim}
+
+
+
 \subsection{Resistance}
 \label{sec:EL:THERMO:RESISTANCE}
 
-This element implements a simple thermal resistance between two thermal nodes.
+This element implements a simple linear thermal resistance between two thermal nodes.
 It computes the heat flow between the two nodes as
 \begin{align*}
-	q &= \frac{T_2 - T_1}{\nt{dResistance}}
+	q_{21} &= \frac{T_2 - T_1}{\nt{dResistance}}
 \end{align*}
 
 The input format is:
@@ -51,10 +78,48 @@ The input format is:
         (\ty{real}) \bnt{dResistance}
 \end{Verbatim}
 %\end{verbatim}
-where \nt{node\_1\_label} and \nt{node\_2\_label} are the thermal nodes the thermal resistance is connected to, and \nt{dResistance} is the (non-negative) value of the thermal resistance.
+where \nt{node\_1\_label} and \nt{node\_2\_label} are the thermal nodes the thermal resistance is connected to, and \nt{dResistance} is the (positive) value of the thermal resistance.
+
+\paragraph{Example.} \
+\begin{verbatim}
+    thermal: 98, resistance,
+        11,    # node 1 label
+        12,    # node 2 label
+        0.99;  # resistance
+\end{verbatim}
+
 
 
 \subsection{Source}
 \label{sec:EL:THERMO:SOURCE}
+
+This element implements a simple thermal source associated with a thermal node.
+It computes the heat flow into the node as
+\begin{align*}
+	q &= \nt{Source}
+\end{align*}
+
+The input format is:
+%\begin{verbatim}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{elem_type} ::= \kw{capacitance}
+
+    \bnt{normal_arglist} ::= 
+        \bnt{node_label} , 
+        (\hty{DriveCaller}) \bnt{Source}
+\end{Verbatim}
+%\end{verbatim}
+where \nt{node\_label} is the thermal node the thermal source is connected to, and \nt{Source} is a \ty{DriveCaller}.
+
+\paragraph{Example.} \
+\begin{verbatim}
+    thermal: 97, source,
+        12,    # node label
+        # source; grows as 1-cos from 0 s to 1 s, raising from 0. to 0.9 
+        cosine, 0., pi, 0.45, half, 0.;
+\end{verbatim}
+
+
+
 
 

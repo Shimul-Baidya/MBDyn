@@ -151,7 +151,17 @@ Elem* ReadThermal(DataManager* pDM,
 
 		case THERMALCAPACITANCE: {
 			const ThermalNode* pThNode1 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
-			doublereal c = HP.GetReal();
+			doublereal c;
+
+			doublereal c(0.);
+			try {
+				c = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+			} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+				silent_cerr("error: invalid thermal capacitance " << e.Get() << " (must be non-negative) [" << e.what() << "] for ThermalCapacitance(" << uLabel << ") at line " << HP.GetLineData() << std::endl);
+				throw e;
+			}
+
 			flag fOut = pDM->fReadOutput(HP, Elem::THERMAL);
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				ThermalCapacitance,
