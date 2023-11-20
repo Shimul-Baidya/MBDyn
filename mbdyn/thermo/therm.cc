@@ -124,7 +124,16 @@ Elem* ReadThermal(DataManager* pDM,
 		case THERMALRESISTANCE: {
 			const ThermalNode* pThNode1 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
 			const ThermalNode* pThNode2 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
-			doublereal r = HP.GetReal();
+
+			doublereal r(0.);
+			try {
+				r = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+			} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+				silent_cerr("error: invalid thermal resistance " << e.Get() << " (must be non-negative) [" << e.what() << "] for ThermalResistance(" << uLabel << ") at line " << HP.GetLineData() << std::endl);
+				throw e;
+			}
+
 			flag fOut = pDM->fReadOutput(HP, Elem::THERMAL);
 			SAFENEWWITHCONSTRUCTOR(pEl,
 				ThermalResistance,
