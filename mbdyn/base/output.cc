@@ -608,8 +608,9 @@ OutputHandler::Open(const OutputHandler::OutFiles out)
 		OutData[out].pof->open(fname);
 
 		if (!(*OutData[out].pof)) {
+			int save_errno = errno;
 			silent_cerr("Unable to open file "
-				"\"" << fname << "\"" << std::endl);
+				"\"" << fname << "\" (" << save_errno << ": " << strerror(save_errno) << ");" << std::endl);
 			throw ErrFile(MBDYN_EXCEPT_ARGS);
 		}
 
@@ -670,8 +671,9 @@ OutputHandler::Open(const int out, const std::string& postfix)
 		OutData[out].pof->open(fname.c_str());
 
 		if (!(*OutData[out].pof)) {
+			int save_errno = errno;
 			silent_cerr("Unable to open file "
-				"\"" << fname << "\"" << std::endl);
+				"\"" << fname << "\" (" << save_errno << ": " << strerror(save_errno) << ");" << std::endl);
 			throw ErrFile(MBDYN_EXCEPT_ARGS);
 		}
 
@@ -877,8 +879,9 @@ OutputHandler::RestartOpen(bool openResXSol)
 	      	OutData[RESTART].pof->open(_sPutExt(resExt));
 
 	      	if(!(*OutData[RESTART].pof)) {
-		 	std::cerr << "Unable to open file '" << _sPutExt(resExt)
-		   		<< '\'' << std::endl;
+			int save_errno = errno;
+		 	std::cerr << "Unable to open file \"" << _sPutExt(resExt)
+		   		<< "\" (" << save_errno << ": " << strerror(save_errno) << ");" << std::endl;
 			throw ErrFile(MBDYN_EXCEPT_ARGS);
 		}
 		SAFEDELETEARR(resExt);
@@ -909,8 +912,9 @@ OutputHandler::RestartOpen(bool openResXSol)
 			/* Apre lo stream */
 		      	OutData[RESTARTXSOL].pof->open(_sPutExt(resXSolExt));
 		      	if(!(*OutData[RESTARTXSOL].pof)) {
-			 	std::cerr << "Unable to open file '" << _sPutExt(resExt)
-			   		<< '\'' << std::endl;
+				int save_errno = errno;
+			 	std::cerr << "Unable to open file \"" << _sPutExt(resExt)
+			   		<< "\" (" << save_errno << ": " << strerror(save_errno) << ");" << std::endl;
 				throw ErrFile(MBDYN_EXCEPT_ARGS);
 			}
 			SAFEDELETEARR(resXSolExt);
