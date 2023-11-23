@@ -151,7 +151,6 @@ Elem* ReadThermal(DataManager* pDM,
 
 		case THERMALCAPACITANCE: {
 			const ThermalNode* pThNode1 = pDM->ReadNode<const ThermalNode, Node::THERMAL>(HP);
-			doublereal c;
 
 			doublereal c(0.);
 			try {
