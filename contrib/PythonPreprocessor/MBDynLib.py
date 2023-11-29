@@ -2378,8 +2378,89 @@ class FileDriveDrive(DriveCaller):
 
 
 class FourierSeriesDrive(DriveCaller):
-    # TODO
-    pass
+    type = 'fourier series'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' FourierSeriesDrive: <idx> must either be an integer value or an MBVar' + 
+                    '\n-------------------\n')
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            arg = 'initial_time'
+            assert isinstance(kwargs[arg], (MBVar, Number)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' a number or an MBVar' + 
+                    '\n-------------------\n')
+            if isinstance(kwargs[arg], MBVar) and ('real' not in kwargs[arg].var_type):
+                raise TypeError(
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' an MBVar of type real' + 
+                    '\n-------------------\n'
+                )
+            self.initial_time= kwargs[arg]
+        try:
+            arg = 'angular_velocity'
+            assert isinstance(kwargs[arg], (MBVar, Number)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' a number or an MBVar' + 
+                    '\n-------------------\n')
+            if isinstance(kwargs[arg], MBVar) and ('real' not in kwargs[arg].var_type):
+                raise TypeError(
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' an MBVar of type real' + 
+                    '\n-------------------\n'
+                )
+            self.angular_velocity = kwargs[arg]
+        try:
+            arg = 'number_of_terms'
+            assert isinstance(kwargs[arg], (MBVar, Integral)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' a number or an MBVar' + 
+                    '\n-------------------\n')
+            if isinstance(kwargs[arg], MBVar) and ('integer' not in kwargs[arg].var_type):
+                raise TypeError(
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' an MBVar of type integer' + 
+                    '\n-------------------\n'
+                )
+            self.number_of_terms = kwargs[arg]
+        try:
+            arg = 'number_of_cycles'
+            assert isinstance(kwargs[arg], (MBVar, Integral, str)), (
+                    '\n-------------------\nERROR:' +
+                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                    ' a number or an MBVar' + 
+                    '\n-------------------\n')
+            if isinstance(kwargs[arg], MBVar) and kwargs[arg].var_type == 'string':
+                if kwargs[arg] not in ('one', 'forever'):
+                    raise ValueError(
+                        '\n-------------------\nERROR:' +
+                        ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
+                        ' either \'one\' or \'forever\', if of type string' + 
+                        '\n-------------------\n'
+                        )
+            self.number_of_cycles = kwargs[arg]
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        s = s + ', {}, {}, {}'.format(
+                    self.initial_time, 
+                    self.angular_velocity,
+                    self.number_of_terms
+                    )
+        s = s + ',\n\t {}'.format(self.coefs
+        return s
 
 
 class FrequencySweepDrive(DriveCaller):
