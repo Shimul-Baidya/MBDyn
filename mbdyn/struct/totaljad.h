@@ -84,6 +84,8 @@ public:
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
 
+     using TotalJoint::AssRes;
+
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
@@ -170,6 +172,8 @@ public:
             const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
+
+     using TotalPinJoint::AssRes;
 
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
