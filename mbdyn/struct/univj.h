@@ -84,6 +84,11 @@ public:
 		return DofOrder::ALGEBRAIC;
 	};
 
+	DofOrder::Order GetEqType(unsigned int i) const {
+		ASSERT(i >= 0 && i < 4);
+		return DofOrder::ALGEBRAIC;
+	};
+
 	void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
 		*piNumRows = 16;
 		*piNumCols = 16;
@@ -192,6 +197,11 @@ public:
 		return DofOrder::ALGEBRAIC;
 	};
 
+	DofOrder::Order GetEqType(unsigned int i) const {
+		ASSERT(i >= 0 && i < 1);
+		return DofOrder::ALGEBRAIC;
+	};
+
 	void WorkSpaceDim(integer* piNumRows, integer* piNumCols) const {
 		*piNumRows = 7;
 		*piNumCols = 7;
@@ -294,6 +304,12 @@ public:
 
 	virtual DofOrder::Order
 	GetDofType(unsigned int i) const {
+		ASSERT(i >= 0 && i < 4);
+		return DofOrder::ALGEBRAIC;
+	};
+
+	virtual DofOrder::Order
+	GetEqType(unsigned int i) const {
 		ASSERT(i >= 0 && i < 4);
 		return DofOrder::ALGEBRAIC;
 	};
