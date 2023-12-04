@@ -1786,6 +1786,8 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
      }
 
      h0d = hd * Transpose(invJ);
+
+     F = Eye3;
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>

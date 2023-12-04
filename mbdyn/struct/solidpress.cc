@@ -651,6 +651,8 @@ SurfaceLoad<ElementType, CollocationType, PressureSource>::InitCollocData(std::a
 
           A0 += alpha * detJA;
      }
+
+     DEBUGCERR("SurfaceLoad(" << GetLabel() << "): A0=" << A0 << "\n");
 }
 
 template <typename ElementType, typename CollocationType, typename PressureSource>
@@ -1280,8 +1282,8 @@ protected:
      enum class ContactState {IN_FRONT, ACTIVE, BEHIND};
 
      template <typename T>
-     std::tuple<T, T> DistanceNormalToPlane(sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3>& n0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
-     ContactState ChangeContactState(const doublereal giproj, const doublereal cosPhii, const ContactState eContactStatePrev) const;
+     void DistanceNormalToPlane(sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3>& n0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, T& g, T& cosPhi, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
+     void UpdateContactState(const doublereal gminproj, const doublereal gcosPhiavg);
 
      template <typename T>
      inline void
@@ -1304,7 +1306,7 @@ protected:
      const Mat3x3 Rn0;
      const Vec3 o0;
      sp_grad::SpColVector<doublereal, 3> F0tot, M0tot;
-     std::array<ContactState, iNumNodes> rgContactStateCurr, rgContactStatePrev;
+     ContactState eContactStateCurr, eContactStatePrev;
 };
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1331,10 +1333,6 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Unilatera
 
      gref *= sqrt(this->A0);
 
-     if (dSearchRadius < 0.) {
-          dSearchRadius = sqrt(this->A0);
-     }
-
      SpColVector<doublereal, 3 * iNumNodes> x(3 * iNumNodes, 0);
      SpColVector<doublereal, 3> X0(3, 0);
      SpMatrix<doublereal, 3, 3> R0(3, 3, 0);
@@ -1344,6 +1342,28 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Unilatera
 
      this->GetNodalPosition(x, dCoef, func);
 
+     if (dSearchRadius < 0.) {
+          dSearchRadius = std::numeric_limits<doublereal>::max();
+
+          for (index_type i = 1; i <= iNumNodes; ++i) {
+               for (index_type j = 1; j <= iNumNodes; ++j) {
+                    if (i == j) {
+                         continue;
+                    }
+
+                    const SpColVector<doublereal, 3> xi = SubMatrix<3, 1>(x, 3 * (i - 1) + 1, 1, 1, 1);
+                    const SpColVector<doublereal, 3> xj = SubMatrix<3, 1>(x, 3 * (j - 1) + 1, 1, 1, 1);
+
+                    dSearchRadius = std::min(dSearchRadius, Norm(xi - xj) / 3.);
+               }
+          }
+
+          if (dSearchRadius <= 0.) {
+               ASSERT(0);
+               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+          }
+     }
+
      pNode0->GetXCurr(X0, dCoef, func);
      pNode0->GetRCurr(R0, dCoef, func);
 
@@ -1351,12 +1371,25 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Unilatera
 
      const SpColVector<doublereal, 3> n0(R0 * Rn0.GetCol(3));
 
-     for (index_type i = 1; i <= iNumNodes; ++i) {
-          auto [giproj, cosPhii] = DistanceNormalToPlane(i, X0, R0, n0, x, oDofMap);
-          const bool bFrontSide = giproj / cosPhii >= 0.;
+     doublereal gavgproj = 0., cosPhiavg = 0.;
 
-          rgContactStatePrev[i - 1] = rgContactStateCurr[i - 1] = (bFrontSide ? ContactState::IN_FRONT : ContactState::BEHIND);
+     for (index_type i = 1; i <= iNumNodes; ++i) {
+          doublereal giproj, cosPhii;
+          DistanceNormalToPlane(i, X0, R0, n0, x, giproj, cosPhii, oDofMap);
+          gavgproj += giproj;
+          cosPhiavg += cosPhii;
      }
+
+     gavgproj /= iNumNodes;
+     cosPhiavg /= iNumNodes;
+
+     if (cosPhiavg == 0.) {
+          cosPhiavg += std::numeric_limits<doublereal>::epsilon();
+     }
+
+     const bool bFrontSide = gavgproj / cosPhiavg >= 0.;
+
+     eContactStatePrev = eContactStateCurr = (bFrontSide ? ContactState::IN_FRONT : ContactState::BEHIND);
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1385,8 +1418,11 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssRes(sp
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
 template <typename T>
-std::tuple<T, T> UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::DistanceNormalToPlane(const sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3>& n0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const
+void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::DistanceNormalToPlane(const sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3>& n0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, T& giproj, T& cosPhii, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const
 {
+     ASSERT(iNode >= 1);
+     ASSERT(iNode <= iNumNodes);
+
      using namespace sp_grad;
 
      SpColVector<doublereal, 2> r(2, 0);
@@ -1407,20 +1443,21 @@ std::tuple<T, T> UnilateralInPlaneContact<ElementType, CollocationType, ContactT
      const SpColVector<T, 3> n2(dHf_ds * x, oDofMap);
 
      const SpColVector<T, 3> n3 = Cross(n1, n2, oDofMap);
-     const SpColVector<T, 3> e3(n3 / Norm(n3, oDofMap), oDofMap);
-     const T giproj = Dot(Rn0.GetCol(3), Transpose(R0) * (X0 - SubMatrix<3, 1>(x, 3 * (iNode - 1) + 1, 1, 1, 1)) + o0, oDofMap);
-     const T cosPhi = Dot(e3, n0, oDofMap);
 
-     return {giproj, cosPhi};
+     const SpColVector<T, 3> e3(n3 / Norm(n3, oDofMap), oDofMap);
+     giproj = Dot(Rn0.GetCol(3), Transpose(R0) * (X0 - SubMatrix<3, 1>(x, 3 * (iNode - 1) + 1, 1, 1, 1)) + o0, oDofMap);
+     cosPhii = Dot(e3, n0, oDofMap);
+
+     DEBUGCERR("UnilateralInPlaneContact(" << this->GetLabel() << "): StructNode(" << this->rgNodes[iNode - 1]->GetLabel() << "): e3 = [" << e3 << "]\n");
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
-typename UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::ContactState UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::ChangeContactState(const doublereal giproj, const doublereal cosPhii, const ContactState eContactStatePrev) const
+void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::UpdateContactState(const doublereal gproj, const doublereal gcosPhi)
 {
-     const bool bOutside = fabs(giproj) > dSearchRadius;
-     const bool bFrontSide = giproj / cosPhii >= 0.;
+     const bool bOutside = fabs(gproj) > dSearchRadius;
+     const bool bFrontSide = gcosPhi >= 0.;
 
-     ContactState eContactStateCurr = eContactStatePrev;
+     DEBUGCERR("eContactStatePrev=" << static_cast<unsigned>(eContactStatePrev) << "\n");
 
      switch (eContactStatePrev) {
      case ContactState::ACTIVE:
@@ -1444,7 +1481,7 @@ typename UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::
           break;
      }
 
-     return eContactStateCurr;
+     DEBUGCERR("eContactStateCurr=" << static_cast<unsigned>(eContactStateCurr) << "\n");
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1489,26 +1526,57 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssContac
      SpColVector<T, 3> F0(3, oDofMap);
      SpColVector<T, 3> M0(3, oDofMap);
      SpColVector<T, 3> xi(3, iNumNodes * 3);
-     SpColVector<T, iNumNodes> g(iNumNodes, 0);
+     SpColVector<T, iNumNodes> g(iNumNodes, 0), cosPhi(iNumNodes, 0);
 
      const SpColVector<T, 3> n0(R0 * Rn0.GetCol(3), oDofMap);
 
      for (index_type i = 1; i <= iNumNodes; ++i) {
-          auto [giproj, cosPhii] = DistanceNormalToPlane(i, X0, R0, n0, x, oDofMap);
+          DistanceNormalToPlane(i, X0, R0, n0, x, g(i), cosPhi(i), oDofMap);
+     }
 
-          if constexpr(std::is_same<T, doublereal>::value) {
-               rgContactStateCurr[i - 1] = ChangeContactState(giproj, cosPhii, rgContactStatePrev[i - 1]);
+     doublereal dOffset = 0.;
+
+     if constexpr(std::is_same<T, doublereal>::value) {
+          doublereal gavg = 0., cosPhiavg = 0., gmin = std::numeric_limits<doublereal>::max();
+
+          for (index_type i = 1; i <= iNumNodes; ++i) {
+               gavg += g(i);
+               cosPhiavg += cosPhi(i);
+               gmin = std::min(gmin, fabs(g(i)));
           }
 
-          if (cosPhii == 0.) {
-               cosPhii += std::numeric_limits<doublereal>::epsilon(); // FIXME: avoid division by zero if n0 is normal to e3
+          gavg /= iNumNodes;
+          cosPhiavg /= iNumNodes;
+
+          if (cosPhiavg == 0.) {
+               cosPhiavg += std::numeric_limits<doublereal>::epsilon();
           }
 
-          // if (rgContactStateCurr[i - 1] == ContactState::BEHIND) {
-          //      cosPhii *= -1.; // FIXME: how to enforce zero contact pressure??
-          // }
-          
-          oDofMap.MapAssign(g(i), giproj / cosPhii);
+          UpdateContactState(gmin, gavg / cosPhiavg);
+     }
+
+     if (eContactStateCurr == ContactState::BEHIND) {
+          doublereal gcosPhiminabs = std::numeric_limits<doublereal>::max();
+
+          for (index_type i = 1; i <= iNumNodes; ++i) {
+               doublereal cosPhii = SpGradientTraits<T>::dGetValue(cosPhi(i));
+
+               if (cosPhii == 0.) {
+                    cosPhii += std::numeric_limits<doublereal>::epsilon();
+               }
+
+               gcosPhiminabs = std::min(gcosPhiminabs, SpGradientTraits<T>::dGetValue(g(i)) / cosPhii);
+          }
+
+          dOffset = gref / std::numeric_limits<doublereal>::epsilon() - gcosPhiminabs;
+     }
+
+     for (index_type i = 1; i <= iNumNodes; ++i) {
+          if (cosPhi(i) == 0.) {
+               cosPhi(i) += std::numeric_limits<doublereal>::epsilon(); // FIXME: avoid division by zero if n0 is normal to e3
+          }
+
+          g(i) = oDofMap.MapEval(g(i) / cosPhi(i) + dOffset);
      }
 
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
@@ -1621,7 +1689,7 @@ void
 UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AfterConvergence(const VectorHandler& X,
                                                                                         const VectorHandler& XP)
 {
-     rgContactStatePrev = rgContactStateCurr;
+     eContactStatePrev = eContactStateCurr;
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
