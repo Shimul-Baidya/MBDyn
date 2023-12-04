@@ -148,13 +148,18 @@ pNode1(0), pNode2(0)
    KeyTable K(HP, sBModels);
 
    /* lettura del tipo di vincolo */
-   bearing_model = bModels(HP.IsKeyWord());
+   int bm = bModels(HP.IsKeyWord());
+   if (bm == -1) {
+		silent_cerr("Unknown bearing model for HydrodynamicBearing(" << uLabel << ") at line " << HP.GetLineData() << std::endl);
+		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+   }
+   bearing_model = bModels(bm);
 
 	// Read the node of bearing from .mbd file:
    pNode1 = pDM->ReadNode<const StructNode, Node::STRUCTURAL>(HP);
 
    if (!pNode1) {
-          silent_cerr("Hydrodynamic Bearing (" << GetLabel() << ") - bearing node: structural node expected at line " << HP.GetLineData() << std::endl);
+          silent_cerr("HydrodynamicBearing(" << GetLabel() << ") - bearing node: structural node expected at line " << HP.GetLineData() << std::endl);
           throw ErrGeneric(MBDYN_EXCEPT_ARGS);
    }
 
@@ -165,14 +170,14 @@ pNode1(0), pNode2(0)
 	// Read the position offset of bearing, if supplied:
    if (HP.IsKeyWord("position")) {
         X1tilde = HP.GetPosRel(RF1);
-        DEBUGCOUT("Position offset of bearing node is supplied: " << X1tilde << std::endl);
+        DEBUGCOUT("HydrodynamicBearing(" << GetLabel() << ") : Position offset of bearing node is supplied: " << X1tilde << std::endl);
    }
 
    R1tilde = Mat3x3(Eye3);
 
 	// Read the relative reference frame of bearing, if supplied:
    if (HP.IsKeyWord("orientation")) {
-        DEBUGCOUT("Rotation orientation matrix of bearing node is supplied" << std::endl);
+        DEBUGCOUT("HydrodynamicBearing(" << GetLabel() << ") : Rotation orientation matrix of bearing node is supplied" << std::endl);
         R1tilde = HP.GetRotRel(RF1);
    }
 
@@ -180,7 +185,7 @@ pNode1(0), pNode2(0)
    pNode2 = pDM->ReadNode<const StructNode, Node::STRUCTURAL>(HP);
 
    if (!pNode2) {
-      silent_cerr("Hydrodynamic Bearing  (" << GetLabel() << ") - shaft node : structural node expected at line " << HP.GetLineData() << std::endl);
+      silent_cerr("HydrodynamicBearing(" << GetLabel() << ") - shaft node: structural node expected at line " << HP.GetLineData() << std::endl);
       throw ErrGeneric(MBDYN_EXCEPT_ARGS);
    }
 
@@ -190,7 +195,7 @@ pNode1(0), pNode2(0)
 
 	// Read the position offset of bearing, if supplied:
    if (HP.IsKeyWord("position")) {
-        DEBUGCOUT("Position offset of bearing node is supplied" << std::endl);
+        DEBUGCOUT("HydrodynamicBearing(" << GetLabel() << ") : Position offset of bearing node is supplied" << std::endl);
         X2tilde = HP.GetPosRel(RF2);
    }
 
@@ -198,30 +203,56 @@ pNode1(0), pNode2(0)
 
 	// Read the relative reference frame of the shaft, if supplied:
    if (HP.IsKeyWord("orientation")) {
-        DEBUGCOUT("Rotation orientation matrix of shaft node is supplied" << std::endl);
+        DEBUGCOUT("HydrodynamicBearing(" << GetLabel() << ") : Rotation orientation matrix of shaft node is supplied" << std::endl);
         R2tilde = HP.GetRotRel(RF2);
    }
 
    // Read the radial clearance:
-   cr = HP.GetReal();
+	try {
+		cr = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+	} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+		silent_cerr("error: invalid radial clearance " << e.Get() << " (must be non-negative) [" << e.what() << "] for HydrodynamicBearing(" << uLabel << ") at line " << HP.GetLineData() << std::endl);
+		throw e;
+	}
 
    // Read the bearing diameter:
-   d0 = HP.GetReal();
+	try {
+		d0 = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+	} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+		silent_cerr("error: invalid bearing diameter " << e.Get() << " (must be non-negative) [" << e.what() << "] for HydrodynamicBearing(" << uLabel << ") at line " << HP.GetLineData() << std::endl);
+		throw e;
+	}
 
    // Read the bearing length:
-   l0 = HP.GetReal();
+	try {
+		l0 = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+	} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+		silent_cerr("error: invalid bearing length " << e.Get() << " (must be non-negative) [" << e.what() << "] for HydrodynamicBearing(" << uLabel << ") at line " << HP.GetLineData() << std::endl);
+		throw e;
+	}
 
    // Read the lubricant:
    hFluid = HP.GetHydraulicFluid();
 
    if (HP.IsKeyWord("minimum" "speed")) {
         DEBUGCOUT("Minimum rotation speed is supplied" << std::endl);
-        wr_min = HP.GetReal();
-   } else { wr_min = 0.;};
+		try {
+			wr_min = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+		} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+			silent_cerr("error: invalid minimum rotation speed " << e.Get() << " (must be non-negative) [" << e.what() << "] for HydrodynamicBearing(" << uLabel << ") at line " << HP.GetLineData() << std::endl);
+			throw e;
+		}
+
+   } else {
+	wr_min = 0.;
+   }
 
 	// Activate element output:
 	SetOutputFlag(pDM->fReadOutput(HP, Elem::LOADABLE));
-
 }
 
 HydrodynamicBearing01::~HydrodynamicBearing01(void)
@@ -926,32 +957,62 @@ struct RollingBearingCLR : public ConstitutiveLawRead<T, Tder> {
 
 		CLType = ConstLawType::VISCOELASTIC;
 
-        bool bBall(false);
+		// defaults to roller bearing
+		bool bBall(false);
 
-        if (HP.IsKeyWord("ball" "bearing")) {
-            bBall = true;
-        } else if (HP.IsKeyWord("roller" "bearing")) {
-            bBall = false;
-        }
+		if (HP.IsKeyWord("ball" "bearing")) {
+			bBall = true;
 
-        // Ball diameter or roller length
-		doublereal dDL = HP.GetReal();
+		} else if (HP.IsKeyWord("roller" "bearing")) {
+			bBall = false;
+		}
+
+		// Ball diameter or roller length
+		doublereal dDL;
+		try {
+			dDL = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+		} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+			silent_cerr("error: invalid " << (bBall ? "ball diameter" : "roller length") << " " << e.Get() << " (must be non-negative) [" << e.what() << "] for RollingBearin constitutive law at line " << HP.GetLineData() << std::endl);
+			throw e;
+		}
+
 		/*if (dS <= 0.) {
 			silent_cerr("warning, null or negative stiffness "
 				"at line " << HP.GetLineData() << std::endl);
 		}*/
 
-        // Number of rolling elements
-		int iNElms = HP.GetInt();
+		// Number of rolling elements
+		int iNElms;
+		try {
+			iNElms = HP.GetInt(0, HighParser::range_gt<int>(0));
 
-        // Contact angle [radians]
-		doublereal dAlpha = HP.GetReal();
+		} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+			silent_cerr("error: invalid number of rolling elements " << e.Get() << " (must be non-negative) [" << e.what() << "] for RollingBearin constitutive law at line " << HP.GetLineData() << std::endl);
+			throw e;
+		}
 
-        doublereal dDamp = 0.;
+		// Contact angle [radians]
+		doublereal dAlpha;
+		try {
+			dAlpha = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
 
-        if (HP.IsKeyWord("proportional")) {
-            dDamp = HP.GetReal();
-        }
+		} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+			silent_cerr("error: invalid contact angle " << e.Get() << " (must be non-negative) [" << e.what() << "] for RollingBearin constitutive law at line " << HP.GetLineData() << std::endl);
+			throw e;
+		}
+
+		doublereal dDamp = 0.;
+
+		if (HP.IsKeyWord("proportional")) {
+			try {
+				dDamp = HP.GetReal(0., HighParser::range_gt<doublereal>(0.));
+
+			} catch (HighParser::ErrValueOutOfRange<doublereal>& e) {
+				silent_cerr("error: invalid damping coefficient " << e.Get() << " (must be non-negative) [" << e.what() << "] for RollingBearin constitutive law at line " << HP.GetLineData() << std::endl);
+				throw e;
+			}
+		}
 
 		typedef RollingBearingConstitutiveLaw<T, Tder> L;
 		SAFENEWWITHCONSTRUCTOR(pCL, L, L(bBall, dDL, iNElms, dAlpha, dDamp));
