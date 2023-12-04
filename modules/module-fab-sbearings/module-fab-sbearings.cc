@@ -801,15 +801,15 @@ class RollingBearingConstitutiveLaw
 : public ConstitutiveLaw<T, Tder> {
 private:
 	doublereal DSphere;         // Sphere (or ball) diameter [m]
-	doublereal ZRollElem;       // Number of rolling elements (balls or rollers)
+	int ZRollElem;       // Number of rolling elements (balls or rollers)
 	doublereal LRoller;         // Length of the rollers [m]
 	doublereal AlphaContact;    // Contact angle (zero if contact is purely radial)
 	doublereal cDamping;         // Proportional damping coefficient
     bool bIsBallBearing;        // Is it a ball bearing? If not, it is a roller bearing.
 
 public:
-	RollingBearingConstitutiveLaw(bool bBall, doublereal dDL, doublereal dNElms, doublereal dAlpha, doublereal dDamp)
-	: DSphere(dDL), ZRollElem(dNElms), LRoller(dDL), AlphaContact(dAlpha), bIsBallBearing(bBall), cDamping(dDamp) {
+	RollingBearingConstitutiveLaw(bool bBall, doublereal dDL, int iNElms, doublereal dAlpha, doublereal dDamp)
+	: DSphere(dDL), ZRollElem(iNElms), LRoller(dDL), AlphaContact(dAlpha), cDamping(dDamp), bIsBallBearing(bBall) {
 		NO_OP;
 	};
 
@@ -942,7 +942,7 @@ struct RollingBearingCLR : public ConstitutiveLawRead<T, Tder> {
 		}*/
 
         // Number of rolling elements
-		doublereal dNElms = HP.GetReal();
+		int iNElms = HP.GetInt();
 
         // Contact angle [radians]
 		doublereal dAlpha = HP.GetReal();
@@ -954,7 +954,7 @@ struct RollingBearingCLR : public ConstitutiveLawRead<T, Tder> {
         }
 
 		typedef RollingBearingConstitutiveLaw<T, Tder> L;
-		SAFENEWWITHCONSTRUCTOR(pCL, L, L(bBall, dDL, dNElms, dAlpha, dDamp));
+		SAFENEWWITHCONSTRUCTOR(pCL, L, L(bBall, dDL, iNElms, dAlpha, dDamp));
 
 		return pCL;
 	};

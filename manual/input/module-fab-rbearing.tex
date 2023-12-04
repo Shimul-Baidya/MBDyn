@@ -30,26 +30,19 @@
 \emph{Author: Eduardo Okabe}
 
 \noindent
-This module implements the \kw{hydrodynamic bearing} (described below) and the \htmlref{\kw{rolling bearing}}{sec:MODULES:CL:ROLLING-BEARING} constitutive law.
+This module implements the \kw{rolling bearing} constitutive law (described below) and the \htmlref{\kw{hydrodynamic bearing}}{sec:MODULES:ELEM:HYDRODYNAMIC-BEARING}.
 
-\subsubsection{Hydrodynamic bearing}
-\label{sec:MODULES:ELEM:HYDRODYNAMIC-BEARING}
+\subsubsection{Rolling bearing}
+\label{sec:MODULES:CL:ROLLING-BEARING}
 \begin{Verbatim}[commandchars=\\\{\}]
-    \bnt{name} ::= \kw{hydrodynamic bearing}
+    \bnt{name} ::= \kw{rolling bearing}
 
     \bnt{arglist} ::=
         [ \kw{help} , ]
-        \{ \kw{Ocvirk} | \kw{Capone 1991} | \kw{Sommerfeld} \} ,
-        \bnt{structural_node_1_label} ,
-            [ \kw{position} , (\ty{Vec3}) \bnt{node_1_offset} , ]
-            [ \kw{orientation} , (\ty{OrientationMatrix}) \bnt{node_1_orientation_matrix} , ]
-        \bnt{structural_node_2_label} ,
-            [ \kw{position} , (\ty{Vec3}) \bnt{node_2_offset} , ]
-            [ \kw{orientation} , (\ty{OrientationMatrix}) \bnt{node_2_orientation_matrix} , ]
-        (\ty{real}) \bnt{radial_clearance} ,
-        (\ty{real}) \bnt{bearing_diameter} ,
-        (\ty{real}) \bnt{bearing_length} ,
-        (\hty{HydraulicFluid}) \bnt{fluid}
-        [ , \kw{minimum speed} , (\ty{real}) \bnt{minimum_speed} ]
+        \{ \kw{ball bearing} | \kw{roller bearing} \} ,
+        (\ty{real}) \bnt{roller_length} ,
+        (\ty{integer}) \bnt{rolling_elements_number} ,
+        (\ty{real}) \bnt{contact_angle}
+        [ , \kw{proportional} , \bnt{damping_coefficient} ]
 \end{Verbatim}
 
