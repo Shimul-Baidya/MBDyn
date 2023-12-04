@@ -41,10 +41,10 @@ The rolling bearing is implemented as a 3D constitutive law according to \cite{H
 
     \bnt{arglist} ::=
         [ \kw{help} , ]
-        \{ \kw{ball bearing} | \kw{roller bearing} \} ,
+        [ \{ \kw{ball bearing} | \kw{roller bearing} \} , ]
         (\ty{real}) \bnt{roller_length} ,
         (\ty{integer}) \bnt{rolling_elements_number} ,
         (\ty{real}) \bnt{contact_angle}
         [ , \kw{proportional} , \bnt{damping_coefficient} ]
 \end{Verbatim}
-
+If neither \kw{ball bearing} nor \kw{roller bearing} is given, it defaults to \kw{roller bearing}.
