@@ -106,6 +106,8 @@ public:
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
 
+     using Body::AssRes;
+
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
@@ -154,6 +156,8 @@ public:
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
 
+     using Body::AssRes;
+
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,
             doublereal dCoef,
@@ -194,6 +198,8 @@ public:
             const VectorHandler& XCurr,
             const VectorHandler& XPrimeCurr,
             VariableSubMatrixHandler& WorkMat) override;
+
+     using Body::AssRes;
 
      virtual SubVectorHandler&
      AssRes(SubVectorHandler& WorkVec,

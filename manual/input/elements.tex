@@ -87,7 +87,7 @@ where \nt{elem\_type} is one of the following:
 
 \item thermal elements:
 \begin{itemize}
-\item TODO \ldots
+\item \kw{thermal}
 \end{itemize}
 
 \item output elements:
@@ -3768,7 +3768,7 @@ The relative position is constrained as well.
 The joint is shown in Figure~\ref{fig:el:joint:CARDANO} where the origins and orientations of \nt{node\_1} and \nt{node\_2} are given by axes 1, 2, 3 and 1$^\prime$, 2$^\prime$, 3$^\prime$, respectively. The central, constrained, axes 3 and 2$^\prime$ are obtained after having applied \nt{relative\_offset} and \nt{relative\_orientation\_matrix} transformations to \nt{node\_1} and \nt{node\_2}, respectively.
 \begin{figure}
 \centering
-\includegraphics[width=.5\textwidth]{Cardano}
+\includegraphics[width=.5\textwidth]{cardano}
 \caption{Cardano hinge.}
 \label{fig:el:joint:CARDANO}
 \end{figure}
@@ -6848,6 +6848,10 @@ Its support may be discontinued in the future.
 %\subsection{Structural output}
 %\label{sec:EL:OUTELEM:STRUCTURAL_OUTPUT}
 %TODO.
+
+
+% Thermal elements
+\input{elemthermo}
 
 
 
