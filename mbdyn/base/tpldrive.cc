@@ -36,6 +36,6 @@
 doublereal 
 GetT(MBDynParser& /* HP */ , const doublereal& /* t */ )
 {
-	return 0.;
+	return 1.;
 }
 

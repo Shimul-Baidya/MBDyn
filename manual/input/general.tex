@@ -3470,18 +3470,20 @@ a shortcut for nothing;
 \item the \kw{single} template drive caller:
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{tpl_drive_caller} ::= \kw{single} ,
-        (\ty{<Entity>}) \bnt{entity} , (\hty{DriveCaller}) \bnt{drive_caller}
+        (\hty{DriveCaller}) \bnt{drive_caller} # in case \ty{<Entity>} is scalar
+        (\ty{<Entity>}) \bnt{entity} , (\hty{DriveCaller}) \bnt{drive_caller} # otherwise
 \end{Verbatim}
-corresponding to $\nt{entity} \cdot \nt{drive\_caller}$,
-where \nt{entity} is a constant of the expected type (scalar, $3 \times 1$ 
+corresponding to the expression $\nt{entity} \cdot \nt{drive\_caller}$,
+where \nt{entity} is a constant of the expected type ($3 \times 1$ 
 vector, $6 \times 1$ vector, $3 \times 3$ matrix, $6 \time 6$ matrix
 are the types currently defined, but since 
 a C++ template has been used, the implementation of new ones 
 is straightforward).
+If \ty{<Entity>} is a scalar, then \nt{entity} is assumed to be 1.
 
 \begin{framed}
 The keyword \kw{single} can be omitted; however, this practice is not recommended,
-since in some contexts the keyword is required to disambiguate the syntax.
+since in some contexts such keyword is required to disambiguate the syntax.
 \end{framed}
 
 In some contexts (e.g.\ when specifying the direction of a force),
@@ -3526,6 +3528,7 @@ special matrix layouts:
 \item \kw{sym} indicates that only the upper triangular components are expected;
 \item \kw{diag} indicates that only the diagonal components are expected;
 \end{itemize}
+When \ty{<Entity>} is a scalar, \kw{component} is treated as \kw{single}.
 
 \paragraph{Example.} \
 The following example implements a \hty{Vec3} template drive having constant value in the X direction, and a \kw{sine} drive in the Z direction.
@@ -3546,7 +3549,7 @@ The following example implements a \hty{Vec3} template drive having constant val
 \end{Verbatim}
 which linearly combines a set of arbitrary template drive callers.
 \end{itemize}
-In case of scalar values, a normal drive caller is actually instantiated,
+In case \ty{<Entity>} is a scalar, a normal array drive caller is actually instantiated,
 so no overhead is added.
 
 In the case of the \kw{component} template drive caller,
