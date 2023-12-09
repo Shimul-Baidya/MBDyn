@@ -196,7 +196,7 @@ DataManager::DofOwnerInit(void)
 		OutHdl.Open(OutputHandler::DOFSTATS);
 	}
 
-	std::ostream& out_ds = (uPrintFlags & PRINT_TO_FILE)
+	std::ostream& out_ds = ((uPrintFlags & PRINT_TO_FILE) && OutHdl.UseText(OutputHandler::DOFSTATS))
 		? OutHdl.DofStats()
 		: std::cout;
 
