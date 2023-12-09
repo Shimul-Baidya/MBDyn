@@ -214,9 +214,6 @@ protected:
 	MBDynNcDim m_Dim_Eig_iSize;
 	MBDynNcDim m_Dim_Eig_iComplex;
 
-	MBDynNcVar Var_Eig_lStep;
-	MBDynNcVar Var_Eig_dTime;
-	MBDynNcVar Var_Eig_dCoef;
 	MBDynNcVar Var_Eig_dAplus;
 	MBDynNcVar Var_Eig_dAminus;
 	MBDynNcVar Var_Eig_dAlpha;
