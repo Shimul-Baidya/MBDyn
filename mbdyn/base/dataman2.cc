@@ -1530,46 +1530,45 @@ DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize)
 #ifdef USE_NETCDF
 	/* Set up additional NetCDF stuff for eigenanalysis output */
 	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-
-		OutputHandler::NcDimVec dim(1);
-		dim[0] = OutHdl.CreateDim("eigensolutions", iNumAnalyses);
-
 		m_Dim_Eig_iSize = OutHdl.CreateDim("eig_iSize", iSize);
 		m_Dim_Eig_iComplex = OutHdl.CreateDim("complex_var_dim", 2);
 
-		OutputHandler::AttrValVec attrs2(2);
-		attrs2[0] = OutputHandler::AttrVal("type", "integer");
-		attrs2[1] = OutputHandler::AttrVal("description",
-				"timestep index of eigensolution");
+		OutputHandler::NcDimVec dim(1);
+                unsigned uNumNodes = 0;
 
-		Var_Eig_lStep = OutHdl.CreateVar("eig.step", MbNcInt, attrs2, dim);
+		for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
+			const StructNode *pSN = dynamic_cast<const StructNode*>(oKeyNode.second);
 
-		OutputHandler::AttrValVec attrs3(3);
-		attrs3[0] = OutputHandler::AttrVal("units", "s");
-		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
-		attrs3[2] = OutputHandler::AttrVal("description",
-				"simulation time at which the eigensolution was computed");
+			if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                             continue;
+			}
 
-		Var_Eig_dTime = OutHdl.CreateVar("eig.time", MbNcDouble, attrs3, dim);
+                        ++uNumNodes;
+                }
 
-		attrs3[0] = OutputHandler::AttrVal("units", "-");
-		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
-		attrs3[2] = OutputHandler::AttrVal("description",
-				"coefficient used to build Aplus and Aminus matrices");
+                dim[0] = OutHdl.CreateDim("eig_iIdxSize", uNumNodes);
 
-		Var_Eig_dCoef = OutHdl.CreateVar("eig.dCoef", MbNcDouble, attrs3, dim);
+                OutputHandler::AttrValVec attrs2(2);
+                attrs2[0] = OutputHandler::AttrVal("type", "integer");
+                attrs2[1] = OutputHandler::AttrVal("description",
+                                                   "structural nodes base index");
 
-		OutputHandler::NcDimVec dim2(2);
-		integer iNumNodes = NodeData[Node::STRUCTURAL].NodeContainer.size();
+                Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim);
 
-		dim2[0] = dim[0];
-		dim2[1] = OutHdl.CreateDim("eig_iIdxSize", iNumNodes);
+                uNumNodes = 0;
 
-		attrs2[0] = OutputHandler::AttrVal("type", "integer");
-		attrs2[1] = OutputHandler::AttrVal("description",
-				"structural nodes base index");
+                for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
+                     const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oKeyNode.second);
+                     const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
+                     ASSERT(pN != 0);
 
-		Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim2);
+                     if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                          continue;
+                     }
+
+                     const integer iFirstIndex = pN->iGetFirstIndex();
+                     OutHdl.WriteNcVar(Var_Eig_Idx, iFirstIndex, uNumNodes++);
+                }
 	}
 #endif /* USE_NETCDF */
 }
@@ -1604,10 +1603,52 @@ DataManager::OutputEigParams(const doublereal& dTime,
 	}
 #ifdef USE_NETCDF
 	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-		long lStep = OutHdl.GetCurrentStep();
-		OutHdl.WriteNcVar(Var_Eig_dTime, dTime, uCurrEigSol);
-		OutHdl.WriteNcVar(Var_Eig_lStep, lStep, uCurrEigSol);
-		OutHdl.WriteNcVar(Var_Eig_dCoef, dCoef, uCurrEigSol);
+		const long lStep = OutHdl.GetCurrentStep();
+                
+                OutputHandler::NcDimVec dim(1);
+		dim[0] = OutHdl.DimV1();
+                
+		OutputHandler::AttrValVec attrs2(2);
+		attrs2[0] = OutputHandler::AttrVal("type", "integer");
+		attrs2[1] = OutputHandler::AttrVal("description",
+                                                   "timestep index of eigensolution");
+                
+		std::stringstream varname_ss;
+                
+		varname_ss << "eig." << uCurrEigSol << ".step";
+                
+		MBDynNcVar Var_Eig_lStep = OutHdl.CreateVar(varname_ss.str(), MbNcInt, attrs2, dim);
+
+		OutputHandler::AttrValVec attrs3(3);
+		attrs3[0] = OutputHandler::AttrVal("units", "s");
+		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
+		attrs3[2] = OutputHandler::AttrVal("description",
+                                                   "simulation time at which the eigensolution was computed");
+
+                varname_ss.str(std::string());
+                varname_ss.clear();
+
+                varname_ss << "eig." << uCurrEigSol << ".time";
+                
+		MBDynNcVar Var_Eig_dTime = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim);
+
+		attrs3[0] = OutputHandler::AttrVal("units", "-");
+		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
+		attrs3[2] = OutputHandler::AttrVal("description",
+                                                   "coefficient used to build Aplus and Aminus matrices");
+
+                varname_ss.str(std::string());
+                varname_ss.clear();
+
+                varname_ss << "eig." << uCurrEigSol << ".dCoef";
+                
+		MBDynNcVar Var_Eig_dCoef = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim);
+
+                const std::vector<size_t> ncStartPos(1, 0);
+                
+		Var_Eig_dTime.putVar(ncStartPos, &dTime);
+		Var_Eig_lStep.putVar(ncStartPos, &lStep);
+		Var_Eig_dCoef.putVar(ncStartPos, &dCoef);
 	}
 #endif /* USE_NETCDF */
 }
@@ -1953,36 +1994,6 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 
 		out << "];" << std::endl;
 	}
-#ifdef USE_NETCDF
-	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-
-		/* start corner and count vector for NetCDF matrix output.
-		 * Since we are writing a matrix element-by-element, count will
-		 * always be (1, 1) and start will move to the desired place in the
-		 * matrix */
-		std::vector<size_t> start (2, 0);	
-		const std::vector<size_t> count (2, 1);
-
-		start[0] = uCurrEigSol;
-		
-		for (i = NodeData[Node::STRUCTURAL].NodeContainer.begin(); i != e; ++i) {
-			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(i->second);
-			const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-			integer iNodeIndex;
-			ASSERT(pN != 0);
-
-			if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
-				start[1]++; 	// skip the dummy node
-				continue;
-			}
-
-			iNodeIndex = pN->iGetFirstIndex();
-			OutHdl.WriteNcVar(Var_Eig_Idx, iNodeIndex, start, count); 
-			start[1]++;
-		}
-
-	}
-#endif // USE_NETCDF
 }
 
 void
