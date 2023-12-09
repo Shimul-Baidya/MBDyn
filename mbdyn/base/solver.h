@@ -160,7 +160,8 @@ public:
 		// for each analysis in the list
 		std::vector<doublereal> Analyses;
 		std::vector<doublereal>::iterator currAnalysis;
-
+                unsigned currAnalysisIndex;
+             
 		doublereal dParam;
 		bool bOutputModes;
 		enum { EIGAN_WIDTH_COMPUTE = -1 };
@@ -222,6 +223,7 @@ public:
 		EigenAnalysis(void)
 		: bAnalysis(false),
 		uFlags(EIG_NONE),
+                currAnalysisIndex(0),
 		dParam(1.),
 		bOutputModes(false),
 		iFNameWidth(0),
@@ -231,7 +233,7 @@ public:
                 eWhichEigVal(SM)
 		{
 			currAnalysis = Analyses.end();
-		};
+		}
 	};
 
 protected:

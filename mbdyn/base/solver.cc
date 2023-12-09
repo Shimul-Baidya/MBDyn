@@ -4101,6 +4101,7 @@ Solver::ReadData(MBDynParser& HP)
                         ASSERT(EigAn.Analyses.size() > 0);
                         // initialize EigAn
                         EigAn.currAnalysis = EigAn.Analyses.begin();
+                        EigAn.currAnalysisIndex = 0u;
                         EigAn.bAnalysis = true;
 
                         // permute is the default; use "balance, no" to disable
@@ -6920,7 +6921,8 @@ lwork       Size of workspace, >= 4+m+5jmax+3kmax if GMRESm
 bool Solver::EigNext(bool (*pfnConditionTime)(doublereal, doublereal), bool bNewLine)
 {
      ASSERT(!EigAn.bAnalysis || (EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis <= EigAn.Analyses.end()));
-
+     ASSERT(EigAn.currAnalysisIndex <= EigAn.Analyses.size());
+     
      if (!(EigAn.bAnalysis &&
            EigAn.currAnalysis != EigAn.Analyses.end() &&
            (*pfnConditionTime)(*EigAn.currAnalysis, dTime))) {
@@ -6930,10 +6932,16 @@ bool Solver::EigNext(bool (*pfnConditionTime)(doublereal, doublereal), bool bNew
      ASSERT(EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis < EigAn.Analyses.end());
 
      Eig(bNewLine);
-     ++EigAn.currAnalysis;
-
+     
+     do {
+          ++EigAn.currAnalysis;
+     } while (EigAn.currAnalysis != EigAn.Analyses.end() && (*pfnConditionTime)(*EigAn.currAnalysis, dTime));
+     
+     ++EigAn.currAnalysisIndex;
+     
      ASSERT(EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis <= EigAn.Analyses.end());
-
+     ASSERT(EigAn.currAnalysisIndex <= EigAn.Analyses.size());
+     
      return true;
 }
 
@@ -7048,7 +7056,7 @@ Solver::Eig(bool bNewLine)
 		<< "Matrix B:" << std::endl << *pMatB << std::endl);
 #endif /* DEBUG */
 
-	unsigned uCurr = EigAn.currAnalysis - EigAn.Analyses.begin();
+	unsigned uCurr = EigAn.currAnalysisIndex;
 	if (EigAn.uFlags & EigenAnalysis::EIG_OUTPUT) {
 		unsigned uSize = EigAn.Analyses.size();
 		if (uSize >= 1) {
