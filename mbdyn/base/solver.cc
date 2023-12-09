@@ -4123,38 +4123,41 @@ Solver::ReadData(MBDynParser& HP)
 			}
 			break;
 
-		case EIGENANALYSIS:
+		case EIGENANALYSIS: {
 			// initialize output precision: 0 means use default precision
 			EigAn.iMatrixPrecision = 0;
 			EigAn.iResultsPrecision = 0;
 
 			// read eigenanalysis time (to be changed)
-			if (HP.IsKeyWord("list")) {
-				int iNumTimes = HP.GetInt();
-				if (iNumTimes <= 0) {
-					silent_cerr("invalid number of eigenanalysis times "
-						"at line " << HP.GetLineData()
-						<< std::endl);
-					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-				}
 
-				EigAn.Analyses.resize(iNumTimes);
-				for (std::vector<doublereal>::iterator i = EigAn.Analyses.begin();
-					i != EigAn.Analyses.end(); ++i)
-				{
-					*i = HP.GetReal();
-					if (i > EigAn.Analyses.begin() && *i <= *(i-1)) {
-						silent_cerr("eigenanalysis times must be in strict ascending order "
-							"at line " << HP.GetLineData()
-							<< std::endl);
-						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-					}
-				}
+                        const int iNumTimes = HP.IsKeyWord("list") ? HP.GetInt() : 1;
 
-			} else {
-				EigAn.Analyses.resize(1);
-				EigAn.Analyses[0] = HP.GetReal();
-			}
+                        if (iNumTimes <= 0) {
+                             silent_cerr("invalid number of eigenanalysis times "
+                                         "at line " << HP.GetLineData()
+                                         << std::endl);
+                             throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                        }
+
+                        EigAn.Analyses.clear();
+                        EigAn.Analyses.reserve(iNumTimes);
+                                
+                        for (int i = 0; i < iNumTimes; ++i)
+                        {
+                             const doublereal dTimeEig = HP.GetReal();
+                             
+                             if (i > 0 && dTimeEig <= EigAn.Analyses.back()) {
+                                  silent_cerr("eigenanalysis times must be in strict ascending order "
+                                              "at line " << HP.GetLineData() << "\n");
+                                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                             }
+
+                             if (dTimeEig <= dFinalTime) {
+                                  EigAn.Analyses.push_back(dTimeEig);
+                             } else {
+                                  silent_cerr("warning: eigenanalysis at " << dTimeEig << " is beyond the final time " << dFinalTime << " and will not be executed\n");
+                             }
+                        }                        
 
 			ASSERT(EigAn.Analyses.size() > 0);
 			// initialize EigAn
@@ -4559,7 +4562,7 @@ Solver::ReadData(MBDynParser& HP)
 			}
 			silent_cerr("warning: \"eigenanalysis\" not supported; ignored" << std::endl);
 #endif // !USE_EIG
-			break;
+                } break;
 
 		case SOLVER:
 			silent_cerr("\"solver\" keyword at line "
