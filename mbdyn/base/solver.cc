@@ -856,16 +856,7 @@ Solver::Prepare(void)
 	 *     o         # if t < t_i, analysis at t = t_i *before derivatives*
 	 *         o     # if t == t_i, analysis at t = t_i *after derivatives*
 	 */
-	if (EigAn.bAnalysis) {
-		EigAn.currAnalysis = EigAn.Analyses.begin();
-		while (*EigAn.currAnalysis < dTime) {
-			Eig();
-			++EigAn.currAnalysis;
-			if (EigAn.currAnalysis == EigAn.Analyses.end()) {
-				break;
-			}
-		}
-	}
+        EigAll(Solver::EigAnTimeBeforeNow);
 
 	/* calcolo delle derivate */
 	DEBUGLCOUT(MYDEBUG_DERIVATIVES, "derivatives solution step"
@@ -1040,14 +1031,7 @@ Solver::Prepare(void)
 
 	// if eigenanalysis is requested at initial time,
 	// perform *after* derivatives
-	if (EigAn.bAnalysis) {
-		if (EigAn.currAnalysis != EigAn.Analyses.end() && *EigAn.currAnalysis == dTime) {
-			Eig();
-			if (EigAn.currAnalysis != EigAn.Analyses.end()) {
-				++EigAn.currAnalysis;
-			}
-		}
-	}
+        EigAll(Solver::EigAnTimeExactlyNow);
 
 	/* Dati comuni a passi fittizi e normali */
 	lStep = 1;
@@ -1687,18 +1671,7 @@ IfFirstStepIsToBeRepeated:
 	dTotErr += dTest;
 	iTotIter += iStIter;
 
-	if (EigAn.bAnalysis
-		&& EigAn.currAnalysis != EigAn.Analyses.end()
-		&& *EigAn.currAnalysis <= dTime)
-	{
-		std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-                        EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-		if (i != EigAn.Analyses.end()) {
-			EigAn.currAnalysis = --i;
-		}
-		Eig();
-		++EigAn.currAnalysis;
-	}
+        EigAll(Solver::EigAnTimeUntilNow);
 
 	if (pRTSolver) {
 		pRTSolver->Init();
@@ -1937,18 +1910,7 @@ IfFirstStepIsToBeRepeated:
 
 		bSolConv = false;
 
-		if (EigAn.bAnalysis
-			&& EigAn.currAnalysis != EigAn.Analyses.end()
-			&& *EigAn.currAnalysis <= dTime)
-		{
-			std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-				EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-			if (i != EigAn.Analyses.end()) {
-				EigAn.currAnalysis = --i;
-			}
-			Eig(bOutputCounter);
-			++EigAn.currAnalysis;
-		}
+                EigAll(Solver::EigAnTimeUntilNow, bOutputCounter);
 
 		/* Calcola il nuovo timestep */
 		dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
@@ -2191,18 +2153,7 @@ IfFirstStepIsToBeRepeated:
 
 		bSolConv = false;
 
-		if (EigAn.bAnalysis
-			&& EigAn.currAnalysis != EigAn.Analyses.end()
-			&& *EigAn.currAnalysis <= dTime)
-		{
-			std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-				EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-			if (i != EigAn.Analyses.end()) {
-				EigAn.currAnalysis = --i;
-			}
-			Eig(bOutputCounter);
-			++EigAn.currAnalysis;
-		}
+                EigAll(Solver::EigAnTimeUntilNow, bOutputCounter);
 
 		/* Calcola il nuovo timestep */
 		dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
@@ -2465,18 +2416,7 @@ IfStepIsToBeRepeated:
 
 	bSolConv = false;
 
-	if (EigAn.bAnalysis
-		&& EigAn.currAnalysis != EigAn.Analyses.end()
-		&& *EigAn.currAnalysis <= dTime)
-	{
-		std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-                        EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-		if (i != EigAn.Analyses.end()) {
-			EigAn.currAnalysis = --i;
-		}
-		Eig(bOutputCounter);
-		++EigAn.currAnalysis;
-	}
+        EigAll(Solver::EigAnTimeUntilNow, bOutputCounter);
 
 	/* Calcola il nuovo timestep */
 	dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
@@ -4124,28 +4064,27 @@ Solver::ReadData(MBDynParser& HP)
 			break;
 
 		case EIGENANALYSIS: {
-			// initialize output precision: 0 means use default precision
-			EigAn.iMatrixPrecision = 0;
-			EigAn.iResultsPrecision = 0;
+                        // initialize output precision: 0 means use default precision
+                        EigAn.iMatrixPrecision = 0;
+                        EigAn.iResultsPrecision = 0;
 
-			// read eigenanalysis time (to be changed)
+                        // read eigenanalysis time (to be changed)
 
-                        const int iNumTimes = HP.IsKeyWord("list") ? HP.GetInt() : 1;
+                        const integer iNumTimes = HP.IsKeyWord("list") ? HP.GetInt() : 1;
 
                         if (iNumTimes <= 0) {
                              silent_cerr("invalid number of eigenanalysis times "
-                                         "at line " << HP.GetLineData()
-                                         << std::endl);
+                                         "at line " << HP.GetLineData() << "\n");
                              throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                         }
 
                         EigAn.Analyses.clear();
                         EigAn.Analyses.reserve(iNumTimes);
-                                
-                        for (int i = 0; i < iNumTimes; ++i)
+
+                        for (integer i = 0; i < iNumTimes; ++i)
                         {
                              const doublereal dTimeEig = HP.GetReal();
-                             
+
                              if (i > 0 && dTimeEig <= EigAn.Analyses.back()) {
                                   silent_cerr("eigenanalysis times must be in strict ascending order "
                                               "at line " << HP.GetLineData() << "\n");
@@ -4157,12 +4096,12 @@ Solver::ReadData(MBDynParser& HP)
                              } else {
                                   silent_cerr("warning: eigenanalysis at " << dTimeEig << " is beyond the final time " << dFinalTime << " and will not be executed\n");
                              }
-                        }                        
+                        }
 
-			ASSERT(EigAn.Analyses.size() > 0);
-			// initialize EigAn
-			EigAn.currAnalysis = EigAn.Analyses.begin();
-			EigAn.bAnalysis = true;
+                        ASSERT(EigAn.Analyses.size() > 0);
+                        // initialize EigAn
+                        EigAn.currAnalysis = EigAn.Analyses.begin();
+                        EigAn.bAnalysis = true;
 
                         // permute is the default; use "balance, no" to disable
                         EigAn.uFlags = EigenAnalysis::EIG_PERMUTE;
@@ -6977,6 +6916,37 @@ lwork       Size of workspace, >= 4+m+5jmax+3kmax if GMRESm
 	}
 }
 #endif // USE_JDQZ
+
+bool Solver::EigNext(bool (*pfnConditionTime)(doublereal, doublereal), bool bNewLine)
+{
+     ASSERT(!EigAn.bAnalysis || (EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis <= EigAn.Analyses.end()));
+
+     if (!(EigAn.bAnalysis &&
+           EigAn.currAnalysis != EigAn.Analyses.end() &&
+           (*pfnConditionTime)(*EigAn.currAnalysis, dTime))) {
+          return false;
+     }
+
+     ASSERT(EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis < EigAn.Analyses.end());
+
+     Eig(bNewLine);
+     ++EigAn.currAnalysis;
+
+     ASSERT(EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis <= EigAn.Analyses.end());
+
+     return true;
+}
+
+int Solver::EigAll(bool (*pfnConditionTime)(doublereal, doublereal), bool bNewLine)
+{
+     int iCnt = 0;
+
+     while (EigNext(pfnConditionTime, bNewLine)) {
+          ++iCnt;
+     }
+
+     return iCnt;
+}
 
 // Driver for eigenanalysis
 void

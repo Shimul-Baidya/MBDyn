@@ -236,7 +236,11 @@ public:
 
 protected:
 	struct EigenAnalysis EigAn;
-
+        static bool EigAnTimeBeforeNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn < dTimeCurr; }
+        static bool EigAnTimeUntilNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn <= dTimeCurr; }
+        static bool EigAnTimeExactlyNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn == dTimeCurr; }
+        bool EigNext(bool (*pfnConditionTime)(doublereal, doublereal) = EigAnTimeUntilNow, bool bNewLine = false);
+        int EigAll(bool (*pfnConditionTime)(doublereal, doublereal) = EigAnTimeUntilNow, bool bNewLine = false);
 	void Eig(bool bNewLine = false);
 
 	RTSolverBase *pRTSolver;
