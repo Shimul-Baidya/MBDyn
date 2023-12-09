@@ -217,7 +217,6 @@ protected:
 	MBDynNcVar Var_Eig_dAplus;
 	MBDynNcVar Var_Eig_dAminus;
 	MBDynNcVar Var_Eig_dAlpha;
-	MBDynNcVar Var_Eig_Idx;
 	MBDynNcVar Var_Eig_dVR;
 	MBDynNcVar Var_Eig_dVL;
 

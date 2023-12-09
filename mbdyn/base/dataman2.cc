@@ -1553,8 +1553,13 @@ DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize)
                 attrs2[1] = OutputHandler::AttrVal("description",
                                                    "structural nodes base index");
 
-                Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim);
+                MBDynNcVar Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim);
 
+                attrs2[1] = OutputHandler::AttrVal("description",
+                                                   "structural nodes label");
+                
+                MBDynNcVar Var_Eig_Label = OutHdl.CreateVar("eig.label", MbNcInt, attrs2, dim);
+                
                 uNumNodes = 0;
 
                 for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
@@ -1567,7 +1572,12 @@ DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize)
                      }
 
                      const integer iFirstIndex = pN->iGetFirstIndex();
-                     OutHdl.WriteNcVar(Var_Eig_Idx, iFirstIndex, uNumNodes++);
+                     const unsigned uLabel = pN->GetLabel();
+                     
+                     OutHdl.WriteNcVar(Var_Eig_Idx, iFirstIndex, uNumNodes);
+                     OutHdl.WriteNcVar(Var_Eig_Label, uLabel, uNumNodes);
+                     
+                     ++uNumNodes;
                 }
 	}
 #endif /* USE_NETCDF */
