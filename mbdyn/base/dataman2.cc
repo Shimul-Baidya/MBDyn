@@ -1525,134 +1525,136 @@ DataManager::OutputPrepare(void)
 
 /* Output setup for Eigenanalysis parameters */
 void
-DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize)
+DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize, unsigned uFlags)
 {
 #ifdef USE_NETCDF
         using namespace std::string_literals;
-	/* Set up additional NetCDF stuff for eigenanalysis output */
-	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-		m_Dim_Eig_iSize = OutHdl.CreateDim("eig_iSize", iSize);
-		m_Dim_Eig_iComplex = OutHdl.CreateDim("complex_var_dim", 2);
+        /* Set up additional NetCDF stuff for eigenanalysis output */
+        if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
+                m_Dim_Eig_iSize = OutHdl.CreateDim("eig_iSize", iSize);
+                m_Dim_Eig_iComplex = OutHdl.CreateDim("complex_var_dim", 2);
 
-                unsigned uNumNodes = 0;
+                if (uFlags & Solver::EigenAnalysis::EIG_OUTPUT_GEOMETRY) {
+                        unsigned uNumNodes = 0;
 
-		for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
-			const StructNode *pSN = dynamic_cast<const StructNode*>(oKeyNode.second);
+                        for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
+                                const StructNode *pSN = dynamic_cast<const StructNode*>(oKeyNode.second);
 
-			if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
-                             continue;
-			}
+                                if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                                        continue;
+                                }
 
-                        ++uNumNodes;
+                                ++uNumNodes;
+                        }
+
+                        if (uNumNodes) {
+                                m_Dim_Eig_iIdxSize = OutHdl.CreateDim("eig_iIdxSize", uNumNodes); // Must not be created if uNumNodes == 0
+                                m_Dim_Eig_X0Size = OutHdl.CreateDim("eig_X0Size", 6);
+
+                                OutputHandler::NcDimVec dim(1);
+
+                                dim[0] = m_Dim_Eig_iIdxSize;
+
+                                OutputHandler::AttrValVec attrs2(2);
+
+                                attrs2[0] = OutputHandler::AttrVal("type", "integer");
+                                attrs2[1] = OutputHandler::AttrVal("description",
+                                                                   "structural nodes base index");
+
+                                MBDynNcVar Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim);
+
+                                attrs2[1] = OutputHandler::AttrVal("description",
+                                                                   "structural nodes label");
+
+                                MBDynNcVar Var_Eig_Label = OutHdl.CreateVar("eig.labels", MbNcInt, attrs2, dim);
+
+                                uNumNodes = 0;
+
+                                for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
+                                        const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oKeyNode.second);
+                                        const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
+                                        ASSERT(pN != 0);
+
+                                        if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                                                continue;
+                                        }
+
+                                        const integer iFirstIndex = pN->iGetFirstIndex();
+                                        const unsigned uLabel = pN->GetLabel();
+
+                                        OutHdl.WriteNcVar(Var_Eig_Idx, iFirstIndex, uNumNodes);
+                                        OutHdl.WriteNcVar(Var_Eig_Label, uLabel, uNumNodes);
+
+                                        ++uNumNodes;
+                                }
+                        }
+
+                        for (const auto& oElemCont: ElemData) {
+                                unsigned uNumElemWithDofs = 0;
+
+                                for (const auto& oElemItem: oElemCont.ElemContainer) {
+                                        unsigned uNumDofs = oElemItem.second->iGetNumDof();
+
+                                        if (!uNumDofs) {
+                                                continue;
+                                        }
+
+                                        DofOwnerOwner* pDO = dynamic_cast<DofOwnerOwner*>(oElemItem.second);
+
+                                        if (!pDO) {
+                                                continue;
+                                        }
+
+                                        ++uNumElemWithDofs;
+                                }
+
+                                if (!uNumElemWithDofs) {
+                                        continue;
+                                }
+
+                                OutputHandler::NcDimVec dim(1);
+
+                                dim[0] = OutHdl.CreateDim("eig_iIdx"s + oElemCont.Desc + "Size", uNumElemWithDofs);
+
+                                OutputHandler::AttrValVec attrs2(2);
+
+                                attrs2[0] = OutputHandler::AttrVal("type", "integer");
+                                attrs2[1] = OutputHandler::AttrVal("description",
+                                                                   std::string(oElemCont.ShortDesc) + " element base index");
+
+                                MBDynNcVar Var_Eig_IdxElem = OutHdl.CreateVar("eig."s + oElemCont.ShortDesc + ".idx", MbNcInt, attrs2, dim);
+
+                                attrs2[1] = OutputHandler::AttrVal("description",
+                                                                   std::string(oElemCont.ShortDesc) + " element label");
+
+                                MBDynNcVar Var_Eig_LabelElem = OutHdl.CreateVar("eig."s + oElemCont.ShortDesc + ".labels", MbNcInt, attrs2, dim);
+
+                                uNumElemWithDofs = 0;
+
+                                for (const auto& oElemItem: oElemCont.ElemContainer) {
+                                        unsigned uNumDofs = oElemItem.second->iGetNumDof();
+
+                                        if (!uNumDofs) {
+                                                continue;
+                                        }
+
+                                        DofOwnerOwner* pDO = dynamic_cast<DofOwnerOwner*>(oElemItem.second);
+
+                                        if (!pDO) {
+                                                continue;
+                                        }
+
+                                        const integer iFirstIndex = pDO->iGetFirstIndex();
+                                        const unsigned uLabel = oElemItem.second->GetLabel();
+
+                                        OutHdl.WriteNcVar(Var_Eig_IdxElem, iFirstIndex, uNumElemWithDofs);
+                                        OutHdl.WriteNcVar(Var_Eig_LabelElem, uLabel, uNumElemWithDofs);
+
+                                        ++uNumElemWithDofs;
+                                }
+                        }
                 }
-
-                if (uNumNodes) {
-                     m_Dim_Eig_iIdxSize = OutHdl.CreateDim("eig_iIdxSize", uNumNodes); // Must not be created if uNumNodes == 0
-                     m_Dim_Eig_X0Size = OutHdl.CreateDim("eig_X0Size", 6);
-                     
-                     OutputHandler::NcDimVec dim(1);
-                     
-                     dim[0] = m_Dim_Eig_iIdxSize;
-
-                     OutputHandler::AttrValVec attrs2(2);
-                
-                     attrs2[0] = OutputHandler::AttrVal("type", "integer");
-                     attrs2[1] = OutputHandler::AttrVal("description",
-                                                        "structural nodes base index");
-
-                     MBDynNcVar Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim);
-
-                     attrs2[1] = OutputHandler::AttrVal("description",
-                                                        "structural nodes label");
-                
-                     MBDynNcVar Var_Eig_Label = OutHdl.CreateVar("eig.labels", MbNcInt, attrs2, dim);
-                
-                     uNumNodes = 0;
-
-                     for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
-                          const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oKeyNode.second);
-                          const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-                          ASSERT(pN != 0);
-
-                          if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
-                               continue;
-                          }
-
-                          const integer iFirstIndex = pN->iGetFirstIndex();
-                          const unsigned uLabel = pN->GetLabel();
-                     
-                          OutHdl.WriteNcVar(Var_Eig_Idx, iFirstIndex, uNumNodes);
-                          OutHdl.WriteNcVar(Var_Eig_Label, uLabel, uNumNodes);
-                     
-                          ++uNumNodes;
-                     }
-                }
-
-                for (const auto& oElemCont: ElemData) {
-                     unsigned uNumElemWithDofs = 0;
-                     
-                     for (const auto& oElemItem: oElemCont.ElemContainer) {
-                          unsigned uNumDofs = oElemItem.second->iGetNumDof();
-
-                          if (!uNumDofs) {
-                               continue;
-                          }
-
-                          DofOwnerOwner* pDO = dynamic_cast<DofOwnerOwner*>(oElemItem.second);
-
-                          if (!pDO) {
-                               continue;
-                          }
-                          
-                          ++uNumElemWithDofs;
-                     }
-
-                     if (!uNumElemWithDofs) {
-                          continue;
-                     }
-
-                     OutputHandler::NcDimVec dim(1);
-                     
-                     dim[0] = OutHdl.CreateDim("eig_iIdx"s + oElemCont.Desc + "Size", uNumElemWithDofs);
-
-                     OutputHandler::AttrValVec attrs2(2);
-                     
-                     attrs2[0] = OutputHandler::AttrVal("type", "integer");
-                     attrs2[1] = OutputHandler::AttrVal("description",
-                                                        std::string(oElemCont.ShortDesc) + " element base index");
-
-                     MBDynNcVar Var_Eig_IdxElem = OutHdl.CreateVar("eig."s + oElemCont.ShortDesc + ".idx", MbNcInt, attrs2, dim);
-
-                     attrs2[1] = OutputHandler::AttrVal("description",
-                                                        std::string(oElemCont.ShortDesc) + " element label");
-                     
-                     MBDynNcVar Var_Eig_LabelElem = OutHdl.CreateVar("eig."s + oElemCont.ShortDesc + ".labels", MbNcInt, attrs2, dim);
-                     
-                     uNumElemWithDofs = 0;
-                     
-                     for (const auto& oElemItem: oElemCont.ElemContainer) {
-                          unsigned uNumDofs = oElemItem.second->iGetNumDof();
-
-                          if (!uNumDofs) {
-                               continue;
-                          }
-
-                          DofOwnerOwner* pDO = dynamic_cast<DofOwnerOwner*>(oElemItem.second);
-
-                          if (!pDO) {
-                               continue;
-                          }
-                          
-                          const integer iFirstIndex = pDO->iGetFirstIndex();
-                          const unsigned uLabel = oElemItem.second->GetLabel();
-                          
-                          OutHdl.WriteNcVar(Var_Eig_IdxElem, iFirstIndex, uNumElemWithDofs);
-                          OutHdl.WriteNcVar(Var_Eig_LabelElem, uLabel, uNumElemWithDofs);
-                          
-                          ++uNumElemWithDofs;
-                     }
-                }               
-	}
+        }
 #endif /* USE_NETCDF */
 }
 
@@ -1901,94 +1903,94 @@ void
 DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPrecision)
 {
         const auto& StructNodeCont = NodeData[Node::STRUCTURAL].NodeContainer;
-        
-	// no structural nodes!
-	if (StructNodeCont.empty()) {
-		return;
-	}
 
-	if (OutHdl.UseText(OutputHandler::EIGENANALYSIS)) {
-		std::ostream& out = OutHdl.Eigenanalysis();
+        // no structural nodes!
+        if (StructNodeCont.empty()) {
+                return;
+        }
 
-		if (iResultsPrecision) {
-			// 7 = number of characters requested by scientific notation
-			int iNewWidth = iResultsPrecision + 7;
-			out.width(iNewWidth);
-			out.precision(iResultsPrecision);
-		}
+        if (OutHdl.UseText(OutputHandler::EIGENANALYSIS)) {
+                std::ostream& out = OutHdl.Eigenanalysis();
 
-		out
-			<< "% structural nodes labels" << std::endl
-			<< "labels = int32([" << std::endl;
+                if (iResultsPrecision) {
+                        // 7 = number of characters requested by scientific notation
+                        int iNewWidth = iResultsPrecision + 7;
+                        out.width(iNewWidth);
+                        out.precision(iResultsPrecision);
+                }
 
-		for (const auto& oNodeItem: StructNodeCont) {
-			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
-			const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-			ASSERT(pN != 0);
+                out
+                        << "% structural nodes labels\n"
+                        << "labels = int32([\n";
 
-			if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
-				continue;
-			}
+                for (const auto& oNodeItem: StructNodeCont) {
+                        const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
+                        const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
+                        ASSERT(pN != 0);
 
-			out << pN->GetLabel() << ";" << std::endl;
-		}
+                        if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                                continue;
+                        }
 
-		out << "]);" << std::endl;
+                        out << pN->GetLabel() << ";" << std::endl;
+                }
 
-		out
-			<< "% structural nodes base index" << std::endl
-			<< "idx = int32([" << std::endl;
+                out << "]);\n";
 
-		for (const auto& oNodeItem: StructNodeCont) {
-			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
-			const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-			ASSERT(pN != 0);
+                out
+                        << "% structural nodes base index\n"
+                        << "idx = int32([\n";
 
-			if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
-				continue;
-			}
+                for (const auto& oNodeItem: StructNodeCont) {
+                        const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
+                        const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
+                        ASSERT(pN != 0);
 
-			out << pN->iGetFirstIndex() << ";" << std::endl;
-		}
+                        if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                                continue;
+                        }
 
-		out << "]);" << std::endl;
+                        out << pN->iGetFirstIndex() << ";" << std::endl;
+                }
 
-		out
-			<< "% structural nodes reference configuration (X, Phi)" << std::endl
-			<< "X0 = [" << std::endl;
+                out << "]);\n";
 
-		for (const auto& oNodeItem: StructNodeCont) {
-			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
-			const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-			ASSERT(pN != nullptr);
+                out
+                        << "% structural nodes reference configuration (X, Phi)" << std::endl
+                        << "X0 = [\n";
 
-			if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
-				continue;
-			}
+                for (const auto& oNodeItem: StructNodeCont) {
+                        const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
+                        const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
+                        ASSERT(pN != nullptr);
 
-			const Vec3& X(pN->GetX());
-			Vec3 Phi(mb_zero<Vec3>());
-			if (pSN) {
-				Phi = RotManip::VecRot(pSN->GetR());
-			}
+                        if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                                continue;
+                        }
 
-			out
-				<< X(1) << ";" << std::endl
-				<< X(2) << ";" << std::endl
-				<< X(3) << ";" << std::endl
-				<< Phi(1) << ";" << std::endl
-				<< Phi(2) << ";" << std::endl
-				<< Phi(3) << ";" << std::endl;
-		}
+                        const Vec3& X(pN->GetX());
+                        Vec3 Phi(mb_zero<Vec3>());
+                        if (pSN) {
+                                Phi = RotManip::VecRot(pSN->GetR());
+                        }
 
-		out << "];" << std::endl;
-	}
+                        out
+                                << X(1) << ";" << std::endl
+                                << X(2) << ";" << std::endl
+                                << X(3) << ";" << std::endl
+                                << Phi(1) << ";" << std::endl
+                                << Phi(2) << ";" << std::endl
+                                << Phi(3) << ";" << std::endl;
+                }
+
+                out << "];\n";
+        }
 
 #ifdef USE_NETCDF
-	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
+        if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
                 if (m_Dim_Eig_iIdxSize.getSize()) {
                         ASSERT(m_Dim_Eig_X0Size.getSize() == 6);
-                        
+
                         using namespace std::string_literals;
                         const std::string VarNameX0 = "eig."s + std::to_string(uCurrEigSol) + ".X0";
 
@@ -2008,7 +2010,7 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
                         for (const auto& oNodeItem: StructNodeCont) {
                                 const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
                                 const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-                        
+
                                 ASSERT(pN != nullptr);
 
                                 if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
@@ -2017,22 +2019,22 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 
                                 const Vec3& X = pN->GetX();
                                 Vec3 Phi(mb_zero<Vec3>());
-                        
+
                                 if (pSN) {
                                         Phi = RotManip::VecRot(pSN->GetR());
                                 }
 
                                 const Vec6 X0(X, Phi);
-                                
+
                                 ASSERT(ncStartPos[1] < m_Dim_Eig_iIdxSize.getSize());
-                                
+
                                 Var_Eig_X0.putVar(ncStartPos, ncCount, X0.pGetVec(0));
-                                
+
                                 ++ncStartPos[1];
                         }
                 }
-	}
-#endif /* USE_NETCDF */        
+        }
+#endif /* USE_NETCDF */
 }
 
 void
@@ -2273,7 +2275,7 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 						OutHdl.WriteNcVar(Var_Eig_dVL, re, start, count);
 
 						start[0] = 1;	// imaginary part in second "page"
-						OutHdl.WriteNcVar(Var_Eig_dVL, re, start, count);
+						OutHdl.WriteNcVar(Var_Eig_dVL, im, start, count);
 
 						start[1]++;
 

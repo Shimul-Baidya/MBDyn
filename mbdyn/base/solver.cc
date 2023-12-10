@@ -830,7 +830,7 @@ Solver::Prepare(void)
 	 * If eigenanalysis is requested, prepare output for it
 	 */
 	if (EigAn.bAnalysis) {
-		pDM->OutputEigPrepare(EigAn.Analyses.size(), iNumDofs);
+                pDM->OutputEigPrepare(EigAn.Analyses.size(), iNumDofs, EigAn.uFlags);
 		if (EigAn.iFNameWidth == EigenAnalysis::EIGAN_WIDTH_COMPUTE) {
 			EigAn.iFNameWidth = int(std::log10(double(EigAn.Analyses.size()))) + 1;
 		}

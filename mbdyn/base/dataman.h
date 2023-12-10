@@ -429,7 +429,8 @@ public:
 public:
 	virtual void OutputPrepare(void);
 	virtual void OutputEigPrepare(const integer iNumAnalyses,
-			const integer iSize);
+                                      const integer iSize,
+                                      const unsigned uFlags);
 
 	/* stampa i risultati */
 	virtual bool
