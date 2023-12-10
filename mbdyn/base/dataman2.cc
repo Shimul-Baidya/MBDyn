@@ -721,7 +721,7 @@ DataManager::InitialJointAssembly(void)
 		OutHdl.Open(OutputHandler::DOFSTATS);
 	}
 
-	std::ostream& out_ds = (uPrintFlags & PRINT_TO_FILE)
+	std::ostream& out_ds = ((uPrintFlags & PRINT_TO_FILE) && OutHdl.UseText(OutputHandler::DOFSTATS))
 		? OutHdl.DofStats()
 		: std::cout;
 
@@ -1528,12 +1528,12 @@ void
 DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize)
 {
 #ifdef USE_NETCDF
+        using namespace std::string_literals;
 	/* Set up additional NetCDF stuff for eigenanalysis output */
 	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
 		m_Dim_Eig_iSize = OutHdl.CreateDim("eig_iSize", iSize);
 		m_Dim_Eig_iComplex = OutHdl.CreateDim("complex_var_dim", 2);
 
-		OutputHandler::NcDimVec dim(1);
                 unsigned uNumNodes = 0;
 
 		for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
@@ -1546,39 +1546,109 @@ DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize)
                         ++uNumNodes;
                 }
 
-                dim[0] = OutHdl.CreateDim("eig_iIdxSize", uNumNodes);
+                if (uNumNodes) {
+                     OutputHandler::NcDimVec dim(1);
+                     
+                     dim[0] = OutHdl.CreateDim("eig_iIdxSize", uNumNodes);
 
-                OutputHandler::AttrValVec attrs2(2);
-                attrs2[0] = OutputHandler::AttrVal("type", "integer");
-                attrs2[1] = OutputHandler::AttrVal("description",
-                                                   "structural nodes base index");
-
-                MBDynNcVar Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim);
-
-                attrs2[1] = OutputHandler::AttrVal("description",
-                                                   "structural nodes label");
+                     OutputHandler::AttrValVec attrs2(2);
                 
-                MBDynNcVar Var_Eig_Label = OutHdl.CreateVar("eig.label", MbNcInt, attrs2, dim);
+                     attrs2[0] = OutputHandler::AttrVal("type", "integer");
+                     attrs2[1] = OutputHandler::AttrVal("description",
+                                                        "structural nodes base index");
+
+                     MBDynNcVar Var_Eig_Idx = OutHdl.CreateVar("eig.idx", MbNcInt, attrs2, dim);
+
+                     attrs2[1] = OutputHandler::AttrVal("description",
+                                                        "structural nodes label");
                 
-                uNumNodes = 0;
+                     MBDynNcVar Var_Eig_Label = OutHdl.CreateVar("eig.labels", MbNcInt, attrs2, dim);
+                
+                     uNumNodes = 0;
 
-                for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
-                     const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oKeyNode.second);
-                     const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-                     ASSERT(pN != 0);
+                     for (const auto& oKeyNode: NodeData[Node::STRUCTURAL].NodeContainer) {
+                          const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oKeyNode.second);
+                          const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
+                          ASSERT(pN != 0);
 
-                     if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                          if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                               continue;
+                          }
+
+                          const integer iFirstIndex = pN->iGetFirstIndex();
+                          const unsigned uLabel = pN->GetLabel();
+                     
+                          OutHdl.WriteNcVar(Var_Eig_Idx, iFirstIndex, uNumNodes);
+                          OutHdl.WriteNcVar(Var_Eig_Label, uLabel, uNumNodes);
+                     
+                          ++uNumNodes;
+                     }
+                }
+
+                for (const auto& oElemCont: ElemData) {
+                     unsigned uNumElemWithDofs = 0;
+                     
+                     for (const auto& oElemItem: oElemCont.ElemContainer) {
+                          unsigned uNumDofs = oElemItem.second->iGetNumDof();
+
+                          if (!uNumDofs) {
+                               continue;
+                          }
+
+                          DofOwnerOwner* pDO = dynamic_cast<DofOwnerOwner*>(oElemItem.second);
+
+                          if (!pDO) {
+                               continue;
+                          }
+                          
+                          ++uNumElemWithDofs;
+                     }
+
+                     if (!uNumElemWithDofs) {
                           continue;
                      }
 
-                     const integer iFirstIndex = pN->iGetFirstIndex();
-                     const unsigned uLabel = pN->GetLabel();
+                     OutputHandler::NcDimVec dim(1);
                      
-                     OutHdl.WriteNcVar(Var_Eig_Idx, iFirstIndex, uNumNodes);
-                     OutHdl.WriteNcVar(Var_Eig_Label, uLabel, uNumNodes);
+                     dim[0] = OutHdl.CreateDim("eig_iIdx"s + oElemCont.Desc + "Size", uNumElemWithDofs);
+
+                     OutputHandler::AttrValVec attrs2(2);
                      
-                     ++uNumNodes;
-                }
+                     attrs2[0] = OutputHandler::AttrVal("type", "integer");
+                     attrs2[1] = OutputHandler::AttrVal("description",
+                                                        std::string(oElemCont.ShortDesc) + " element base index");
+
+                     MBDynNcVar Var_Eig_IdxElem = OutHdl.CreateVar("eig."s + oElemCont.ShortDesc + ".idx", MbNcInt, attrs2, dim);
+
+                     attrs2[1] = OutputHandler::AttrVal("description",
+                                                        std::string(oElemCont.ShortDesc) + " element label");
+                     
+                     MBDynNcVar Var_Eig_LabelElem = OutHdl.CreateVar("eig."s + oElemCont.ShortDesc + ".labels", MbNcInt, attrs2, dim);
+                     
+                     uNumElemWithDofs = 0;
+                     
+                     for (const auto& oElemItem: oElemCont.ElemContainer) {
+                          unsigned uNumDofs = oElemItem.second->iGetNumDof();
+
+                          if (!uNumDofs) {
+                               continue;
+                          }
+
+                          DofOwnerOwner* pDO = dynamic_cast<DofOwnerOwner*>(oElemItem.second);
+
+                          if (!pDO) {
+                               continue;
+                          }
+                          
+                          const integer iFirstIndex = pDO->iGetFirstIndex();
+                          const unsigned uLabel = oElemItem.second->GetLabel();
+                          
+                          OutHdl.WriteNcVar(Var_Eig_IdxElem, iFirstIndex, uNumElemWithDofs);
+                          OutHdl.WriteNcVar(Var_Eig_LabelElem, uLabel, uNumElemWithDofs);
+                          
+                          ++uNumElemWithDofs;
+                     }
+                }               
 	}
 #endif /* USE_NETCDF */
 }
@@ -1683,12 +1753,12 @@ DataManager::OutputEigFullMatrices(const MatrixHandler* pMatA,
 		OutputHandler::AttrValVec attrs3(3);
 		attrs3[0] = OutputHandler::AttrVal("units", "-");
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
-		attrs3[2] = OutputHandler::AttrVal("description", "F/xPrime + dCoef * F/x");
+		attrs3[2] = OutputHandler::AttrVal("description", "dense Jacobian: F/xPrime + dCoef * F/x");
 
 		std::stringstream varname_ss;
 		varname_ss << "eig." << uCurrEigSol << ".Aplus";
 		Var_Eig_dAplus = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim2);
-		attrs3[2] = OutputHandler::AttrVal("description", "F/xPrime - dCoef * F/x");
+		attrs3[2] = OutputHandler::AttrVal("description", "dense Jacobian: F/xPrime - dCoef * F/x");
 
 		varname_ss.str("");
 		varname_ss.clear();
@@ -1795,14 +1865,17 @@ DataManager::OutputEigSparseMatrices(const MatrixHandler* pMatA,
 		
 		std::stringstream varname_ss;
 		varname_ss << "eig." << uCurrEigSol << ".Aplus";
+                
+                // The keyword "sparse" is used in order to check if spconvert(Aplus) should be called within MATLAB/Octave
 		Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-				OutputHandler::Dimensions::Dimensionless, "F/xPrime - dCoef * F/x");
+                                                        OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime + dCoef * F/x");
+                
 
 		varname_ss.str("");
 		varname_ss.clear();
 		varname_ss << "eig." << uCurrEigSol << ".Aminus";
 		Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-			OutputHandler::Dimensions::Dimensionless, "F/xPrime + dCoef * F/x");
+                                                         OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime - dCoef * F/x");
 
                 OutputEigSparseMatrixNc(Var_Eig_dAplus, *pMatB);
                 OutputEigSparseMatrixNc(Var_Eig_dAminus, *pMatA);           
@@ -1882,13 +1955,13 @@ DataManager::OutputEigNaiveMatrices(const MatrixHandler* pMatA,
 		std::stringstream varname_ss;
 		varname_ss << "eig." << uCurrEigSol << ".Aplus";
 		Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-			OutputHandler::Dimensions::Dimensionless, "F/xPrime + dCoef * F/x");
+                        OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime + dCoef * F/x");
 
 		varname_ss.str("");
 		varname_ss.clear();
 		varname_ss << "eig." << uCurrEigSol << ".Aminus";
 		Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-			OutputHandler::Dimensions::Dimensionless, "F/xPrime - dCoef * F/x");
+			OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime - dCoef * F/x");
 
 		size_t iCnt = 0;
 		Vec3 v;
