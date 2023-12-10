@@ -210,7 +210,8 @@ protected:
 	MBDynNcVar Var_TimeStep;
 
 	/* for eigenanalysis output */
-
+        MBDynNcDim m_Dim_Eig_iIdxSize;
+        MBDynNcDim m_Dim_Eig_X0Size;
 	MBDynNcDim m_Dim_Eig_iSize;
 	MBDynNcDim m_Dim_Eig_iComplex;
 
@@ -456,12 +457,7 @@ public:
 			const MatrixHandler* pmMatB,
 			const unsigned uCurrEigSol,
 			const int iMatrixPrecision);
-     
-	void
-	OutputEigNaiveMatrices(const MatrixHandler* pmMatA,
-			const MatrixHandler* pmMatB,
-			const unsigned uCurrEigSol,
-			const int iMatrixPrecision);
+
 	void
 	OutputEigenvectors(const VectorHandler *pBeta,
 			const VectorHandler& R, const VectorHandler& I,

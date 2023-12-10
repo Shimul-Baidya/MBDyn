@@ -1547,9 +1547,12 @@ DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize)
                 }
 
                 if (uNumNodes) {
+                     m_Dim_Eig_iIdxSize = OutHdl.CreateDim("eig_iIdxSize", uNumNodes); // Must not be created if uNumNodes == 0
+                     m_Dim_Eig_X0Size = OutHdl.CreateDim("eig_X0Size", 6);
+                     
                      OutputHandler::NcDimVec dim(1);
                      
-                     dim[0] = OutHdl.CreateDim("eig_iIdxSize", uNumNodes);
+                     dim[0] = m_Dim_Eig_iIdxSize;
 
                      OutputHandler::AttrValVec attrs2(2);
                 
@@ -1670,20 +1673,28 @@ DataManager::OutputEigParams(const doublereal& dTime,
 			out.precision(iResultsPrecision);
 		}
 
+                const long lStep = OutHdl.GetCurrentStep();
+                
 		// header
 		out
-			<< "% time: " << dTime << std::endl;
+			<< "% time: " << dTime << "\n";
 		out
-			<< "dTime = " << dTime << ';' << std::endl;
+			<< "dTime = " << dTime << ";\n";
 
 		// coefficient
 		out
-			<< "% coefficient" << std::endl
-			<< "dCoef = " << dCoef << ";" << std::endl;
+			<< "% coefficient\n"
+			<< "dCoef = " << dCoef << ";\n";
+
+                out
+                        << "% timestep index of eigensolution\n"
+                        << "lStep = int32(" << lStep << ");\n";
 	}
 #ifdef USE_NETCDF
 	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-		const long lStep = OutHdl.GetCurrentStep();
+                using namespace std::string_literals;
+                
+                const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
                 
                 OutputHandler::NcDimVec dim(1);
 		dim[0] = OutHdl.DimV1();
@@ -1693,11 +1704,7 @@ DataManager::OutputEigParams(const doublereal& dTime,
 		attrs2[1] = OutputHandler::AttrVal("description",
                                                    "timestep index of eigensolution");
                 
-		std::stringstream varname_ss;
-                
-		varname_ss << "eig." << uCurrEigSol << ".step";
-                
-		MBDynNcVar Var_Eig_lStep = OutHdl.CreateVar(varname_ss.str(), MbNcInt, attrs2, dim);
+		MBDynNcVar Var_Eig_lStep = OutHdl.CreateVar(prefix + ".step", MbNcInt, attrs2, dim);
 
 		OutputHandler::AttrValVec attrs3(3);
 		attrs3[0] = OutputHandler::AttrVal("units", "s");
@@ -1705,26 +1712,18 @@ DataManager::OutputEigParams(const doublereal& dTime,
 		attrs3[2] = OutputHandler::AttrVal("description",
                                                    "simulation time at which the eigensolution was computed");
 
-                varname_ss.str(std::string());
-                varname_ss.clear();
-
-                varname_ss << "eig." << uCurrEigSol << ".time";
-                
-		MBDynNcVar Var_Eig_dTime = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim);
+		MBDynNcVar Var_Eig_dTime = OutHdl.CreateVar(prefix + ".time", MbNcDouble, attrs3, dim);
 
 		attrs3[0] = OutputHandler::AttrVal("units", "-");
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 		attrs3[2] = OutputHandler::AttrVal("description",
                                                    "coefficient used to build Aplus and Aminus matrices");
 
-                varname_ss.str(std::string());
-                varname_ss.clear();
-
-                varname_ss << "eig." << uCurrEigSol << ".dCoef";
-                
-		MBDynNcVar Var_Eig_dCoef = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim);
+		MBDynNcVar Var_Eig_dCoef = OutHdl.CreateVar(prefix + ".dCoef", MbNcDouble, attrs3, dim);
 
                 const std::vector<size_t> ncStartPos(1, 0);
+
+                const long lStep = OutHdl.GetCurrentStep();
                 
 		Var_Eig_dTime.putVar(ncStartPos, &dTime);
 		Var_Eig_lStep.putVar(ncStartPos, &lStep);
@@ -1741,11 +1740,15 @@ DataManager::OutputEigFullMatrices(const MatrixHandler* pMatA,
 {
 	const FullMatrixHandler& MatB = dynamic_cast<const FullMatrixHandler &>(*pMatB);
 	const FullMatrixHandler& MatA = dynamic_cast<const FullMatrixHandler &>(*pMatA);
-	integer nrows = MatB.iGetNumRows();
-	integer ncols = MatB.iGetNumCols();
 
+        ASSERT(MatA.iGetNumRows() == MatB.iGetNumRows());
+        ASSERT(MatA.iGetNumCols() == MatB.iGetNumCols());
+        
 #ifdef USE_NETCDF
 	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
+                using namespace std::string_literals;
+                const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
+             
 		OutputHandler::NcDimVec dim2(2);
 		dim2[0] = m_Dim_Eig_iSize;
 		dim2[1] = m_Dim_Eig_iSize;
@@ -1755,22 +1758,17 @@ DataManager::OutputEigFullMatrices(const MatrixHandler* pMatA,
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 		attrs3[2] = OutputHandler::AttrVal("description", "dense Jacobian: F/xPrime + dCoef * F/x");
 
-		std::stringstream varname_ss;
-		varname_ss << "eig." << uCurrEigSol << ".Aplus";
-		Var_Eig_dAplus = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim2);
+		Var_Eig_dAplus = OutHdl.CreateVar(prefix + ".Aplus", MbNcDouble, attrs3, dim2);
+                
 		attrs3[2] = OutputHandler::AttrVal("description", "dense Jacobian: F/xPrime - dCoef * F/x");
 
-		varname_ss.str("");
-		varname_ss.clear();
-		varname_ss << "eig." << uCurrEigSol << ".Aminus";
-		Var_Eig_dAminus = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim2);
+		Var_Eig_dAminus = OutHdl.CreateVar(prefix + ".Aminus", MbNcDouble, attrs3, dim2);
+               
+                const size_t nrows = MatB.iGetNumRows();
+                const size_t ncols = MatB.iGetNumCols();
 
+		const std::vector<size_t> ncStartPos = {0LU, 0LU}, ncCount = {nrows, ncols};
 
-		std::vector<size_t> ncStartPos, ncCount;
-		ncStartPos.push_back(0); // implicit cast here ok?
-		ncStartPos.push_back(0); // implicit cast here ok?
-		ncCount.push_back(nrows);
-		ncCount.push_back(ncols);
 		Var_Eig_dAplus.putVar(MatB.pdGetMat()); // seems that there is no purpose in giving matrix size as for old c++ (legacy) interface...
 		Var_Eig_dAminus.putVar(MatA.pdGetMat());
 
@@ -1791,6 +1789,8 @@ DataManager::OutputEigFullMatrices(const MatrixHandler* pMatA,
 			<< "% F/xPrime + dCoef * F/x" << std::endl
 			<< "Aplus" << " = [";
 
+                const integer nrows = MatB.iGetNumRows();
+                const integer ncols = MatB.iGetNumCols();
 
 		for (integer r = 1; r <= nrows; r++) {
 			for (integer c = 1; c <= ncols; c++) {
@@ -1862,20 +1862,17 @@ DataManager::OutputEigSparseMatrices(const MatrixHandler* pMatA,
 	}
 #ifdef USE_NETCDF
 	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-		
-		std::stringstream varname_ss;
-		varname_ss << "eig." << uCurrEigSol << ".Aplus";
+		using namespace std::string_literals;
+		const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
                 
                 // The keyword "sparse" is used in order to check if spconvert(Aplus) should be called within MATLAB/Octave
-		Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-                                                        OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime + dCoef * F/x");
+		Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(prefix + ".Aplus", 
+                                                        OutputHandler::Dimensions::Dimensionless,
+                                                        "sparse Jacobian: F/xPrime + dCoef * F/x");
                 
-
-		varname_ss.str("");
-		varname_ss.clear();
-		varname_ss << "eig." << uCurrEigSol << ".Aminus";
-		Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-                                                         OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime - dCoef * F/x");
+		Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(prefix + ".Aminus", 
+                                                         OutputHandler::Dimensions::Dimensionless,
+                                                         "sparse Jacobian: F/xPrime - dCoef * F/x");
 
                 OutputEigSparseMatrixNc(Var_Eig_dAplus, *pMatB);
                 OutputEigSparseMatrixNc(Var_Eig_dAminus, *pMatA);           
@@ -1901,103 +1898,12 @@ void DataManager::OutputEigSparseMatrixNc(const MBDynNcVar& var, const MatrixHan
 #endif
 
 void
-DataManager::OutputEigNaiveMatrices(const MatrixHandler* pMatA,
-	const MatrixHandler* pMatB,
-	const unsigned uCurrEigSol,
-	const int iMatrixPrecision)
-{
-	const NaiveMatrixHandler& MatB = dynamic_cast<const NaiveMatrixHandler &>(*pMatB);
-	const NaiveMatrixHandler& MatA = dynamic_cast<const NaiveMatrixHandler &>(*pMatA);
-
-	if (OutHdl.UseText(OutputHandler::EIGENANALYSIS)) {
-		std::ostream& out = OutHdl.Eigenanalysis();
-
-		if (iMatrixPrecision) {
-			// 7 = number of characters requested by scientific notation
-			int iNewWidth = iMatrixPrecision + 7;
-			out.width(iNewWidth);
-			out.precision(iMatrixPrecision);
-		}
-
-		out
-			<< "% F/xPrime + dCoef *F/x" << std::endl
-			<< "Aplus" << " = [";
-
-		for (NaiveMatrixHandler::const_iterator i = MatB.begin();
-				i != MatB.end(); ++i)
-		{
-			if (i->dCoef != 0.) {
-				out << i->iRow + 1 << " " << i->iCol + 1 << " " << i->dCoef << ";" << std::endl;
-			}
-		}
-
-		out << "];" << std::endl
-			<< "Aplus = spconvert(Aplus);" << std::endl;
-
-		out
-			<< "% F/xPrime - dCoef *F/x" << std::endl
-			<< "Aminus" << " = [";
-
-		for (NaiveMatrixHandler::const_iterator j = MatA.begin();
-				j != MatA.end(); ++j)
-		{
-			if (j->dCoef != 0.) {
-				out << j->iRow + 1 << " " << j->iCol + 1 << " " << j->dCoef << ";" << std::endl;
-			}
-		}
-
-		out << "];" << std::endl
-			<< "Aminus = spconvert(Aminus);" << std::endl;
-	}
-#ifdef USE_NETCDF
-	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-
-		std::stringstream varname_ss;
-		varname_ss << "eig." << uCurrEigSol << ".Aplus";
-		Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-                        OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime + dCoef * F/x");
-
-		varname_ss.str("");
-		varname_ss.clear();
-		varname_ss << "eig." << uCurrEigSol << ".Aminus";
-		Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(varname_ss.str(), 
-			OutputHandler::Dimensions::Dimensionless, "sparse Jacobian: F/xPrime - dCoef * F/x");
-
-		size_t iCnt = 0;
-		Vec3 v;
-		for (NaiveMatrixHandler::const_iterator i = MatB.begin();
-				i != MatB.end(); ++i)
-		{
-			if (i->dCoef != 0.) {
-				v = Vec3(i->iRow + 1, i->iCol + 1, i->dCoef);
-				OutHdl.WriteNcVar(Var_Eig_dAplus, v, iCnt);
-				iCnt++;
-			}
-		}
-
-		iCnt = 0;
-		for (NaiveMatrixHandler::const_iterator i = MatA.begin();
-				i != MatA.end(); ++i)
-		{
-			if (i->dCoef != 0.) {
-				v = Vec3(i->iRow + 1, i->iCol + 1, i->dCoef);
-				OutHdl.WriteNcVar(Var_Eig_dAminus, v, iCnt);
-				iCnt++;
-			}
-		}
-
-	}
-#endif /* USE_NETCDF */
-}
-
-void
 DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPrecision)
 {
-	NodeContainerType::const_iterator i = NodeData[Node::STRUCTURAL].NodeContainer.begin();
-	NodeContainerType::const_iterator e = NodeData[Node::STRUCTURAL].NodeContainer.end();
-
+        const auto& StructNodeCont = NodeData[Node::STRUCTURAL].NodeContainer;
+        
 	// no structural nodes!
-	if (i == e) {
+	if (StructNodeCont.empty()) {
 		return;
 	}
 
@@ -2013,10 +1919,10 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 
 		out
 			<< "% structural nodes labels" << std::endl
-			<< "labels = [" << std::endl;
+			<< "labels = int32([" << std::endl;
 
-		for (; i != e; ++i) {
-			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(i->second);
+		for (const auto& oNodeItem: StructNodeCont) {
+			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
 			const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
 			ASSERT(pN != 0);
 
@@ -2027,14 +1933,14 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 			out << pN->GetLabel() << ";" << std::endl;
 		}
 
-		out << "];" << std::endl;
+		out << "]);" << std::endl;
 
 		out
 			<< "% structural nodes base index" << std::endl
-			<< "idx = [" << std::endl;
+			<< "idx = int32([" << std::endl;
 
-		for (i = NodeData[Node::STRUCTURAL].NodeContainer.begin(); i != e; ++i) {
-			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(i->second);
+		for (const auto& oNodeItem: StructNodeCont) {
+			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
 			const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
 			ASSERT(pN != 0);
 
@@ -2045,16 +1951,16 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 			out << pN->iGetFirstIndex() << ";" << std::endl;
 		}
 
-		out << "];" << std::endl;
+		out << "]);" << std::endl;
 
 		out
 			<< "% structural nodes reference configuration (X, Phi)" << std::endl
 			<< "X0 = [" << std::endl;
 
-		for (i = NodeData[Node::STRUCTURAL].NodeContainer.begin(); i != e; ++i) {
-			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(i->second);
+		for (const auto& oNodeItem: StructNodeCont) {
+			const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
 			const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
-			ASSERT(pN != 0);
+			ASSERT(pN != nullptr);
 
 			if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
 				continue;
@@ -2077,6 +1983,56 @@ DataManager::OutputEigGeometry(const unsigned uCurrEigSol, const int iResultsPre
 
 		out << "];" << std::endl;
 	}
+
+#ifdef USE_NETCDF
+	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
+                if (m_Dim_Eig_iIdxSize.getSize()) {
+                        ASSERT(m_Dim_Eig_X0Size.getSize() == 6);
+                        
+                        using namespace std::string_literals;
+                        const std::string VarNameX0 = "eig."s + std::to_string(uCurrEigSol) + ".X0";
+
+                        OutputHandler::NcDimVec dim2(2);
+                        dim2[0] = m_Dim_Eig_X0Size;
+                        dim2[1] = m_Dim_Eig_iIdxSize;
+
+                        OutputHandler::AttrValVec attrs3(3);
+                        attrs3[0] = OutputHandler::AttrVal("units", "-");
+                        attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
+                        attrs3[2] = OutputHandler::AttrVal("description", "structural nodes reference configuration (X, Phi)");
+
+                        MBDynNcVar Var_Eig_X0 = OutHdl.CreateVar(VarNameX0, MbNcDouble, attrs3, dim2);
+
+                        std::vector<size_t> ncStartPos = {0u, 0u}, ncCount = {6u, 1u};
+
+                        for (const auto& oNodeItem: StructNodeCont) {
+                                const StructDispNode *pN = dynamic_cast<const StructDispNode *>(oNodeItem.second);
+                                const StructNode *pSN = dynamic_cast<const StructNode *>(pN);
+                        
+                                ASSERT(pN != nullptr);
+
+                                if (pSN && pSN->GetStructNodeType() == StructNode::DUMMY) {
+                                        continue;
+                                }
+
+                                const Vec3& X = pN->GetX();
+                                Vec3 Phi(mb_zero<Vec3>());
+                        
+                                if (pSN) {
+                                        Phi = RotManip::VecRot(pSN->GetR());
+                                }
+
+                                const Vec6 X0(X, Phi);
+                                
+                                ASSERT(ncStartPos[1] < m_Dim_Eig_iIdxSize.getSize());
+                                
+                                Var_Eig_X0.putVar(ncStartPos, ncCount, X0.pGetVec(0));
+                                
+                                ++ncStartPos[1];
+                        }
+                }
+	}
+#endif /* USE_NETCDF */        
 }
 
 void
@@ -2232,10 +2188,11 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 
 #ifdef USE_NETCDF
 	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
+                using namespace std::string_literals;
+                
 		OutputHandler::NcDimVec dim_alpha(2);
 
-		std::stringstream dimname_ss;
-		dimname_ss << "eig_" << uCurrEigSol << "_iNVec_out";
+                const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
 
 		integer iNVecOut = 0;
 		for (integer r = 1; r <= iNVec; r++)
@@ -2245,7 +2202,9 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 			}
 		}
 
-		dim_alpha[0] = OutHdl.CreateDim(dimname_ss.str(), iNVecOut);
+                const std::string dimname = "eig_"s + std::to_string(uCurrEigSol) + "_iNVec_out";
+                
+		dim_alpha[0] = OutHdl.CreateDim(dimname, iNVecOut);
 		dim_alpha[1] = OutHdl.DimV3();
 
 		OutputHandler::AttrValVec attrs3(3);
@@ -2253,9 +2212,7 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 		attrs3[2] = OutputHandler::AttrVal("description", "alpha matrix");
 
-		std::stringstream varname_ss;
-		varname_ss << "eig." << uCurrEigSol << ".alpha";
-		Var_Eig_dAlpha = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim_alpha);
+		Var_Eig_dAlpha = OutHdl.CreateVar(prefix + ".alpha", MbNcDouble, attrs3, dim_alpha);
 
 		Vec3 v;
 		size_t uNRec = 0;
@@ -2290,9 +2247,7 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 			attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 			attrs3[2] = OutputHandler::AttrVal("description", "VL - Left eigenvectors matrix");
 
-			std::stringstream varname_ss;
-			varname_ss << "eig." << uCurrEigSol << ".VL";
-			Var_Eig_dVL = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim_v);
+			Var_Eig_dVL = OutHdl.CreateVar(prefix + ".VL", MbNcDouble, attrs3, dim_v);
 
 			doublereal re;
 			doublereal im;
@@ -2355,10 +2310,7 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 		attrs3[2] = OutputHandler::AttrVal("description", "VR - Right eigenvectors matrix");
 
-		varname_ss.str("");
-		varname_ss.clear();
-		varname_ss << "eig." << uCurrEigSol << ".VR";
-		Var_Eig_dVR = OutHdl.CreateVar(varname_ss.str(), MbNcDouble, attrs3, dim_v);
+		Var_Eig_dVR = OutHdl.CreateVar(prefix + ".VR", MbNcDouble, attrs3, dim_v);
 
 		doublereal re;
 		doublereal im;
