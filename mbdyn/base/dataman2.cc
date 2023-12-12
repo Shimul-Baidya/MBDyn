@@ -1755,16 +1755,18 @@ DataManager::OutputEigFullMatrices(const MatrixHandler* pMatA,
 		dim2[0] = m_Dim_Eig_iSize;
 		dim2[1] = m_Dim_Eig_iSize;
 
-		OutputHandler::AttrValVec attrs3(3);
+		OutputHandler::AttrValVec attrs3(4);
+
 		attrs3[0] = OutputHandler::AttrVal("units", "-");
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
-		attrs3[2] = OutputHandler::AttrVal("description", "dense Jacobian: F/xPrime + dCoef * F/x");
-
-		Var_Eig_dAplus = OutHdl.CreateVar(prefix + ".Aplus", MbNcDouble, attrs3, dim2);
+		attrs3[2] = OutputHandler::AttrVal("description", "F/xPrime + dCoef * F/x");
+                attrs3[3] = OutputHandler::AttrVal("matrix type", "dense"); // Used by Matlab/Octave in order to check if spconvert should be called
                 
-		attrs3[2] = OutputHandler::AttrVal("description", "dense Jacobian: F/xPrime - dCoef * F/x");
+		MBDynNcVar Var_Eig_dAplus = OutHdl.CreateVar(prefix + ".Aplus", MbNcDouble, attrs3, dim2);
+                
+		attrs3[2] = OutputHandler::AttrVal("description", "F/xPrime - dCoef * F/x");
 
-		Var_Eig_dAminus = OutHdl.CreateVar(prefix + ".Aminus", MbNcDouble, attrs3, dim2);
+		MBDynNcVar Var_Eig_dAminus = OutHdl.CreateVar(prefix + ".Aminus", MbNcDouble, attrs3, dim2);
                
                 const size_t nrows = MatB.iGetNumRows();
                 const size_t ncols = MatB.iGetNumCols();
@@ -1867,15 +1869,19 @@ DataManager::OutputEigSparseMatrices(const MatrixHandler* pMatA,
 		using namespace std::string_literals;
 		const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
                 
-                // The keyword "sparse" is used in order to check if spconvert(Aplus) should be called within MATLAB/Octave
-		Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(prefix + ".Aplus", 
-                                                        OutputHandler::Dimensions::Dimensionless,
-                                                        "sparse Jacobian: F/xPrime + dCoef * F/x");
-                
-		Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(prefix + ".Aminus", 
-                                                         OutputHandler::Dimensions::Dimensionless,
-                                                         "sparse Jacobian: F/xPrime - dCoef * F/x");
+		MBDynNcVar Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(prefix + ".Aplus", 
+                                                                   OutputHandler::Dimensions::Dimensionless,
+                                                                   "F/xPrime + dCoef * F/x");
 
+                // Used by Matlab/Octave in order to check if spconvert should be called
+                Var_Eig_dAplus.putAtt("matrix type", "sparse");
+                
+		MBDynNcVar Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(prefix + ".Aminus", 
+                                                                    OutputHandler::Dimensions::Dimensionless,
+                                                                    "F/xPrime - dCoef * F/x");
+
+                Var_Eig_dAminus.putAtt("matrix type", "sparse");
+                
                 OutputEigSparseMatrixNc(Var_Eig_dAplus, *pMatB);
                 OutputEigSparseMatrixNc(Var_Eig_dAminus, *pMatA);           
 	}
@@ -2214,7 +2220,7 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 		attrs3[2] = OutputHandler::AttrVal("description", "alpha matrix");
 
-		Var_Eig_dAlpha = OutHdl.CreateVar(prefix + ".alpha", MbNcDouble, attrs3, dim_alpha);
+		MBDynNcVar Var_Eig_dAlpha = OutHdl.CreateVar(prefix + ".alpha", MbNcDouble, attrs3, dim_alpha);
 
 		Vec3 v;
 		size_t uNRec = 0;
@@ -2249,7 +2255,7 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 			attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 			attrs3[2] = OutputHandler::AttrVal("description", "VL - Left eigenvectors matrix");
 
-			Var_Eig_dVL = OutHdl.CreateVar(prefix + ".VL", MbNcDouble, attrs3, dim_v);
+			MBDynNcVar Var_Eig_dVL = OutHdl.CreateVar(prefix + ".VL", MbNcDouble, attrs3, dim_v);
 
 			doublereal re;
 			doublereal im;
@@ -2312,7 +2318,7 @@ DataManager::OutputEigenvectors(const VectorHandler *pBeta,
 		attrs3[1] = OutputHandler::AttrVal("type", "doublereal");
 		attrs3[2] = OutputHandler::AttrVal("description", "VR - Right eigenvectors matrix");
 
-		Var_Eig_dVR = OutHdl.CreateVar(prefix + ".VR", MbNcDouble, attrs3, dim_v);
+		MBDynNcVar Var_Eig_dVR = OutHdl.CreateVar(prefix + ".VR", MbNcDouble, attrs3, dim_v);
 
 		doublereal re;
 		doublereal im;

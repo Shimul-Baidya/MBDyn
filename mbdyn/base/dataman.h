@@ -215,12 +215,6 @@ protected:
 	MBDynNcDim m_Dim_Eig_iSize;
 	MBDynNcDim m_Dim_Eig_iComplex;
 
-	MBDynNcVar Var_Eig_dAplus;
-	MBDynNcVar Var_Eig_dAminus;
-	MBDynNcVar Var_Eig_dAlpha;
-	MBDynNcVar Var_Eig_dVR;
-	MBDynNcVar Var_Eig_dVL;
-
 public:
 	inline netCDF::NcFile::FileFormat GetNetCDFFileFormat(void) const { return NetCDF_Format; }
 
