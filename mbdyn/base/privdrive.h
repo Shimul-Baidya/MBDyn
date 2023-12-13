@@ -44,6 +44,8 @@
 
 #include "drive.h"
 #include "simentity.h"
+#include "elem.h"
+#include "node.h"
 
 class PrivDriveCaller : public DriveCaller, public DriveOwner
 {
@@ -71,7 +73,8 @@ public:
 inline doublereal
 PrivDriveCaller::dGet(const doublereal& dVar) const
 {
-	silent_cerr("warning, possible improper call of element drive with real argument; \"dVar\" is ignored and private data is returned instead"
+	// should this be "pedantic"?
+	silent_cerr("warning, possible improper call of " << (dynamic_cast<const Elem *>(pSE) == 0 ? "node" : "element") << " drive with real argument; \"dVar\" is ignored and private data is returned instead"
 		<< std::endl);
 
 	// ignore dVar; return private data
