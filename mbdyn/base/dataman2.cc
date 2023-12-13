@@ -1612,6 +1612,12 @@ DataManager::OutputEigPrepare(const integer iNumAnalyses, const integer iSize, u
                                         continue;
                                 }
 
+                                if (!(oElemCont.Desc && strlen(oElemCont.Desc) && oElemCont.ShortDesc && strlen(oElemCont.ShortDesc))) {
+                                     DEBUGCERR("warning: element type does not have a valid description "
+                                               "and no netcdf output of it's dof index will be created!\n");
+                                     continue;
+                                }
+
                                 OutputHandler::NcDimVec dim(1);
 
                                 dim[0] = OutHdl.CreateDim("eig_iIdx"s + oElemCont.Desc + "Size", uNumElemWithDofs);
