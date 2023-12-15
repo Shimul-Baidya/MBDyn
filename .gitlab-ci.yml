@@ -26,15 +26,16 @@ build-job:       # This job runs in the build stage, which runs first.
   script:
     - |
       if [ -d mbdyn ]; then
-        printf "skipping checkout and pulling"
+        printf "skipping checkout and pulling\n"
         cd mbdyn
         git checkout $CI_COMMIT_BRANCH --force
         git pull --force
       else
-        printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
+        printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH \n"
         git clone -b $CI_COMMIT_BRANCH https://public.gitlab.polimi.it/DAER/mbdyn.git
         cd mbdyn
       fi
+    - pwd
     - ./bootstrap.sh
     - printf "configure ...\n"
     - ./configure
