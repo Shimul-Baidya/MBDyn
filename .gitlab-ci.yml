@@ -24,10 +24,16 @@ stages:          # List of stages for jobs, and their order of execution
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-    - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
-    - git clone -b $CI_COMMIT_BRANCH https://public.gitlab.polimi.it/DAER/mbdyn.git
-    - printf "bootstrap ...\n"
-    - cd mbdyn
+    - if [ -d mbdyn ]; then
+        printf "skipping checkout and pulling"
+        cd mbdyn
+        git checkout -b $CI_COMMIT_BRANCH
+        git pull --force
+      else
+        printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
+        git clone -b $CI_COMMIT_BRANCH https://public.gitlab.polimi.it/DAER/mbdyn.git
+        cd mbdyn
+      fi
     - ./bootstrap.sh
     - printf "configure ...\n"
     - ./configure
