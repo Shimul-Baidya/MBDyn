@@ -1853,57 +1853,90 @@ DataManager::OutputEigSparseMatrices(const MatrixHandler* pMatA,
 		}
 
 		out
-			<< "% F/xPrime + dCoef *F/x" << std::endl
+			<< "% F/xPrime + dCoef *F/x\n"
 			<< "Aplus" << " = [";
 
                 pMatB->Print(out, MatrixHandler::MAT_PRINT_SPCONVERT);
 
-		out << "];" << std::endl
-			<< "Aplus = spconvert(Aplus);" << std::endl;
+		out << "];\n"
+			<< "Aplus = spconvert(Aplus);\n";
 
 		out
-			<< "% F/xPrime - dCoef *F/x" << std::endl
+			<< "% F/xPrime - dCoef *F/x\n"
 			<< "Aminus" << " = [";
 
                 pMatA->Print(out, MatrixHandler::MAT_PRINT_SPCONVERT);
                 
-		out << "];" << std::endl
-			<< "Aminus = spconvert(Aminus);" << std::endl;
+		out << "];\n"
+			<< "Aminus = spconvert(Aminus);\n";
 	}
 #ifdef USE_NETCDF
-	if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
-		using namespace std::string_literals;
-		const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
-                
-		MBDynNcVar Var_Eig_dAplus = OutHdl.CreateVar<Vec3>(prefix + ".Aplus", 
-                                                                   OutputHandler::Dimensions::Dimensionless,
-                                                                   "F/xPrime + dCoef * F/x");
+        if (OutHdl.UseNetCDF(OutputHandler::NETCDF)) {
+                using namespace std::string_literals;
 
-                // Used by Matlab/Octave in order to check if spconvert should be called
-                Var_Eig_dAplus.putAtt("matrix type", "sparse");
-                
-		MBDynNcVar Var_Eig_dAminus = OutHdl.CreateVar<Vec3>(prefix + ".Aminus", 
-                                                                    OutputHandler::Dimensions::Dimensionless,
-                                                                    "F/xPrime - dCoef * F/x");
+                size_t iCnt = 0;
 
-                Var_Eig_dAminus.putAtt("matrix type", "sparse");
-                
+                auto func = [&iCnt] (integer iRow, integer iCol, doublereal dCoef) {
+                                    ++iCnt;
+                            };
+
+                pMatA->EnumerateNz(func);
+
+                const size_t iCntAminus = iCnt;
+
+                iCnt = 0;
+
+                pMatB->EnumerateNz(func);
+
+                const size_t iCntAplus = iCnt;
+
+                const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
+
+                OutputHandler::NcDimVec dimAplus(2);
+                dimAplus[0] = OutHdl.CreateDim(prefix + ".iCntAplus", iCntAplus); // Need to create a new dimension, because the number of nonzeros might change
+                dimAplus[1] = OutHdl.DimV3();
+
+                OutputHandler::NcDimVec dimAminus(2);
+                dimAminus[0] = OutHdl.CreateDim(prefix + ".iCntAminus", iCntAminus);
+                dimAminus[1] = OutHdl.DimV3();
+
+                OutputHandler::AttrValVec attrsAplus(4);
+
+                attrsAplus[0] = OutputHandler::AttrVal("units", "-");
+                attrsAplus[1] = OutputHandler::AttrVal("type", "doublereal");
+                attrsAplus[2] = OutputHandler::AttrVal("description", "F/xPrime + dCoef * F/x");
+                attrsAplus[3] = OutputHandler::AttrVal("matrix type", "sparse"); // Used by Matlab/Octave in order to check if spconvert should be called
+
+                OutputHandler::AttrValVec attrsAminus(attrsAplus);
+
+                attrsAminus[2] = OutputHandler::AttrVal("description", "F/xPrime - dCoef * F/x");
+
+                MBDynNcVar Var_Eig_dAplus = OutHdl.CreateVar(prefix + ".Aplus", MbNcDouble, attrsAplus, dimAplus);
+                MBDynNcVar Var_Eig_dAminus = OutHdl.CreateVar(prefix + ".Aminus", MbNcDouble, attrsAminus, dimAminus);
+
                 OutputEigSparseMatrixNc(Var_Eig_dAplus, *pMatB);
-                OutputEigSparseMatrixNc(Var_Eig_dAminus, *pMatA);           
-	}
+                OutputEigSparseMatrixNc(Var_Eig_dAminus, *pMatA);
+        }
 #endif /* USE_NETCDF */
 }
 
 #ifdef USE_NETCDF
 void DataManager::OutputEigSparseMatrixNc(const MBDynNcVar& var, const MatrixHandler& mh)
 {
+     ASSERT(var.getDimCount() == 2);
      ASSERT(OutHdl.UseNetCDF(OutputHandler::NETCDF));
-     
+
      size_t iCnt = 0;
-     
-     auto func = [this, &iCnt, &var] (integer iRow, integer iCol, doublereal dCoef) {
-                      Vec3 v(iRow, iCol, dCoef);
-                      OutHdl.WriteNcVar(var, v, iCnt);
+     std::vector<size_t> ncStart = {0u, 0u};
+     const std::vector<size_t> ncCount = {1u, 3u};
+
+     auto func = [this, &iCnt, &var, &ncStart, &ncCount] (integer iRow, integer iCol, doublereal dCoef) {
+                      ASSERT(iCnt < var.getDim(0).getSize());
+                      // FIXME: iRow and iCol are stored as doublereal, same isse as in MATLAB format
+                      static_assert(static_cast<integer>(static_cast<doublereal>(std::numeric_limits<integer>::max())) == std::numeric_limits<integer>::max());
+                      const doublereal rgTriplet[3] = {static_cast<doublereal>(iRow), static_cast<doublereal>(iCol), dCoef};
+                      ncStart[0] = iCnt;
+                      OutHdl.WriteNcVar(var, rgTriplet[0], ncStart, ncCount);
                       ++iCnt;
                  };
 
