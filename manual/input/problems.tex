@@ -1097,12 +1097,16 @@ the corresponding continuous time domain eigenvalue $\lambda_k$ is
 \end{align}
 where $\texttt{dCoef}$ is defined in the \texttt{.m} file;
 
-\item \texttt{VR}: the right eigenvectors, solution of the problem
-$\plbr{\TT{J}_{(+c)} + \Lambda \TT{J_{(-c)}}}\T{V_R}=\T{0}$;
+\item \texttt{VR}: the matrix of the right eigenvectors, $\TT{V}_R$, solution of the problem
+\begin{align*}
+	\plbr{\TT{J}_{(+c)} - \Lambda(\mathtt{k}) \TT{J}_{(-c)}} \TT{V}_R(:,\mathtt{k}) = \T{0}
+\end{align*}
 only the eigenvectors corresponding to the selected eigenvalues are output;
 
-\item \texttt{VL}: the left eigenvectors, solution of the problem
-$\plbr{\TT{J}_{(+c)} + \Lambda \TT{J_{(-c)}}}^T\T{V_L}=\T{0}$;
+\item \texttt{VL}: the matrix of the left eigenvectors, $\TT{V}_L$, solution of the problem
+\begin{align*}
+	\plbr{\TT{J}_{(+c)}^T - \mathrm{conj}(\Lambda(\mathtt{k})) \TT{J}_{(-c)}^T} \TT{V}_L(:, \mathtt{k}) = \T{0}
+\end{align*}
 only the eigenvectors corresponding to the selected eigenvalues are output;
 
 \item \texttt{X0}: a vector containing the reference position

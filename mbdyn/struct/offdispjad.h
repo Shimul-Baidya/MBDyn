@@ -103,6 +103,8 @@ public:
 
      virtual Type GetJointType() const override;
 
+     using Elem::AssRes;
+
      template <typename T>
      void AssRes(sp_grad::SpGradientAssVec<T>& WorkMat,
                  doublereal dCoef,

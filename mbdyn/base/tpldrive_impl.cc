@@ -895,7 +895,7 @@ InitTplDC(void)
         SetDC6x6D("component", new CompTDCR<Mat6x6>);
 
         /* array */
-        SetDC1D("array", new ArrayTDCR<doublereal>);
+        // SetDC1D("array", new ArrayTDCR<doublereal>); // no need for this, let the underlying array drive caller take care of it
         SetDC3D("array", new ArrayTDCR<Vec3>);
         SetDC6D("array", new ArrayTDCR<Vec6>);
 

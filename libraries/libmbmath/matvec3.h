@@ -1004,7 +1004,8 @@ class Mat3x3: public sp_grad::SpConstMatElemAdapter<Mat3x3>
     */
    bool EigSym(Vec3& EigenValues) const;
    bool EigSym(Vec3& EigenValues, Mat3x3& EigenVectors) const;
- 
+
+   bool PrincipalAxes(Vec3& J_princ, Mat3x3& R_princ) const;
    /*Operazioni su arrays di reali */
       
    /*
