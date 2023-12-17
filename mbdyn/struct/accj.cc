@@ -474,7 +474,7 @@ void AngularAccelerationJoint::Output(OutputHandler& OH) const
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			Joint::NetCDFOutput(OH, Zero3, Vec3(dM, 0., 0.), Zero3, Dir*dM);
-			OH.WriteNcVar(Var_wP, dGet());
+			OH.WriteNcVar(Var_wP, pNode->GetRCurr() * Dir * dGet());
 		}
 #endif // USE_NETCDF
 	}
