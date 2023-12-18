@@ -24,15 +24,10 @@ stages:          # List of stages for jobs, and their order of execution
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-    - printf "list directory contents\n"
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
     - git pull --force
-    - pwd
-    - ls -lhF
-    - find . -name bootstrap.sh
-    - find / -name bootstrap.sh
     - chmod u+x ./bootstrap.sh
     - ./bootstrap.sh
     - printf "configure ...\n"
