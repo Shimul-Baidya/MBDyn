@@ -206,7 +206,7 @@ OL_ARG_ENABLE(mbc,[  --enable-mbc            enable MBC - multibody communicatio
 OL_ARG_ENABLE(netcdf,[  --enable-netcdf         enable NetCDF4 based binary output],auto,[auto yes no])dnl
 OL_ARG_ENABLE(python,[  --enable-python         enable Python support],no)dnl
 OL_ARG_ENABLE(octave,[  --enable-octave         enable Octave support],no)dnl
-OL_ARG_ENABLE(octave_utils,[  --enable-octave-utils   enable Octave utility functions],no)dnl
+OL_ARG_ENABLE(octave_utils,[  --enable-octave-utils   enable Octave utility functions],no,[yes no global local])dnl
 AC_ARG_WITH(mkoctfile,[  --with-mkoctfile=exec-path Octave build tool mkoctfile],[
 	ol_with_mkoctfile_exec="$withval"
 ],[ol_with_mkoctfile_exec=mkoctfile])
@@ -883,6 +883,9 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
            OCTAVE_CLI=octave-cli
         fi
 fi
+
+AM_CONDITIONAL([USE_OCTAVE_UTILS_LOCAL], [test "$ol_enable_octave_utils" = "local"])
+AM_CONDITIONAL([USE_OCTAVE_UTILS_GLOBAL], [test "$ol_enable_octave_utils" = "global"])
 
 	AC_MSG_CHECKING([for _aligned_malloc and _aligned_free])
 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
