@@ -777,7 +777,7 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
 	AC_CHECK_HEADER(octave/octave.h,[have_octave_octave_h=yes],[have_octave_octave_h=no],[
 #include <octave/oct.h>
 		])
-	CPPFLAGS="$save_CPPFLAGS"
+	CPPFLAGS="$save_CPPFLAGS -fPIC"
 	AC_LANG([C])
 
 	link_octave="no"
