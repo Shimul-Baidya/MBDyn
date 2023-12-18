@@ -31,7 +31,7 @@ build-job:       # This job runs in the build stage, which runs first.
     - chmod u+x ./bootstrap.sh
     - ./bootstrap.sh
     - printf "configure ...\n"
-    - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/" ./configure
+    - PYTHON_VERSION=3 CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/" ./configure --enable-python
     - echo "Compiling the code..."
     - make
     - echo "Install the code."
