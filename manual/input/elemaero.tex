@@ -165,6 +165,14 @@ Sharp variations, like tip loss concentrated in the outermost 2\%
 of a rotor blade span, might be entirely missed when using too little
 spanwise elements with too little integration points.
 
+The value resulting from the \nt{control\_drive} is added to the local angle of attack to mimick a deflection of a control surface that extends for the whole span of the element.
+As such, it does not directly correspond to the deflection of the surface, but rather to
+\begin{align*}
+	\nt{control\_drive} &= \cfrac{C_{L/\delta}}{C_{L/\alpha}} \, \delta
+\end{align*}
+where $\delta$ is the actual deflection of the control surface and $C_{L/\alpha}$ and $C_{L/\delta}$ respectively are the lift stability and control derivatives of the airfoil, namely the partial derivatives of the airfoil's lift coefficient with respect to the angle of attack, $\alpha$, and the control surface deflection.
+\emph{Caveat: no account is made of any change in aerodynamic moment resulting from the deflection of the control surface.}
+
 The span of the \kw{aerodynamic body} element is set by the user;
 the offset vector points to the center-span of the element.
 The span of the \kw{aerodynamic beam2} and \kw{aerodynamic beam3} elements
