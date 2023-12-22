@@ -455,9 +455,9 @@ AngularAccelerationJoint::OutputPrepare(OutputHandler& OH)
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			OutputPrepare_int("Angular acceleration", OH);
 
-			Var_wP = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "wP", 
-				OutputHandler::Dimensions::AngularAcceleration,
-				"imposed angular acceleration (x, y, z)");
+                        Var_wP = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "wP",
+                                OutputHandler::Dimensions::AngularAcceleration,
+                                "imposed angular acceleration");
 		}
 #endif // USE_NETCDF
 	}
@@ -474,7 +474,7 @@ void AngularAccelerationJoint::Output(OutputHandler& OH) const
 #ifdef USE_NETCDF
 		if (OH.UseNetCDF(OutputHandler::JOINTS)) {
 			Joint::NetCDFOutput(OH, Zero3, Vec3(dM, 0., 0.), Zero3, Dir*dM);
-			OH.WriteNcVar(Var_wP, pNode->GetRCurr() * Dir * dGet());
+			OH.WriteNcVar(Var_wP, dGet());
 		}
 #endif // USE_NETCDF
 	}
