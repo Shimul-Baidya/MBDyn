@@ -17,7 +17,7 @@
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
 variables:
-  MBD_SKIP_MBDYN_BUILD_STAGE: "no" ## Set this variable to "yes" in order to reuse the existing MBDyn installation
+  MBD_SKIP_MBDYN_BUILD_STAGE: "yes" ## Set this variable to "yes" in order to reuse the existing MBDyn installation
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -98,6 +98,7 @@ mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs 
   stage: build
   script:
       - |
+           octave-cli --eval "pkg install -forge nurbs"
            git clone -b master https://github.com/octave-user/mboct-mbdyn-pkg.git && \
            pushd mboct-mbdyn-pkg && \
            make CXXFLAGS="-Ofast -Wall -march=native" install_local && popd
