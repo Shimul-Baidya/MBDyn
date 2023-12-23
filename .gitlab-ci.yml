@@ -28,16 +28,45 @@ build-job:       # This job runs in the build stage, which runs first.
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
     - git pull --force
-    - chmod u+x ./bootstrap.sh
-    - ./bootstrap.sh
+    ## Let's try to speed up the build process a bit
+    ## Execute bootstrap.sh and configure only if needed
+    ## This conditional execution may be removed as soon as the testsuite is finished
+    - |
+      if ! test -x ./configure || test configure.ac -nt configure ; then
+        chmod u+x ./bootstrap.sh
+        if ! ./bootstrap.sh ; then
+          exit 1
+        fi
+      fi
+      if ! test -x configure ; then
+        exit 1
+      fi      
     - printf "configure ...\n"
-    - PYTHON_VERSION=3 CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" ./configure --enable-python --enable-octave --enable-install_test_progs --prefix=$HOME/local/mbdyn-test-install
+    - |
+      if ! test -f Makefile || test configure -nt Makefile; then
+        if ! PYTHON_VERSION=3 \
+          ./configure \
+                    CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" \        
+                    --enable-python \
+                    --enable-octave \
+                    --enable-install_test_progs \
+                    --prefix=$HOME/local/mbdyn-test-install \
+                    --with-umfpack \
+                    --with-static-modules \
+                    --with-suitesparse-qr ; then
+          exit 1
+        fi
+      fi
+      if ! test -f Makefile; then
+        exit 1
+      fi
     - echo "Clean up local installation directory"
     - rm -rf $HOME/local/mbdyn-test-install
     - echo "Compiling the code..."
     - make -j 11
     - echo "Install the code."
     - make install
+    - echo "Run built-in unit tests"
     - make test
 
 unit-test-job:   # This job runs in the test stage.
