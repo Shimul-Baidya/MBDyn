@@ -44,16 +44,15 @@ build-job:       # This job runs in the build stage, which runs first.
     - printf "configure ...\n"
     - |
       if ! test -f Makefile || test configure -nt Makefile; then
-        if ! PYTHON_VERSION=3 \
-          ./configure \
-                    CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" \        
+        if ! PYTHON_VERSION=3 ./configure \
+                    CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" \
                     --enable-python \
                     --enable-octave \
                     --enable-install_test_progs \
                     --prefix=$HOME/local/mbdyn-test-install \
                     --with-umfpack \
                     --with-static-modules \
-                    --with-suitesparse-qr ; then
+                    --with-suitesparseqr ; then
           exit 1
         fi
       fi
