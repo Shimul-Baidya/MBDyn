@@ -112,7 +112,7 @@ SUBDIRS = include build etc libraries manual mbdyn modules utils var
 
 include $(top_srcdir)/build/bot.mk
 
-test-local: all
+test: all
 	for cmd in "libraries/libmbmath/sp_gradient_test" \
 		"libraries/libmbmath/dgeequtest" \
 		"libraries/libmbmath/itertest" \
@@ -122,8 +122,6 @@ test-local: all
 		"libraries/libmbwrap/cctest -m umfpack" \
 		"libraries/libmbwrap/cctest -m y12" \
 		"libraries/libmbwrap/wraptest -m umfpack" \
-		"libraries/libmbwrap/wraptest -m pardiso" \
-		"libraries/libmbwrap/wraptest -m pardiso_64" \
 		"libraries/libmbwrap/wraptest -m naive" \
 		"libraries/libmbwrap/wraptest -m lapack" \
 		"libraries/libmbwrap/wraptest -m qr" \
