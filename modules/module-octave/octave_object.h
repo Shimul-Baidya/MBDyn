@@ -1,5 +1,5 @@
-/* 
- * MBDyn (C) is a multibody analysis code. 
+/*
+ * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
  * Copyright (C) 1996-2023
@@ -16,7 +16,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation (version 2 of the License).
- * 
+ *
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +30,7 @@
 
 /*
   AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-  Copyright (C) 2011(-2019) all rights reserved.
+  Copyright (C) 2011(-2023) all rights reserved.
 
   The copyright of this code is transferred
   to Pierangelo Masarati and Paolo Mantegazza
@@ -65,7 +65,7 @@ namespace oct
 #define DECLARE_OCTAVE_ALLOCATOR
 #define DEFINE_OCTAVE_ALLOCATOR(class)
 #endif
-    
+
         template <typename T>
         class octave_object_ptr: public octave_value
         {
@@ -145,7 +145,7 @@ namespace oct
                                 throw std::bad_cast();
                 }
         };
-    
+
         class octave_object: public octave_base_value
         {
                 typedef octave_value_list method_function(octave_object*, const octave_value_list&, int);
@@ -155,9 +155,9 @@ namespace oct
                 {
                 public:
                         typedef octave_object_ptr<octave_object> object_type;
-        
+
                         octave_method();
-        
+
                         octave_method(const std::string& method, method_function* pfn, octave_object* pobject);
 
                         virtual octave_value_list subsref(const std::string& type,
@@ -169,17 +169,17 @@ namespace oct
                         virtual bool is_defined(void) const { return true; }
 
                         virtual void print(std::ostream& os, bool pr_as_read_syntax);
-        
+
                         DECLARE_OV_TYPEID_FUNCTIONS_AND_DATA
                         DECLARE_OCTAVE_ALLOCATOR
-        
+
                         private:
                         std::string method;
                         method_function* pfunc;
                         object_type object;
                 };
 #endif
-    
+
         protected:
                 typedef void setup_class_object_function();
                 class class_object
@@ -201,21 +201,21 @@ namespace oct
                         {
                                 return method_table.size();
                         }
-                        
+
                         method_function* lookup_method(const std::string& method_name)const;
                 private:
                         typedef std::map<std::string,method_function*> method_table_t;
                         method_table_t method_table;
                         class_object* const parent_object;
                 };
-        
+
         protected:
                 octave_object();
                 virtual ~octave_object();
-        
+
         protected:
                 static class_object dispatch_class_object;
-        
+
         private:
                 virtual octave_value operator()(const octave_value_list& idx) const;
                 virtual const class_object* get_class_object()=0;
@@ -238,9 +238,9 @@ namespace oct
 #endif
                 ;
 
-#define BEGIN_METHOD_TABLE_DECLARE()                    \
-        virtual const class_object* get_class_object(); \
-        static class_object dispatch_class_object;      \
+#define BEGIN_METHOD_TABLE_DECLARE()                             \
+        virtual const class_object* get_class_object() override; \
+        static class_object dispatch_class_object;               \
         static void setup_class_object();
 
 #define METHOD_DECLARE(method_name)                                     \
@@ -275,7 +275,7 @@ namespace oct
 #define END_METHOD_TABLE()                                              \
                 } else assert(false);                                   \
         }
-        
+
 } // namespace
 
 #endif // USE_OCTAVE
