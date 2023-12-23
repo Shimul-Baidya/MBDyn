@@ -148,5 +148,5 @@ if USE_PASTIX
 endif
 
 if USE_MULTITHREAD
-	mbdyn/base/inusetest
+	mbdyn/base/inusetest -n 100 -t 4
 endif
