@@ -97,20 +97,15 @@ mboct-numerical-pkg-build-job:       # This job runs in the build stage, which r
 mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - |
-           octave-cli --eval "pkg install -forge nurbs"
-           git clone -b master https://github.com/octave-user/mboct-mbdyn-pkg.git && \
-           pushd mboct-mbdyn-pkg && \
-           make CXXFLAGS="-Ofast -Wall -march=native" install_local && popd
+      - octave-cli --eval "pkg install -verbose -local -forge nurbs"
+      - git clone -b master https://github.com/octave-user/mboct-mbdyn-pkg.git
+      - make CXXFLAGS="-Ofast -Wall -march=native" -C mboct-mbdyn-pkg install_local
 
 mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - |
-           git clone -b master https://github.com/octave-user/mboct-fem-pkg.git
-           pushd mboct-fem-pkg
-           make CXXFLAGS="-Ofast -Wall -march=native" install_local
-           popd
+      - git clone -b master https://github.com/octave-user/mboct-fem-pkg.git
+      - make CXXFLAGS="-Ofast -Wall -march=native" -C mboct-fem-pkg install_local
 
 mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
