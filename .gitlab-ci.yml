@@ -16,14 +16,22 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
+variables:
+  MBD_SKIP_MBDYN_BUILD_STAGE: "no" ## Set this variable to "yes" in order to reuse the existing MBDyn installation
+
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
   - deploy
 
-build-job:       # This job runs in the build stage, which runs first.
+mbdyn-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
+    - |
+      if test '$MBD_SKIP_MBDYN_BUILD_STAGE' = "yes" && test -e $HOME/local/mbdyn-test-install/bin/mbdyn; then 
+        printf "Do not compile MBDyn because MBD_SKIP_MBDYN_BUILD_STAGE = \"%s\"\n" '$MBD_SKIP_MBDYN_BUILD_STAGE'
+        exit 0
+      fi
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
@@ -70,10 +78,47 @@ build-job:       # This job runs in the build stage, which runs first.
     - echo "Run built-in unit tests"
     - make test
 
-unit-test-job:   # This job runs in the test stage.
+mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - |
+           git clone -b master https://github.com/octave-user/mboct-octave-pkg.git && \
+           pushd mboct-octave-pkg && \
+           make install_local && popd
+
+mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - |
+           git clone -b master https://github.com/octave-user/mboct-numerical-pkg.git && \
+           pushd mboct-numerical-pkg && \
+           make install_local && popd
+
+mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - |
+           git clone -b master https://github.com/octave-user/mboct-mbdyn-pkg.git && \
+           pushd mboct-mbdyn-pkg && \
+           make CXXFLAGS="-Ofast -Wall -march=native" install_local && popd
+
+mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - |
+           git clone -b master https://github.com/octave-user/mboct-fem-pkg.git
+           pushd mboct-fem-pkg
+           make CXXFLAGS="-Ofast -Wall -march=native" install_local
+           popd
+
+mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
-    - echo "Running unit tests..."
+      - |
+           PATH=$HOME/local/mbdyn-test-install/bin:${PATH} make -C mboct-mbdyn-pkg check_installed 2>&1 | tee fntests.out
+           cat mboct-mbdyn-pkg/fntests.log
+           tail -n 14 fntests.out
+           awk -F ' ' 'BEGIN{ failed=9999; } /^  FAIL\>/{ failed = $2; } END { if (failed != 0) exit 1; }' fntests.out
 
 lint-test-job:   # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
