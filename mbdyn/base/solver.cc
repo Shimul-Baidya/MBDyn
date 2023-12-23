@@ -2193,6 +2193,10 @@ Solver::Advance(void)
 	CurrStep = StepIntegrator::NEWSTEP;
 
 	if (pDM->EndOfSimulation() || dTime >= dFinalTime) {
+                // Make sure to execute all eigenanalyses after the end of the simulation
+                DEBUGCERR("Executing all remaining eigenanalyses\n");
+                EigAll(Solver::EigAnTimeAllRemaining, bOutputCounter);
+
 		if (pRTSolver) {
 			pRTSolver->StopCommanded();
 		}
@@ -4091,11 +4095,7 @@ Solver::ReadData(MBDynParser& HP)
                                   throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                              }
 
-                             if (dTimeEig <= dFinalTime) {
-                                  EigAn.Analyses.push_back(dTimeEig);
-                             } else {
-                                  silent_cerr("warning: eigenanalysis at " << dTimeEig << " is beyond the final time " << dFinalTime << " and will not be executed\n");
-                             }
+                             EigAn.Analyses.push_back(dTimeEig); // If dTimeEig is after the end of the simulation it will be executed as well.
                         }
 
                         ASSERT(EigAn.Analyses.size() > 0);
@@ -6935,6 +6935,8 @@ bool Solver::EigNext(bool (*pfnConditionTime)(doublereal, doublereal), bool bNew
      
      do {
           ++EigAn.currAnalysis;
+          // Because it would be pointless to execute exactly the same eigenanalysis several times,
+          // all the the remaining eigenanalyses will be ignored.
      } while (EigAn.currAnalysis != EigAn.Analyses.end() && (*pfnConditionTime)(*EigAn.currAnalysis, dTime));
      
      ++EigAn.currAnalysisIndex;

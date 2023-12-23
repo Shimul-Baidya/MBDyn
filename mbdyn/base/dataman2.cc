@@ -1891,13 +1891,14 @@ DataManager::OutputEigSparseMatrices(const MatrixHandler* pMatA,
                 const size_t iCntAplus = iCnt;
 
                 const std::string prefix = "eig."s + std::to_string(uCurrEigSol);
+                const std::string prefix_dim = "eig_"s + std::to_string(uCurrEigSol);
 
                 OutputHandler::NcDimVec dimAplus(2);
-                dimAplus[0] = OutHdl.CreateDim(prefix + ".iCntAplus", iCntAplus); // Need to create a new dimension, because the number of nonzeros might change
+                dimAplus[0] = OutHdl.CreateDim(prefix_dim + "_Aplus_sp_iSize", iCntAplus); // Need to create a new dimension, because the number of nonzeros might change
                 dimAplus[1] = OutHdl.DimV3();
 
                 OutputHandler::NcDimVec dimAminus(2);
-                dimAminus[0] = OutHdl.CreateDim(prefix + ".iCntAminus", iCntAminus);
+                dimAminus[0] = OutHdl.CreateDim(prefix_dim + "_Aminus_sp_iSize", iCntAminus);
                 dimAminus[1] = OutHdl.DimV3();
 
                 OutputHandler::AttrValVec attrsAplus(4);

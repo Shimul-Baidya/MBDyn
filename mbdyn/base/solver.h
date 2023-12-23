@@ -241,6 +241,7 @@ protected:
         static bool EigAnTimeBeforeNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn < dTimeCurr; }
         static bool EigAnTimeUntilNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn <= dTimeCurr; }
         static bool EigAnTimeExactlyNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn == dTimeCurr; }
+        static bool EigAnTimeAllRemaining(doublereal dTimeEigAn, doublereal dTimeCurr) { return true; }
         bool EigNext(bool (*pfnConditionTime)(doublereal, doublereal) = EigAnTimeUntilNow, bool bNewLine = false);
         int EigAll(bool (*pfnConditionTime)(doublereal, doublereal) = EigAnTimeUntilNow, bool bNewLine = false);
 	void Eig(bool bNewLine = false);
