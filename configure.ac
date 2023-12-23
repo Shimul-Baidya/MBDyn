@@ -1395,6 +1395,8 @@ if test "$ol_enable_multithread" != no ; then
 	fi
 fi
 
+AM_CONDITIONAL([USE_MULTITHREAD],[test "$ol_link_multithread" = "yes"])
+
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for multithread naive solver (use previous checks)

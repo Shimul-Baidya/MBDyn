@@ -126,7 +126,6 @@ test: all
 		"libraries/libmbwrap/wraptest -m lapack" \
 		"libraries/libmbwrap/wraptest -m qr" \
 		"libraries/liby12/y12test" \
-		"mbdyn/base/inusetest" \
 		"mbdyn/struct/solidshapetest" ; do \
 		printf "running command: \"%s\"\n" "$${cmd}" ; \
 		$${cmd} ; \
@@ -134,14 +133,20 @@ test: all
 		printf "status: %d\n" $${rc} ; \
 		if test $${rc} -ne 0; then exit 1; fi ; \
 	done
-
+## tests for optional features
 if USE_SUITESPARSE_QR
 	libraries/libmbwrap/wraptest -m spqr
 endif
+
 if USE_PARDISO
 	libraries/libmbwrap/wraptest -m pardiso
 	libraries/libmbwrap/wraptest -m pardiso_64
 endif
+
 if USE_PASTIX
 	libraries/libmbwrap/wraptest -m pastix
+endif
+
+if USE_MULTITHREAD
+	mbdyn/base/inusetest
 endif
