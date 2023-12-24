@@ -17,10 +17,11 @@
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
 variables:
-  MBD_INSTALL_PREFIX: "local/mbdyn-test-install/" ## Local installation directory
-  MBD_BUILD_DIR: "install/mbdyn-test-build/"
-  MBD_NUM_BUILD_JOBS: "11" # Run make -j '$MBD_NUM_BUILD_JOBS'
+  MBD_INSTALL_PREFIX: "local/mbdyn-test-install/" ## Local installation directory below ${HOME}
+  MBD_BUILD_DIR: "install/mbdyn-test-build/" ## Local build directory below ${HOME}
+  MBD_NUM_BUILD_JOBS: "12" # Run make -j '$MBD_NUM_BUILD_JOBS'
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
+  MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -30,6 +31,12 @@ stages:          # List of stages for jobs, and their order of execution
 mbdyn-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
+    - echo "Check cpuinfo ..."
+    - cat /proc/cpuinfo
+    - echo "Check the host system ..."
+    - uname -a
+    - echo "Check the contents of the home directory ..."
+    - find ${HOME} '(' -type f -and -not -path '*/.git/*' ')'# Let us check if we left some garbage there ...
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
@@ -49,12 +56,12 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       fi      
     - MBD_SOURCE_DIR=`pwd`
     - MBD_SOURCE_DIR=`realpath ${MBD_SOURCE_DIR}`
-    - |
-      if test '$MBD_CLEAN_BUILD' = "yes"; then
-        rm -rf '$MBD_BUILD_DIR'
-      fi
     - echo "Create build directory ..."
-    - MBD_BUILD_DIR=${HOME}/${MBDYN_BUILD_DIR}
+    - MBD_BUILD_DIR=${HOME}/${MBD_BUILD_DIR}
+    - |
+      if test ${MBD_CLEAN_BUILD} = "yes"; then
+        rm -rf ${MBD_BUILD_DIR}
+      fi
     - MBD_INSTALL_PREFIX=${HOME}/${MBD_INSTALL_PREFIX}
     - if ! test -d ${MBD_BUILD_DIR}; then mkdir -p ${MBD_BUILD_DIR}; fi
     - test -d ${MBD_BUILD_DIR}
@@ -72,14 +79,21 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       if ! test -f Makefile || test ${MBD_SOURCE_DIR}/configure -nt Makefile; then
         if ! PYTHON_VERSION=3 ${MBD_SOURCE_DIR}/configure \
                     CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" \
+                    CXXFLAGS="${MBD_COMPILER_FLAGS}" \
+                    CFLAGS="${MBD_COMPILER_FLAGS}" \
+                    FFLAGS="${MBD_COMPILER_FLAGS}" \
+                    FCFLAGS="${MBD_COMPILER_FLAGS}" \
                     --enable-python \
                     --enable-octave \
                     --enable-install_test_progs \
                     --prefix=${MBD_INSTALL_PREFIX} \
                     --with-umfpack \
+                    --with-klu \
+                    --with-suitesparseqr \
                     --with-static-modules \
                     --disable-Werror \
-                    --with-suitesparseqr ; then
+                    --enable-netcdf \
+                    --with-trilinos ; then
                     ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
           echo "Failed to run configure"
           exit 1
@@ -108,21 +122,24 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
 mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${PATH} ## Check if the variables were lost
+      - which mbdyn
       - git clone -b master https://github.com/octave-user/mboct-octave-pkg.git && \
-      - make -C mboct-octave-pkg install_local
+      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-octave-pkg install_local
 
 mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
       - git clone -b master https://github.com/octave-user/mboct-numerical-pkg.git && \
-      - make -C mboct-numerical-pkg install_local
+      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-numerical-pkg install_local
 
 mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
       - octave-cli --eval "pkg install -verbose -local -forge nurbs"
+      - if ! octave-cli --eval "pkg install -verbose -local -forge netcdf"; then echo "netcdf was not installed"; fi
       - git clone -b master https://github.com/octave-user/mboct-mbdyn-pkg.git
-      - make CXXFLAGS="-Ofast -Wall -march=native" -C mboct-mbdyn-pkg install_local
+      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-mbdyn-pkg install_local
 
 mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
@@ -132,19 +149,22 @@ mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs fi
       - install gmsh-*.*.*-Linux64/bin/gmsh $HOME/local/mbdyn-test-install/bin/
       - $HOME/local/mbdyn-test-install/bin/gmsh --version
       - git clone -b master https://github.com/octave-user/mboct-fem-pkg.git
-      - make CXXFLAGS="-Ofast -Wall -march=native" -C mboct-fem-pkg install_local
+      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-fem-pkg install_local
 
 mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
-      - PATH=$HOME/local/mbdyn-test-install/bin:${PATH} octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})'
-
-lint-test-job:   # This job also runs in the test stage.
-  stage: test    # It can run at the same time as unit-test-job (in parallel).
-  script:
-    - echo "Linting code... This will take about 10 seconds."
-    - sleep 10
-    - echo "No lint issues found."
+      #- export PATH=${HOME}/local/mbdyn-test-install/bin:${PATH} 
+      #- export AWKPATH=${HOME}/local/mbdyn-test-install/share/awk:${AWKPATH} 
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${PATH} 
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - which mbdyn
+      - mbdyn --version
+      - which mbdyn2easyanim.sh
+      - |
+        mbdyn2easyanim.sh
+        test $? = 1
+      - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})'
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
