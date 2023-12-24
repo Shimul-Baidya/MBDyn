@@ -48,7 +48,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         exit 1
       fi      
     - MBD_SOURCE_DIR=`pwd`
-    - MBD_SOURCE_DIR=`realpath '$MBD_SOURCE_DIR'`
+    - MBD_SOURCE_DIR=`realpath $MBD_SOURCE_DIR`
     - |
       if test '$MBD_CLEAN_BUILD' = "yes"; then
         rm -rf '$MBD_BUILD_DIR'
