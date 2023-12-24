@@ -157,31 +157,31 @@ mboct-numerical-pkg-build-job:       # This job runs in the build stage, which r
       - git clone -b ${MBOCT_NUMERICAL_PKG_BRANCH} https://github.com/octave-user/mboct-numerical-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-numerical-pkg install_local
 
-nurbs-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - echo "nurbs build"
-      - |
-        if test ${OCT_NURBS_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
-            echo "nurbs is already installed"
-            exit 0
-          fi
-        fi
-      - octave-cli --eval "pkg install -verbose -local -forge nurbs"
+# nurbs-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "nurbs build"
+#       - |
+#         if test ${OCT_NURBS_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
+#             echo "nurbs is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - octave-cli --eval "pkg install -verbose -local -forge nurbs"
 
-netcdf-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - echo "netcdf build"
-      - |
-        if test ${OCT_NETCDF_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "netcdf"); exit(isempty(pl))'; then
-            echo "netcdf is already installed"
-            exit 0
-          fi
-        fi    
-      - octave-cli --eval "pkg install -verbose -local -forge netcdf"
+# netcdf-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "netcdf build"
+#       - |
+#         if test ${OCT_NETCDF_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "netcdf"); exit(isempty(pl))'; then
+#             echo "netcdf is already installed"
+#             exit 0
+#           fi
+#         fi    
+#       - octave-cli --eval "pkg install -verbose -local -forge netcdf"
 
 mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
