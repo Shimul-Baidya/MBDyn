@@ -91,8 +91,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         MBD_NUM_BUILD_JOBS=`awk 'BEGIN{max=1;}/^processor\>/{if ($3 + 1 >= max) max = $3 + 1; } END{ print max }' /proc/cpuinfo`;   
       fi
     - printf "Compiling the code using %s jobs ...\n" $MBD_NUM_BUILD_JOBS
-    - make -j '$MBD_NUM_BUILD_JOBS'
-    - printf "Install the code below \"%s\"\n" '$MBD_INSTALL_PREFIX'
+    - make -j$MBD_NUM_BUILD_JOBS
+    - printf "Install the code below \"%s\"\n" "$MBD_INSTALL_PREFIX"
     - make install
     - echo "MBDyn version:"
     - $MBD_INSTALL_PREFIX/bin/mbdyn --version
