@@ -36,7 +36,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - echo "Check the host system ..."
     - uname -a
     - echo "Check the contents of the home directory ..."
-    - find ${HOME} '(' -type f -and -not -path '*/.git/*' ')'# Let us check if we left some garbage there ...
+    - find ${HOME} -type f # Let us check if we left some garbage there ...
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
