@@ -143,19 +143,19 @@ mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs
       - git clone -b ${MBOCT_OCTAVE_PKG_BRANCH} https://github.com/octave-user/mboct-octave-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-octave-pkg install_local
 
-mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - echo "mboct-numerical-pkg build"
-      - |
-        if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "mboct-numerical-pkg"); exit(isempty(pl))'; then
-            echo "mboct-numerical-pkg is already installed"
-            exit 0
-          fi
-        fi    
-      - git clone -b ${MBOCT_NUMERICAL_PKG_BRANCH} https://github.com/octave-user/mboct-numerical-pkg.git
-      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-numerical-pkg install_local
+# mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "mboct-numerical-pkg build"
+#       - |
+#         if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "mboct-numerical-pkg"); exit(isempty(pl))'; then
+#             echo "mboct-numerical-pkg is already installed"
+#             exit 0
+#           fi
+#         fi    
+#       - git clone -b ${MBOCT_NUMERICAL_PKG_BRANCH} https://github.com/octave-user/mboct-numerical-pkg.git
+#       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-numerical-pkg install_local
 
 # nurbs-build-job:       # This job runs in the build stage, which runs first.
 #   stage: build
