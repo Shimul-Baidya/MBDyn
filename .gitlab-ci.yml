@@ -20,8 +20,21 @@ variables:
   MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/" ## Local installation directory
   MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/" ## Local build directory
   MBD_NUM_BUILD_JOBS: "12" # Run make -j '$MBD_NUM_BUILD_JOBS'
-  MBD_CLEAN_BUILD: "no" ## Clean up the build directory
+  MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
+  MBD_CLEAN_BUILD: "${MBD_CLEAN_ALL}" ## Clean up the build directory
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
+  MBD_MERGE_BRANCHES: ""
+  MBOCT_OCTAVE_PKG_BRANCH: "master"
+  MBOCT_NUMERICAL_PKG_BRANCH: "master"
+  MBOCT_MBDYN_PKG_BRANCH: "master"
+  MBOCT_FEM_PKG_BRANCH: "master"
+  MBOCT_OCTAVE_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
+  MBOCT_NUMERICAL_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
+  MBOCT_MBDYN_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
+  MBOCT_FEM_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
+  MBD_GMSH_REINSTALL: "${MBD_CLEAN_ALL}"
+  OCT_NETCDF_REINSTALL: "${MBD_CLEAN_ALL}"
+  OCT_NURBS_REINSTALL: "${MBD_CLEAN_ALL}"
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -40,7 +53,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - |
       for dirent in autom4te.cache build contrib CVS etc include libraries manual mbdyn modules packaging tests utils var; do
         if test -d ${HOME}/${dirent}; then
-          find ${HOME}/${dirent} -type f
+          #find ${HOME}/${dirent} -type f
+          #rm -rf ${HOME}/${dirent}
         fi
       done
     #- echo "Check the contents of the home directory ..."
@@ -53,21 +67,19 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     ## Execute bootstrap.sh and configure only if needed
     ## This conditional execution may be removed as soon as the testsuite is finished
     - |
-      if ! test -x ./configure || test configure.ac -nt configure ; then
+      if ! test -x ./configure ; then
         chmod u+x ./bootstrap.sh
-        if ! ./bootstrap.sh ; then
-          exit 1
-        fi
+        ./bootstrap.sh
       fi
-      if ! test -x configure ; then
-        exit 1
-      fi      
+      test -x ./configure
     - MBD_SOURCE_DIR=`pwd`
     - echo "Create build directory ..."
     - |
       if test ${MBD_CLEAN_BUILD} = "yes"; then
+        echo "cleanup build directory ..."
         rm -rf ${MBD_BUILD_DIR}
       fi
+    - echo "create build directory ..."
     - if ! test -d ${MBD_BUILD_DIR}; then mkdir -p ${MBD_BUILD_DIR}; fi
     - test -d ${MBD_BUILD_DIR}
     - if ! test -d ${MBD_INSTALL_PREFIX}; then mkdir -p ${MBD_INSTALL_PREFIX}; fi
@@ -78,7 +90,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - ls -lhF .
     - printf "configure ...\n"
     - |
-      if ! test -f Makefile || test ${MBD_SOURCE_DIR}/configure -nt Makefile; then
+      if ! test -f Makefile; then
         if ! PYTHON_VERSION=3 ${MBD_SOURCE_DIR}/configure \
                     CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" \
                     CXXFLAGS="${MBD_COMPILER_FLAGS}" \
@@ -101,19 +113,16 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
           exit 1
         fi
       fi
-      if ! test -f Makefile; then
-        echo "Makefile was not created"
-        exit 1
-      fi
-    - echo "Clean up local installation directory"
-    - rm -rf ${MBD_INSTALL_PREFIX}
+      test -f Makefile
     - echo "Determine the number of build jobs ..."
     - |
       if test -f /proc/cpuinfo ; then
-        MBD_NUM_BUILD_JOBS=`awk 'BEGIN{max=1;}/^processor\>/{if ($3 + 1 >= max) max = $3 + 1; } END{ print max }' /proc/cpuinfo`;   
+        MBD_NUM_BUILD_JOBS=`awk 'BEGIN{max=1;}/^processor\>/{if ($3 + 1 >= max) max = $3 + 1; } END{ print max }' /proc/cpuinfo`;
       fi
     - printf "Compiling the code using %s jobs ...\n" ${MBD_NUM_BUILD_JOBS}
     - make -j${MBD_NUM_BUILD_JOBS}
+    - echo "Clean up local installation directory"
+    - rm -rf ${MBD_INSTALL_PREFIX}
     - printf "Install the code in \"%s\"\n" "${MBD_INSTALL_PREFIX}"
     - make install
     - echo "MBDyn version:"
@@ -124,33 +133,76 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
 mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - export PATH=${MBD_INSTALL_PREFIX}/bin:${PATH} ## Check if the variables were lost
-      - which mbdyn
-      - git clone -b master https://github.com/octave-user/mboct-octave-pkg.git && \
+      -|
+        if test ${MBOCT_OCTAVE_PKG_REINSTALL} = "no"; then
+          if octave --eval 'pl=pkg("list", "mboct-octave-pkg"); exit(isempty(pl))'; then
+            echo "mboct-octave-pkg is already installed"
+            exit 0
+          fi
+        fi
+      - git clone -b ${MBOCT_OCTAVE_PKG_BRANCH} https://github.com/octave-user/mboct-octave-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-octave-pkg install_local
 
 mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - git clone -b master https://github.com/octave-user/mboct-numerical-pkg.git && \
+      -|
+        if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no"; then
+          if octave --eval 'pl=pkg("list", "mboct-numerical-pkg"); exit(isempty(pl))'; then
+            echo "mboct-numerical-pkg is already installed"
+            exit 0
+          fi
+        fi    
+      - git clone -b ${MBOCT_NUMERICAL_PKG_BRANCH} https://github.com/octave-user/mboct-numerical-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-numerical-pkg install_local
+
+nurbs-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      -|
+        if test ${OCT_NURBS_REINSTALL} = "no"; then
+          if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
+            echo "nurbs is already installed"
+            exit 0
+          fi
+        fi    
+      - octave-cli --eval "pkg install -verbose -local -forge nurbs"
+
+netcdf-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      -|
+        if test ${OCT_NETCDF_REINSTALL} = "no"; then
+          if octave --eval 'pl=pkg("list", "netcdf"); exit(isempty(pl))'; then
+            echo "netcdf is already installed"
+            exit 0
+          fi
+        fi    
+      - octave-cli --eval "pkg install -verbose -local -forge netcdf"
 
 mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - octave-cli --eval "pkg install -verbose -local -forge nurbs"
-      - if ! octave-cli --eval "pkg install -verbose -local -forge netcdf"; then echo "netcdf was not installed"; fi
-      - git clone -b master https://github.com/octave-user/mboct-mbdyn-pkg.git
+      - git clone -b ${MBOCT_MBDYN_PKG_BRANCH} https://github.com/octave-user/mboct-mbdyn-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-mbdyn-pkg install_local
+
+gmsh-install-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - |
+        if ${MBD_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test ${MBD_GMSH_REINSTALL} = "no"; then
+          echo "Gmsh is already installed ..."
+          exit 0
+        fi
+      - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
+      - tar -zxvf gmsh-stable-Linux64.tgz
+      - install gmsh-*.*.*-Linux64/bin/gmsh ${MBD_INSTALL_PREFIX}/bin
+      - ${MBD_INSTALL_PREFIX}/bin/gmsh --version
 
 mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
-      - tar -zxvf gmsh-stable-Linux64.tgz
-      - install gmsh-*.*.*-Linux64/bin/gmsh $HOME/local/mbdyn-test-install/bin/
-      - $HOME/local/mbdyn-test-install/bin/gmsh --version
-      - git clone -b master https://github.com/octave-user/mboct-fem-pkg.git
+      - git clone -b ${MBOCT_FEM_PKG_BRANCH} https://github.com/octave-user/mboct-fem-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-fem-pkg install_local
 
 mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
@@ -163,7 +215,11 @@ mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
       - which mbdyn
       - mbdyn --version
       - which mbdyn2easyanim.sh
-      - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})'
+      - which gmsh
+      - gmsh --version
+      - rm -f fntests.out
+      - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})' 2>&1 | tee fntests.out
+      - awk -F ' ' 'BEGIN{ failed=9999; } /^  FAIL\>/{ failed = $2; } END { if (failed != 0) exit 1; }' fntests.out
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
