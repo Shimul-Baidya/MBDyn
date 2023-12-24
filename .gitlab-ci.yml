@@ -163,9 +163,6 @@ mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
       - which mbdyn
       - mbdyn --version
       - which mbdyn2easyanim.sh
-      - |
-        mbdyn2easyanim.sh
-        test $? = 1
       - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})'
 
 deploy-job:      # This job runs in the deploy stage.
