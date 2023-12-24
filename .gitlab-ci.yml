@@ -17,7 +17,9 @@
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
 variables:
-  MBD_SKIP_MBDYN_BUILD_STAGE: "yes" ## Set this variable to "yes" in order to reuse the existing MBDyn installation
+  MBD_INSTALL_PREFIX: "~/local/mbdyn-test-install/" ## Local installation directory
+  MBD_BUILD_DIR: "~/install/mbdyn-test-build/"
+  MBD_NUM_BUILD_JOBS: "11" # Run make -j '$MBD_NUM_BUILD_JOBS'
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -27,11 +29,6 @@ stages:          # List of stages for jobs, and their order of execution
 mbdyn-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-    - |
-      if test '$MBD_SKIP_MBDYN_BUILD_STAGE' = "yes" && test -e $HOME/local/mbdyn-test-install/bin/mbdyn; then 
-        printf "Do not compile MBDyn because MBD_SKIP_MBDYN_BUILD_STAGE = \"%s\"\n" '$MBD_SKIP_MBDYN_BUILD_STAGE'
-        exit 0
-      fi
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
@@ -49,32 +46,45 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       if ! test -x configure ; then
         exit 1
       fi      
+    - MBD_SOURCE_DIR=`pwd`
+    - echo "Create build directory ..."
+    - if ! test -d '$MBD_BUILD_DIR'; then mkdir -p '$MBD_BUILD_DIR'; fi
+    - cd '$MBD_BUILD_DIR'
     - printf "configure ...\n"
     - |
-      if ! test -f Makefile || test configure -nt Makefile; then
-        if ! PYTHON_VERSION=3 ./configure \
+      if ! test -f Makefile || test $MBD_SOURCE_DIR/configure -nt Makefile; then
+        if ! PYTHON_VERSION=3 $MBD_SOURCE_DIR/configure \
                     CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" \
                     --enable-python \
                     --enable-octave \
                     --enable-install_test_progs \
-                    --prefix=$HOME/local/mbdyn-test-install \
+                    --prefix='$MBD_INSTALL_PREFIX' \
                     --with-umfpack \
                     --with-static-modules \
                     --disable-Werror \
                     --with-suitesparseqr ; then
                     ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
+          echo "Failed to run configure"
           exit 1
         fi
       fi
       if ! test -f Makefile; then
+        echo "Makefile was not created"
         exit 1
       fi
     - echo "Clean up local installation directory"
-    - rm -rf $HOME/local/mbdyn-test-install
-    - echo "Compiling the code..."
-    - make -j 11
-    - echo "Install the code."
+    - rm -rf '$MBD_INSTALL_PREFIX'
+    - echo "Determine the number of build jobs ..."
+    - |
+      if test -f /proc/cpuinfo ; then
+        MBD_NUM_BUILD_JOBS=`awk 'BEGIN{max=1;}/^processor\>/{if ($3 + 1 >= max) max = $3 + 1; } END{ print max }' /proc/cpuinfo`;   
+      fi
+    - printf "Compiling the code using %d jobs ...\n" '$MBD_NUM_BUILD_JOBS'
+    - make -j '$MBD_NUM_BUILD_JOBS'
+    - printf "Install the code below \"%s\"\n" '$MBD_INSTALL_PREFIX'
     - make install
+    - echo "MBDyn version:"
+    - $MBD_INSTALL_PREFIX/bin/mbdyn --version
     - echo "Run built-in unit tests"
     - make test
 
