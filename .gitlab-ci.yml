@@ -100,6 +100,10 @@ mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs 
 mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
+      - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
+      - tar -zxvf gmsh-stable-Linux64.tgz
+      - install gmsh-*.*.*-Linux64/bin/gmsh $HOME/local/mbdyn-test-install/bin/
+      - $HOME/local/mbdyn-test-install/bin/gmsh --version
       - git clone -b master https://github.com/octave-user/mboct-fem-pkg.git
       - make CXXFLAGS="-Ofast -Wall -march=native" -C mboct-fem-pkg install_local
 
