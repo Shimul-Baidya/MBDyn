@@ -133,7 +133,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
 mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      -|
+      - |
         if test ${MBOCT_OCTAVE_PKG_REINSTALL} = "no"; then
           if octave --eval 'pl=pkg("list", "mboct-octave-pkg"); exit(isempty(pl))'; then
             echo "mboct-octave-pkg is already installed"
@@ -146,7 +146,7 @@ mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs
 mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      -|
+      - |
         if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no"; then
           if octave --eval 'pl=pkg("list", "mboct-numerical-pkg"); exit(isempty(pl))'; then
             echo "mboct-numerical-pkg is already installed"
@@ -159,19 +159,19 @@ mboct-numerical-pkg-build-job:       # This job runs in the build stage, which r
 nurbs-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      -|
-        if test ${OCT_NURBS_REINSTALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
-            echo "nurbs is already installed"
-            exit 0
-          fi
-        fi    
+      - |
+         if test ${OCT_NURBS_REINSTALL} = "no"; then
+           if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
+             echo "nurbs is already installed"
+             exit 0
+           fi
+         fi    
       - octave-cli --eval "pkg install -verbose -local -forge nurbs"
 
 netcdf-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      -|
+      - |
         if test ${OCT_NETCDF_REINSTALL} = "no"; then
           if octave --eval 'pl=pkg("list", "netcdf"); exit(isempty(pl))'; then
             echo "netcdf is already installed"
