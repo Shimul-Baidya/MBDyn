@@ -196,19 +196,19 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
 #       - git clone -b ${MBOCT_MBDYN_PKG_BRANCH} https://github.com/octave-user/mboct-mbdyn-pkg.git
 #       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-mbdyn-pkg install_local
 
-# gmsh-build-job:       # This job runs in the build stage, which runs first.
-#   stage: build
-#   script:
-#       - echo "gmsh build"
-#       - |
-#         if ${MBD_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test ${MBD_GMSH_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
-#           echo "Gmsh is already installed ..."
-#           exit 0
-#         fi
-#       - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
-#       - tar -zxvf gmsh-stable-Linux64.tgz
-#       - install gmsh-*.*.*-Linux64/bin/gmsh ${MBD_INSTALL_PREFIX}/bin
-#       - ${MBD_INSTALL_PREFIX}/bin/gmsh --version
+gmsh-build-job:       # This job runs in the build stage, which runs first.
+   stage: build
+   script:
+       - echo "gmsh build"
+       - |
+         if test -x ${MBD_INSTALL_PREFIX}/bin/gmsh && test ${MBD_GMSH_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no" ; then
+           echo "Gmsh is already installed ..."
+           exit 0
+         fi
+       - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
+       - tar -zxvf gmsh-stable-Linux64.tgz
+       - install gmsh-*.*.*-Linux64/bin/gmsh ${MBD_INSTALL_PREFIX}/bin
+       - ${MBD_INSTALL_PREFIX}/bin/gmsh --version
 
 # mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
 #   stage: build
