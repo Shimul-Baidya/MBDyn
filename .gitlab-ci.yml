@@ -54,11 +54,13 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         rm -rf '$MBD_BUILD_DIR'
       fi
     - echo "Create build directory ..."
-    - if ! test -d '$MBD_BUILD_DIR'; then mkdir -p '$MBD_BUILD_DIR'; fi
-    - test -d '$MBD_BUILD_DIR'
-    - MBD_BUILD_DIR=`realpath '$MBD_BUILD_DIR'` ## avoid configure error unsafe absolute working directory name
-    - test -d '$MBD_BUILD_DIR'
-    - cd '$MBD_BUILD_DIR'
+    - if ! test -d $MBD_BUILD_DIR; then mkdir -p $MBD_BUILD_DIR; fi
+    - test -d $MBD_BUILD_DIR
+    - MBD_BUILD_DIR=`realpath $MBD_BUILD_DIR` ## avoid configure error unsafe absolute working directory name
+    - test -d $MBD_BUILD_DIR
+    - cd $MBD_BUILD_DIR
+    - pwd
+    - ls -lhF .
     - printf "configure ...\n"
     - |
       if ! test -f Makefile || test $MBD_SOURCE_DIR/configure -nt Makefile; then
