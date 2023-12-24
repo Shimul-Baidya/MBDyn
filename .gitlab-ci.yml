@@ -21,20 +21,20 @@ variables:
   MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/" ## Local build directory
   MBD_NUM_BUILD_JOBS: "12" # Run make -j '$MBD_NUM_BUILD_JOBS'
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
-  MBD_CLEAN_BUILD: "${MBD_CLEAN_ALL}" ## Clean up the build directory
+  MBD_CLEAN_BUILD: "no" ## Clean up the build directory
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_MERGE_BRANCHES: ""
   MBOCT_OCTAVE_PKG_BRANCH: "master"
   MBOCT_NUMERICAL_PKG_BRANCH: "master"
   MBOCT_MBDYN_PKG_BRANCH: "master"
   MBOCT_FEM_PKG_BRANCH: "master"
-  MBOCT_OCTAVE_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
-  MBOCT_NUMERICAL_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
-  MBOCT_MBDYN_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
-  MBOCT_FEM_PKG_REINSTALL: "${MBD_CLEAN_ALL}"
-  MBD_GMSH_REINSTALL: "${MBD_CLEAN_ALL}"
-  OCT_NETCDF_REINSTALL: "${MBD_CLEAN_ALL}"
-  OCT_NURBS_REINSTALL: "${MBD_CLEAN_ALL}"
+  MBOCT_OCTAVE_PKG_REINSTALL: "no"
+  MBOCT_NUMERICAL_PKG_REINSTALL: "no"
+  MBOCT_MBDYN_PKG_REINSTALL: "no"
+  MBOCT_FEM_PKG_REINSTALL: "no"
+  MBD_GMSH_REINSTALL: "no"
+  OCT_NETCDF_REINSTALL: "no"
+  OCT_NURBS_REINSTALL: "no"
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -75,7 +75,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - MBD_SOURCE_DIR=`pwd`
     - echo "Create build directory ..."
     - |
-      if test ${MBD_CLEAN_BUILD} = "yes"; then
+      if test ${MBD_CLEAN_BUILD} = "yes" || test ${MBD_CLEAN_ALL} = "yes"; then
         echo "cleanup build directory ..."
         rm -rf ${MBD_BUILD_DIR}
       fi
@@ -134,7 +134,7 @@ mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs
   stage: build
   script:
       - |
-        if test ${MBOCT_OCTAVE_PKG_REINSTALL} = "no"; then
+        if test ${MBOCT_OCTAVE_PKG_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
           if octave --eval 'pl=pkg("list", "mboct-octave-pkg"); exit(isempty(pl))'; then
             echo "mboct-octave-pkg is already installed"
             exit 0
@@ -147,7 +147,7 @@ mboct-numerical-pkg-build-job:       # This job runs in the build stage, which r
   stage: build
   script:
       - |
-        if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no"; then
+        if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
           if octave --eval 'pl=pkg("list", "mboct-numerical-pkg"); exit(isempty(pl))'; then
             echo "mboct-numerical-pkg is already installed"
             exit 0
@@ -160,7 +160,7 @@ nurbs-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
       - |
-         if test ${OCT_NURBS_REINSTALL} = "no"; then
+         if test ${OCT_NURBS_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
            if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
              echo "nurbs is already installed"
              exit 0
@@ -172,7 +172,7 @@ netcdf-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
       - |
-        if test ${OCT_NETCDF_REINSTALL} = "no"; then
+        if test ${OCT_NETCDF_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
           if octave --eval 'pl=pkg("list", "netcdf"); exit(isempty(pl))'; then
             echo "netcdf is already installed"
             exit 0
@@ -183,6 +183,13 @@ netcdf-job:       # This job runs in the build stage, which runs first.
 mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
+      - |
+        if test ${MBOCT_MBDYN_PKG_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
+          if octave --eval 'pl=pkg("list", "mboct-mbdyn-pkg"); exit(isempty(pl))'; then
+            echo "mboct-mbdyn-pkg is already installed"
+            exit 0
+          fi
+        fi       
       - git clone -b ${MBOCT_MBDYN_PKG_BRANCH} https://github.com/octave-user/mboct-mbdyn-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-mbdyn-pkg install_local
 
@@ -190,7 +197,7 @@ gmsh-install-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
       - |
-        if ${MBD_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test ${MBD_GMSH_REINSTALL} = "no"; then
+        if ${MBD_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test ${MBD_GMSH_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
           echo "Gmsh is already installed ..."
           exit 0
         fi
@@ -202,14 +209,19 @@ gmsh-install-job:       # This job runs in the build stage, which runs first.
 mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
+      - |
+        if test ${MBOCT_FEM_PKG_REINSTALL} = "no" && test ${MBD_CLEAN_ALL} = "no"; then
+          if octave --eval 'pl=pkg("list", "mboct-fem-pkg"); exit(isempty(pl))'; then
+            echo "mboct-fem-pkg is already installed"
+            exit 0
+          fi
+        fi       
       - git clone -b ${MBOCT_FEM_PKG_BRANCH} https://github.com/octave-user/mboct-fem-pkg.git
       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-fem-pkg install_local
 
 mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
-      #- export PATH=${HOME}/local/mbdyn-test-install/bin:${PATH} 
-      #- export AWKPATH=${HOME}/local/mbdyn-test-install/share/awk:${AWKPATH} 
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${PATH} 
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - which mbdyn
@@ -218,7 +230,7 @@ mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
       - which gmsh
       - gmsh --version
       - rm -f fntests.out
-      - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})' 2>&1 | tee fntests.out
+      - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})' >& fntests.out
       - awk -F ' ' 'BEGIN{ failed=9999; } /^  FAIL\>/{ failed = $2; } END { if (failed != 0) exit 1; }' fntests.out
 
 deploy-job:      # This job runs in the deploy stage.
