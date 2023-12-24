@@ -55,7 +55,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       fi
     - echo "Create build directory ..."
     - MBD_BUILD_DIR=${HOME}/${MBDYN_BUILD_DIR}
-    - MBD_INSTALL_PREFIX=${HOME}/${MBDYN_INTALL_PREFIX}
+    - MBD_INSTALL_PREFIX=${HOME}/${MBDYN_INSTALL_PREFIX}
     - if ! test -d ${MBD_BUILD_DIR}; then mkdir -p ${MBD_BUILD_DIR}; fi
     - test -d ${MBD_BUILD_DIR}
     - MBD_BUILD_DIR=`realpath ${MBD_BUILD_DIR}` ## avoid configure error unsafe absolute working directory name
