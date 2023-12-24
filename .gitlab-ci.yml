@@ -39,7 +39,9 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - echo "Cleanup some garbage ..."
     - |
       for dirent in autom4te.cache build contrib CVS etc include libraries manual mbdyn modules packaging tests utils var; do
-        find ${HOME}/${dirent} -type f
+        if test -d ${HOME}/${dirent}; then
+          find ${HOME}/${dirent} -type f
+        fi
       done
     #- echo "Check the contents of the home directory ..."
     #- find ${HOME} -type f # Let us check if we left some garbage there ...
