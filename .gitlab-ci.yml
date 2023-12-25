@@ -34,7 +34,7 @@ variables:
   MBD_GMSH_REINSTALL: "no"
   OCT_NETCDF_REINSTALL: "no"
   OCT_NURBS_REINSTALL: "no"
-  MBOCT_MBDYN_PKG_TESTS: "no" ## Should be yes
+  MBOCT_MBDYN_PKG_TESTS: "yes" ## Should be yes
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -241,9 +241,11 @@ mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
       - which mbdyn2easyanim.sh
       - which gmsh
       - gmsh --version
-      - rm -f fntests.out
+      - rm -f fntests.out fntests.log
       - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})' >& fntests.out
-      - awk -F ' ' 'BEGIN{ failed=9999; } /^  FAIL\>/{ failed = $2; } END { if (failed != 0) exit 1; }' fntests.out
+      - echo "mboct-mbdyn-pkg testsuite finished:"
+      - if test -f fntests.log; then cat fntests.log; else echo "fntests.log not found"; fi
+      - awk -f parse_test_suite_status.awk fntests.out
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
