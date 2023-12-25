@@ -81,7 +81,7 @@ nlopt-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
       - |
-        if test -f "${NL_INSTALL_PREFIX}/lib/pkgconfig/nlopt.pc" && test "${MBD_CLEAN_ALL}" = "no"; then
+        if test -f "${NL_INSTALL_PREFIX}/lib64/pkgconfig/nlopt.pc" && test "${MBD_CLEAN_ALL}" = "no"; then
           echo "nlopt was already installed"
           exit 0
         fi    
@@ -141,11 +141,23 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - echo "Build directory"
     - pwd
     - ls -lhF .
+    - export PATH="${NC_INSTALL_PREFIX}/bin:${PATH}"
+    - LDFLAGS=""
+    - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0"
+    - |
+      if ncxx4-config --help >& /dev/null; then
+        NC_INCDIR=`ncxx4-config --includedir`
+        NC_LIBDIR=`ncxx4-config --libdir`
+        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
+        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
+      fi
     - printf "configure ...\n"
     - |
       if ! test -f Makefile; then
-        if ! PYTHON_VERSION=3 ${MBD_SOURCE_DIR}/configure \
-                    CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0" \
+        if ! ${MBD_SOURCE_DIR}/configure \
+                    PYTHON_VERSION=3 \
+                    CPPFLAGS="${CPPFLAGS}" \
+                    LDFLAGS="${LDFLAGS}" \
                     CXXFLAGS="${MBD_COMPILER_FLAGS}" \
                     CFLAGS="${MBD_COMPILER_FLAGS}" \
                     FFLAGS="${MBD_COMPILER_FLAGS}" \
@@ -188,8 +200,8 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
   script:
         - echo "octave packages installation job"
         - |
-          if test -d "${NL_INSTALL_PREFIX}/lib/pkgconfig"; then
-            export PKG_CONFIG_PATH="${NL_INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+          if test -d "${NL_INSTALL_PREFIX}/lib64/pkgconfig"; then
+            export PKG_CONFIG_PATH="${NL_INSTALL_PREFIX}/lib64/pkgconfig:${PKG_CONFIG_PATH}"
           fi
         - |
           for pkgname in ${OCT_PKG_LIST}; do
