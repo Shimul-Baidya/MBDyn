@@ -82,7 +82,7 @@ nlopt-build-job:       # This job runs in the build stage, which runs first.
   script:
       - |
         if test -f "${NL_INSTALL_PREFIX}/lib/pkgconfig/nlopt.pc" && test "${MBD_CLEAN_ALL}" = "no"; then
-          echo nlopt was already installed"
+          echo "nlopt was already installed"
           exit 0
         fi    
       - rm -rf nlopt
