@@ -134,7 +134,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
           for pkgname in ${OCT_PKG_LIST}; do
               printf "build package \"%s\"\n" "${pkgname}"
 
-              pkg_rebuild_flag=`echo ${OCT_PKG_REBUILD} | awk "BEGIN{RS=\" \"; FS=\":\";}/^${pkgname}\>/{print $2}"`
+              pkg_rebuild_flag=$(echo ${OCT_PKG_REBUILD} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
               case "${pkg_rebuild_flag}" in
                   yes|no)
@@ -144,7 +144,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                       ;;
               esac
 
-              pkg_branch=`echo ${OCT_PKG_BRANCH} | awk "BEGIN{RS=\" \"; FS=\":\";}/^${pkgname}\>/{print $2}"`
+              pkg_branch=$(echo ${OCT_PKG_BRANCH} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
               if test -z "${pkg_branch}"; then
                   pkg_branch="master"
@@ -220,7 +220,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
         failed_packages=""
 
         for pkgname in ${OCT_PKG_LIST}; do
-            pkg_test_flag=`echo ${OCT_PKG_TESTS} | awk "BEGIN{RS=\" \"; FS=\":\";}/^${pkgname}\>/{print $2}"`
+            pkg_test_flag=$(echo ${OCT_PKG_TESTS} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
             case "${pkg_test_flag}" in
                 yes)
