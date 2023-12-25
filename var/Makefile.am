@@ -10,6 +10,7 @@ mbdyn_ref2log.awk \
 mbdyn2easyanim.awk \
 mbdyn2pod.awk \
 periodize.awk \
+parse_test_suite_status.awk \
  \
 naca0012.c81 \
  \
