@@ -17,7 +17,9 @@
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
 variables:
-  MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/" ## Local installation directory
+  MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/" ## Local installation directory for MBDyn
+  NC_INSTALL_PREFIX: "/home/gitlab-runner/local/netcdf-test-install/" ## Local installation directory for NetCDF
+  NL_INSTALL_PREFIX: "/home/gitlab-runner/local/nlopt-test-install/" ## Local installation directory for nlopt
   MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/" ## Local build directory
   MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
@@ -31,11 +33,66 @@ variables:
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:yes mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
+  OCTAVE_EXEC: "octave"
 
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
   - deploy
+
+netcdf-c-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - echo "netcdf-c installation job"
+      - |
+        if "${NC_INSTALL_PREFIX}/bin/nc-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
+          echo "netcdf-c was already installed"
+          exit 0
+        fi
+      - rm -rf netcdf-c
+      - git clone -b main https://github.com/Unidata/netcdf-c.git
+      - cd netcdf-c
+      - mkdir build_dir
+      - cd build_dir
+      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}"
+      - make -j${MBD_NUM_BUILD_JOBS}
+      - if test -d "${NC_INSTALL_PREFIX}"; then rm -rf "${NC_INSTALL_PREFIX}"; fi
+      - make install
+
+netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - echo "netcdf-cxx4 installation job"
+      - |
+        if "${NC_INSTALL_PREFIX}/bin/ncxx4-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
+          echo "netcdf-cxx4 was already installed"
+          exit 0
+        fi
+      - rm -rf netcdf-cxx4
+      - git clone -b master https://github.com/Unidata/netcdf-cxx4.git
+      - cd netcdf-cxx4
+      - mkdir build_dir
+      - cd build_dir
+      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}" -DnetCDF_DIR="${NC_INSTALL_PREFIX}/lib/cmake/netCDF"
+      - make -j${MBD_NUM_BUILD_JOBS}
+      - make install
+
+nlopt-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+      - |
+        if test -f "${NL_INSTALL_PREFIX}/lib/pkgconfig/nlopt.pc" && test "${MBD_CLEAN_ALL}" = "no"; then
+          echo nlopt was already installed"
+          exit 0
+        fi    
+      - rm -rf nlopt
+      - git clone -b master https://github.com/stevengj/nlopt.git
+      - cd nlopt
+      - mkdir build
+      - cd build
+      - cmake .. -DCMAKE_INSTALL_PREFIX="${NL_INSTALL_PREFIX}" -DBUILD_SHARED_LIBS=ON -DNLOPT_OCTAVE=OFF -DNLOPT_PYTHON=OFF
+      - make -j${MBD_NUM_BUILD_JOBS}
+      - make install
 
 mbdyn-build-job:       # This job runs in the build stage, which runs first.
   stage: build
@@ -96,7 +153,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
                     --enable-python \
                     --enable-octave \
                     --enable-install_test_progs \
-                    --prefix=${MBD_INSTALL_PREFIX} \
+                    --prefix="${MBD_INSTALL_PREFIX}" \
                     --with-umfpack \
                     --with-klu \
                     --with-suitesparseqr \
@@ -110,11 +167,11 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         fi
       fi
       test -f Makefile
-    - echo "Determine the number of build jobs ..."
-    - |
-      if test -f /proc/cpuinfo ; then
-        MBD_NUM_BUILD_JOBS=`awk 'BEGIN{max=1;}/^processor\>/{if ($3 + 1 >= max) max = $3 + 1; } END{ print max }' /proc/cpuinfo`;
-      fi
+    # - echo "Determine the number of build jobs ..."
+    # - |
+    #   if test -f /proc/cpuinfo ; then
+    #     MBD_NUM_BUILD_JOBS=`awk 'BEGIN{max=1;}/^processor\>/{if ($3 + 1 >= max) max = $3 + 1; } END{ print max }' /proc/cpuinfo`;
+    #   fi
     - printf "Compiling the code using %s jobs ...\n" ${MBD_NUM_BUILD_JOBS}
     - make -j${MBD_NUM_BUILD_JOBS}
     - echo "Clean up local installation directory"
@@ -129,8 +186,12 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
 octave-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - echo "octave packages installation job"
-      - |
+        - echo "octave packages installation job"
+        - |
+          if test -d "${NL_INSTALL_PREFIX}/lib/pkgconfig"; then
+            export PKG_CONFIG_PATH="${NL_INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+          fi
+        - |
           for pkgname in ${OCT_PKG_LIST}; do
               printf "build package \"%s\"\n" "${pkgname}"
 
@@ -151,7 +212,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
               fi
 
               if test "${pkg_rebuild_flag}" = "no" -a "${MBD_CLEAN_ALL}" = "no"; then
-                  if octave --eval "pkg load ${pkgname}"; then
+                  if ${OCTAVE_EXEC} -qfH --eval "pkg load ${pkgname}"; then
                       printf "installation of \"%s\" will be skipped, because the package is already installed\n" "${pkgname}"
                       continue
                   fi
@@ -172,14 +233,14 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                       ;;
                   *)
                       # Assume that the package is hosted at octave-forge
-                      if ! octave-cli --eval "pkg install -verbose -local -forge ${pkgname}"; then
+                      if ! ${OCTAVE_EXEC} -qfH --eval "pkg install -verbose -local -forge ${pkgname}"; then
                           printf "failed to install package \"%s\" from octave-forge\n" "${pkgname}"
                           exit 1
                       fi
                       ;;
               esac
 
-              if octave --eval "pkg load ${pkgname}"; then
+              if ${OCTAVE_EXEC} -qfH --eval "pkg load ${pkgname}"; then
                   printf "package \"%s\" was loaded successfully\n" "${pkgname}"
               else
                   printf "failed to load package \"%s\"\n" "${pkgname}"
@@ -214,7 +275,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - which gmsh
       - gmsh --version
       - which octave
-      - octave --version
+      - ${OCTAVE_EXEC} -qfH --version
       - |
         test_status="passed"
         failed_packages=""
@@ -238,9 +299,9 @@ octave-pkg-test-job:   # This job runs in the test stage.
 
             OCTAVE_CODE="pkg(\"load\",\"${pkgname}\");p=pkg(\"list\",\"${pkgname}\");__run_test_suite__({p{1}.dir},{});"
 
-            echo octave --eval "${OCTAVE_CODE}"
+            echo ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CODE}"
 
-            if octave --eval "${OCTAVE_CODE}" >& fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
+            if ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CODE}" >& fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
                 curr_test_status="passed"
             fi
 
