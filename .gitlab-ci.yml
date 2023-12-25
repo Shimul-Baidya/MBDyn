@@ -34,7 +34,12 @@ variables:
   MBD_GMSH_REINSTALL: "no"
   OCT_NETCDF_REINSTALL: "no"
   OCT_NURBS_REINSTALL: "no"
+  MBOCT_OCTAVE_PKG_TESTS: "yes"
+  MBOCT_NUMERICAL_PKG_TESTS: "yes"
   MBOCT_MBDYN_PKG_TESTS: "yes" ## Should be yes
+  MBOCT_FEM_PKG_TESTS: "no"
+  OCT_NETCDF_TESTS: "no"
+  OCT_NURBS_TESTS: "no"
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -130,80 +135,164 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - echo "Run built-in unit tests"
     - make test
 
-mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - echo "mboct-octave-pkg build"
-      - |
-        if test ${MBOCT_OCTAVE_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "mboct-octave-pkg"); exit(isempty(pl))'; then
-            echo "mboct-octave-pkg is already installed"
-            exit 0
-          fi
-        fi
-      - git clone -b ${MBOCT_OCTAVE_PKG_BRANCH} https://github.com/octave-user/mboct-octave-pkg.git
-      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-octave-pkg install_local
+# octave-forge-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "octave-forge build"
+#       - |
 
-mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - echo "mboct-numerical-pkg build"
-      - |
-        if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "mboct-numerical-pkg"); exit(isempty(pl))'; then
-            echo "mboct-numerical-pkg is already installed"
-            exit 0
-          fi
-        fi
-      - git clone -b ${MBOCT_NUMERICAL_PKG_BRANCH} https://github.com/octave-user/mboct-numerical-pkg.git
-      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-numerical-pkg install_local
+#         if test ${OCT_NURBS_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
+#             echo "nurbs is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - octave-cli --eval "pkg install -verbose -local -forge nurbs"
 
-nurbs-build-job:       # This job runs in the build stage, which runs first.
+octave-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      - echo "nurbs build"
+      - echo "octave packages installation job"
       - |
-        if test ${OCT_NURBS_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
-            echo "nurbs is already installed"
-            exit 0
-          fi
-        fi
-      - octave-cli --eval "pkg install -verbose -local -forge nurbs"
+          for pkgname in nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg; do
+              printf "build package \"%s\"\n" "${pkgname}"
+              case "${pkgname}" in
+                  mboct-octave-pkg)
+                      mboct_reinstall_flag="${MBOCT_OCTAVE_PKG_REINSTALL}"
+                      mboct_branch_tag="${MBOCT_OCTAVE_PKG_BRANCH}"
+                      ;;
+                  mboct-numerical-pkg)
+                      mboct_reinstall_flag="${MBOCT_NUMERICAL_PKG_REINSTALL}"
+                      mboct_branch_tag="${MBOCT_NUMERICAL_PKG_BRANCH}"
+                      ;;
+                  mboct-mbdyn-pkg)
+                      mboct_reinstall_flag="${MBOCT_MBDYN_PKG_REINSTALL}"
+                      mboct_branch_tag="${MBOCT_MBDYN_PKG_BRANCH}"
+                      ;;
+                  mboct-fem-pkg)
+                      mboct_reinstall_flag="${MBOCT_FEM_PKG_REINSTALL}"
+                      mboct_branch_tag="${MBOCT_FEM_PKG_BRANCH}"
+                      ;;
+                  netcdf)
+                      mboct_reinstall_flag="${OCT_NETCDF_REINSTALL}"
+                      mboct_branch_tag="forge"
+                      ;;
+                  nurbs)
+                      mboct_reinstall_flag="${OCT_NURBS_REINSTALL}"
+                      mboct_branch_tag="forge"
+                      ;;
+                  *)
+                      mboct_reinstall_flag="no"
+                      mboct_branch_tag="master"
+                      ;;
+              esac
+              if test "${mboct_reinstall_flag}" = "no" -a "${MBD_CLEAN_ALL}" = "no"; then
+                  if octave --eval "pkg load ${pkgname}"; then
+                      printf "installation of \"%s\" will be skipped, because the package is already installed\n" "${pkgname}"
+                      continue
+                  fi
+              fi
+              case "${pkgname}" in
+                  mboct-*-pkg)
+                      if ! git clone -b "${mboct_branch_tag}" "https://github.com/octave-user/${pkgname}.git"; then
+                          printf "failed to clone package \"%s\" from github.com\n" "${pkgname}"
+                          exit 1
+                      fi
+                      if ! make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C "${pkgname}" install_local; then
+                          printf "failed to build package \"%s\"\n" "${pkgname}"
+                      fi
+                      ;;
+                  *)
+                      # Assume that the package is hosted at octave-forge
+                      if ! octave-cli --eval "pkg install -verbose -local -forge ${pkgname}"; then
+                          printf "failed to install package \"%s\" from octave-forge\n" "${pkgname}"
+                          exit 1
+                      fi
+                      ;;
+              esac
 
-netcdf-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - echo "netcdf build"
-      - |
-        if test ${OCT_NETCDF_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "netcdf"); exit(isempty(pl))'; then
-            echo "netcdf is already installed"
-            exit 0
-          fi
-        fi
-      - octave-cli --eval "pkg install -verbose -local -forge netcdf"
+              if octave --eval "pkg load ${pkgname}"; then
+                  printf "package \"%s\" was loaded successfully\n" "${pkgname}"
+              else
+                  printf "failed to load package \"%s\"\n" "${pkgname}"
+              fi
+          done
 
-mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - |
-        if test ${MBOCT_MBDYN_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "mboct-mbdyn-pkg"); exit(isempty(pl))'; then
-            echo "mboct-mbdyn-pkg is already installed"
-            exit 0
-          fi
-        fi
-      - git clone -b ${MBOCT_MBDYN_PKG_BRANCH} https://github.com/octave-user/mboct-mbdyn-pkg.git
-      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-mbdyn-pkg install_local
+# mboct-octave-pkg-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "mboct-octave-pkg build"
+#       - |
+#         if test ${MBOCT_OCTAVE_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "mboct-octave-pkg"); exit(isempty(pl))'; then
+#             echo "mboct-octave-pkg is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - git clone -b ${MBOCT_OCTAVE_PKG_BRANCH} https://github.com/octave-user/mboct-octave-pkg.git
+#       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-octave-pkg install_local
+
+# mboct-numerical-pkg-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "mboct-numerical-pkg build"
+#       - |
+#         if test ${MBOCT_NUMERICAL_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "mboct-numerical-pkg"); exit(isempty(pl))'; then
+#             echo "mboct-numerical-pkg is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - git clone -b ${MBOCT_NUMERICAL_PKG_BRANCH} https://github.com/octave-user/mboct-numerical-pkg.git
+#       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-numerical-pkg install_local
+
+# nurbs-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "nurbs build"
+#       - |
+#         if test ${OCT_NURBS_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "nurbs"); exit(isempty(pl))'; then
+#             echo "nurbs is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - octave-cli --eval "pkg install -verbose -local -forge nurbs"
+
+# netcdf-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "netcdf build"
+#       - |
+#         if test ${OCT_NETCDF_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "netcdf"); exit(isempty(pl))'; then
+#             echo "netcdf is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - octave-cli --eval "pkg install -verbose -local -forge netcdf"
+
+# mboct-mbdyn-pkg-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - |
+#         if test ${MBOCT_MBDYN_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "mboct-mbdyn-pkg"); exit(isempty(pl))'; then
+#             echo "mboct-mbdyn-pkg is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - git clone -b ${MBOCT_MBDYN_PKG_BRANCH} https://github.com/octave-user/mboct-mbdyn-pkg.git
+#       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-mbdyn-pkg install_local
 
 gmsh-build-job:       # This job runs in the build stage, which runs first.
    stage: build
    script:
        - echo "gmsh build"
        - |
-         if test -x ${MBD_INSTALL_PREFIX}/bin/gmsh -a ${MBD_GMSH_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no" ; then
-           echo "Gmsh is already installed ..."
+         export PATH=${MBD_INSTALL_PREFIX}/bin:${PATH}
+         if gmsh --version >& /dev/null && test ${MBD_GMSH_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no" ; then
+           echo "Gmsh was already installed ..."
            exit 0
          fi
        - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
@@ -211,29 +300,24 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
        - install gmsh-*.*.*-Linux64/bin/gmsh ${MBD_INSTALL_PREFIX}/bin
        - ${MBD_INSTALL_PREFIX}/bin/gmsh --version
 
-mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-      - echo "mboct-fem-pkg build"
-      - |
-        if test ${MBOCT_FEM_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
-          if octave --eval 'pl=pkg("list", "mboct-fem-pkg"); exit(isempty(pl))'; then
-            echo "mboct-fem-pkg is already installed"
-            exit 0
-          fi
-        fi
-      - git clone -b ${MBOCT_FEM_PKG_BRANCH} https://github.com/octave-user/mboct-fem-pkg.git
-      - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-fem-pkg install_local
+# mboct-fem-pkg-build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   script:
+#       - echo "mboct-fem-pkg build"
+#       - |
+#         if test ${MBOCT_FEM_PKG_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no"; then
+#           if octave --eval 'pl=pkg("list", "mboct-fem-pkg"); exit(isempty(pl))'; then
+#             echo "mboct-fem-pkg is already installed"
+#             exit 0
+#           fi
+#         fi
+#       - git clone -b ${MBOCT_FEM_PKG_BRANCH} https://github.com/octave-user/mboct-fem-pkg.git
+#       - make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C mboct-fem-pkg install_local
 
-mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
+octave-pkg-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
-      - echo "mboct-mbdyn-pkg test"
-      - |
-        if test ${MBOCT_MBDYN_PKG_TESTS} = "no"; then
-          echo "mboct-mbdyn-pkg tests are not performed"
-          exit 0
-        fi
+      - echo "octave packages test job"
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - which mbdyn
@@ -241,11 +325,106 @@ mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
       - which mbdyn2easyanim.sh
       - which gmsh
       - gmsh --version
-      - rm -f fntests.out fntests.log
-      - octave --eval 'psta=pkg("list","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})' >& fntests.out
-      - echo "mboct-mbdyn-pkg testsuite finished:"
-      - if test -f fntests.log; then cat fntests.log; else echo "fntests.log not found"; fi
-      - awk -f parse_test_suite_status.awk fntests.out
+      - which octave
+      - octave --version
+      - |
+        test_status="passed"
+        failed_packages=""
+
+        for pkgname in nurbs netcdf mboct-octave-pkg mboct-numerical-pkg; do
+            printf "test package \"%s\"\n" "${pkgname}"
+
+            case "${pkgname}" in
+                mboct-octave-pkg)
+                    mboct_tests_flag="${MBOCT_OCTAVE_PKG_TESTS}"
+                    ;;
+                mboct-numerical-pkg)
+                    mboct_tests_flag="${MBOCT_NUMERICAL_PKG_TESTS}"
+                    ;;
+                mboct-mbdyn-pkg)
+                    mboct_tests_flag="${MBOCT_MBDYN_PKG_TESTS}"
+                    ;;
+                mboct-fem-pkg)
+                    mboct_tests_flag="${MBOCT_FEM_PKG_TESTS}"
+                    ;;
+                nurbs)
+                    mboct_tests_flag="${OCT_NURBS_TESTS}"
+                    ;;
+                netcdf)
+                    mboct_tests_flag="${OCT_NETCDF_TESTS}"
+                    ;;
+                *)
+                    mboct_tests_flag="no"
+                    ;;
+            esac
+
+            if test "${mboct_tests_flag}" = "no"; then
+                printf "tests for package \"%s\" will be skipped\n" "${pkgname}"
+            else
+                rm -f fntests.out fntests.log
+
+                curr_test_status="failed"
+
+                OCTAVE_CODE="pkg(\"load\",\"${pkgname}\");p=pkg(\"list\",\"${pkgname}\");__run_test_suite__({p{1}.dir},{});"
+                echo $OCTAVE_CODE
+
+                if octave --eval "${OCTAVE_CODE}" >& fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
+                    curr_test_status="passed"
+                fi
+
+                case "${curr_test_status}" in
+                    passed)
+                        printf "octave testsuite for package \"%s\" passed\n" "${pkgname}"
+                        ;;
+                    *)
+                        printf "octave testsuite for package \"%s\" failed\n" "${pkgname}"
+                        if test -f fntests.log; then
+                            cat fntests.log;
+                        else
+                            echo "fntests.log not found";
+                        fi
+                        test_status="failed"
+                        failed_packages="${failed_packages} ${pkgname}"
+                        ;;
+                esac
+            fi
+        done
+        echo ${test_status}
+        case "${test_status}" in
+            passed)
+                echo "all tests passed"
+                ;;
+            *)
+                echo "the following packages did not pass:"
+                for pkgname in ${failed_packages}; do
+                    printf "%s\n" "${pkgname}"
+                done
+                exit 1
+                ;;
+        esac
+
+
+# mboct-mbdyn-pkg-unit-test-job:   # This job runs in the test stage.
+#   stage: test    # It only starts when the job in the build stage completes successfully.
+#   script:
+#       - echo "mboct-mbdyn-pkg test"
+#       - |
+#         if test ${MBOCT_MBDYN_PKG_TESTS} = "no"; then
+#           echo "mboct-mbdyn-pkg tests are not performed"
+#           exit 0
+#         fi
+#       - export PATH=${MBD_INSTALL_PREFIX}/bin:${PATH}
+#       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+#       - which mbdyn
+#       - mbdyn --version
+#       - which mbdyn2easyanim.sh
+#       - which gmsh
+#       - gmsh --version
+#       - rm -f fntests.out fntests.log
+#       - octave --eval 'pkg("load","mboct-mbdyn-pkg"); __run_test_suite__({psta{1}.dir},{})' >& fntests.out
+#       - echo "mboct-mbdyn-pkg testsuite finished:"
+#       - if test -f fntests.log; then cat fntests.log; else echo "fntests.log not found"; fi
+#       - awk -f parse_test_suite_status.awk fntests.out
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
