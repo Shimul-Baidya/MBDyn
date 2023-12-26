@@ -48,7 +48,7 @@
 #include <memory>
 
 #ifdef USE_MKL_SET_NUM_THREADS_LOCAL
-#include <mkl/mkl_service.h>
+#include <mkl_service.h>
 #endif
 
 #include "pardisowrap.h"
