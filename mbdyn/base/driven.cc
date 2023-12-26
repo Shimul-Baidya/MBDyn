@@ -80,14 +80,15 @@ DrivenElem::bIsActive(void) const
 void
 DrivenElem::OutputPrepare(OutputHandler& OH)
 {
+        using namespace std::string_literals;
 	ASSERT(pElem != NULL);
 	pElem->OutputPrepare(OH);
-	m_sOutputNameBase = pElem->sGetOutputNameBase();
+	m_sOutputNameBase = "driven."s + std::to_string(GetLabel());
 
 #ifdef USE_NETCDF
 	if (pElem->bToBeOutput() && OH.UseNetCDF(OutputHandler::NETCDF))
 	{
-		Var_status = OH.CreateVar<integer>(m_sOutputNameBase + "." "driven", 
+		Var_status = OH.CreateVar<integer>(m_sOutputNameBase + ".activation", 
 		OutputHandler::Dimensions::Boolean, "activation flag (1: active, 0: inactive)");
 	}
 #endif // USE_NETCDF
