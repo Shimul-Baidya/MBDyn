@@ -25,7 +25,7 @@ variables:
   NL_INSTALL_PREFIX: "/home/gitlab-runner/local/nlopt-test-install/" ## Local installation directory for nlopt
   MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/" ## Local build directory
   MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
-  MBD_CLEAN_ALL: "yes" ## Should be set to "yes" as soon as the testsuite is finished
+  MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
