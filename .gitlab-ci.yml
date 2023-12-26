@@ -18,19 +18,19 @@
 
 variables:
   MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/" ## Local installation directory for MBDyn
-  MBD_MERGE_BRANCH: "fix-netcdf-eig"
+  MBD_MERGE_BRANCH: ""
   GMSH_INSTALL_PREFIX: "/home/gitlab-runner/local/gmsh-test-install/" ## Local installation directory for Gmsh
   MBOCT_INSTALL_PREFIX: "/home/gitlab-runner/local/mboct-test-install/" ## Local installation directory for Gmsh
   NC_INSTALL_PREFIX: "/home/gitlab-runner/local/netcdf-test-install/" ## Local installation directory for NetCDF
   NL_INSTALL_PREFIX: "/home/gitlab-runner/local/nlopt-test-install/" ## Local installation directory for nlopt
   MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/" ## Local build directory
   MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
-  MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
+  MBD_CLEAN_ALL: "yes" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
-  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
+  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:eig-netcdf mboct-fem-pkg:fem_sol_harmonic_modal2"
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:yes mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
   OCTAVE_EXEC: "octave"
 
