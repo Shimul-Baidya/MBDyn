@@ -1395,6 +1395,8 @@ if test "$ol_enable_multithread" != no ; then
 	fi
 fi
 
+AM_CONDITIONAL([USE_MULTITHREAD],[test "$ol_link_multithread" = "yes"])
+
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for multithread naive solver (use previous checks)
@@ -2471,6 +2473,7 @@ if test $ol_with_pardiso != no ; then
         fi
 fi
 
+AM_CONDITIONAL([USE_PARDISO], [test "$ol_link_pardiso" = "yes"])
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for IBM Watson wsmp
@@ -2564,6 +2567,8 @@ if test $ol_with_pastix != no ; then
 		PASTIX_INC=""
 	fi
 fi
+
+AM_CONDITIONAL([USE_PASTIX], [test "$ol_link_pastix" = "yes"])
 
 dnl ----------------------------------------------------------------
 dnl
@@ -2664,6 +2669,7 @@ if test $ol_with_suitesparseqr != no ; then
         fi
 fi
 
+AM_CONDITIONAL([USE_SUITESPARSE_QR], [test "$ol_link_suitesparseqr" = "yes"])
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for STRUMPACK

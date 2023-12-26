@@ -126,7 +126,7 @@ public:
         static OctaveInterface* CreateInterface(const DataManager* pDM, MBDynParser* pHP);
         void AddRef() {
                 ++iRefCount;
-                TRACE("octave info: increase reference count to:" << iRefCount << "\n");                                
+                TRACE("octave info: increase reference count to:" << iRefCount << "\n");
         }
         void Destroy();
         static OctaveInterface* GetInterface(void);
@@ -213,7 +213,7 @@ public:
         // In this case pInterface must be defined
         explicit MBDynInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), bool bAddRef = true);
         virtual ~MBDynInterface(void);
-        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) const;
+        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) override;
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
                 METHOD_DECLARE(GetVersion)
@@ -236,9 +236,9 @@ public:
         explicit ConstVectorHandlerInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), const VectorHandler* pX=0);
         virtual ~ConstVectorHandlerInterface();
         void Set(const VectorHandler* pX){ this->pX = const_cast<VectorHandler*>(pX); }
-        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) const;
-        virtual octave_value operator()(const octave_value_list& idx) const;
-        virtual dim_vector dims (void) const;
+        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) override;
+        virtual octave_value operator()(const octave_value_list& idx) const override;
+        virtual dim_vector dims (void) const override;
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
                 METHOD_DECLARE(dGetCoef)
@@ -275,7 +275,7 @@ public:
         explicit OStreamInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), std::ostream* pOS = 0);
         virtual ~OStreamInterface();
         void Set(std::ostream* pOS){ this->pOS = pOS; }
-        std::ostream* Get()const{ return pOS; }
+        std::ostream* Get() const { return pOS; }
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
                 METHOD_DECLARE(printf)
@@ -294,7 +294,7 @@ class SimulationEntityInterface: public MBDynInterface {
 public:
         explicit SimulationEntityInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface());
         virtual ~SimulationEntityInterface();
-        virtual const SimulationEntity* Get()const=0;
+        virtual const SimulationEntity* Get() const = 0;
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
                 METHOD_DECLARE(iGetNumPrivData)
@@ -307,8 +307,8 @@ class NodeInterface: public SimulationEntityInterface {
 public:
         explicit NodeInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface());
         virtual ~NodeInterface();
-        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) const;
-        virtual const Node* Get()const=0;
+        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) override;
+        virtual const Node* Get() const = 0;
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
                 METHOD_DECLARE(GetLabel)
@@ -325,7 +325,7 @@ class ScalarNodeInterface: public NodeInterface {
 public:
         explicit ScalarNodeInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), ScalarNode* pNode = 0);
         virtual ~ScalarNodeInterface();
-        virtual const ScalarNode* Get()const;
+        virtual const ScalarNode* Get() const override;
 
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
@@ -347,7 +347,7 @@ class StructDispNodeBaseInterface : public NodeInterface {
 public:
         explicit StructDispNodeBaseInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface());
         virtual ~StructDispNodeBaseInterface();
-        virtual const StructDispNode* Get()const=0;
+        virtual const StructDispNode* Get() const = 0;
 
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
@@ -371,7 +371,7 @@ class StructDispNodeInterface: public StructDispNodeBaseInterface {
 public:
         explicit StructDispNodeInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), const StructDispNode* pNode = 0);
         virtual ~StructDispNodeInterface();
-        virtual const StructDispNode* Get()const;
+        virtual const StructDispNode* Get() const override;
 
 private:
         DECLARE_OV_TYPEID_FUNCTIONS_AND_DATA
@@ -385,7 +385,7 @@ class StructNodeInterface : public StructDispNodeBaseInterface {
 public:
         explicit StructNodeInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), const StructNode* pNode = 0);
         virtual ~StructNodeInterface();
-        virtual const StructNode* Get()const;
+        virtual const StructNode* Get() const override;
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
                 METHOD_DECLARE(GetgCurr)
@@ -416,9 +416,9 @@ public:
         // In this case pInterface must be defined
         explicit DataManagerInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), const DataManager* pDM = 0, bool bAddRef = true);
         virtual ~DataManagerInterface();
-        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) const;
-        inline const DataManager* GetDataManager(void)const;
-        inline const Table& GetSymbolTable(void)const;
+        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) override;
+        inline const DataManager* GetDataManager(void) const;
+        inline const Table& GetSymbolTable(void) const;
 
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
@@ -449,8 +449,8 @@ public:
         // In this case pInterface must be defined
         explicit MBDynParserInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), MBDynParser* pHP=0, bool bAddRef=true);
         virtual ~MBDynParserInterface();
-        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) const;
-        MBDynParser* Get()const{ return pHP; }
+        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) override;
+        MBDynParser* Get() const { return pHP; }
 
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
@@ -542,14 +542,14 @@ class OctaveTplDriveCaller : public TplDriveCaller<T> {
 public:
         OctaveTplDriveCaller(const std::string& strFunction, OctaveInterface* pInterface, int iFlags, const octave_value_list& args);
         ~OctaveTplDriveCaller(void);
-        virtual TplDriveCaller<T>* pCopy(void) const;
-        virtual std::ostream& Restart(std::ostream& out) const;
-        virtual std::ostream& Restart_int(std::ostream& out) const;
-        virtual inline T Get(const doublereal& dVar) const;
-        virtual inline T Get(void) const;
-        virtual inline bool bIsDifferentiable(void) const;
-        virtual inline T GetP(void) const;
-        virtual inline int getNDrives(void) const;
+        virtual TplDriveCaller<T>* pCopy(void) const override;
+        virtual std::ostream& Restart(std::ostream& out) const override;
+        virtual std::ostream& Restart_int(std::ostream& out) const override;
+        virtual inline T Get(const doublereal& dVar) const override;
+        virtual inline T Get(void) const override;
+        virtual inline bool bIsDifferentiable(void) const override;
+        virtual inline T GetP(void) const override;
+        virtual inline int getNDrives(void) const override;
 
 private:
         inline octave_value_list MakeArgList(doublereal dVar) const;
@@ -613,13 +613,13 @@ public:
 
 protected:
         octave_value octObject;
+        static const std::string strGetConstLawType;
+        static const std::string strUpdate;
 
 private:
         const std::string strClass;
         OctaveInterface* const pInterface;
         const int iFlags;
-        static const std::string strGetConstLawType;
-        static const std::string strUpdate;
 };
 
 template <class T, class Tder>
@@ -627,12 +627,13 @@ class OctaveConstitutiveLaw
 : public ConstitutiveLaw<T, Tder>, private OctaveConstitutiveLawBase {
         typedef ConstitutiveLaw<T, Tder> Base_t;
 public:
+        using Base_t::Update;
         OctaveConstitutiveLaw(const std::string& strClass, OctaveInterface* pInterface, int iFlags);
         virtual ~OctaveConstitutiveLaw(void);
-        ConstLawType::Type GetConstLawType(void) const;
-        virtual ConstitutiveLaw<T, Tder>* pCopy(void) const;
-        virtual std::ostream& Restart(std::ostream& out) const;
-        virtual void Update(const T& mbEps, const T& mbEpsPrime);
+        ConstLawType::Type GetConstLawType(void) const override;
+        virtual ConstitutiveLaw<T, Tder>* pCopy(void) const override;
+        virtual std::ostream& Restart(std::ostream& out) const override;
+        virtual void Update(const T& mbEps, const T& mbEpsPrime) override;
 
 private:
         mutable ConstLawType::Type clType;
@@ -691,7 +692,7 @@ public:
 template <class T, class Tder>
 struct OctaveCLR : public ConstitutiveLawRead<T, Tder>, public OctaveBaseDCR {
         virtual ConstitutiveLaw<T, Tder> *
-        Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) {
+        Read(const DataManager* pDM, MBDynParser& HP, ConstLawType::Type& CLType) override {
                 ConstitutiveLaw<T, Tder>* pCL = 0;
 
                 OctaveBaseDCR::Read(pDM, HP);
@@ -814,7 +815,7 @@ class OctaveElementInterface: public MBDynInterface {
 public:
         explicit OctaveElementInterface(OctaveInterface* pInterface = OctaveInterface::GetInterface(), OctaveElement* pElem = 0);
         virtual ~OctaveElementInterface(void);
-        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) const;
+        virtual void print(std::ostream& os, bool pr_as_read_syntax = false) override;
 
 protected:
         BEGIN_METHOD_TABLE_DECLARE()
@@ -847,7 +848,7 @@ pHP(pHP)
         TRACE("constructor");
 
         ASSERT(iRefCount == 0);
-        
+
         ASSERT(pDM != 0);
         ASSERT(pHP != 0);
         ASSERT(pOctaveInterface == 0);
@@ -929,7 +930,7 @@ OctaveInterface::~OctaveInterface(void)
         do_octave_atexit();
 #elif defined(HAVE_CLEAN_UP_AND_EXIT)
         clean_up_and_exit(0, true);
-#endif        
+#endif
 #elif OCTAVE_MAJOR_VERSION >= 6 && OCTAVE_MAJOR_VERSION < 8
         interpreter.shutdown();
 #endif
@@ -970,9 +971,9 @@ OctaveInterface::CreateInterface(const DataManager* pDM, MBDynParser* pHP)
         if (!pOctaveInterface) {
                 pOctaveInterface = new OctaveInterface(pDM, pHP);
         }
-        
+
         pOctaveInterface->AddRef();
-        
+
         return pOctaveInterface;
 }
 
@@ -982,11 +983,11 @@ OctaveInterface::Destroy(void)
         ASSERT(iRefCount >= 1);
 
         if (0 == --iRefCount) {
-                TRACE("octave info: Octave interface is released\n"); 
+                TRACE("octave info: Octave interface is released\n");
                 delete this;
         }
-        
-        TRACE("octave info: Octave remaining count:" << iRefCount << "\n");        
+
+        TRACE("octave info: Octave remaining count:" << iRefCount << "\n");
 }
 
 OctaveInterface* OctaveInterface::GetInterface(void) {
@@ -1041,7 +1042,7 @@ OctaveInterface::UpdateMBDynVariables(void)
                 const std::string& mbName(it->first);
 
 #if OCTAVE_MAJOR_VERSION >= 6
-                const octave_value octValue(interpreter.global_varval(mbName));                
+                const octave_value octValue(interpreter.global_varval(mbName));
 #elif OCTAVE_MAJOR_VERSION >= 5
                 const octave_value octValue(interpreter.get_symbol_table().global_varval(mbName));
 #else
@@ -1611,7 +1612,7 @@ MBDynInterface::MBDynInterface(OctaveInterface* pInterface, bool bAddRef)
 {
         TRACE("constructor");
         ASSERT(pInterface != 0);
-        
+
         if (bAddRef) {
                 pInterface->AddRef(); // Avoid invalid memory access in octave-6.2.1
         }
@@ -1620,14 +1621,14 @@ MBDynInterface::MBDynInterface(OctaveInterface* pInterface, bool bAddRef)
 MBDynInterface::~MBDynInterface(void)
 {
         TRACE("destructor");
-        
+
         if (bAddRef) {
                 pInterface->Destroy(); // Avoid invalid memory access in octave-6.2.1
         }
 }
 
 void
-MBDynInterface::print(std::ostream& os, bool pr_as_read_syntax) const
+MBDynInterface::print(std::ostream& os, bool pr_as_read_syntax)
 {
         os << type_name() << ": MBDyn version" << VERSION << std::endl;
 }
@@ -1668,7 +1669,7 @@ ConstVectorHandlerInterface::~ConstVectorHandlerInterface()
 }
 
 void
-ConstVectorHandlerInterface::print(std::ostream& os, bool pr_as_read_syntax) const
+ConstVectorHandlerInterface::print(std::ostream& os, bool pr_as_read_syntax)
 {
         if ( pX == 0 ) {
                 error("%s: not connected", type_name().c_str());
@@ -2026,7 +2027,7 @@ METHOD_DEFINE(OStreamInterface, printf, args, nargout)
                 return octave_value();
         }
 #endif
-        
+
         if (!(ans.length() >= 1 && ans(0).is_string())) { // sprintf returns more than one output argument
                 error("ostream: %s failed", strsprintf.c_str());
                 return octave_value();
@@ -2160,7 +2161,7 @@ NodeInterface::~NodeInterface()
 
 }
 
-void NodeInterface::print(std::ostream& os, bool pr_as_read_syntax) const
+void NodeInterface::print(std::ostream& os, bool pr_as_read_syntax)
 {
         const Node* const pNode = Get();
 
@@ -2708,7 +2709,7 @@ StructDispNodeInterface::~StructDispNodeInterface()
 
 }
 
-const StructDispNode* StructDispNodeInterface::Get()const
+const StructDispNode* StructDispNodeInterface::Get() const
 {
         return pNode;
 }
@@ -2897,7 +2898,7 @@ DataManagerInterface::~DataManagerInterface()
         TRACE("destructor");
 }
 
-void DataManagerInterface::print(std::ostream& os, bool pr_as_read_syntax)const
+void DataManagerInterface::print(std::ostream& os, bool pr_as_read_syntax)
 {
         os << "DataManager" << std::endl
                         << "iTotDofs=" << GetDataManager()->iGetNumDofs() << std::endl;
@@ -3293,7 +3294,7 @@ MBDynParserInterface::~MBDynParserInterface()
 
 }
 
-void MBDynParserInterface::print(std::ostream& os, bool pr_as_read_syntax) const
+void MBDynParserInterface::print(std::ostream& os, bool pr_as_read_syntax)
 {
         os << "MBDynParser";
 
@@ -3981,7 +3982,7 @@ OctaveDriveCaller::OctaveDriveCaller(const std::string& strFunc, OctaveInterface
         TRACE("constructor");
         TRACE("strFunc=" << strFunc);
         TRACE("iFlags=" <<  iFlags);
-        
+
         if (pInterface) {
                 pInterface->AddRef();
         }
@@ -4066,7 +4067,7 @@ template <class T>
 OctaveTplDriveCaller<T>::~OctaveTplDriveCaller(void)
 {
         TRACE("destructor");
-        
+
         if (pInterface) {
                 pInterface->Destroy();
         }
@@ -4468,7 +4469,7 @@ void OctaveBaseDCR::Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred
         if (pInterface) {
                 pInterface->Destroy();
         }
-        
+
         pInterface = OctaveInterface::CreateInterface(pDM, &HP);
 
         strFunction = HP.GetStringWithDelims(HighParser::DOUBLEQUOTE);
@@ -4539,7 +4540,7 @@ OctaveDCR::Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred)
         OctaveFunctionDCR::Read(pDM, HP, bDeferred);
 
         return new OctaveDriveCaller(GetFunction(), GetInterface(), GetFlags(), GetArgs());
-};        
+};
 
 DriveCaller *
 DerivativeDCR::Read(const DataManager* pDM, MBDynParser& HP, bool bDeferred)
@@ -5728,7 +5729,7 @@ OctaveElementInterface::~OctaveElementInterface()
 }
 
 void
-OctaveElementInterface::print(std::ostream& os, bool pr_as_read_syntax) const
+OctaveElementInterface::print(std::ostream& os, bool pr_as_read_syntax)
 {
         os << "MBDynElement(" << (pElem ? pElem->GetLabel() : (unsigned)(-1)) << ")" << std::endl;
 }
