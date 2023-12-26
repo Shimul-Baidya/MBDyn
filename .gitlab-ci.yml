@@ -44,15 +44,13 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
   script:
       - |
           echo "mkl-devel installation job"
-          if pip3 install --user mkl-devel; then
-              echo "mkl-devel was installed"
-              exit 0
-          fi
 
-          if pip install --user mkl-devel; then
-              echo "mkl-devel was installed"
+          for cmd in pip3 pip pipx pipx3 pip3x; do
+            if ${cmd} install --user mkl-devel; then
+              echo "mkl-devel was installed by command ${cmd}"
               exit 0
-          fi
+            fi
+          done
 
           echo "Warning: mkl-devel could not be installed"
 
