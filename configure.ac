@@ -2448,8 +2448,8 @@ dnl Check for Intel MKL Pardiso
 dnl
 ol_link_pardiso=no
 if test $ol_with_pardiso != no ; then
-        AC_CHECK_HEADER(mkl/mkl_pardiso.h, [have_mkl_pardiso_h=yes], [have_mkl_pardiso_h=no])
-        AC_CHECK_HEADER(mkl/mkl_service.h, [have_mkl_service_h=yes], [have_mkl_service_h=no])
+        AC_CHECK_HEADER(mkl_pardiso.h, [have_mkl_pardiso_h=yes], [have_mkl_pardiso_h=no])
+        AC_CHECK_HEADER(mkl_service.h, [have_mkl_service_h=yes], [have_mkl_service_h=no])
         
         if test "$have_mkl_pardiso_h" = "yes" ; then
 	        try_PARDISO_LIBS="-lmkl_gf_lp64 -lmkl_core -lmkl_gnu_thread -lm -lgomp"
