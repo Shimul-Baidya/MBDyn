@@ -247,7 +247,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
             export PKG_CONFIG_PATH="${NL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
             export NLOPT_LIBS=`pkg-config --libs nlopt`
             export NLOPT_INC=`pkg-config --cflags nlopt`
-            NL_LIBDIR=`pkg-config --variable=libdir netcdf`
+            NL_LIBDIR=`pkg-config --variable=libdir nlopt`
             if ! test -z "${NL_LIBDIR}"; then
                 NLOPT_LIBS="${NLOPT_LIBS} -Wl,-rpath=${NL_LIBDIR}"
             fi
