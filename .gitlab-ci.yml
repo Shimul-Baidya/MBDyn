@@ -28,12 +28,8 @@ variables:
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
-  MBOCT_OCTAVE_PKG_BRANCH: "master"
-  MBOCT_NUMERICAL_PKG_BRANCH: "master"
-  MBOCT_MBDYN_PKG_BRANCH: "master"
-  MBOCT_FEM_PKG_BRANCH: "master"
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
-  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:yes"
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:yes mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
   OCTAVE_EXEC: "octave"
@@ -113,16 +109,20 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - printf "pulling\n"
     - git pull --force
     - |
-      if ! test -z "${MBD_MERGE_BRANCH}" && ! test -z "`git branch --list | grep ${MBD_MERGE_BRANCH}`"; then
-        if git fetch origin "${MBD_MERGE_BRANCH}":"${MBD_MERGE_BRANCH}"; then
-          if git merge --no-commit "${MBD_MERGE_BRANCH}"; then
-            echo "branch ${MBD_MERGE_BRANCH} was merged"
-          else
-            echo "branch ${MBD_MERGE_BRANCH} could not be merged"
-            git merge --abort
-          fi
+        if ! test -z "${MBD_MERGE_BRANCH}"; then
+            if ! test -z "`git branch --list | grep ${MBD_MERGE_BRANCH}`"; then
+                if git merge --no-commit "${MBD_MERGE_BRANCH}"; then
+                    echo "branch ${MBD_MERGE_BRANCH} was merged"
+                else
+                    echo "branch ${MBD_MERGE_BRANCH} could not be merged"
+                    git merge --abort
+                fi
+            else
+                echo "branch ${MBD_MERGE_BRANCH} does not exist"
+            fi
+        else
+            echo "there is no branch to merge"
         fi
-      fi
     ## Let's try to speed up the build process a bit
     ## Execute bootstrap.sh and configure only if needed
     ## This conditional execution may be removed as soon as the testsuite is finished
