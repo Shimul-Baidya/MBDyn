@@ -210,19 +210,10 @@ protected:
 	MBDynNcVar Var_TimeStep;
 
 	/* for eigenanalysis output */
-
+        MBDynNcDim m_Dim_Eig_iIdxSize;
+        MBDynNcDim m_Dim_Eig_X0Size;
 	MBDynNcDim m_Dim_Eig_iSize;
 	MBDynNcDim m_Dim_Eig_iComplex;
-
-	MBDynNcVar Var_Eig_lStep;
-	MBDynNcVar Var_Eig_dTime;
-	MBDynNcVar Var_Eig_dCoef;
-	MBDynNcVar Var_Eig_dAplus;
-	MBDynNcVar Var_Eig_dAminus;
-	MBDynNcVar Var_Eig_dAlpha;
-	MBDynNcVar Var_Eig_Idx;
-	MBDynNcVar Var_Eig_dVR;
-	MBDynNcVar Var_Eig_dVL;
 
 public:
 	inline netCDF::NcFile::FileFormat GetNetCDFFileFormat(void) const { return NetCDF_Format; }
@@ -432,7 +423,8 @@ public:
 public:
 	virtual void OutputPrepare(void);
 	virtual void OutputEigPrepare(const integer iNumAnalyses,
-			const integer iSize);
+                                      const integer iSize,
+                                      const unsigned uFlags);
 
 	/* stampa i risultati */
 	virtual bool
@@ -460,12 +452,7 @@ public:
 			const MatrixHandler* pmMatB,
 			const unsigned uCurrEigSol,
 			const int iMatrixPrecision);
-     
-	void
-	OutputEigNaiveMatrices(const MatrixHandler* pmMatA,
-			const MatrixHandler* pmMatB,
-			const unsigned uCurrEigSol,
-			const int iMatrixPrecision);
+
 	void
 	OutputEigenvectors(const VectorHandler *pBeta,
 			const VectorHandler& R, const VectorHandler& I,
