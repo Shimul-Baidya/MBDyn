@@ -498,11 +498,8 @@ octave-pkg-test-job:   # This job runs in the test stage.
 
             echo "${OCTAVE_CMD}"
 
-            if sh -c "${OCTAVE_CMD}" >& fntests.out; then
-                echo "Test completed"
-                if test -f fntests.out; then
-                    tail -n 20 fntests.out
-                fi
+            if sh -c "${OCTAVE_CMD}"; then
+                echo "${OCTAVE_CMD} completed with status 0"
                 if awk -f parse_test_suite_status.awk fntests.out; then
                     curr_test_status="passed"
                 fi
