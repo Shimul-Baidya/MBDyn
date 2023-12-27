@@ -36,7 +36,7 @@ variables:
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
-  
+
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
@@ -79,6 +79,11 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
           fi
       - chmod u+x "./${MKL_PACKAGE}"
       - MKL_STATUS="failed"
+      - |
+          # FIXME: Need to remove MKL before we are able to install it again
+          if ! sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action remove --install-dir "${MKL_INSTALL_PREFIX}"; then
+              echo "Failed to remove MKL ..."
+          fi
       - echo "removing ${MKL_INSTALL_PREFIX} ..."
       - rm -rf ${MKL_INSTALL_PREFIX}
       - |
