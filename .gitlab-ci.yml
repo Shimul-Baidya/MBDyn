@@ -243,10 +243,12 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
                   echo "File ${MKL_PKG_CONFIG}.pc not found"
               fi
           fi
+    - PARDISO_FLAGS="--without-pardiso"
     - |
         if test -d "${MKL_PKG_CONFIG_PATH}"; then
             export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
             if pkg-config --validate "${MKL_PKG_CONFIG}"; then
+                PARDISO_FLAGS="--with-pardiso"
                 CPPFLAGS="${CPPFLAGS} `pkg-config --cflags-only-I ${MKL_PKG_CONFIG}`"
                 LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG}`"
                 LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG} | sed  's/^-L\//-Wl,-rpath=\//g'`"
@@ -274,6 +276,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
                     --prefix="${MBD_INSTALL_PREFIX}" \
                     --with-umfpack \
                     --with-klu \
+                    ${PARDISO_FLAGS} \
                     --with-suitesparseqr \
                     --with-static-modules \
                     --disable-Werror \
