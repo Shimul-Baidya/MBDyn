@@ -48,7 +48,10 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
   script:
       # Local installation directory for Gmsh
       - echo "MKL installation job"
-      - MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
+      - |
+        if test -d "${MKL_INSTALL_PREFIX}"; then
+          MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
+        fi
       - |
         if test -d "${MKL_PKG_CONFIG_PATH}" -a "${MBD_CLEAN_ALL}" = "no"; then
           echo "MKL was already installed in ${MKL_PKG_CONFIG_PATH}"
