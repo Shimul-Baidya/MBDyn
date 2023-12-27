@@ -4035,7 +4035,6 @@ ReadJoint(DataManager* pDM,
 						
 	} break;
 	
-#ifdef MBDYN_DEVEL
 	case SCREWJOINT: {
 		/* nodo collegato 1 */
 		StructNode* pNode1 = dynamic_cast<StructNode *>(pDM->ReadNode(HP, Node::STRUCTURAL));
@@ -4119,7 +4118,7 @@ ReadJoint(DataManager* pDM,
 			<< " " << Eye3
 			<< std::endl;
 	} break;
-#endif // MBDYN_DEVEL
+
         case OFFSETDISPLACEMENTJOINT: {
              if (!pDM->bUseAutoDiff()) {
                   silent_cerr("offset displacement joint(" << uLabel << "): requires support for automatic differentiation at line"

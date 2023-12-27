@@ -54,7 +54,7 @@ The (complex) magnitude of the fundamental harmonic of each signal is logged at 
             (\hty{DriveCaller}) \bnt{input_signal}
                     [ \{ \kw{test} | \kw{output} | \kw{target} \} , \{ \kw{true} | \kw{false} | (\ty{bool}) \bnt{value} \} ]
                 [ , ... ] , # \nt{inputs_number} occurrences
-        [ \kw{output format} , \{ \kw{complex} | \kw{magnitude phase} \}, [\kw{normalized} ,]]
+        [ \kw{output format} , \{ \kw{complex} | \kw{magnitude phase} \}, [ \kw{normalized} , ] ]
 	\kw{steps number} , (\ty{integer}) \bnt{steps_number} ,
         [ \kw{max delta t} , (\hty{DriveCaller}) \bnt{max_delta_t} ,]
         \kw{initial angular frequency} , (\ty{real}) \bnt{omega0} ,
@@ -329,7 +329,7 @@ end: initial value;
 begin: elements;
     # ...
 
-    set: const integer HARMONIC_EXCITATION = 99;
+    set: const integer HARMONIC_EXCITATION = 97;
     user defined: HARMONIC_EXCITATION, harmonic excitation,
         inputs number, 2,
             node, 2, structural, string, "X[1]", direct,

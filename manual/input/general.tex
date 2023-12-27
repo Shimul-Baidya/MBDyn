@@ -3595,9 +3595,10 @@ a \kw{sine} drive caller with the parameters illustrated above.
 
 \section{Friction}
 A friction-based element needs the definition of
-at least a friction model and of a shape function.
+at least a \hty{friction model} and of a \hty{shape function}.
 
 \subsection{Friction models}
+\label{sec:friction model}
 The \kw{friction model} input format is:
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -3653,8 +3654,8 @@ The input format is:
 \end{enumerate}
 
 \subsection{Shape functions}
-\label{sec:Shape}
-Implements the type \hty{Shape}.
+\label{sec:shape function}
+Implements the type \hty{shape function}.
 The input format of shape functions is:
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -3682,13 +3683,35 @@ Currently implemented shape functions for friction models are:
     \bnt{shape_function_arglist} ::= 
 \end{Verbatim}
 %\end{verbatim}
-    This is the shape function of a \kw{revolute hinge}; the radius will be prescribed from the
+    This is the shape function of a \hty{revolute hinge}; the radius will be prescribed from the
     joint; the \kw{revolute hinge} is assumed to be subject to small loads.
+
+    \item \kw{screw joint}
+\begin{Verbatim}[commandchars=\\\{\}]
+    \bnt{shape_function_type} ::= \kw{screw joint}
+
+    \bnt{shape_function_arglist} ::= 
+        \kw{radius}, \bnt{average_radius_value},
+	\kw{half thread angle}, \bnt{half_thread_angle_value}
+\end{Verbatim}
+    This is the shape function of a \hty{screw} joint. 
+    With reference to Fig.~\ref{fig:screw_sketch_3D} the \kw{radius} $r$
+    is the average contact radius required to compute the friction-induced moment, while 
+    the \kw{half thread angle} angle $\gamma$ should be equal to half of the thread angle.
+  \begin{figure}[h]
+    \begin{center}
+      \includegraphics{../tecman/Screw_sketch}
+    \end{center}
+    \caption{3D screw thread sketch.}
+    \label{fig:screw_sketch_3D}
+  \end{figure}
+
 \end{enumerate}
 
 
 
 \section{Shapes}
+\label{sec:Shape}
 The \hty{Shape} entities are objects that return a value depending on one
 (or two, for 2D shapes) dimensionless abscissa, ranging $ \sqbr{-1,1} $.
 At present, only 1D shapes are used, by aerodynamic elements.
