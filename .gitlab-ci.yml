@@ -477,11 +477,11 @@ octave-pkg-test-job:   # This job runs in the test stage.
 
             case "${pkg_test_timeout}" in
             -1)
-              echo "No timeout is applied"
+              echo "Timeout: not applied"
               ulimit -S -t unlimited                
               ;;
             *)
-              echo "Timeout: ${pkg_test_timeout}"
+              echo "Timeout: ${pkg_test_timeout}s"
               ulimit -S -t "${pkg_test_timeout}"
               ;;
             esac
