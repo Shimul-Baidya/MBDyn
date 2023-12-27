@@ -853,15 +853,22 @@ The binary output of eigenanalysis is structured as follows.
 If at least one eigenanalysis is requested, a base level is added, called \kw{eig}.
 This level contains general data:
 \begin{itemize}
-\item \kw{eig.step}, the step number at which each eigenanalysis was performed;
-\item \kw{eig.time}, the time in seconds at which each eigenanalysis was performed;
-\item \kw{eig.dCoef}, the coefficient used to build the problem matrices;
-\item \kw{eig.idx}, the indexes of the nodes dofs in the eigenvectors.
+\item \kw{eig.idx}, a vector containing the reference row index of each structural node (excluding any dummy node) in the eigenvectors;
+\item \kw{eig.labels}, a vector containing the labels of each structural node, if any (excluding any dummy node);
+\item \kw{eig.}\bnt{elem\_type}\kw{.idx}, the indices of the degrees of freedom in the eigenvector associated with specific elements (e.g. Lagrange multipliers of joints);
+\item \kw{eig.}\bnt{elem\_type}\kw{.labels}, a vector containing the corresponing labels of the elements;
 \end{itemize}
 
 \subsubsection{Analysis level}
 For each analysis, a level \kw{eig.}\bnt{index} is created. The requested outputs 
-are then added to the level.
+are then added to that level.
+
+\begin{itemize}
+\item \kw{eig.}\bnt{index}\kw{.step}, the step number at which each eigenanalysis was performed;
+\item \kw{eig.}\bnt{index}\kw{.time}, the time in seconds at which each eigenanalysis was performed;
+\item \kw{eig.}\bnt{index}\kw{.dCoef}, the coefficient used to build the problem matrices;
+\item \kw{eig.}\bnt{index}\kw{.X0}, a vector containing the reference position and orientation of the structural nodes, if any (excluding any dummy node); the vector contains, for each node, the three components of the reference position and the three components of the Euler vector corresponding to the reference orientation; all data are referred to the absolute reference frame;
+\end{itemize}
 
 \paragraph{Full matrices.}
 If \kw{output full matrices} was specified, the following variables are added to the
@@ -874,7 +881,7 @@ If \kw{output full matrices} was specified, the following variables are added to
     $\TT{J}_{(-c)} = \T{f}_{/\dot{\T{x}}} - \texttt{dCoef} \cdot \T{f}_{/\T{x}}$ 
     matrix.
 \end{itemize}
-Both matrices are stored in full format.
+Both matrices are stored in full format. The corresponding attributes ``matrix type'' of \kw{eig.}\bnt{index}\kw{.Aplus} and \kw{eig.}\bnt{index}\kw{.Aminus} are set to ``dense''.
 
 \paragraph{Sparse matrices.}
 If \kw{output sparse matrices} was specified, the following variables are added to the
@@ -894,7 +901,8 @@ and the following dimensions specified
 \item \kw{eig\_}\bnt{index}\kw{\_Aminus\_sp\_iSize} : 
     represents the number of nonzero elements in matrix \texttt{Aminus};
 \end{itemize}
-Both matrices are stored in sparse format.
+Both matrices are stored in sparse triplet format and may be passed to Matlab's spconvert function.
+The corresponding attributes ``matrix type'' of \kw{eig.}\bnt{index}\kw{.Aplus} and \kw{eig.}\bnt{index}\kw{.Aminus} are set to ``sparse''.
 
 \paragraph{Eigenvalues and Eigenvectors.}
 If \kw{output eigenvectors} was specified, the following variables are added to the
