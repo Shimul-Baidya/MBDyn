@@ -28,13 +28,13 @@ variables:
   MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
-  MBD_SKIP_BUILD: "no"
+  MBD_SKIP_BUILD: "yes"
   GMSH_REINSTALL: "no"
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
-  OCT_PKG_REBUILD: "nurbs:yes netcdf:yes mboct-octave-pkg:yes mboct-numerical-pkg:yes mboct-mbdyn-pkg:yes mboct-fem-pkg:yes"
+  OCT_PKG_REBUILD: "nurbs:no netcdf:yes mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:eig-netcdf mboct-fem-pkg:fem_sol_harmonic_modal2"
-  OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+  OCT_PKG_TESTS: "nurbs:no netcdf:yes mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
   OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:"
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
@@ -418,11 +418,22 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                       esac
                       ;;
                   *)
+                      SAVE_LDFLAGS=""
+                      
+                      case "${pkgname}" in
+                          netcdf)
+                              SAVE_LDFLAGS="${LDFLAGS}"
+                              export LDFLAGS="-Wl,-rpath=`nc-config --libdir`"
+                              ;;
+                      esac
+
                       # Assume that the package is hosted at octave-forge
                       if ! ${OCTAVE_EXEC} -qfH --eval "pkg install -verbose -local -forge ${pkgname}"; then
                           printf "failed to install package \"%s\" from octave-forge\n" "${pkgname}"
                           exit 1
                       fi
+
+                      export LDFLAGS="${SAVE_LDFLAGS}"
                       ;;
               esac
 
