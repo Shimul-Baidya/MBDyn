@@ -36,7 +36,6 @@ variables:
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
-  MKL_COMPONENT: "intel.oneapi.lin.mkl.devel"
   
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -80,7 +79,7 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
       - chmod u+x "./${MKL_PACKAGE}"
       - MKL_STATUS="failed"
       - |
-          if sh "./${MKL_PACKAGE}" -r -a -s --eula accept --ignore-errors --action install --component "${MKL_COMPONENT}" --install-dir "${MKL_INSTALL_PREFIX}"; then
+          if sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action install --install-dir "${MKL_INSTALL_PREFIX}"; then
               MKL_STATUS="succeeded"
           fi
       - rm -f "./${MKL_PACKAGE}"
