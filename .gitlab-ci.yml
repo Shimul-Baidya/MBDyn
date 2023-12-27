@@ -32,7 +32,7 @@ variables:
   GMSH_REINSTALL: "no"
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
-  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:yes mboct-mbdyn-pkg:no mboct-fem-pkg:no"
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:eig-netcdf mboct-fem-pkg:fem_sol_harmonic_modal2"
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
   OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:"
@@ -419,7 +419,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                       ;;
                   *)
                       SAVE_LDFLAGS=""
-                      
+
                       case "${pkgname}" in
                           netcdf)
                               SAVE_LDFLAGS="${LDFLAGS}"
