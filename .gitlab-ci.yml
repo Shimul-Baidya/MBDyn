@@ -49,7 +49,7 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
       - echo "MKL installation job"
       - |
         if test -d "${MKL_INSTALL_PREFIX}"; then
-          MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
+          MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig -and -path '*/lib64/*' ')' 2>/dev/null`
         fi
       - |
         if test -d "${MKL_PKG_CONFIG_PATH}" -a "${MBD_CLEAN_ALL}" = "no"; then
@@ -57,6 +57,7 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
           exit 0
         fi
       - |
+          rm -rf "${MKL_INSTALL_PREFIX}"
           if test -z "${MKL_URL}"; then
             echo "MKL_URL was not defined"
             exit 0
@@ -78,6 +79,8 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
           fi
       - chmod u+x "./${MKL_PACKAGE}"
       - MKL_STATUS="failed"
+      - echo "removing ${MKL_INSTALL_PREFIX} ..."
+      - rm -rf ${MKL_INSTALL_PREFIX}
       - |
           if sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action install --install-dir "${MKL_INSTALL_PREFIX}"; then
               MKL_STATUS="succeeded"
@@ -216,11 +219,12 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - |
       if test -d "${MKL_INSTALL_PREFIX}"; then
         MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig -and -path '*/lib64/*' ')'`
+        echo "MKL_PKG_CONFIG_PATH=${MKL_PKG_CONFIG_PATH}"
       else
         echo "Directory ${MKL_INSTALL_PREFIX} does not exist"
       fi
     - |
-        if ! test -z "${MKL_PKG_CONFIG_PATH}"; then
+        if test -d "${MKL_PKG_CONFIG_PATH}"; then
             export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
             find "${MKL_PKG_CONFIG_PATH}" -name '*.pc'
             CPPFLAGS="${CPPFLAGS} `pkg-config --cflags-only-I mkl-dynamic-lp64-gomp`"
