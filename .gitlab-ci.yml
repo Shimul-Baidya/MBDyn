@@ -432,8 +432,7 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
    script:
        - echo "gmsh build"
        - |
-         export PATH=${GMSH_INSTALL_PREFIX}/bin:${PATH}
-         if gmsh --version >& /dev/null && test "${MBD_GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
+         if ${GMSH_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test "${MBD_GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
            echo "Gmsh was already installed ..."
            exit 0
          fi
@@ -489,7 +488,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
 
             echo "${OCTAVE_CMD}"
 
-            if sh -c "${OCTAVE_CMD}" >& fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
+            if sh -c "${OCTAVE_CMD}" 2>&1 | tee fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
                 curr_test_status="passed"
             fi
 
