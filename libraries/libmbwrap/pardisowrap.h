@@ -43,6 +43,7 @@
 
 #ifdef USE_PARDISO
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <limits>
