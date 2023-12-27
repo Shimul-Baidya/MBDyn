@@ -28,6 +28,7 @@ variables:
   MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
+  MBD_SKIP_BUILD: "no"
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
@@ -174,6 +175,11 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
           #rm -rf ${HOME}/${dirent}
       #  fi
     #  done
+    - |
+      if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
+        echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
+        exit 0
+      fi
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
@@ -478,7 +484,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
             case "${pkg_test_timeout}" in
             -1)
               echo "Timeout: not applied"
-              ulimit -S -t unlimited                
+              ulimit -S -t unlimited
               ;;
             *)
               echo "Timeout: ${pkg_test_timeout}s"
