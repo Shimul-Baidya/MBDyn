@@ -21,6 +21,7 @@ variables:
   MBD_MERGE_BRANCH: "fix-netcdf-eig"
   GMSH_INSTALL_PREFIX: "/home/gitlab-runner/local/gmsh-test-install/" ## Local installation directory for Gmsh
   MBOCT_INSTALL_PREFIX: "/home/gitlab-runner/local/mboct-test-install/" ## Local installation directory for Gmsh
+  MKL_INSTALL_PREFIX: "/home/gitlab-runner/local/mkl-test-install/" ## Local installation directory for MKL
   NC_INSTALL_PREFIX: "/home/gitlab-runner/local/netcdf-test-install/" ## Local installation directory for NetCDF
   NL_INSTALL_PREFIX: "/home/gitlab-runner/local/nlopt-test-install/" ## Local installation directory for nlopt
   MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/" ## Local build directory
@@ -33,7 +34,10 @@ variables:
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:yes mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
   OCTAVE_EXEC: "octave"
-
+  MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
+  MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
+  MKL_COMPONENT: "intel.oneapi.lin.mkl.devel"
+  
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
@@ -42,17 +46,46 @@ stages:          # List of stages for jobs, and their order of execution
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
+      - ## Local installation directory for Gmsh
+      - echo "MKL installation job"
+      - MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
       - |
-          echo "mkl-devel installation job"
-
-          for cmd in pip3 pip pipx pipx3 pip3x; do
-            if ${cmd} install --user mkl-devel; then
-              echo "mkl-devel was installed by command ${cmd}"
-              exit 0
-            fi
-          done
-
-          echo "Warning: mkl-devel could not be installed"
+        if test -d "${MKL_PKG_CONFIG_PATH}" -a "${MBD_CLEAN_ALL}" = "no"; then
+          echo "MKL was already installed in ${MKL_PKG_CONFIG_PATH}"
+          exit 0
+        fi
+      - |
+          if test -z "${MKL_URL}"; then
+            echo "MKL_URL was not defined"
+            exit 0
+          fi
+          if test -z "${MKL_PACKAGE}"; then
+            echo "MKL_PACKAGE was not defined"
+            exit 0
+          fi
+          if test -f "./${MKL_PACKAGE}"; then
+            rm -f "./${MKL_PACKAGE}"
+          fi
+          if ! wget "${MKL_URL}${MKL_PACKAGE}"; then
+            echo "Failed to download ${MKL_URL}${MKL_PACKAGE}"
+            exit 1
+          fi
+          if ! test -f "./${MKL_PACKAGE}"; then
+            echo "File not found ${MKL_PACKAGE}"
+            exit 1
+          fi
+       - chmod u+x "./${MKL_PACKAGE}"
+       - MKL_STATUS="failed"
+      - |
+          if sh "./${MKL_PACKAGE}" -r -a -s --eula accept --ignore-errors --action install --component "${MKL_COMPONENT}" --install-dir "${MKL_INSTALL_PREFIX}"; then
+              MKL_STATUS="succeeded"
+          fi
+      - rm -f "./${MKL_PACKAGE}"
+      - |
+          if test "${MKL_STATUS}" != "succeeded"; then
+              echo "Failed to install MKL"
+              exit 1
+          fi
 
 netcdf-c-build-job:       # This job runs in the build stage, which runs first.
   stage: build
@@ -178,7 +211,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
       fi
     - echo "Detecting MKL ..."
-    - MKL_PKG_CONFIG_PATH=`find "${HOME}/.local" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
+    - MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
     - |
         if ! test -z "${MKL_PKG_CONFIG_PATH}"; then
             export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
@@ -231,7 +264,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
   stage: build
   script:
         - echo "octave packages installation job"
-        - MKL_PKG_CONFIG_PATH=`find "${HOME}/.local" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
+        - MKL_PKG_CONFIG_PATH=`find "${MKL_INSTALL_PREFIX}" '(' -type d -and -name pkgconfig ')' 2>/dev/null`
         - |
             if ! test -z "${MKL_PKG_CONFIG_PATH}"; then
                 export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
