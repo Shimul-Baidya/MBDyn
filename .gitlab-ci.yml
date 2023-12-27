@@ -46,7 +46,6 @@ stages:          # List of stages for jobs, and their order of execution
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-      # Local installation directory for Gmsh
       - echo "MKL installation job"
       - |
           if test -d "${MKL_INSTALL_PREFIX}"; then
@@ -427,7 +426,7 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
        - echo "gmsh build"
        - |
          export PATH=${GMSH_INSTALL_PREFIX}/bin:${PATH}
-         if gmsh --version >& /dev/null && test ${MBD_GMSH_REINSTALL} = "no" -a ${MBD_CLEAN_ALL} = "no" ; then
+         if gmsh --version >& /dev/null && test "${MBD_GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
            echo "Gmsh was already installed ..."
            exit 0
          fi
