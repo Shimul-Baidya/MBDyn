@@ -28,13 +28,13 @@ variables:
   MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
-  MBD_SKIP_BUILD: "no"
+  MBD_SKIP_BUILD: "yes"
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:yes mboct-numerical-pkg:yes mboct-mbdyn-pkg:no mboct-fem-pkg:no"
-  OCT_PKG_TIMEOUT: "nurbs:-1 netcdf:-1 mboct-octave-pkg:-1 mboct-numerical-pkg:300 mboct-mbdyn-pkg:-1 mboct-fem-pkg:-1"
+  OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg:300 mboct-mbdyn-pkg: mboct-fem-pkg:"
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
@@ -477,28 +477,21 @@ octave-pkg-test-job:   # This job runs in the test stage.
 
             curr_test_status="failed"
 
-            OCTAVE_CODE="pkg(\"load\",\"${pkgname}\");p=pkg(\"list\",\"${pkgname}\");__run_test_suite__({p{1}.dir},{});"
+            OCTAVE_CODE="pkg(\\\"load\\\",\\\"${pkgname}\\\");p=pkg(\\\"list\\\",\\\"${pkgname}\\\");__run_test_suite__({p{1}.dir},{});"
 
             pkg_test_timeout=$(echo ${OCT_PKG_TIMEOUT} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
-            case "${pkg_test_timeout}" in
-            -1)
-              echo "Timeout: not applied"
-              ulimit -S -t unlimited
-              ;;
-            *)
-              echo "Timeout: ${pkg_test_timeout}s"
-              ulimit -S -t "${pkg_test_timeout}"
-              ;;
-            esac
-
-            echo ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CODE}"
-
-            if ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CODE}" >& fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
-                curr_test_status="passed"
+            if test -z "${pkg_test_timeout}"; then
+              pkg_test_timeout="unlimited"
             fi
 
-            ulimit -S -t unlimited
+            OCTAVE_CMD="ulimit -t ${pkg_test_timeout}; ${OCTAVE_EXEC} -qfH --eval \"${OCTAVE_CODE}\""
+
+            echo "${OCTAVE_CMD}"
+
+            if sh -c "${OCTAVE_CMD}" >& fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
+                curr_test_status="passed"
+            fi
 
             case "${curr_test_status}" in
                 passed)
