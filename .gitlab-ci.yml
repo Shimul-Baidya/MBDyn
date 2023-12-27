@@ -384,6 +384,11 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                   fi
               fi
 
+              # Force a new installation
+              if ! ${OCTAVE_EXEC} -qfH --eval "pkg uninstall -nodeps -verbose -local ${pkgname}"; then
+                  printf "Warning: failed to uninstall package \"%s\"\n" "${pkgname}"
+              fi
+
               case "${pkgname}" in
                   mboct-*-pkg)
                       if test -d "${pkgname}"; then
@@ -393,6 +398,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                           printf "failed to clone package \"%s\" from github.com\n" "${pkgname}"
                           exit 1
                       fi
+
                       if ! make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C "${pkgname}" install_local; then
                           printf "failed to build package \"%s\"\n" "${pkgname}"
                       fi
@@ -488,8 +494,14 @@ octave-pkg-test-job:   # This job runs in the test stage.
 
             echo "${OCTAVE_CMD}"
 
-            if sh -c "${OCTAVE_CMD}" 2>&1 | tee fntests.out && awk -f parse_test_suite_status.awk fntests.out; then
-                curr_test_status="passed"
+            if sh -c "${OCTAVE_CMD}" >& fntests.out; then
+                echo "Test completed"
+                if test -f fntests.out; then
+                    tail -n 20 fntests.out
+                fi
+                if awk -f parse_test_suite_status.awk fntests.out; then
+                    curr_test_status="passed"
+                fi
             fi
 
             case "${curr_test_status}" in
