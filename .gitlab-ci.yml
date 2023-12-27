@@ -29,6 +29,7 @@ variables:
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
   MBD_SKIP_BUILD: "yes"
+  GMSH_REINSTALL: "no"
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
@@ -438,14 +439,17 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
    script:
        - echo "gmsh build"
        - |
-         if ${GMSH_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test "${MBD_GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
+         if ${GMSH_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test "${GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
            echo "Gmsh was already installed ..."
            exit 0
          fi
+       - rm -f gmsh-stable-Linux64.tgz
        - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
        - tar -zxvf gmsh-stable-Linux64.tgz
+       - rm -rf ${GMSH_INSTALL_PREFIX}
        - mkdir -p "${GMSH_INSTALL_PREFIX}/bin"
        - install gmsh-*.*.*-Linux64/bin/gmsh "${GMSH_INSTALL_PREFIX}/bin"
+       - rm -rf gmsh-*.*.*-Linux64
        - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
 
 octave-pkg-test-job:   # This job runs in the test stage.
