@@ -176,8 +176,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       #  fi
     #  done
     - |
-      if test "${MBD_SKIP_BUILD}" = "yes"; then
-        echo "Do not build MBDyn because MBD_SKIP_BUILD=yes"
+      if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
+        echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
         exit 0
       fi
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
