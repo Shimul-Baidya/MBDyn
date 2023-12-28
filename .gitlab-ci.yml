@@ -35,7 +35,8 @@ variables:
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:eig-netcdf mboct-fem-pkg:fem_sol_harmonic_modal2"
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
-  OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:"
+  OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:" ## Timeout in seconds - a missing value means unlimited timeout
+  MBD_MODULE_TEST_TIMEOUT: "600" ## Timeout per model in seconds
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
@@ -476,13 +477,13 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - gmsh --version
       - which octave
       - ${OCTAVE_EXEC} -qfH --version
-      # FIXME: mboct-fem-pkg is not able to locate mkl/mkl_pardiso.h
-      #- echo "pardiso solver ..."
-      #- ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=pardiso(A,b,struct()); norm(A*x-b)/norm(A*x+b)"
-      #- echo "umfpack solver ..."
-      #- if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=umfpack(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
-      #- echo "mumps solver ..."
-      #- if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=mumps(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
+      # Let's see if mboct-fem-pkg is now able to locate mkl/mkl_pardiso.h
+      - echo "pardiso solver ..."
+      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=pardiso(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
+      - echo "umfpack solver ..."
+      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=umfpack(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
+      - echo "mumps solver ..."
+      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=mumps(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
       - |
         test_status="passed"
         failed_packages=""
@@ -572,6 +573,18 @@ octave-pkg-test-job:   # This job runs in the test stage.
                 exit 1
                 ;;
         esac
+
+mbdyn-modules-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  script:
+      - echo "MBDyn modules test job"
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - chmod +x simple_testsuite.sh
+      - |
+        ./simple_testsuite.sh --timeout ${MBD_MODULE_TEST_TIMEOUT} \
+                              --prefix-output /tmp/mbdyn-gitlab-ci-yml-module-testsuite \
+                              --prefix-input modules
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
