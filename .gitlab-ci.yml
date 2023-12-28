@@ -32,9 +32,9 @@ variables:
   GMSH_REINSTALL: "no"
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
-  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:yes mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:eig-netcdf mboct-fem-pkg:fem_sol_harmonic_modal2"
-  OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+  OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
   OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:"
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
@@ -500,7 +500,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
                     ;;
             esac
 
-            rm -f fntests.out fntests.log
+            rm -f fntests.out fntests.log fntests.tm
 
             curr_test_status="failed"
 
@@ -512,16 +512,34 @@ octave-pkg-test-job:   # This job runs in the test stage.
               pkg_test_timeout="unlimited"
             fi
 
-            OCTAVE_CMD="ulimit -t ${pkg_test_timeout}; ${OCTAVE_EXEC} -qfH --eval \"${OCTAVE_CODE}\""
+            OCTAVE_CMD="ulimit -t ${pkg_test_timeout}; /usr/bin/time --verbose --output fntests.tm ${OCTAVE_EXEC} -qfH --eval \"${OCTAVE_CODE}\""
 
             echo "${OCTAVE_CMD}"
+            echo "Memory usage before test:"
+            vmstat -S M
+            echo "Temporary files before test:"
+            ls -lhF /tmp/oct-*
+            echo "Disk usage before test:"
+            df -h
 
-            if sh -c "${OCTAVE_CMD}" 2>&1 | tee fntests.out; then
+            if sh -c "${OCTAVE_CMD}" >& fntests.out; then
                 echo "${OCTAVE_CMD} completed with status 0"
                 if awk -f parse_test_suite_status.awk fntests.out; then
                     curr_test_status="passed"
                 fi
             fi
+
+            if test -f fntests.tm; then
+                echo "Resources used by ${OCTAVE_CMD}"
+                cat fntests.tm
+            fi
+
+            echo "Memory usage after test:"
+            vmstat -S M
+            echo "Temporary files after test:"
+            ls -lhF /tmp/oct-*
+            echo "Disk usage after test:"
+            df -h
 
             case "${curr_test_status}" in
                 passed)
