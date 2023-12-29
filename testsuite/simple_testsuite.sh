@@ -68,11 +68,11 @@ while ! test -z "$1"; do
             shift
             ;;
         --help|-h)
-            printf "%s\n  --prefix-output <output-dir>\n  --prefix-input <input-dir>\n  --timeout <timeout-seconds>\n  --help\n" "${program_name}" > /dev/stderr
+            printf "%s\n  --prefix-output <output-dir>\n  --prefix-input <input-dir>\n  --timeout <timeout-seconds>\n  --help\n" "${program_name}"
             exit 1;
             ;;
         *)
-            printf "%s: invalid argument \"%s\"\n" "${program_name}" "$1" > /dev/stderr
+            printf "%s: invalid argument \"%s\"\n" "${program_name}" "$1"
             exit 1
             ;;
     esac
@@ -84,24 +84,24 @@ if test -z "${mbdyn_testsuite_timeout}"; then
 fi
 
 if test -z "${mbdyn_testsuite_prefix_output}"; then
-    printf "%s: missing argument --prefix-output <output-dir>\n" "${program_name}" > /dev/stderr
+    printf "%s: missing argument --prefix-output <output-dir>\n" "${program_name}"
     exit 1
 fi
 
 mbdyn_testsuite_output_dir="$(realpath $(dirname ${mbdyn_testsuite_prefix_output}))"
 
 if ! test -d "${mbdyn_testsuite_output_dir}"; then
-    printf "%s: invalid argument --prefix-output %s\n" "${program_name}" "${mbdyn_testsuite_prefix_output}" > /dev/stderr
+    printf "%s: invalid argument --prefix-output %s\n" "${program_name}" "${mbdyn_testsuite_prefix_output}"
     exit 1
 fi
 
 if test -z "${mbdyn_testsuite_prefix_input}"; then
-    printf "%s: missing argument --prefix-input <input-dir>\n" "${program_name}" > /dev/stderr
+    printf "%s: missing argument --prefix-input <input-dir>\n" "${program_name}"
     exit 1
 fi
 
 if ! test -d "${mbdyn_testsuite_prefix_input}"; then
-    printf "%s: argument --prefix-input \"%s\" is not valid\n" "${program_name}" "${mbdyn_testsuite_prefix_input}" > /dev/stderr
+    printf "%s: argument --prefix-input \"%s\" is not valid\n" "${program_name}" "${mbdyn_testsuite_prefix_input}"
     exit 1
 fi
 

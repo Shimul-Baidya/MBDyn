@@ -16,13 +16,13 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
-# workflow:
-#   rules:
-#     - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
-#       when: always
-#     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-#       when: always
-#     - when: never
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+    - when: never
 
 variables:
   MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/" ## Local installation directory for MBDyn
@@ -202,13 +202,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         exit 0
       fi
       
-    # - git checkout develop --force
-    # - git branch -D testsuite
-    # - git fetch origin testsuite:testsuite
-    # - git checkout testsuite --force
     - echo "checkout branch $CI_COMMIT_BRANCH" 
     - git checkout $CI_COMMIT_BRANCH --force
-    - git branch --set-upstream-to=origin/testsuite
     - printf "pulling\n"
     - git pull --force
     ## Let's try to speed up the build process a bit

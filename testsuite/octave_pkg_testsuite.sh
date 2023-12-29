@@ -91,11 +91,11 @@ while ! test -z "$1"; do
             shift
             ;;
         --help|-h)
-            printf "%s\n --octave-pkg-list <list-of-packages>\n --octave-pkg-tests <list-of-tests>\n --octave-pkg-test-dir <output-dir>\n --timeout <timeout-value>\n --help\n" "${program_name}" > /dev/stderr
+            printf "%s\n --octave-pkg-list <list-of-packages>\n --octave-pkg-tests <list-of-tests>\n --octave-pkg-test-dir <output-dir>\n --timeout <timeout-value>\n --help\n" "${program_name}"
             exit 1;
             ;;
         *)
-            printf "%s: invalid argument \"%s\"\n" "${program_name}" "$1" > /dev/stderr
+            printf "%s: invalid argument \"%s\"\n" "${program_name}" "$1"
             exit 1
             ;;
     esac
