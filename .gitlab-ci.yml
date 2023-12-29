@@ -16,13 +16,14 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
-workflow:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
-      when: always
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: always
-    - when: never
+## FIXME: workflow rules are causing troubles with git pull
+# workflow:
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+#       when: always
+#     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+#       when: always
+#     - when: never
 
 variables:
   MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/" ## Local installation directory for MBDyn
@@ -204,6 +205,9 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       
     - echo "checkout branch $CI_COMMIT_BRANCH" 
     - git checkout $CI_COMMIT_BRANCH --force
+    ## FIXME: git pull --force fails whenever workflow rules are active
+    ## Need to set upstream branch in order to fix it
+    - git branch --set-upstream-to=origin/$CI_COMMIT_BRANCH
     - printf "pulling\n"
     - git pull --force
     ## Let's try to speed up the build process a bit
