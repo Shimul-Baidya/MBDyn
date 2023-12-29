@@ -82,7 +82,7 @@ while ! test -z "$1"; do
             OCT_PKG_TESTS_VERBOSE="$2"
             shift
             ;;
-        --timeout|-t)
+        --timeout)
             OCT_PKG_TIMEOUT="$2"
             shift
             ;;
@@ -103,7 +103,7 @@ while ! test -z "$1"; do
 done
 
 if ! test -d "${OCT_PKG_TEST_DIR}"; then
-    if ! mkdir "${OCT_PKG_TEST_DIR}"; then
+    if ! mkdir -p "${OCT_PKG_TEST_DIR}"; then
         echo "Failed to create directory \"${OCT_PKG_TEST_DIR}\""
         exit 1
     fi

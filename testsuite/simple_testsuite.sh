@@ -47,27 +47,27 @@ mbdyn_verbose_output="no"
 
 while ! test -z "$1"; do
     case "$1" in
-        --prefix-output|-o)
+        --prefix-output)
             mbdyn_testsuite_prefix_output="$2"
             shift
             ;;
-        --prefix-input|-i)
+        --prefix-input)
             mbdyn_testsuite_prefix_input="$2"
             shift
             ;;
-        --timeout|-t)
+        --timeout)
             mbdyn_testsuite_timeout="$2"
             shift
             ;;
-        --filter|-f)
+        --filter)
             mbdyn_input_filter="$2"
             shift
             ;;
-        --verbose|-v)
+        --verbose)
             mbdyn_verbose_output="$2"
             shift
             ;;
-        --help|-h)
+        --help)
             printf "%s\n  --prefix-output <output-dir>\n  --prefix-input <input-dir>\n  --timeout <timeout-seconds>\n  --help\n" "${program_name}"
             exit 1;
             ;;
@@ -91,8 +91,10 @@ fi
 mbdyn_testsuite_output_dir="$(realpath $(dirname ${mbdyn_testsuite_prefix_output}))"
 
 if ! test -d "${mbdyn_testsuite_output_dir}"; then
-    printf "%s: invalid argument --prefix-output %s\n" "${program_name}" "${mbdyn_testsuite_prefix_output}"
-    exit 1
+    if ! mkdir -p "${mbdyn_testsuite_output_dir}"; then
+        echo "Failed to create directory \"${mbdyn_testsuite_output_dir}\""
+        exit 1
+    fi
 fi
 
 if test -z "${mbdyn_testsuite_prefix_input}"; then
