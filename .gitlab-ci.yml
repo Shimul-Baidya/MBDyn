@@ -201,7 +201,12 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
         exit 0
       fi
-    - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
+      
+    - git checkout develop --force
+    - git branch -D testsuite
+    - git fetch origin testsuite:testsuite
+    - git checkout testsuite --force
+    - printf "checkout branch \"%s\"\n" $CI_COMMIT_BRANCH
     - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
     - git pull --force
