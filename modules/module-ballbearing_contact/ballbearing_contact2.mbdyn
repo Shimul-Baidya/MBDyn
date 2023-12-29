@@ -85,9 +85,9 @@ begin: initial value;
 
     nonlinear solver: nox, modified, 200,
         jacobian operator, newton krylov,
-        algorithm, line search based,
+        solver, line search based,
         verbose, yes,
-        print convergence info, yes,
+        print convergence info, no,
         weighted rms absolute tolerance, 1e-3,
         weighted rms relative tolerance, 1e-2,
         linear solver tolerance, 1e-5,
@@ -107,6 +107,7 @@ begin: initial value;
 end: initial value;
 
 begin: control data;
+    use automatic differentiation;
     output precision: 16;
     #output meter: closest next, output_start_time, forever, const, output_time_step;
 	print: dof stats;

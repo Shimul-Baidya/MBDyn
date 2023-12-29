@@ -1,4 +1,4 @@
-% MBDyn (C) is a multibody analysis code. 
+% MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
 % Copyright (C) 1996-2023
@@ -15,7 +15,7 @@
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation (version 2 of the License).
-% 
+%
 %
 % This program is distributed in the hope that it will be useful,
 % but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,10 +35,10 @@
 %        in the GNU Public License version 2.1
 
 function order = GetDofType(elem, i)
-    switch (i)
-        case {1,2}
-            order = "DIFFERENTIAL";
-        otherwise
-            error("ball bearing(%d): unknown dof %d", elem.pMbElem.GetLabel(), i);
-    endswitch
+  switch (i)
+    case {1,2}
+      order = "DIFFERENTIAL";
+    otherwise
+      error("ball bearing(%d): unknown dof %d", elem.pMbElem.GetLabel(), i);
+  endswitch
 endfunction

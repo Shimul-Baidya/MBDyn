@@ -36,7 +36,7 @@
 
 ## Usage:
 ## MBDyn installation:
-##   configure --enable-octave --enable-autodiff --with-static-modules --with-trilinos
+##   configure --enable-octave --with-static-modules --with-trilinos
 ##
 ## Octave package installation:
 ##   octave --eval 'pkg install -forge nurbs'

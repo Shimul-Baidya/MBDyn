@@ -36,12 +36,14 @@
 # for use in the software MBDyn as described
 # in the GNU Public License version 2.1
 
-## Simple testsuite just to see if a model can run
+## Use the simple testsuite in order to check if a model can run or not
 
 program_name="$0"
-mbdyn_module_test_timeout="unlimited"
+mbdyn_testsuite_timeout="unlimited"
 mbdyn_testsuite_prefix_output=""
 mbdyn_testsuite_prefix_input=""
+mbdyn_input_filter=""
+mbdyn_verbose_output="no"
 
 while ! test -z "$1"; do
     case "$1" in
@@ -54,7 +56,15 @@ while ! test -z "$1"; do
             shift
             ;;
         --timeout|-t)
-            mbdyn_module_test_timeout="$2"
+            mbdyn_testsuite_timeout="$2"
+            shift
+            ;;
+        --filter|-f)
+            mbdyn_input_filter="$2"
+            shift
+            ;;
+        --verbose|-v)
+            mbdyn_verbose_output="$2"
             shift
             ;;
         --help|-h)
@@ -69,12 +79,19 @@ while ! test -z "$1"; do
     shift
 done
 
-if test -z "${mbdyn_module_test_timeout}"; then
-    mbdyn_module_test_timeout="unlimited"
+if test -z "${mbdyn_testsuite_timeout}"; then
+    mbdyn_testsuite_timeout="unlimited"
 fi
 
 if test -z "${mbdyn_testsuite_prefix_output}"; then
     printf "%s: missing argument --prefix-output <output-dir>\n" "${program_name}" > /dev/stderr
+    exit 1
+fi
+
+mbdyn_testsuite_output_dir="$(realpath $(dirname ${mbdyn_testsuite_prefix_output}))"
+
+if ! test -d "${mbdyn_testsuite_output_dir}"; then
+    printf "%s: invalid argument --prefix-output %s\n" "${program_name}" "${mbdyn_testsuite_prefix_output}" > /dev/stderr
     exit 1
 fi
 
@@ -88,44 +105,101 @@ if ! test -d "${mbdyn_testsuite_prefix_input}"; then
     exit 1
 fi
 
+mbdyn_testsuite_prefix_input=`realpath ${mbdyn_testsuite_prefix_input}`
+
 passed_tests=""
 failed_tests=""
-killed_tests=""
+timeout_tests=""
 
-for mbd_filename in `find "${mbdyn_testsuite_prefix_input}" -type f -print0 | xargs -0 awk "/begin: initial value;/{print FILENAME}"`; do
+search_expression="-type f"
+
+if ! test -z "${mbdyn_input_filter}"; then
+    search_expression=`printf -- "-name %s -and %s" "${mbdyn_input_filter}" "${search_expression}"`
+fi
+
+## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
+## This will make it easier to delete those files.
+export TMPDIR="${mbdyn_testsuite_output_dir}"
+
+for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk "/begin: initial value;/{print FILENAME}"`; do
     mbd_basename=`basename -s ".mbdyn" "${mbd_filename}"`
     mbd_basename=`basename -s ".mbd" "${mbd_basename}"`
+
     if test -f "${mbd_filename}"; then
         mbd_time_file="${mbdyn_testsuite_prefix_output}${mbd_basename}_time.log"
         mbd_output_file="${mbdyn_testsuite_prefix_output}${mbd_basename}_mbdyn_output"
         mbd_log_file="${mbd_output_file}.stdout"
         echo ${mbd_log_file}
-        mbd_command="ulimit -t ${mbdyn_module_test_timeout}; /usr/bin/time --verbose --output \"${mbd_time_file}\" mbdyn -C -f \"${mbd_filename}\" -o \"${mbd_output_file}\""
-        printf "%s:%s\n" "${mbd_basename}" "${mbd_command}"
+
+        mbd_script_name=`basename ${mbd_filename}`
+        mbd_script_name=`basename -s .mbd ${mbd_script_name}`
+        mbd_script_name=`basename -s .mbdyn ${mbd_script_name}`
+        mbd_dir_name=`dirname ${mbd_filename}`
+        mbd_script_name="${mbd_dir_name}/${mbd_script_name}.sh"
+
+        if test -x "${mbd_script_name}"; then
+            echo "A custom test script ${mbd_script_name} was found for input file ${mbd_filename}; It will be used to run the model"
+            mbd_command="${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+        else
+            echo "No custom test script was found for input file ${mbd_filename}; The default command will be used to run the model"
+            mbd_command="mbdyn -C -f ${mbd_filename} -o ${mbd_output_file}"
+        fi
+
+        mbd_command="/usr/bin/time --verbose --output ${mbd_time_file} ${mbd_command}"
         status="failed"
-        sh -c "${mbd_command}" >& "${mbd_log_file}"
+
+        if test -z "${mbdyn_testsuite_timeout}"; then
+            mbdyn_testsuite_timeout="unlimited"
+        fi
+
+        case "${mbdyn_testsuite_timeout}" in
+            unlimited)
+                echo "no timeout is applied"
+                ;;
+            *)
+                echo "timeout after ${mbdyn_testsuite_timeout}"
+                ## Octave will not dump a core file on SIGINT
+                mbd_command="timeout --signal=SIGINT ${mbdyn_testsuite_timeout} ${mbd_command}"
+            ;;
+        esac
+
+        printf "%s:%s\n" "${mbd_basename}" "${mbd_command}"
+
+        pushd "${mbd_dir_name}"
+
+        if test "${mbdyn_verbose_output}" = "yes"; then
+            ${mbd_command}
+        else
+            ${mbd_command} >& "${mbd_log_file}"
+        fi
 
         rc=$?
+
+        popd
 
         case ${rc} in
             0)
                 status="passed"
                 ;;
-            137)
-                status="killed"
+            124)
+                status="timeout"
+                ;;
+            130)
+                echo "interrupted"
+                exit ${rc}
                 ;;
             *)
                 status="failed"
                 ;;
         esac
-        printf "test %s:%d\n" "${status}" "${rc}"
-        rm -f "${mbdyn_testsuite_prefix_output}${mbd_basename}*"
+        printf "Test \"%s\" %s with status %d\n" "${mbd_basename}" "${status}" "${rc}"
+        echo rm -f "${mbdyn_testsuite_prefix_output}${mbd_basename}*"
         case "${status}" in
             passed)
                 passed_tests="${passed_tests} ${mbd_filename}"
                 ;;
-            killed)
-                killed_tests="${killed_tests} ${mbd_filename}"
+            timeout)
+                timeout_tests="${timeout_tests} ${mbd_filename}"
                 ;;
             *)
                 failed_tests="${failed_tests} ${mbd_filename}"
@@ -143,11 +217,11 @@ else
     done
 fi
 
-if test -z "${killed_tests}"; then
+if test -z "${timeout_tests}"; then
     echo "No tests were killed because of timeout"
 else
     echo "The following tests were killed because of timeout:"
-    for mbd_filename in ${killed_tests}; do
+    for mbd_filename in ${timeout_tests}; do
         echo " ${mbd_filename}"
     done
 fi

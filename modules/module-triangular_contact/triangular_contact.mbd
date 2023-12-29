@@ -75,7 +75,7 @@ begin: initial value;
         verbose, yes,
         print convergence info, no,
         jacobian operator, newton krylov,
-        algorithm, line search based,
+        solver, line search based,
         weighted rms absolute tolerance, 1e-3,
         weighted rms relative tolerance, 1e-2,
         linear solver tolerance, 1e-10,
