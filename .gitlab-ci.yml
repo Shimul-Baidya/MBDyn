@@ -202,7 +202,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         exit 0
       fi
     - printf "checkout branch \"%s\"\n" "$CI_COMMIT_BRANCH"
-    - git checkout ${CI_COMMIT_BRANCH} --force
+    - git checkout $CI_COMMIT_BRANCH --force
     - printf "pulling\n"
     - git pull --force
     ## Let's try to speed up the build process a bit
@@ -510,6 +510,8 @@ octave-pkg-test-job:   # This job runs in the test stage.
 mbdyn-modules-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
+    - job: octave-pkg-build-job ## module-triangular_contact is using Octave
+    - job: gmsh-build-job ## module-triangular_contact is using Gmsh
     - job: mbdyn-build-job
   script:
       - echo "MBDyn modules test job"
