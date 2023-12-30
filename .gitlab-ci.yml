@@ -46,8 +46,8 @@ variables:
   OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:" ## Timeout in seconds - a missing value means unlimited timeout
   OCT_PKG_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/octave-pkg-testjob/"
   MBD_MODULE_TEST_TIMEOUT: "600s" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
-  ## Timeout value should not be "unlimited" since models which are using sockets might block our pipeline forever!
-  MBD_TESTS_PUBLIC_TIMEOUT: "600s" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
+  ## FIXME: MBD_MODULE_TEST_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
+  MBD_TESTS_PUBLIC_TIMEOUT: "unlimited" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
   MBD_MODULE_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-modules-testjob/"
   MBD_TESTS_PUBLIC_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-public-testjob/"
   MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
@@ -499,15 +499,8 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - git clone $MBD_TESTS_PUBLIC_GITLAB "${mbd_tests_public_input_dir}"
       - test -d "${mbd_tests_public_input_dir}"
       - chmod +x testsuite/simple_testsuite.sh
-      - |
         ## FIXME: It seems that everything must be on one long line ...
-        if testsuite/simple_testsuite.sh --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${mbd_tests_public_input_dir}"; then
-          echo "mbdyn-tests-public test job passed"
-        else
-          echo "mbdyn-tests-public test job failed - exit status will not be checked yet"
-          ## FIXME: Enable the next line as soon as all tests pass
-          ## exit 1
-        fi
+      - testsuite/simple_testsuite.sh --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${mbd_tests_public_input_dir}"
 
 mbdyn-modules-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
