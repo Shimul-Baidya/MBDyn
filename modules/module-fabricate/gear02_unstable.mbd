@@ -9,19 +9,19 @@ end: data;
 
 begin: initial value;
 	initial time: 0.;
-	final time: 1.;
-	time step: 1.e-4;
+	final time: 4e-2;
+	time step: 1.e-5;
 
-	tolerance: 1.e-5;
-	max iterations: 20, at most;
-
-	method: ms, .6;
-
+	tolerance: 1.e-8, test, norm, 1e-5, test, norm;
+	max iterations: 2000;
+        linear solver: umfpack, cc, scale, iterative, always, max iterations, 100;
+        nonlinear solver: linesearch, default solver options, heavy nonlinear, lambda min, 0, tolerance x, 1e-2, print convergence info, yes, divergence check, no;
+        method: ms, 0.6;
 	derivatives coefficient: 1.e-12;
 	derivatives tolerance: 1.e-3;
 	derivatives max iterations: 5;
 
-	output: iterations;
+	output: iterations, solver condition number, stat, yes;
 	#output: residual;
 	#output: solution;
 end: initial value;
@@ -116,9 +116,8 @@ begin: elements;
       null, # relative center of mass
       diag, 0.01, 0.01, 0.01;  # inertia matrix
 
-	#module load: "../mbdyn_teste/modules/module-fabricate/.libs/libmodule-fabricate.so";
-	module load: "libmodule-fabricate";
-	user defined: 1, SimpleGearJoint, 1, 2, 0, r1, r2, output, yes;
+	module load: "libmodule-fabricate.la";
+	user defined: 1, GearJoint, 1, 2, 0, r1, r2, output, yes;
 
 end: elements;
 
