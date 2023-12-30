@@ -88,7 +88,7 @@ if test -z "${mbdyn_testsuite_prefix_output}"; then
     exit 1
 fi
 
-mbdyn_testsuite_output_dir="$(realpath $(dirname ${mbdyn_testsuite_prefix_output}))"
+mbdyn_testsuite_output_dir="$(realpath ${mbdyn_testsuite_prefix_output})"
 
 if ! test -d "${mbdyn_testsuite_output_dir}"; then
     if ! mkdir -p "${mbdyn_testsuite_output_dir}"; then
