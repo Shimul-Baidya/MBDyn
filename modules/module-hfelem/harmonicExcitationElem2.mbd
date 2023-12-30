@@ -147,7 +147,7 @@ end: nodes;
 begin: elements;
 	set: const real EXCITATION_START = 1.;
 	set: const real EXCITATION_AMPLITUDE = 0.01;
-	module load: "libmodule-hfelem";
+	# module load: "libmodule-hfelem";
 	user defined: 99, harmonic excitation,
 		inputs number, 2,
 			node, BODY, structural, string, "X[1]", direct,

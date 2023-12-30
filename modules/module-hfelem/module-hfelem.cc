@@ -85,7 +85,6 @@ private:
 	doublereal m_dOmegaMax;
 	doublereal m_dPsi;
 	doublereal m_dF;
-
 	bool bRMSTest;
 	bool bRMSTestTarget;
 	doublereal m_dTol;
@@ -105,6 +104,7 @@ private:
 	std::vector<doublereal> m_Omega;
 
 	unsigned m_iOmegaCnt;
+        unsigned m_iOmegaSize;
 	integer m_iPeriod;
 	integer m_iPeriodRMS;
 	integer m_iPeriodCnt;
@@ -267,6 +267,7 @@ m_NoConvStrategy(NoConv_CONTINUE),
 m_dOmegaAddInc(0.),
 m_dOmegaMulInc(1.),
 m_iOmegaCnt(0),
+m_iOmegaSize(0),
 m_iPeriod(0),
 m_iPeriodRMS(0),
 m_iPeriodCnt(0),
@@ -501,7 +502,7 @@ m_iConvergedPeriod(0)
 		silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): \"angular frequency increment\" expected at line " << HP.GetLineData() << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
-
+        
 	if (HP.IsKeyWord("additive")) {
 		m_OmegaInc = Inc_ADDITIVE;
 		try {
@@ -511,7 +512,8 @@ m_iConvergedPeriod(0)
 			silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): frequency additive increment must be positive, at line " << HP.GetLineData() << std::endl);
 			throw e;
 		}
-
+                
+                m_iOmegaSize = std::floor((m_dOmegaMax - m_dOmega0) / m_dOmegaAddInc) + 1;
 	} else if (HP.IsKeyWord("multiplicative")) {
 		m_OmegaInc = Inc_MULTIPLICATIVE;
 		try {
@@ -521,7 +523,8 @@ m_iConvergedPeriod(0)
 			silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): frequency multiplicative increment must be greater than 1, at line " << HP.GetLineData() << std::endl);
 			throw e;
 		}
-
+                
+                m_iOmegaSize = std::floor(std::log(m_dOmegaMax)/std::log(m_dOmegaMulInc) - std::log(m_dOmega0)/std::log(m_dOmegaMulInc)) + 1;
 	} else if (HP.IsKeyWord("custom")) {
 		m_OmegaInc = Inc_CUSTOM;
 
@@ -543,12 +546,17 @@ m_iConvergedPeriod(0)
 
 			m_Omega.push_back(dOmega);
 		}
-
+                
+                m_iOmegaSize = m_Omega.size();
 	} else {
 		silent_cerr("HarmonicExcitationElem(" << GetLabel() << "): unknown or missing frequency increment method at line " << HP.GetLineData() << std::endl);
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
 
+        if (!m_iOmegaSize) {
+                throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+        }
+        
 	// initial time
 	if (HP.IsKeyWord("initial" "time")) {
 		m_dTInit = HP.GetReal();
@@ -810,23 +818,7 @@ HarmonicForcingElem::OutputPrepare(OutputHandler& OH)
 
 		OutputHandler::NcDimVec m_vDimHFElem(1);
 		// NetCDF output at each period is disabled in this case
-		switch (m_OmegaInc) {
-			case Inc_ADDITIVE:
-				m_vDimHFElem[0] = OH.CreateDim("HFELEM", std::floor((m_dOmegaMax - m_dOmega0) / m_dOmegaAddInc) + 1);
-				break;
-
-			case Inc_MULTIPLICATIVE:
-				m_vDimHFElem[0] = OH.CreateDim("HFELEM", std::floor(std::log(m_dOmegaMax)/std::log(m_dOmegaMulInc) - std::log(m_dOmega0)/std::log(m_dOmegaMulInc)) + 1);
-				break;
-
-			case Inc_CUSTOM:
-				m_vDimHFElem[0] = OH.CreateDim("HFELEM", m_Omega.size());
-				break;
-
-			default:
-				// impossible
-				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-		}
+                m_vDimHFElem[0] = OH.CreateDim("HFELEM", m_iOmegaSize);
 
 		std::ostringstream os;
 		os << "elem.loadable." << GetLabel();
@@ -924,6 +916,13 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 	// NOTE: output occurs only at convergence,
 	// not with fixed periodicity
 	if (bToBeOutput()) {
+#ifdef USE_NETCDF
+                const unsigned iOmegaIdx = m_iOmegaCnt > 0 ? m_iOmegaCnt - 1 : 0;
+#endif
+                if (m_iOmegaCnt > m_iOmegaSize) {
+                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                }
+
 		if (((m_iPeriodOut!=0 && m_iPeriod == 0) || (m_bPrintAllPeriods && m_pDM->dGetTime()>m_dTInit))
 			&& m_iPeriodCnt == 0 && m_iCurrentStep == 0) {
 
@@ -945,9 +944,9 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 				}
 #ifdef USE_NETCDF
 				if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-					OH.WriteNcVar(Var_dConvTime, m_pDM->dGetTime(), m_iOmegaCnt - 1);
-					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut, m_iOmegaCnt - 1);
-					OH.WriteNcVar(Var_iNumPeriods, m_iPeriodOut, m_iOmegaCnt - 1);
+					OH.WriteNcVar(Var_dConvTime, m_pDM->dGetTime(), iOmegaIdx);
+					OH.WriteNcVar(Var_dOmegaOut, m_dOmegaOut, iOmegaIdx);
+					OH.WriteNcVar(Var_iNumPeriods, m_iPeriodOut, iOmegaIdx);
 				}
 #endif // USE_NETCDF
 			} else {
@@ -971,8 +970,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], (doublereal)(m_Xsin[i] / m_dAmplitude), m_iOmegaCnt - 1);
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i] / m_dAmplitude, m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i], (doublereal)(m_Xsin[i] / m_dAmplitude), iOmegaIdx);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i] / m_dAmplitude, iOmegaIdx);
 							}
 #endif // USE_NETCDF
 						} else {
@@ -982,8 +981,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], m_Xsin[i], m_iOmegaCnt - 1);
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i], m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i], m_Xsin[i], iOmegaIdx);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], m_Xcos[i], iOmegaIdx);
 							}
 #endif // USE_NETCDF
 						}
@@ -1005,8 +1004,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude, m_iOmegaCnt - 1);
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]) / m_dAmplitude, iOmegaIdx);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), iOmegaIdx);
 							}
 #endif // USE_NETCDF
 						} else {
@@ -1017,8 +1016,8 @@ HarmonicForcingElem::Output(OutputHandler& OH) const
 							}
 #ifdef USE_NETCDF
 							if (OH.UseNetCDF(OutputHandler::LOADABLE)) {
-								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]), m_iOmegaCnt - 1);
-								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), m_iOmegaCnt - 1);
+								OH.WriteNcVar(m_vInputNcVars[2*i], std::sqrt(m_Xsin[i]*m_Xsin[i] + m_Xcos[i]*m_Xcos[i]), iOmegaIdx);
+								OH.WriteNcVar(m_vInputNcVars[2*i + 1], std::atan2(m_Xcos[i], m_Xsin[i]), iOmegaIdx);
 							}
 #endif
 						}
@@ -1502,11 +1501,9 @@ HarmonicForcingElem::AfterConvergence(const VectorHandler& X,
 				break;
 
 			case Inc_CUSTOM:
-				if ((unsigned)m_iOmegaCnt >= m_Omega.size()) {
-					// schedule for termination!
-					m_bDone = true;
-				}
-				m_dOmega = m_Omega[m_iOmegaCnt];
+				if (m_iOmegaCnt < m_Omega.size()) {
+                                        m_dOmega = m_Omega[m_iOmegaCnt];
+                                }
 				break;
 
 			default:
@@ -1514,7 +1511,7 @@ HarmonicForcingElem::AfterConvergence(const VectorHandler& X,
 				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 			}
 
-			if (m_dOmega > m_dOmegaMax) {
+			if (m_iOmegaCnt >= m_iOmegaSize) {
 				// schedule for termination!
 				m_bDone = true;
 			}
