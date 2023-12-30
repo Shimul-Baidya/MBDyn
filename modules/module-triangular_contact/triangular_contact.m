@@ -120,11 +120,11 @@ unwind_protect
   end_unwind_protect
 
   options.mbdyn_command = getenv("MBDYN_EXEC");
-  
+
   if (isempty(options.mbdyn_command))
     options.mbdyn_command = "mbdyn";
   endif
-  
+
   mbdyn_solver_run("triangular_contact.mbd", options);
 
   log_dat = mbdyn_post_load_log(options.output_file);
@@ -146,7 +146,7 @@ unwind_protect
     for i=1:numel(ext)
       err = symlink([options.output_file, ext{i}], [output_file, ext{i}]);
       if (err ~= 0)
-	error("failed to create symbolic link");
+        error("failed to create symbolic link");
       endif
     endfor
     mbdyn_post_abs_to_rel(log_dat.vars.node_id_cone, options.output_file, output_file, false);
