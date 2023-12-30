@@ -48,9 +48,13 @@ variables:
   MBD_MODULE_TEST_TIMEOUT: "600s" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
   ## FIXME: MBD_MODULE_TEST_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
   MBD_TESTS_PUBLIC_TIMEOUT: "unlimited" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
+  MBD_TESTS_PRIVATE_TIMEOUT: "600s"
+  ## FIXME: MBD_TESTS_PRIVATE_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
   MBD_MODULE_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-modules-testjob/"
   MBD_TESTS_PUBLIC_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-public-testjob/"
+  MBD_TESTS_PRIVATE_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-private-testjob/"
   MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
+  MBD_TESTS_PRIVATE_GITLAB: "git@gitlab.com:zanoni-mbdyn/mbdyn-tests.git"
   MBD_MODULE_TEST_FLAGS: ""
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
@@ -485,6 +489,22 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
        - install gmsh-*.*.*-Linux64/bin/gmsh "${GMSH_INSTALL_PREFIX}/bin"
        - rm -rf gmsh-*.*.*-Linux64
        - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
+
+mbdyn-tests-private-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  needs:
+    - job: mbdyn-build-job
+  script:
+      - echo "mbdyn-tests-private test job"
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - mbd_tests_private_input_dir="mbdyn-tests"
+      - rm -rf "${mbd_tests_private_input_dir}"
+      - git clone $MBD_TESTS_PRIVATE_GITLAB "${mbd_tests_private_input_dir}"
+      - test -d "${mbd_tests_private_input_dir}"
+      - chmod +x testsuite/simple_testsuite.sh
+        ## FIXME: It seems that everything must be on one long line ...
+      - testsuite/simple_testsuite.sh --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${mbd_tests_private_input_dir}"
 
 mbdyn-tests-public-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
