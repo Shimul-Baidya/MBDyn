@@ -115,10 +115,9 @@ begin: initial value;
     output: iterations;
 end: initial value;
 
-include: "inline_joint_ad_2_parameters.set";
-
 begin: control data;
-	output meter: closest next, 0, forever, const, 0.1;
+    include: "inline_joint_ad_2_parameters.set";
+    output meter: closest next, 0, forever, const, 0.1;
     default output: all;
 	structural nodes: 2;
     rigid bodies: 1;
