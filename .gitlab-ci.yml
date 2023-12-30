@@ -494,7 +494,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - echo "mbdyn-tests-public test job"
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - mbd_tests_public_input_dir=mbdyn-tests-public
+      - mbd_tests_public_input_dir="mbdyn-tests-public"
       - rm -rf "${mbd_tests_public_input_dir}"
       - git clone $MBD_TESTS_PUBLIC_GITLAB "${mbd_tests_public_input_dir}"
       - test -d "${mbd_tests_public_input_dir}"
