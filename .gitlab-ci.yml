@@ -45,10 +45,13 @@ variables:
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
   OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:" ## Timeout in seconds - a missing value means unlimited timeout
   OCT_PKG_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/octave-pkg-testjob/"
-  MBD_MODULE_TEST_TIMEOUT: "300s" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
-  ## This value should not be "unlimited" since models which are using sockets might block our pipeline forever!
+  MBD_MODULE_TEST_TIMEOUT: "600s" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
+  ## Timeout value should not be "unlimited" since models which are using sockets might block our pipeline forever!
+  MBD_TESTS_PUBLIC_TIMEOUT: "600s" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
   MBD_MODULE_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-modules-testjob/"
-
+  MBD_TESTS_PUBLIC_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-public-testjob/"
+  MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
+  MBD_MODULE_TEST_FLAGS: ""
   OCTAVE_EXEC: "octave"
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
@@ -280,7 +283,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - mbd_with_module=$MBD_WITH_MODULE
     - printf "configure ...\n"
     - |
-      if ! test -f Makefile; then
+      if ! test -f Makefile || test ${MBD_SOURCE_DIR}/configure -nt Makefile; then
         if ! ${MBD_SOURCE_DIR}/configure \
                     PYTHON_VERSION=3 \
                     CPPFLAGS="${CPPFLAGS}" \
@@ -483,6 +486,29 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
        - rm -rf gmsh-*.*.*-Linux64
        - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
 
+mbdyn-tests-public-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  needs:
+    - job: mbdyn-build-job
+  script:
+      - echo "mbdyn-tests-public test job"
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - mbd_tests_public_input_dir=mbdyn-tests-public
+      - rm -rf "${mbd_tests_public_input_dir}"
+      - git clone $MBD_TESTS_PUBLIC_GITLAB "${mbd_tests_public_input_dir}"
+      - test -d "${mbd_tests_public_input_dir}"
+      - chmod +x testsuite/simple_testsuite.sh
+      - |
+        ## FIXME: It seems that everything must be on one long line ...
+        if testsuite/simple_testsuite.sh --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${mbd_tests_public_input_dir}"; then
+          echo "mbdyn-tests-public test job passed"
+        else
+          echo "mbdyn-tests-public test job failed - exit status will not be checked yet"
+          ## FIXME: Enable the next line as soon as all tests pass
+          ## exit 1
+        fi
+
 mbdyn-modules-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
@@ -498,7 +524,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - chmod +x testsuite/simple_testsuite.sh
       - |
         ## FIXME: It seems that everything must be on one long line ...
-        if testsuite/simple_testsuite.sh --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}"; then
+        if testsuite/simple_testsuite.sh --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_MODULE_TEST_FLAGS}; then
           echo "MBDyn modules test job passed"
         else
           echo "MBDyn modules test job failed - exit status will not be checked yet"

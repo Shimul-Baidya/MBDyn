@@ -44,6 +44,7 @@ mbdyn_testsuite_prefix_output=""
 mbdyn_testsuite_prefix_input=""
 mbdyn_input_filter=""
 mbdyn_verbose_output="no"
+OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 
 while ! test -z "$1"; do
     case "$1" in
@@ -137,12 +138,33 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         mbd_script_name=`basename -s .mbd ${mbd_script_name}`
         mbd_script_name=`basename -s .mbdyn ${mbd_script_name}`
         mbd_dir_name=`dirname ${mbd_filename}`
-        mbd_script_name="${mbd_dir_name}/${mbd_script_name}.sh"
+        mbd_script_name_sh="${mbd_dir_name}/${mbd_script_name}_run.sh"
+        mbd_script_name_m1="${mbd_dir_name}/${mbd_script_name}.m"
+        mbd_script_name_m2="${mbd_dir_name}/${mbd_script_name}_gen.m"
+        mbd_command=""
 
-        if test -x "${mbd_script_name}"; then
-            echo "A custom test script ${mbd_script_name} was found for input file ${mbd_filename}; It will be used to run the model"
-            mbd_command="${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
-        else
+        for mbd_script_name in "${mbd_script_name_m2}" "${mbd_script_name_m1}" "${mbd_script_name_sh}"; do
+            if ! test -z "${mbd_command}"; then
+                break
+            fi
+            if test -f "${mbd_script_name}"; then
+                echo "A custom test script ${mbd_script_name} was found for input file ${mbd_filename}; It will be used to run the model"
+                case "${mbd_script_name}" in
+                    *_gen.m)
+                        mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}; mbdyn -C -f ${mbd_filename} -o ${mbd_output_file}"
+                        ;;
+                    *.m)
+                        mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+                        ;;
+                    *.sh)
+                        chmod +x "${mbd_script_name}"
+                        mbd_command="${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+                        ;;
+                esac
+            fi
+        done
+
+        if test -z "${mbd_command}"; then
             echo "No custom test script was found for input file ${mbd_filename}; The default command will be used to run the model"
             mbd_command="mbdyn -C -f ${mbd_filename} -o ${mbd_output_file}"
         fi
