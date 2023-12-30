@@ -571,7 +571,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=mumps(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
       - chmod +x testsuite/octave_pkg_testsuite.sh
       ## FIXME: It seems that everything must be on one long line
-      - testsuite/octave_pkg_testsuite.sh --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}"
+      - testsuite/octave_pkg_testsuite.sh --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}"
 
 
 deploy-job:      # This job runs in the deploy stage.
