@@ -348,6 +348,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - make install
     - echo "MBDyn version:"
     - ${MBD_INSTALL_PREFIX}/bin/mbdyn --version
+    - echo "Shared libraries used by MBDyn:"
+    - ldd ${MBD_INSTALL_PREFIX}/bin/mbdyn
     - echo "Run built-in unit tests"
     - make test
 
