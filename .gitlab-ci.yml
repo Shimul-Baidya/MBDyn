@@ -36,17 +36,40 @@ variables:
   MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
   MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
-  MBD_SKIP_BUILD: "no"
+  MBD_SKIP_BUILD: "no" ## Force no rebuild of MBDyn
   GMSH_REINSTALL: "no"
-  MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native" ## Compiler flags for MBDyn and mboct-*-pkg
+
+  ## Compiler flags for MBDyn and mboct-*-pkg
+  MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native"
+
+  ## Octave packages to be installed from github.com or octave-forge
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
+
+  ## Force rebuild of Octave packages to be installed from github.com or octave-forge
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+
+  ## Branch passed to git clone -b
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
+
+  ## Octave package tests to be executed
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
-  OCT_PKG_TIMEOUT: "nurbs: netcdf: mboct-octave-pkg: mboct-numerical-pkg: mboct-mbdyn-pkg: mboct-fem-pkg:" ## Timeout in seconds - a missing value means unlimited timeout
+
+  ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h")
+  OCT_PKG_TIMEOUT: "nurbs:unlimited netcdf:unlimited mboct-octave-pkg:unlimited mboct-numerical-pkg:unlimited mboct-mbdyn-pkg:30m mboct-fem-pkg:unlimited"
+
+  ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
   OCT_PKG_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/octave-pkg-testjob/"
-  MBD_MODULE_TEST_TIMEOUT: "600s" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
+
+  ## Execution mode for all Octave package tests:
+  ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.
+  ## The value of $OCT_PKG_TIMEOUT will be applied to each function.
+  ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
+  ## The value $OCT_PKG_TIMEOUT will be applied to the whole package.
+  OCT_PKG_TEST_MODE: "single"
+
+  ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
   ## FIXME: MBD_MODULE_TEST_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
+  MBD_MODULE_TEST_TIMEOUT: "600s"
   MBD_TESTS_PUBLIC_TIMEOUT: "unlimited" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
   MBD_TESTS_PRIVATE_TIMEOUT: "600s"
   ## FIXME: MBD_TESTS_PRIVATE_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
@@ -496,6 +519,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
     - job: mbdyn-build-job
   script:
       - echo "mbdyn-tests-private test job"
+      - if test -z ${MBD_TESTS_PRIVATE_GITLAB}; then echo "mbdyn-tests-private-test-job was disabled"; exit 0; fi
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - mbd_tests_private_input_dir="mbdyn-tests"
@@ -571,7 +595,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=mumps(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
       - chmod +x testsuite/octave_pkg_testsuite.sh
       ## FIXME: It seems that everything must be on one long line
-      - testsuite/octave_pkg_testsuite.sh --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}"
+      - testsuite/octave_pkg_testsuite.sh --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}"
 
 
 deploy-job:      # This job runs in the deploy stage.

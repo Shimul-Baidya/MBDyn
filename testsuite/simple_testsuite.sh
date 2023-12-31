@@ -189,7 +189,11 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
 
         printf "%s:%s\n" "${mbd_basename}" "${mbd_command}"
 
-        pushd "${mbd_dir_name}"
+        curr_dir="$(pwd)"
+
+        if ! cd "${mbd_dir_name}"; then
+            exit 1
+        fi
 
         if test "${mbdyn_verbose_output}" = "yes"; then
             ${mbd_command}
@@ -199,7 +203,9 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
 
         rc=$?
 
-        popd
+        if ! cd "${curr_dir}"; then
+            exit 1
+        fi
 
         case ${rc} in
             0)

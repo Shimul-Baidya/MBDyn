@@ -45,13 +45,16 @@ OCT_PKG_TESTS="${OCT_PKG_TESTS:-mboct-mbdyn-pkg:yes}"
 OCT_PKG_TIMEOUT="${OCT_PKG_TIMEOUT:-mboct-mbdyn-pkg:unlimited}"
 OCT_PKG_TEST_DIR="${OCT_PKG_TEST_DIR:-octave-pkg-testsuite}"
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
-OCT_PKG_TESTS_VERBOSE="no"
-OCT_PKG_PRINT_RES="no"
+OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
+OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
+OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
 
 echo $program_name
-if ! test -z `which ${program_name}`; then
-    program_name=`which ${program_name}`
-    echo "${program_name} found on path"
+
+if test "$(basename ${program_name})" = "${program_name}" && ! test -z "$(which ${program_name})"; then
+    ## Path of script was inside the environment variable PATH
+    program_name="$(which ${program_name})"
+    echo "${program_name} found on PATH"
 fi
 
 program_name=`realpath ${program_name}`
@@ -76,6 +79,10 @@ while ! test -z "$1"; do
             ;;
         --octave-exec)
             OCTAVE_EXEC="$2"
+            shift
+            ;;
+        --octave-pkg-test-mode)
+            OCT_PKG_TEST_MODE="$2"
             shift
             ;;
         --verbose)
@@ -114,7 +121,16 @@ if ! test -d "${OCT_PKG_TEST_DIR}"; then
     exit 1
 fi
 
-OCT_PKG_TEST_DIR=$(realpath ${OCT_PKG_TEST_DIR})
+case "${OCT_PKG_TEST_MODE}" in
+    pkg|single)
+        echo "Test mode: ${OCT_PKG_TEST_MODE}"
+        ;;
+    *)
+        echo "Invalid value for --octave-pkg-test-mode \"${OCT_PKG_TEST_MODE}\""
+        exit 1
+esac
+
+OCT_PKG_TEST_DIR="$(realpath ${OCT_PKG_TEST_DIR})"
 
 test_status="passed"
 failed_packages=""
@@ -147,8 +163,32 @@ for pkgname in ${OCT_PKG_LIST}; do
 
     rm -f ${OCT_PKG_TEST_DIR}/${pkgname}/fntests.*
 
-    OCTAVE_CODE=`printf "pkg('load','%s');p=pkg('list','%s');__run_test_suite__({p{1}.dir},{});" "${pkgname}" "${pkgname}"`
-
+    case "${OCT_PKG_TEST_MODE}" in
+        pkg)
+            OCTAVE_CODE=`printf "pkg('load','%s');p=pkg('list','%s');__run_test_suite__({p{1}.dir},{});" "${pkgname}" "${pkgname}"`
+            ;;
+        single)
+            OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('describe','-verbose','%s'); for i=1:numel(p{1}.provides) for j=1:numel(p{1}.provides{i}.functions) disp(p{1}.provides{i}.functions{j}); endfor; endfor" "${pkgname}")
+            #echo ${OCTAVE_CMD_FUNCTIONS}
+            OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} --eval "${OCTAVE_CMD_FUNCTIONS}"`
+            rc=$?
+            if test ${rc} != 0; then
+                echo "${OCTAVE_CMD_FUNCTIONS} failed with status ${rc}"
+                exit 1
+            fi
+            OCTAVE_CODE=""
+            for pkg_function_name in ${OCTAVE_PKG_FUNCTIONS}; do
+                OCTAVE_CODE="${OCTAVE_CODE} $(printf "pkg('load','%s');test('%s');" "${pkgname}" "${pkg_function_name}")"
+                #OCTAVE_CODE="${OCTAVE_CODE} $(printf "pkg('load','%s');addpath('~/work/mboct-git/mboct-octave-pkg/inst');test('%s');" "${pkgname}" "${pkg_function_name}")"
+            done
+            #echo ${OCTAVE_PKG_FUNCTIONS}
+            #echo ${OCTAVE_CODE}
+            ;;
+        *)
+            exit 1
+            ;;
+    esac
+    #exit 0
     pkg_test_timeout=$(echo ${OCT_PKG_TIMEOUT} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
     if test -z "${pkg_test_timeout}"; then
@@ -166,83 +206,104 @@ for pkgname in ${OCT_PKG_LIST}; do
     esac
 
     pkg_test_timing="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.tm"
+    pkg_test_timing_cmd="/usr/bin/time --verbose --output ${pkg_test_timing}"
 
-    OCTAVE_CMD="${TIMEOUT_CMD}/usr/bin/time --verbose --output ${pkg_test_timing} ${OCTAVE_EXEC} -qfH --eval ${OCTAVE_CODE}"
+    for octave_code_cmd in ${OCTAVE_CODE}; do
+        OCTAVE_CMD=$(printf '%s%s %s -qfH --eval %s' "${TIMEOUT_CMD}" "${pkg_test_timing_cmd}" "${OCTAVE_EXEC}" "${octave_code_cmd}")
 
-    if test ${OCT_PKG_PRINT_RES} = "yes"; then
-        echo "Memory usage before test:"
-        vmstat -S M
-        echo "Temporary files before test:"
-        ls -lhF "${OCT_PKG_TEST_DIR}/${pkgname}"
-        echo "Disk usage before test:"
-        df -h
-    fi
+        if test ${OCT_PKG_PRINT_RES} = "yes"; then
+            echo "Memory usage before test:"
+            vmstat -S M
+            echo "Temporary files before test:"
+            ls -lhF "${OCT_PKG_TEST_DIR}/${pkgname}"
+            echo "Disk usage before test:"
+            df -h
+        fi
 
-    curr_test_status="failed"
+        curr_test_status="failed"
 
-    pkg_test_output_file="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.out"
+        pkg_test_output_file="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.out"
 
-    echo "${OCTAVE_CMD}"
+        echo "${OCTAVE_CMD}"
 
-    pushd "${OCT_PKG_TEST_DIR}/${pkgname}"
+        curr_dir="`pwd`"
 
-    case "${OCT_PKG_TESTS_VERBOSE}" in
-        yes)
-            ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '[[:alnum:]]+\/[[:alnum:]]+\/[[:alnum:]]+\.m\>|pass|fail|^Summary|^Integrated test scripts|\.m files have no tests\.$'
-            ;;
-        *)
-            ${OCTAVE_CMD} >& "${pkg_test_output_file}"
-            ;;
-    esac
+        if ! cd "${OCT_PKG_TEST_DIR}/${pkgname}"; then
+            exit 1
+        fi
 
-    popd
+        case "${OCT_PKG_TESTS_VERBOSE}" in
+            yes)
+                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^\!\!\!\!\! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|pass|fail|^Summary|^Integrated test scripts|\.m files have no tests\.$'
+                ;;
+            *)
+                ${OCTAVE_CMD} >& "${pkg_test_output_file}"
+                ;;
+        esac
 
-    rc=$?
+        if ! cd "${curr_dir}"; then
+            exit 1
+        fi
 
-    case ${rc} in
-        0)
-            echo "${OCTAVE_CMD} completed with status 0"
-            if awk -f parse_test_suite_status.awk "${pkg_test_output_file}"; then
-                curr_test_status="passed"
-            fi
-            ;;
-        124)
-            echo "${OCTAVE_CMD} failed with timeout"
-            ;;
-    esac
+        rc=$?
 
-    if test -f "${pkg_test_timing}"; then
-        echo "Resources used by ${OCTAVE_CMD}"
-        cat "${pkg_test_timing}"
-    fi
+        case ${rc} in
+            0)
+                echo "${OCTAVE_CMD} completed with status 0"
+                case ${OCT_PKG_TEST_MODE} in
+                    pkg|single)
+                        if awk -f parse_test_suite_status.awk "${pkg_test_output_file}"; then
+                            curr_test_status="passed"
+                        fi
+                        ;;
+                    single)
+                        ## If we are using the test function, then an exit status of zero already indicates that all tests have passed
+                        curr_test_status="passed"
+                        ;;
+                esac
+                ;;
+            124)
+                echo "${OCTAVE_CMD} failed with timeout"
+                ;;
+        esac
 
-    if test ${OCT_PKG_PRINT_RES} = "yes"; then
-        echo "Memory usage after test:"
-        vmstat -S M
-        echo "Temporary files after test:"
-        ls -lhF ${OCT_PKG_TEST_DIR}
-        echo "Disk usage after test:"
-        df -h
-    fi
+        if test -f "${pkg_test_timing}"; then
+            echo "Resources used by ${OCTAVE_CMD}"
+            cat "${pkg_test_timing}"
+        fi
 
-    case "${curr_test_status}" in
-        passed)
-            printf "octave testsuite for package \"%s\" passed\n" "${pkgname}"
-            ;;
-        *)
-            printf "octave testsuite for package \"%s\" failed\n" "${pkgname}"
-            if test -f ${OCT_PKG_TEST_DIR}/fntests.log; then
-                cat ${OCT_PKG_TEST_DIR}/fntests.log;
-            else
-                echo "${OCT_PKG_TEST_DIR}/fntests.log not found";
-            fi
-            test_status="failed"
-            failed_packages="${failed_packages} ${pkgname}"
-            ;;
-    esac
+        if test ${OCT_PKG_PRINT_RES} = "yes"; then
+            echo "Memory usage after test:"
+            vmstat -S M
+            echo "Temporary files after test:"
+            ls -lhF ${OCT_PKG_TEST_DIR}
+            echo "Disk usage after test:"
+            df -h
+        fi
 
-    echo "Remove all temporary files after the test:"
-    find "${OCT_PKG_TEST_DIR}/${pkgname}" '(' -type f -and '(' -name 'oct-*' -or -name 'fntests.*' ')' ')' -delete
+        case "${curr_test_status}" in
+            passed)
+                printf "octave testsuite for package \"%s\" passed\n" "${pkgname}"
+                ;;
+            *)
+                printf "octave testsuite for package \"%s\" failed\n" "${pkgname}"
+                if test -f ${OCT_PKG_TEST_DIR}/fntests.log; then
+                    cat ${OCT_PKG_TEST_DIR}/fntests.log;
+                else
+                    echo "${OCT_PKG_TEST_DIR}/fntests.log not found";
+                fi
+                test_status="failed"
+                failed_packages="${failed_packages} ${pkgname}"
+                case "${OCT_PKG_TEST_MODE}" in
+                    single)
+                        failed_packages="${failed_packages}:${octave_code_cmd}"
+                        ;;
+                esac
+        esac
+
+        echo "Remove all temporary files after the test:"
+        find "${OCT_PKG_TEST_DIR}/${pkgname}" '(' -type f -and '(' -name 'oct-*' -or -name 'fntests.*' ')' ')' -delete
+    done
 done
 
 case "${test_status}" in

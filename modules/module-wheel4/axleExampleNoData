@@ -72,7 +72,8 @@ set: integer EXTRA = 1; # number of extra driving wheels (how many more than 1)
 begin: control data;
 	default orientation: orientation matrix;
 	default output: accelerations;
-	output results : netcdf, notext;
+        ## FIXME: NetCDF output does not work
+	#output results : netcdf, notext;
 	output meter: meter, 0., forever, steps, 1;
 	structural nodes:
 3
