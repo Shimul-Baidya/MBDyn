@@ -200,8 +200,11 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
             exit 1
         fi
 
+        rm -f "${mbd_time_file}"
+        rm -f "${mbd_log_file}"
+
         if test "${mbdyn_verbose_output}" = "yes"; then
-            ${mbd_command}
+            ${mbd_command} 2>&1 | tee "${mbd_log_file}"
         else
             ${mbd_command} >& "${mbd_log_file}"
         fi
@@ -227,8 +230,22 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                 status="failed"
                 ;;
         esac
+
         printf "Test \"%s\" %s with status %d\n" "${mbd_basename}" "${status}" "${rc}"
-        echo rm -f "${mbdyn_testsuite_prefix_output}/${mbd_basename}*"
+
+        if test -f "${mbd_time_file}"; then
+            cat "${mbd_time_file}"
+        fi
+
+        mbd_output_file=$(awk -F '"' '/^output in file\>/{print $2}' "${mbd_log_file}")
+
+        if test -f "${mbd_output_file}.log"; then
+            find "${mbdyn_testsuite_prefix_output}" '(' -type f -and -wholename $(printf '%s.*' "${mbd_output_file}") ')' -delete
+        fi
+
+        rm -f "${mbd_log_file}"
+        rm -f "${mbd_time_file}"
+
         case "${status}" in
             passed)
                 passed_tests="${passed_tests} ${mbd_filename}"
