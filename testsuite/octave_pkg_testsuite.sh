@@ -49,6 +49,11 @@ OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
 OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
 
+## Do not use multithreaded BLAS by default, because this could cause performance issues!
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+
 echo $program_name
 
 if test "$(basename ${program_name})" = "${program_name}" && ! test -z "$(which ${program_name})"; then
@@ -226,7 +231,7 @@ for pkgname in ${OCT_PKG_LIST}; do
         ## Make sure that we do not read any old stuff ...
         rm -f "${pkg_test_output_file}"
         rm -f "${pkg_test_log_file}"
-        
+
         echo "${OCTAVE_CMD}"
 
         curr_dir="`pwd`"
