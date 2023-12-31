@@ -140,6 +140,19 @@ OCT_PKG_TEST_DIR="$(realpath ${OCT_PKG_TEST_DIR})"
 test_status="passed"
 failed_packages=""
 
+case "${OCT_PKG_PRINT_RES}" in
+    all|*profile*)
+        oct_pkg_profile_on_cmd="profile('on');"
+        oct_pkg_profile_off_fmt="profile('off');prof=profile('info');save('-binary','%s','prof');"
+        oct_pkg_profile_post_fmt="load('%s');profshow(prof);"
+        ;;
+    *)
+        oct_pkg_profile_on_cmd=""
+        oct_pkg_profile_off_fmt=""
+        oct_pkg_profile_post_fmt=""
+        ;;
+esac
+
 for pkgname in ${OCT_PKG_LIST}; do
     pkg_test_flag=$(echo ${OCT_PKG_TESTS} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
@@ -166,13 +179,24 @@ for pkgname in ${OCT_PKG_LIST}; do
     ## This will make it easier to delete those files.
     export TMPDIR="${OCT_PKG_TEST_DIR}/${pkgname}"
 
+    echo "FIXME: cleanup old stuff in ${TMPDIR}; Need to run only once then the code should be removed ..."
+
+    if test -d "${TMPDIR}"; then
+        find "${TMPDIR}" '(' -type f -and -name 'mbdyn_pre_*' ')' -delete
+    fi
+
+    oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/${pkgname}/${pkgname}.mat"
+    oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
+    oct_pkg_load_cmd=$(printf "pkg('load','%s');" "${pkgname}")
+    oct_pkg_list_cmd=$(printf "p=pkg('list','%s');" "${pkgname}")
+    oct_pkg_run_test_suite_cmd="__run_test_suite__({p{1}.dir},{});"
+
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
-            OCTAVE_CODE=`printf "pkg('load','%s');p=pkg('list','%s');__run_test_suite__({p{1}.dir},{});" "${pkgname}" "${pkgname}"`
+            OCTAVE_CODE="${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
             ;;
         single)
             OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('describe','-verbose','%s'); for i=1:numel(p{1}.provides) for j=1:numel(p{1}.provides{i}.functions) disp(p{1}.provides{i}.functions{j}); endfor; endfor" "${pkgname}")
-            #echo ${OCTAVE_CMD_FUNCTIONS}
             OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} --eval "${OCTAVE_CMD_FUNCTIONS}"`
             rc=$?
             if test ${rc} != 0; then
@@ -181,11 +205,9 @@ for pkgname in ${OCT_PKG_LIST}; do
             fi
             OCTAVE_CODE=""
             for pkg_function_name in ${OCTAVE_PKG_FUNCTIONS}; do
-                OCTAVE_CODE="${OCTAVE_CODE} $(printf "pkg('load','%s');test('%s');" "${pkgname}" "${pkg_function_name}")"
-                #OCTAVE_CODE="${OCTAVE_CODE} $(printf "pkg('load','%s');addpath('~/work/mboct-git/mboct-octave-pkg/inst');test('%s');" "${pkgname}" "${pkg_function_name}")"
+                oct_pkg_test_function_cmd=$(printf "test('%s');" "${pkg_function_name}")
+                OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
             done
-            #echo ${OCTAVE_PKG_FUNCTIONS}
-            #echo ${OCTAVE_CODE}
             ;;
         *)
             exit 1
@@ -209,19 +231,29 @@ for pkgname in ${OCT_PKG_LIST}; do
     esac
 
     pkg_test_timing="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.tm"
-    pkg_test_timing_cmd="/usr/bin/time --verbose --output ${pkg_test_timing}"
+
+    case "${OCT_PKG_PRINT_RES}" in
+        all|*time*)
+            pkg_test_timing_cmd="/usr/bin/time --verbose --output ${pkg_test_timing}"
+            ;;
+        *)
+            pkg_test_timing_cmd=""
+            ;;
+    esac
 
     for octave_code_cmd in ${OCTAVE_CODE}; do
         OCTAVE_CMD=$(printf '%s%s %s -qfH --eval %s' "${TIMEOUT_CMD}" "${pkg_test_timing_cmd}" "${OCTAVE_EXEC}" "${octave_code_cmd}")
 
-        if test ${OCT_PKG_PRINT_RES} = "yes"; then
-            echo "Memory usage before test:"
-            vmstat -S M
-            echo "Temporary files before test:"
-            ls -lhF "${OCT_PKG_TEST_DIR}/${pkgname}"
-            echo "Disk usage before test:"
-            df -h
-        fi
+        case "${OCT_PKG_PRINT_RES}" in
+            all|*disk*)
+                echo "Memory usage before test:"
+                vmstat -S M
+                echo "Temporary files before test:"
+                ls -lhF "${OCT_PKG_TEST_DIR}/${pkgname}"
+                echo "Disk usage before test:"
+                df -h
+                ;;
+        esac
 
         curr_test_status="failed"
 
@@ -231,6 +263,8 @@ for pkgname in ${OCT_PKG_LIST}; do
         ## Make sure that we do not read any old stuff ...
         rm -f "${pkg_test_output_file}"
         rm -f "${pkg_test_log_file}"
+        rm -f "${oct_pkg_profile_data}"
+        rm -f "${pkg_test_timing}"
 
         echo "${OCTAVE_CMD}"
 
@@ -243,7 +277,7 @@ for pkgname in ${OCT_PKG_LIST}; do
 
         case "${OCT_PKG_TESTS_VERBOSE}" in
             yes)
-                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^command\: \"mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
+                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^command: \"mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
                 ;;
             *)
                 ${OCTAVE_CMD} >& "${pkg_test_output_file}"
@@ -276,19 +310,30 @@ for pkgname in ${OCT_PKG_LIST}; do
                 ;;
         esac
 
+        if test -f "${oct_pkg_profile_data}"; then
+            oct_pkg_profile_post_cmd=$(printf "${oct_pkg_profile_post_fmt}" "${oct_pkg_profile_data}")
+            ${OCTAVE_EXEC} -q -f --eval "${oct_pkg_profile_post_cmd}"
+        fi
+
+        rm -f "${oct_pkg_profile_data}"
+
         if test -f "${pkg_test_timing}"; then
             echo "Resources used by ${OCTAVE_CMD}"
             cat "${pkg_test_timing}"
         fi
 
-        if test ${OCT_PKG_PRINT_RES} = "yes"; then
-            echo "Memory usage after test:"
-            vmstat -S M
-            echo "Temporary files after test:"
-            ls -lhF ${OCT_PKG_TEST_DIR}
-            echo "Disk usage after test:"
-            df -h
-        fi
+        rm -f "${pkg_test_timing}"
+
+        case "${OCT_PKG_PRINT_RES}" in
+            all|*disk*)
+                echo "Memory usage after test:"
+                vmstat -S M
+                echo "Temporary files after test:"
+                ls -lhF ${OCT_PKG_TEST_DIR}
+                echo "Disk usage after test:"
+                df -h
+                ;;
+        esac
 
         case "${curr_test_status}" in
             passed)
