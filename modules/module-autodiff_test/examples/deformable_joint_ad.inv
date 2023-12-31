@@ -42,13 +42,12 @@
         final time: final_time;
 
         time step: (final_time-initial_time)/number_of_time_steps;
-        max iterations: 100;
-        tolerance: 1e-10, 1e-10;
+        max iterations: 10;
+        tolerance: 1e-8, 1e-8;
         method: ms, 0.6;
-    derivatives tolerance: 1e-2;
-    derivatives max iterations: 100;
-    derivatives coefficient: 1e-9;
-
+    derivatives tolerance: 1e-6, 1e-6;
+    derivatives max iterations: 10;
+    derivatives coefficient: auto;
     linear solver: naive, colamd;
 
     nonlinear solver: nox,
@@ -58,8 +57,6 @@
               forcing term, type 2,
               solver, line search based,
               line search method, backtrack,
-              weighted rms absolute tolerance, 0.,
-              weighted rms relative tolerance, 0.,
               verbose, yes,
               inner iterations before assembly, 4,
               use preconditioner as solver, no;
@@ -70,4 +67,4 @@
         parameter, 1,
         use lapack,balance, permute;
 
-        threads: assembly, 1;
+        threads: disable;
