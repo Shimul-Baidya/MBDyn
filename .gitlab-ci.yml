@@ -46,10 +46,10 @@ variables:
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
 
   ## Force rebuild of Octave packages to be installed from github.com or octave-forge
-  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:yes mboct-numerical-pkg:yes mboct-mbdyn-pkg:yes mboct-fem-pkg:yes"
 
   ## Branch passed to git clone -b
-  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
+  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:eig-netcdf mboct-fem-pkg:master"
 
   ## Octave package tests to be executed
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
@@ -83,7 +83,7 @@ variables:
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
-  MBD_WITH_MODULE: "leapmotion fabricate damper-gandhi pid contact dummy charm eu2phi dot constlaw-f95 hfelem fab-electric template2 cont-contact nonsmooth-node marble wheel4 mds indvel mcp_test1 aerodyn scalarfunc muscles minmaxdrive constlaw-f90 drive-test loadinc cudatest udunits randdrive friction3 imu octave convtest md autodiff_test rotor-loose-coupling namespace drive template controller tclpgin constlaw fab-sbearings rotor_disc bullet rollercoaster hunt-crossley diff FMU damper-hydraulic cyclocopter fab-motion flightgear hid ns damper friction damper-graall"
+  MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 aerodyn scalarfunc muscles minmaxdrive drive-test loadinc cudatest udunits randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc bullet hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
@@ -326,6 +326,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
                     --prefix="${MBD_INSTALL_PREFIX}" \
                     --with-umfpack \
                     --with-klu \
+                    --Wno-unused-variable \
                     ${PARDISO_FLAGS} \
                     --with-suitesparseqr \
                     --with-static-modules \
@@ -333,6 +334,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
                     --disable-Werror \
                     --with-trilinos ; then
                     ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
+                    ## FIXME: Recent versions of NetCDF require --Wno-unused-variable
           echo "Failed to run configure"
           exit 1
         fi
@@ -595,7 +597,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=mumps(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
       - chmod +x testsuite/octave_pkg_testsuite.sh
       ## FIXME: It seems that everything must be on one long line
-      - testsuite/octave_pkg_testsuite.sh --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}"
+      - testsuite/octave_pkg_testsuite.sh --print-resources yes --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}"
 
 
 deploy-job:      # This job runs in the deploy stage.
