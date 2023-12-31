@@ -40,7 +40,7 @@ variables:
   GMSH_REINSTALL: "no"
 
   ## Compiler flags for MBDyn and mboct-*-pkg
-  MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native"
+  MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
 
   ## Octave packages to be installed from github.com or octave-forge
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
@@ -326,7 +326,6 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
                     --prefix="${MBD_INSTALL_PREFIX}" \
                     --with-umfpack \
                     --with-klu \
-                    --Wno-unused-variable \
                     ${PARDISO_FLAGS} \
                     --with-suitesparseqr \
                     --with-static-modules \
