@@ -94,11 +94,11 @@ if test -z "${mbdyn_testsuite_prefix_output}"; then
     exit 1
 fi
 
-mbdyn_testsuite_output_dir="$(realpath ${mbdyn_testsuite_prefix_output})"
+mbdyn_testsuite_prefix_output="$(realpath ${mbdyn_testsuite_prefix_output})"
 
-if ! test -d "${mbdyn_testsuite_output_dir}"; then
-    if ! mkdir -p "${mbdyn_testsuite_output_dir}"; then
-        echo "Failed to create directory \"${mbdyn_testsuite_output_dir}\""
+if ! test -d "${mbdyn_testsuite_prefix_output}"; then
+    if ! mkdir -p "${mbdyn_testsuite_prefix_output}"; then
+        echo "Failed to create directory \"${mbdyn_testsuite_prefix_output}\""
         exit 1
     fi
 fi
@@ -127,15 +127,15 @@ fi
 
 ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
 ## This will make it easier to delete those files.
-export TMPDIR="${mbdyn_testsuite_output_dir}"
+export TMPDIR="${mbdyn_testsuite_prefix_output}"
 
 for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk "/begin: initial value;/{print FILENAME}"`; do
     mbd_basename=`basename -s ".mbdyn" "${mbd_filename}"`
     mbd_basename=`basename -s ".mbd" "${mbd_basename}"`
 
     if test -f "${mbd_filename}"; then
-        mbd_time_file="${mbdyn_testsuite_prefix_output}${mbd_basename}_time.log"
-        mbd_output_file="${mbdyn_testsuite_prefix_output}${mbd_basename}_mbdyn_output"
+        mbd_time_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_time.log"
+        mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output"
         mbd_log_file="${mbd_output_file}.stdout"
         echo ${mbd_log_file}
 
@@ -228,7 +228,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                 ;;
         esac
         printf "Test \"%s\" %s with status %d\n" "${mbd_basename}" "${status}" "${rc}"
-        echo rm -f "${mbdyn_testsuite_prefix_output}${mbd_basename}*"
+        echo rm -f "${mbdyn_testsuite_prefix_output}/${mbd_basename}*"
         case "${status}" in
             passed)
                 passed_tests="${passed_tests} ${mbd_filename}"
