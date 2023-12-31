@@ -161,8 +161,6 @@ for pkgname in ${OCT_PKG_LIST}; do
     ## This will make it easier to delete those files.
     export TMPDIR="${OCT_PKG_TEST_DIR}/${pkgname}"
 
-    rm -f ${OCT_PKG_TEST_DIR}/${pkgname}/fntests.*
-
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
             OCTAVE_CODE=`printf "pkg('load','%s');p=pkg('list','%s');__run_test_suite__({p{1}.dir},{});" "${pkgname}" "${pkgname}"`
@@ -188,7 +186,7 @@ for pkgname in ${OCT_PKG_LIST}; do
             exit 1
             ;;
     esac
-    #exit 0
+
     pkg_test_timeout=$(echo ${OCT_PKG_TIMEOUT} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
     if test -z "${pkg_test_timeout}"; then
@@ -223,18 +221,24 @@ for pkgname in ${OCT_PKG_LIST}; do
         curr_test_status="failed"
 
         pkg_test_output_file="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.out"
+        pkg_test_log_file="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.log" ## created by __run_test_suite__
 
+        ## Make sure that we do not read any old stuff ...
+        rm -f "${pkg_test_output_file}"
+        rm -f "${pkg_test_log_file}"
+        
         echo "${OCTAVE_CMD}"
 
         curr_dir="`pwd`"
 
+        ## Octave's __run_test_suite__ function will create the file "fntests.log" inside the current directory.
         if ! cd "${OCT_PKG_TEST_DIR}/${pkgname}"; then
             exit 1
         fi
 
         case "${OCT_PKG_TESTS_VERBOSE}" in
             yes)
-                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^\!\!\!\!\! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|pass|fail|^Summary|^Integrated test scripts|\.m files have no tests\.$'
+                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^command\: \"mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
                 ;;
             *)
                 ${OCTAVE_CMD} >& "${pkg_test_output_file}"
@@ -287,10 +291,10 @@ for pkgname in ${OCT_PKG_LIST}; do
                 ;;
             *)
                 printf "octave testsuite for package \"%s\" failed\n" "${pkgname}"
-                if test -f ${OCT_PKG_TEST_DIR}/fntests.log; then
-                    cat ${OCT_PKG_TEST_DIR}/fntests.log;
+                if test -f "${pkg_test_log_file}"; then
+                    cat "${pkg_test_log_file}";
                 else
-                    echo "${OCT_PKG_TEST_DIR}/fntests.log not found";
+                    echo "${pkg_test_log_file} not found";
                 fi
                 test_status="failed"
                 failed_packages="${failed_packages} ${pkgname}"
@@ -302,6 +306,7 @@ for pkgname in ${OCT_PKG_LIST}; do
         esac
 
         echo "Remove all temporary files after the test:"
+        ## "oct-" is the default prefix of Octave's tempname() function
         find "${OCT_PKG_TEST_DIR}/${pkgname}" '(' -type f -and '(' -name 'oct-*' -or -name 'fntests.*' ')' ')' -delete
     done
 done
