@@ -185,6 +185,7 @@ for pkgname in ${OCT_PKG_LIST}; do
         find "${TMPDIR}" '(' -type f -and -name 'mbdyn_pre_*' ')' -delete
     fi
 
+    oct_pkg_sigterm_dumps_core="sigterm_dumps_octave_core(false);"
     oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/${pkgname}/${pkgname}.mat"
     oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
     oct_pkg_load_cmd=$(printf "pkg('load','%s');" "${pkgname}")
@@ -193,7 +194,7 @@ for pkgname in ${OCT_PKG_LIST}; do
 
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
-            OCTAVE_CODE="${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
+            OCTAVE_CODE="${oct_pkg_sigterm_dumps_core}${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
             ;;
         single)
             OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('describe','-verbose','%s'); for i=1:numel(p{1}.provides) for j=1:numel(p{1}.provides{i}.functions) disp(p{1}.provides{i}.functions{j}); endfor; endfor" "${pkgname}")
@@ -206,7 +207,7 @@ for pkgname in ${OCT_PKG_LIST}; do
             OCTAVE_CODE=""
             for pkg_function_name in ${OCTAVE_PKG_FUNCTIONS}; do
                 oct_pkg_test_function_cmd=$(printf "test('%s');" "${pkg_function_name}")
-                OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
+                OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_sigterm_dumps_core}${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
             done
             ;;
         *)
@@ -225,8 +226,8 @@ for pkgname in ${OCT_PKG_LIST}; do
             TIMEOUT_CMD=""
             ;;
         *)
-            ## Octave will not dump a core file on SIGINT
-            TIMEOUT_CMD="timeout --signal=SIGINT ${pkg_test_timeout} "
+            ## Need to call Octave's "sigterm_dumps_octave_core" in order to avoid any core dumps!
+            TIMEOUT_CMD="timeout --signal=SIGTERM ${pkg_test_timeout} "
             ;;
     esac
 
