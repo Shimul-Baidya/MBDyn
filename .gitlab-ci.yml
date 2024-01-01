@@ -95,7 +95,11 @@ cleanup-jobs:
   needs: []
   script:
        - ps -u $(whoami) -o pid,comm,command,cputime,vsize,uname,pcpu,pmem
-       - exit 1
+       - |
+         for pid in $(ps -u $(whoami) -o pid,cmd,tty | awk '/\<mbdyn\>|\<octave\>/{if ($3 == "?") {print $1};}'); do
+           kill -9 "${pid}"
+         done
+       - ps -u $(whoami) -o pid,comm,command,cputime,vsize,uname,pcpu,pmem
   
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
