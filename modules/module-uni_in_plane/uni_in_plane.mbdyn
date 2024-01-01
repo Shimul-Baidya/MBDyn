@@ -101,26 +101,22 @@ end: data;
 begin: initial value;
         initial time: 0.;
         final time: 1;
-        time step: 1e-4;
+        time step: 5e-2;
 
 
         max iterations: 100;
-        tolerance: 1e-4, test, norm;
+        tolerance: 1e-4, test, norm, 1e-4, test, norm;
         method: implicit euler;
 
-        linear solver: umfpack, grad;
-        nonlinear solver: mcp newton min fb, lambda min, 0., tolerance x, 1e-6;
+        linear solver: umfpack, grad, scale, row max column max, always, max iterations, 3;
+        nonlinear solver: linesearch, default solver options, heavy nonlinear;
 
-        ## linear solver: siconos dense;
-        ## nonlinear solver: siconos mcp newton min fb, lambda min, 1e-6;
+    derivatives tolerance: 1e-4, 1e-4;
+    derivatives max iterations: 10;
+    derivatives coefficient: auto;
 
-    derivatives tolerance: 1e-5, 1e-4;
-    derivatives max iterations: 30;
-    derivatives coefficient: 1e-3;
-
-    output: iterations;
-    threads: assembly, 1;
-    threads: solver, 1;
+    output: iterations, solver condition number, stat, yes;
+    threads: disable;
 end: initial value;
 
 begin: control data;
@@ -133,7 +129,7 @@ begin: control data;
     loadable elements: 1;
     joints: 1;
         max iterations: 10;
-        tolerance: 1e-15;
+        tolerance: 1e-10;
         gravity;
     print: dof description;
     use: loadable elements, in assembly;
@@ -143,7 +139,7 @@ reference: ref_id_slider,
     position, reference, global, X0, Y0, Z0,
     orientation, reference, global, matr,       cos(theta_y) * cos(theta_z),	-sin(theta_z),	sin(theta_y) * cos(theta_z),
                                                                             cos(theta_y) * sin(theta_z),	 cos(theta_z),	sin(theta_y) * sin(theta_z),
-                                                                            -sin(theta_y),		                                           0.,					cos(theta_y),
+                                                                            -sin(theta_y),                                                         0.,					cos(theta_y),
     velocity,         reference, global, null,
     angular velocity, reference, global, null;
 
@@ -211,7 +207,7 @@ begin: elements;
                 reference, ref_id_slider, l * cos(60*pi/180), l * sin(60 * pi / 180), deltaz,
                 reference, ref_id_slider, l * cos(-60*pi/180), l * sin(-60 * pi / 180), deltaz,
                 reference, ref_id_slider, l * cos(180*pi/180), l * sin(180 * pi / 180), deltaz,
-            enable mcp, yes,
+            epsilon, epsilon,
         node2,
             node_id_ground,
             offset, reference, ref_id_slider, null,
