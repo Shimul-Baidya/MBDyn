@@ -46,10 +46,13 @@ mbdyn_input_filter=""
 mbdyn_verbose_output="no"
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 
-## Do not use multithreaded BLAS by default, because this could cause performance issues!
+## Disable multithreaded BLAS by default
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
+
+## Might be used for Octave scripts (e.g. via mboct-mbdyn-pkg)
+export MBD_NUM_THREADS=${MBD_NUM_THREADS:-`awk -F ':' 'BEGIN{cores=-1;}/^cpu cores\>/{cores=strtonum($2);}END {print cores;}' /proc/cpuinfo`}
 
 while ! test -z "$1"; do
     case "$1" in

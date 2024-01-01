@@ -49,10 +49,13 @@ OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
 OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
 
-## Do not use multithreaded BLAS by default, because this could cause performance issues!
+## Disable multithreaded BLAS by default
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
+
+## Will be used only by mboct-mbdyn-pkg
+export MBD_NUM_THREADS=${MBD_NUM_THREADS:-`awk -F ':' 'BEGIN{cores=-1;}/^cpu cores\>/{cores=strtonum($2);}END {print cores;}' /proc/cpuinfo`}
 
 echo $program_name
 
