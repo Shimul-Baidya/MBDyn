@@ -38,7 +38,7 @@ variables:
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
   MBD_SKIP_BUILD: "no" ## Force no rebuild of MBDyn
   GMSH_REINSTALL: "no"
-
+  MBD_FORCE_KILL: "no"
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
 
@@ -49,7 +49,7 @@ variables:
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:yes mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
 
   ## Branch passed to git clone -b
-  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
+  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:fix-mkl_pardiso_h mboct-mbdyn-pkg:master mboct-fem-pkg:master"
 
   ## Octave package tests to be executed
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
@@ -90,25 +90,36 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
-cleanup-jobs:
+mbdyn-cleanup-job:
   stage: .pre
   needs: []
   script:
-       - OUTPUT_FORMAT=pid,comm,cputime,vsize,uname,pcpu,pmem,tty
-       - ps -u $(whoami) -o ${OUTPUT_FORMAT}
-       - |
-         for pid in $(ps -u $(whoami) -o pid,comm,tty | awk '/mbdyn|octave/{if ($3 == "?") {print $1};}'); do
-           echo "Process ${pid} will be killed"
-           ps -p ${pid} -o ${OUTPUT_FORMAT}
-           if ! kill -9 ${pid}; then
-               echo "Failed to kill ${pid}"
-           fi
-         done
-       - ps -u $(whoami) -o ${OUTPUT_FORMAT}
-  
+    - OUTPUT_FORMAT=pid,comm,tty,state,cputime,vsize,uname,pcpu,pmem,tty
+    - AWK_FILTER_CMD="/mbdyn|octave/{if(\$3==\"?\"&&\$4!=\"Z\"){print \$1};}"
+    - ps -u $(whoami) -o ${OUTPUT_FORMAT} | awk "${AWK_FILTER_CMD}"
+    - |
+        success="yes"
+        for pid in $(ps -u $(whoami) -o pid,comm,tty,state | awk "${AWK_FILTER_CMD}"); do
+            ps -p ${pid} -o ${OUTPUT_FORMAT}
+            if test "${MBD_FORCE_KILL}" = "yes"; then
+                echo "Process ${pid} will be killed"
+                if ! kill -9 ${pid}; then
+                    echo "Failed to kill ${pid}"
+                    success="no"
+                fi
+            else
+                echo "Process ${pid} is still running: use MBD_FORCE_KILL=yes to kill this process!"
+                success="no"
+            fi
+        done
+     - ps -u $(whoami) -o ${OUTPUT_FORMAT} | awk "${AWK_FILTER_CMD}"
+     - if test "${MBD_FORCE_KILL}" = "yes" && ! test "${success}" = "yes"; then exit 1; fi
+     - if test "${MBD_FORCE_KILL}" = "no" && ! test "${success}" = "yes"; then exit 1; fi
+
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs: []
+  needs:
+    - job: mbdyn-cleanup-job      
   script:
       - echo "MKL installation job"
       - |
@@ -171,7 +182,8 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
 
 netcdf-c-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs: []
+  needs:
+    - job: mbdyn-cleanup-job  
   script:
       - echo "netcdf-c installation job"
       - |
@@ -211,7 +223,8 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
 
 nlopt-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs: []
+  needs:
+    - job: mbdyn-cleanup-job    
   script:
       - |
         if test -d "${NL_INSTALL_PREFIX}"; then
@@ -427,6 +440,8 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
         - echo PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
         - echo NLOPT_LIBS="${NLOPT_LIBS}"
         - echo NLOPT_INC="${NLOPT_INC}"
+        - echo PARDISO_LIBS="${PARDISO_LIBS}"
+        - echo PARDISO_INC="${PARDISO_INC}"
         - |
           for pkgname in ${OCT_PKG_LIST}; do
               printf "build package \"%s\"\n" "${pkgname}"
@@ -516,7 +531,8 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
 
 gmsh-build-job:       # This job runs in the build stage, which runs first.
    stage: build
-   needs: []
+   needs:
+     - job: mbdyn-cleanup-job     
    script:
        - echo "gmsh build"
        - |
