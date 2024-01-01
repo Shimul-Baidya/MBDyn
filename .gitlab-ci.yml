@@ -85,10 +85,17 @@ variables:
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
   MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 aerodyn scalarfunc muscles minmaxdrive drive-test loadinc cudatest udunits randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc bullet hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
 stages:          # List of stages for jobs, and their order of execution
+  - .pre
   - build
   - test
   - deploy
 
+cleanup-jobs:
+  statge: .pre
+  needs: []
+       - ps -u $(whoami) -o pid,comm,command,cputime,vsize,uname,pcpu,pmem
+       - exit 1
+  
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   needs: []
