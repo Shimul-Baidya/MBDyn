@@ -38,7 +38,10 @@ variables:
   MBD_CLEAN_BUILD: "no" ## Clean up the build directory
   MBD_SKIP_BUILD: "no" ## Force no rebuild of MBDyn
   GMSH_REINSTALL: "no"
+
+  ## Send a kill -9 to all octave and mbdyn processes which are still alive from a previous pipeline, although this should not happen
   MBD_FORCE_KILL: "no"
+
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
 
@@ -46,16 +49,16 @@ variables:
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
 
   ## Force rebuild of Octave packages to be installed from github.com or octave-forge
-  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:yes mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
+  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
 
   ## Branch passed to git clone -b
-  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:fix-mkl_pardiso_h mboct-mbdyn-pkg:master mboct-fem-pkg:master"
+  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
 
   ## Octave package tests to be executed
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
 
   ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h")
-  OCT_PKG_TIMEOUT: "nurbs:unlimited netcdf:unlimited mboct-octave-pkg:unlimited mboct-numerical-pkg:unlimited mboct-mbdyn-pkg:30m mboct-fem-pkg:unlimited"
+  OCT_PKG_TIMEOUT: "nurbs:unlimited netcdf:unlimited mboct-octave-pkg:unlimited mboct-numerical-pkg:unlimited mboct-mbdyn-pkg:unlimited mboct-fem-pkg:unlimited"
 
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
   OCT_PKG_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/octave-pkg-testjob/"
@@ -65,7 +68,7 @@ variables:
   ## The value of $OCT_PKG_TIMEOUT will be applied to each function.
   ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
   ## The value $OCT_PKG_TIMEOUT will be applied to the whole package.
-  OCT_PKG_TEST_MODE: "single"
+  OCT_PKG_TEST_MODE: "pkg"
 
   ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
   ## FIXME: MBD_MODULE_TEST_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
@@ -119,7 +122,7 @@ mbdyn-cleanup-job:
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   needs:
-    - job: mbdyn-cleanup-job      
+    - job: mbdyn-cleanup-job
   script:
       - echo "MKL installation job"
       - |
@@ -183,7 +186,7 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
 netcdf-c-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   needs:
-    - job: mbdyn-cleanup-job  
+    - job: mbdyn-cleanup-job
   script:
       - echo "netcdf-c installation job"
       - |
@@ -224,7 +227,7 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
 nlopt-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   needs:
-    - job: mbdyn-cleanup-job    
+    - job: mbdyn-cleanup-job
   script:
       - |
         if test -d "${NL_INSTALL_PREFIX}"; then
@@ -532,7 +535,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
 gmsh-build-job:       # This job runs in the build stage, which runs first.
    stage: build
    needs:
-     - job: mbdyn-cleanup-job     
+     - job: mbdyn-cleanup-job
    script:
        - echo "gmsh build"
        - |
