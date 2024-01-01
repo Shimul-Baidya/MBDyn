@@ -281,7 +281,7 @@ for pkgname in ${OCT_PKG_LIST}; do
 
         case "${OCT_PKG_TESTS_VERBOSE}" in
             yes)
-                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^command: \"mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
+                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^command: "mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
                 ;;
             *)
                 ${OCTAVE_CMD} >& "${pkg_test_output_file}"
