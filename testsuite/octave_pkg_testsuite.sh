@@ -182,11 +182,11 @@ for pkgname in ${OCT_PKG_LIST}; do
     ## This will make it easier to delete those files.
     export TMPDIR="${OCT_PKG_TEST_DIR}/${pkgname}"
 
-    echo "FIXME: cleanup old stuff in ${TMPDIR}; Need to run only once then the code should be removed ..."
+    # echo "FIXME: cleanup old stuff in ${TMPDIR}; Need to run only once then the code should be removed ..."
 
-    if test -d "${TMPDIR}"; then
-        find "${TMPDIR}" '(' -type f -and -name 'mbdyn_pre_*' ')' -delete
-    fi
+    # if test -d "${TMPDIR}"; then
+    #     find "${TMPDIR}" '(' -type f -and -name 'mbdyn_pre_*' ')' -delete
+    # fi
 
     oct_pkg_sigterm_dumps_core="sigterm_dumps_octave_core(false);"
     oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/${pkgname}/${pkgname}.mat"
