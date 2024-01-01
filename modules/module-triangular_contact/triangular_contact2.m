@@ -68,6 +68,7 @@ param.sigma1 = 0;
 param.geometry = "sphere";
 param.t1 = 2;
 param.J1 = 2 / 5 * param.m1 * param.r1^2;
+param.num_steps = 1000;
 
 Jred = (param.r2 - param.r1)^2 * (param.m1 + param.J1 / param.r1^2);
 Kred = param.m1 * param.g * (param.r2 - param.r1);
@@ -108,7 +109,7 @@ unwind_protect
   opts.mesh.dim = 2;
 
   unwind_protect
-    [fd, fname] = mkstemp(fullfile(tempdir(), "triangular_contact2_XXXXXX"));
+    [fd, fname] = mkstemp(fullfile(tempdir(), "oct-triangular_contact2_XXXXXX"));
 
     if (fd == -1)
       error("faild to create temporary file");
@@ -284,14 +285,26 @@ unwind_protect
   opt_post.skin_only = false;
   opt_post.print_and_exit = true;
   opt_post.print_to_file = [fname, "_post"];
-  fem_post_sol_external(mesh, sol, opt_post);
+  try
+    fem_post_sol_external(mesh, sol, opt_post);
+  catch
+    warning("Failed to launch gmsh in graphical mode");
+  end_try_catch
   figure_list();
+
+  qint = interp1(t, q, tref);
+  qdotint = interp1(t, qdot, tref);
+
+  tol_pos = 2e-2;
+  tol_vel = 7e-2;
+  assert(max(max(abs(qint(:) - yref(:, 1)))) < tol_pos * max(max(abs(yref(:,1)))));
+  assert(max(max(abs(qdotint(:) - yref(:, 2)))) < tol_vel * max(max(abs(yref(:,2)))));
 unwind_protect_cleanup
   if (numel(fname))
     fn = dir([fname, "*"]);
     for i=1:numel(fn)
-      unlink(fullfile(fn(i).folder, fn(i).name));
+      [~] = unlink(fullfile(fn(i).folder, fn(i).name));
     endfor
-    unlink(fname);
+    [~] = unlink(fname);
   endif
 end_unwind_protect
