@@ -111,10 +111,11 @@ begin: elements;
 			reflexive,
 				proportional gain, Kp,
 				derivative gain, Kd,
-				reference length, L0,
-			# short range stiffness, 
-			# 	model, exponential;
-			#	model, linear;
+				reference length, L0
+			## ,short range stiffness, 
+			##  	model, exponential;
+			## 	model, linear
+                                ;
 
 	joint: 3, rod,
 		0,
@@ -137,10 +138,11 @@ begin: elements;
 			reflexive,
 				proportional gain, Kp,
 				derivative gain, Kd,
-				reference length, L0,
-			# short range stiffness, 
+				reference length, L0
+			# ,short range stiffness, 
 			# 	model, exponential;
-			#	model, linear;
+			#	model, linear
+                        ;
 
 	couple: 1, follower,
 		1,

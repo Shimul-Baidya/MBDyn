@@ -56,8 +56,7 @@ end: control data;
 set: real L0 = 200.e-3;	# m
 set: real F0 = 63.;	# N
 
-# module load: "libmodule-muscles.la";
-module load: "../../../build-dbg/modules/module-muscles/.libs/libmodule-muscles.so";
+module load: "libmodule-muscles.la";
 
 begin: nodes;
 	structural: 0, static, null, eye, null, null, output, no;
