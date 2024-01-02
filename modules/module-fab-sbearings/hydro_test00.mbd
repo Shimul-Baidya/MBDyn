@@ -82,7 +82,8 @@ begin: elements;
 
 	# fluid
 	hydraulic fluid: Fluid, incompressible, 
-		viscosity, 0.01985;	# absolute viscosity of ISO VG22 [Pa.s]
+		density, 870, viscosity, 0.01985;	# absolute viscosity of ISO VG22 [Pa.s]
+                                                        # density according http://lubrin.co LUBRIN HLP ISO VG22 [kg/m^3] 
 	 
 	body: 0, 1,
 	  5.5,   # mass
