@@ -50,11 +50,10 @@ OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
 OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
-OCT_GREP_FILTER_EXPR='^command: "mbdyn|^!!!!! test failed$
-|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|
-\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|
-^Summary|^Integrated test scripts|\.m files have no tests\.$'
 
+## Do not print any output from Octave which does not pass through this filter, even if "--verbose yes" is used!
+## This is strictly required because the amount of output is limited to 4194304 bytes by GitLab
+OCT_GREP_FILTER_EXPR='^command: "mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
 
 ## Disable multithreaded BLAS by default
 export OMP_NUM_THREADS=1
@@ -188,12 +187,6 @@ for pkgname in ${OCT_PKG_LIST}; do
     ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
     ## This will make it easier to delete those files.
     export TMPDIR="${OCT_PKG_TEST_DIR}/${pkgname}"
-
-    # echo "FIXME: cleanup old stuff in ${TMPDIR}; Need to run only once then the code should be removed ..."
-
-    # if test -d "${TMPDIR}"; then
-    #     find "${TMPDIR}" '(' -type f -and -name 'mbdyn_pre_*' ')' -delete
-    # fi
 
     oct_pkg_sigterm_dumps_core="sigterm_dumps_octave_core(false);"
     oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/${pkgname}/${pkgname}.mat"
