@@ -26,24 +26,58 @@
 #     - when: never
 
 variables:
-  MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/" ## Local installation directory for MBDyn
-  GMSH_INSTALL_PREFIX: "/home/gitlab-runner/local/gmsh-test-install/" ## Local installation directory for Gmsh
-  MBOCT_INSTALL_PREFIX: "/home/gitlab-runner/local/mboct-test-install/" ## Local installation directory for Gmsh
-  MKL_INSTALL_PREFIX: "/home/gitlab-runner/local/mkl-test-install/" ## Local installation directory for MKL
-  NC_INSTALL_PREFIX: "/home/gitlab-runner/local/netcdf-test-install/" ## Local installation directory for NetCDF
-  NL_INSTALL_PREFIX: "/home/gitlab-runner/local/nlopt-test-install/" ## Local installation directory for nlopt
-  MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/" ## Local build directory
-  MBD_NUM_BUILD_JOBS: "12" # Run make -j$MBD_NUM_BUILD_JOBS
-  MBD_CLEAN_ALL: "no" ## Should be set to "yes" as soon as the testsuite is finished
-  MBD_CLEAN_BUILD: "no" ## Clean up the build directory
-  MBD_SKIP_BUILD: "no" ## Force no rebuild of MBDyn
-  GMSH_REINSTALL: "no"
+  ## Installation directories - they should be moved to $CI_PROJECT_DIR
+  ## Then we could use it like "artefacts"
+  ## Every build stage needs one directory of it's own!
 
-  ## Send a kill -9 to all octave and mbdyn processes which are still alive from a previous pipeline, although this should not happen
-  MBD_FORCE_KILL: "no"
+  ## Local installation directory for MBDyn:
+  MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/"
+
+  ## Local installation directory for Gmsh:
+  GMSH_INSTALL_PREFIX: "/home/gitlab-runner/local/gmsh-test-install/"
+
+  ## Local installation directory for fem_pre_mesh_size
+  ## This program is needed to calculate the mesh size for Gmsh only for a very specific test case.
+  MBOCT_INSTALL_PREFIX: "/home/gitlab-runner/local/mboct-test-install/"
+
+  ## Local installation directory for Intel oneMKL
+  MKL_INSTALL_PREFIX: "/home/gitlab-runner/local/mkl-test-install/"
+
+  ## Local installation directory for NetCDF
+  NC_INSTALL_PREFIX: "/home/gitlab-runner/local/netcdf-test-install/"
+
+  ## Local installation directory for nlopt
+  NL_INSTALL_PREFIX: "/home/gitlab-runner/local/nlopt-test-install/"
+
+  ## Local build directory for MBDyn
+  ## Will be cleaned only if MBD_CLEAN_BUILD=yes or MBD_CLEAN_ALL=yes
+  MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/"
+
+  ## Clean up the build directory of MBDyn
+  MBD_CLEAN_BUILD: "no"
+
+  # Number of processes to build MBDyn (e.g. make -j$MBD_NUM_BUILD_JOBS)
+  MBD_NUM_BUILD_JOBS: "12"
+
+  ## Remove and reinstall all the software which was installed by previous pipeline executions.
+  MBD_CLEAN_ALL: "no"
+
+  ## Force no rebuild of MBDyn; The default must be "no", but it could be overridden manually when the pipeline is started!
+  MBD_SKIP_BUILD: "no"
+
+  ## Install the latest stable release of Gmsh via wget
+  GMSH_URL: "http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz"
+
+  ## Force reinstallation of a new version of Gmsh from $GMSH_URL
+  ## The default value should be "no", but may be overridden manually when the pipeline is started.
+  GMSH_REINSTALL: "no"
 
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
+
+  ## Run MBDyn's configure with the following modules enabled.
+  ## In order to enable additional modules, it would be necessary also to install their dependencies.
+  MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
 
   ## Octave packages to be installed from github.com or octave-forge
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
@@ -51,16 +85,20 @@ variables:
   ## Force rebuild of Octave packages to be installed from github.com or octave-forge
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
 
-  ## Branch passed to git clone -b
-  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:eig-netcdf mboct-fem-pkg:master"
+  ## Branch passed to git clone -b for all mboct-*-pkg packages.
+  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
 
   ## Octave package tests to be executed
+  ## Actually only mboct-mbdyn-pkg contains validating tests for MBDyn.
+  ## However, the other packages are required to run those tests.
   OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
 
-  ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h")
+  ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h" or "unlimited")
+  ## There should be no need to enable a timeout here.
   OCT_PKG_TIMEOUT: "nurbs:unlimited netcdf:unlimited mboct-octave-pkg:unlimited mboct-numerical-pkg:unlimited mboct-mbdyn-pkg:unlimited mboct-fem-pkg:unlimited"
 
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
+  ## This makes it easier to clean up temporary files and ther is no need to use /tmp
   OCT_PKG_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/octave-pkg-testjob/"
 
   ## Execution mode for all Octave package tests:
@@ -69,24 +107,40 @@ variables:
   ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
   ## The value $OCT_PKG_TIMEOUT will be applied to the whole package.
   OCT_PKG_TEST_MODE: "pkg"
+  OCTAVE_EXEC: "octave"
 
   ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
-  ## FIXME: MBD_MODULE_TEST_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
-  MBD_MODULE_TEST_TIMEOUT: "600s"
-  MBD_TESTS_PUBLIC_TIMEOUT: "unlimited" ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
+  ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
+  MBD_MODULE_TEST_TIMEOUT: "unlimited"
+  MBD_TESTS_PUBLIC_TIMEOUT: "unlimited"
   MBD_TESTS_PRIVATE_TIMEOUT: "600s"
-  ## FIXME: MBD_TESTS_PRIVATE_TIMEOUT should not be "unlimited" since models which are using sockets might block our pipeline forever!
+
   MBD_MODULE_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-modules-testjob/"
   MBD_TESTS_PUBLIC_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-public-testjob/"
   MBD_TESTS_PRIVATE_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-private-testjob/"
   MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
   MBD_TESTS_PRIVATE_GITLAB: "git@gitlab.com:zanoni-mbdyn/mbdyn-tests.git"
+
+  ## Additional arguments to be passed to simple_testsuite.sh
+  ## See simple_testsuite.sh --help
   MBD_MODULE_TEST_FLAGS: ""
-  OCTAVE_EXEC: "octave"
+
+  ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
+  ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
   MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
-  MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 aerodyn scalarfunc muscles minmaxdrive drive-test loadinc cudatest udunits randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc bullet hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
+
+  ## Send a kill -9 to all running octave and mbdyn processes owned by the same user and without a terminal connected.
+  ## For whatever reason, it could happen that those processes are not terminated if a pipeline is cancelled.
+  ## "no"       Do not start the pipeline if there are any running processes! This option should be safe.
+  ## "yes"      Kill all running processes!
+  ##            This must not be the default, and it should be used only as a last resort solution!
+  ##            In such a situation go to "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines/new"
+  ##            and override the default value!
+  ## "disabled" Ignore running processes. Probably not a safe option.
+  MBD_FORCE_KILL: "no"
+
 stages:          # List of stages for jobs, and their order of execution
   - .pre
   - build
@@ -543,13 +597,15 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
            echo "Gmsh was already installed ..."
            exit 0
          fi
-       - rm -f gmsh-stable-Linux64.tgz
-       - wget http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz
-       - tar -zxvf gmsh-stable-Linux64.tgz
+       - GMSH_TAR=`basename ${GMSH_URL}`
+       - rm -f ${GMSH_TAR}
+       - wget ${GMSH_URL}
+       - tar -zxvf ${GMSH_TAR}
        - rm -rf ${GMSH_INSTALL_PREFIX}
        - mkdir -p "${GMSH_INSTALL_PREFIX}/bin"
        - install gmsh-*.*.*-Linux64/bin/gmsh "${GMSH_INSTALL_PREFIX}/bin"
        - rm -rf gmsh-*.*.*-Linux64
+       - rm -f ${GMSH_TAR}
        - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
 
 mbdyn-tests-private-test-job:   # This job runs in the test stage.
