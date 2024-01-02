@@ -39,6 +39,8 @@
 ## Octave package testsuite based on Octave's __run_test_suite__ function
 ## At the moment "mboct-mbdyn-pkg" is the only package which will perform unit tests on MBDyn
 
+set -o pipefail ## Needed for commands like "octave --eval ${cmd} |& tee logfile"
+
 program_name="$0"
 OCT_PKG_LIST="${OCT_PKG_LIST:-mboct-mbdyn-pkg}"
 OCT_PKG_TESTS="${OCT_PKG_TESTS:-mboct-mbdyn-pkg:yes}"
@@ -48,6 +50,11 @@ OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
 OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
+OCT_GREP_FILTER_EXPR='^command: "mbdyn|^!!!!! test failed$
+|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|
+\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|
+^Summary|^Integrated test scripts|\.m files have no tests\.$'
+
 
 ## Disable multithreaded BLAS by default
 export OMP_NUM_THREADS=1
@@ -281,7 +288,8 @@ for pkgname in ${OCT_PKG_LIST}; do
 
         case "${OCT_PKG_TESTS_VERBOSE}" in
             yes)
-                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" 2>&1 | grep -i -E '^command: "mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
+                ## If grep returns a nonzero status, this is not considered as an error!
+                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" | (grep -i -E "${OCT_GREP_FILTER_EXPR}" || true)
                 ;;
             *)
                 ${OCTAVE_CMD} >& "${pkg_test_output_file}"

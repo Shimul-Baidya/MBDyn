@@ -38,6 +38,8 @@
 
 ## Use the simple testsuite in order to check if a model can run or not
 
+set -o pipefail ## Needed for commands like "mbdyn -f input_file |& tee logfile"
+
 program_name="$0"
 mbdyn_testsuite_timeout="unlimited"
 mbdyn_testsuite_prefix_output=""
@@ -121,6 +123,7 @@ mbdyn_testsuite_prefix_input=`realpath ${mbdyn_testsuite_prefix_input}`
 passed_tests=""
 failed_tests=""
 timeout_tests=""
+modules_not_found=""
 
 search_expression="-type f"
 
@@ -207,7 +210,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         rm -f "${mbd_log_file}"
 
         if test "${mbdyn_verbose_output}" = "yes"; then
-            ${mbd_command} 2>&1 | tee "${mbd_log_file}"
+            ${mbd_command} |& tee "${mbd_log_file}"
         else
             ${mbd_command} >& "${mbd_log_file}"
         fi
@@ -218,9 +221,20 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
             exit 1
         fi
 
+        mbd_module_not_found=""
+        
         case ${rc} in
             0)
                 status="passed"
+                ;;
+            1)
+                mbd_module_not_found=`awk -v FPAT='[^:<>]+' '/^ModuleLoad_int: unable to open module\>/{print $3;}' "${mbd_log_file}"`
+                
+                if ! test -z "${mbd_module_not_found}"; then
+                    status="module"
+                else
+                    status="failed"
+                fi
                 ;;
             124)
                 status="timeout"
@@ -256,6 +270,9 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
             timeout)
                 timeout_tests="${timeout_tests} ${mbd_filename}"
                 ;;
+            module)
+                modules_not_found="${modules_not_found} ${mbd_filename}:${mbd_module_not_found}"
+                ;;
             *)
                 failed_tests="${failed_tests} ${mbd_filename}"
                 ;;
@@ -266,7 +283,7 @@ done
 if test -z "${passed_tests}"; then
     echo "No tests passed"
 else
-    echo "The following tests passed:"
+    echo "The following tests passed with zero exit status:"
     for mbd_filename in ${passed_tests}; do
         echo "  ${mbd_filename}"
     done
@@ -279,6 +296,17 @@ else
     for mbd_filename in ${timeout_tests}; do
         echo " ${mbd_filename}"
     done
+    echo "This is not considered as an error!"
+fi
+
+if test -z "${modules_not_found}"; then
+    echo "All modules were found"
+else
+    echo "The following tests failed because a loadable module was not found:"
+    for mbd_filename in ${modules_not_found}; do
+        echo " ${mbd_filename}"
+    done
+    echo "This is not considered as an error!"
 fi
 
 if test -z "${failed_tests}"; then
@@ -288,5 +316,6 @@ else
     for mbd_filename in ${failed_tests}; do
         echo " ${mbd_filename}"
     done
+    echo "This is considered as an error!"
     exit 1
 fi
