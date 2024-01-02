@@ -278,7 +278,7 @@ begin: elements;
 
 	#/*
 	# create a symlink to libmodule-charm.so in this folder
-	# module load: "./libmodule-charm.so";
+	module load: "libmodule-charm.la";
 	user defined: 1, charm,
 		units, si,
 			# output unit, 98,
