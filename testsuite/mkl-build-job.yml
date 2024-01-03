@@ -3,8 +3,8 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
   needs:
        - job: mbdyn-cleanup-job
   script:
-       - MKL_INSTALL_PREFIX=$(realpath ${MKL_INSTALL_PREFIX})
-       - MKL_BUILD_DIR=$(realpath ${MKL_BUILD_DIR})
+       - MKL_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${MKL_INSTALL_PREFIX})
+       - MKL_BUILD_DIR=$(realpath ${CI_PROJECT_DIR}/${MKL_BUILD_DIR})
        - echo "MKL installation job"
        - |
           if test -d "${MKL_INSTALL_PREFIX}"; then

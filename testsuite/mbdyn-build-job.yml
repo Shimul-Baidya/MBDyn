@@ -16,11 +16,11 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
           #rm -rf ${HOME}/${dirent}
       #  fi
     #  done
-    - MBD_INSTALL_PREFIX=$(realpath ${MBD_INSTALL_PREFIX})
-    - NC_INSTALL_PREFIX=$(realpath ${NC_INSTALL_PREFIX})
-    - NL_INSTALL_PREFIX=$(realpath ${NL_INSTALL_PREFIX})
-    - MKL_INSTALL_PREFIX=$(realpath ${MKL_INSTALL_PREFIX})
-    - MBD_BUILD_DIR=$(realpath ${MBD_BUILD_DIR})
+    - MBD_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX})
+    - NC_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX})
+    - NL_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX})
+    - MKL_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${MKL_INSTALL_PREFIX})
+    - MBD_BUILD_DIR=$(realpath ${CI_PROJECT_DIR}/${MBD_BUILD_DIR})
     - |
       if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
         echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
@@ -43,7 +43,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         ./bootstrap.sh
       fi
     - test -x ./configure
-    - MBD_SOURCE_DIR=$(realpath $CI_PROJECT_DIR)
+    - MBD_SOURCE_DIR=$(realpath ${CI_PROJECT_DIR})
     - echo "Create build directory ..."
     - |
       if test ${MBD_CLEAN_BUILD} = "yes" -o ${MBD_CLEAN_ALL} = "yes"; then
