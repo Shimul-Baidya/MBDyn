@@ -41,6 +41,10 @@ begin: initial value;
 		allow nonroot; # nanoseconds
 
 	# output: iterations;
+        remark: "Warning: hid_test requires user interaction and cannot be executed by MBDyn's testsuite!";
+        remark: "Warning: Simulation will be aborted after input!";
+        abort after: input;
+        threads: disable;
 end: initial value;
 
 include: "hid.set";
@@ -53,7 +57,7 @@ begin: control data;
 	forces: JOYSTICK_N_LC + JOYSTICK_N_BUTTONS;
 end: control data;
 
-module load: "libmodule-hid";
+module load: "libmodule-hid.la";
 
 set: const integer JOYSTICK_1 = 999;
 

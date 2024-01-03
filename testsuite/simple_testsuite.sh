@@ -247,6 +247,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                 ;;
             124)
                 status="timeout"
+                echo "Timeout"
                 ;;
             130)
                 echo "Interrupted"
