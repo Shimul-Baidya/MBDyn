@@ -1,0 +1,33 @@
+gmsh-build-job:       # This job runs in the build stage, which runs first.
+   stage: build
+   needs:
+     - job: mbdyn-cleanup-job
+   script:
+       - GMSH_INSTALL_PREFIX=$(realpath ${GMSH_INSTALL_PREFIX})
+       - GMSH_BUILD_DIR=$(realpath ${GMSH_BUILD_DIR})
+       - echo "gmsh build"
+       - |
+         if ${GMSH_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test "${GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
+           echo "Gmsh was already installed ..."
+           exit 0
+         fi
+       - GMSH_TAR=`basename ${GMSH_URL}`
+       - mkdir -p ${GMSH_BUILD_DIR}
+       - cd ${GMSH_BUILD_DIR}
+       - rm -f ${GMSH_TAR}
+       - wget ${GMSH_URL}
+       - tar -zxvf ${GMSH_TAR}
+       - rm -rf ${GMSH_INSTALL_PREFIX}
+       - mkdir -p "${GMSH_INSTALL_PREFIX}/bin"
+       - gmsh_bin=`find ${GMSH_BUILD_DIR} '(' -type f -and -path '*/bin/gmsh' ')'`
+       - |
+         for f in ${gmsh_bin}; do
+          install "${f}"" "${GMSH_INSTALL_PREFIX}/bin"
+          break
+         done
+       - rm -rf ${GMSH_BUILD_DIR}/*
+       - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
+   artifacts:
+     paths:
+       - $GMSH_INSTALL_PREFIX
+       - $GMSH_BUILD_DIR
