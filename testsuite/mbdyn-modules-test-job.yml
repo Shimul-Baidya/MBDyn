@@ -2,11 +2,11 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
     - job: octave-pkg-build-job ## module-triangular_contact is using Octave
-      artifacts: true
+      #artifacts: true
     - job: gmsh-build-job ## module-triangular_contact is using Gmsh
-      artifacts: true
+      #artifacts: true
     - job: mbdyn-build-job
-      artifacts: true
+      #artifacts: true
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
@@ -20,6 +20,6 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
       - chmod +x testsuite/simple_testsuite.sh
       - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
-  artifacts:
-    paths:
-      - $MBD_MODULE_TEST_OUTPUT_DIR
+  # artifacts:
+  #   paths:
+  #     - $MBD_MODULE_TEST_OUTPUT_DIR

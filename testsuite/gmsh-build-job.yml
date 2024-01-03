@@ -27,7 +27,7 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
          done
        - rm -rf ${GMSH_BUILD_DIR}/*
        - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
-   artifacts:
-     paths:
-       - $GMSH_INSTALL_PREFIX
-       - $GMSH_BUILD_DIR
+   # artifacts:
+   #   paths:
+   #     - $GMSH_INSTALL_PREFIX
+   #     - $GMSH_BUILD_DIR

@@ -22,8 +22,8 @@ nlopt-build-job:       # This job runs in the build stage, which runs first.
       - make -j${MBD_NUM_BUILD_JOBS}
       - make install
       - rm -rf ${NL_BUILD_DIR}
-  artifacts:
-     name: nlopt-binaries
-     paths:
-      - $NL_INSTALL_PREFIX
-      - $NL_BUILD_DIR
+  # artifacts:
+  #    name: nlopt-binaries
+  #    paths:
+  #     - $NL_INSTALL_PREFIX
+  #     - $NL_BUILD_DIR

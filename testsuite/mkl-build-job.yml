@@ -65,7 +65,7 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
               exit 1
           fi
        - rm -rf ${MKL_BUILD_DIR}/* ## Keep the files just in case of errors
-  artifacts:
-   paths:
-      - $MKL_INSTALL_PREFIX
-      - $MKL_BUILD_DIR
+  # artifacts:
+  #  paths:
+  #     - $MKL_INSTALL_PREFIX
+  #     - $MKL_BUILD_DIR
