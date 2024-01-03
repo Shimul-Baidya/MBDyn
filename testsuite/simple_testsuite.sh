@@ -124,6 +124,7 @@ passed_tests=""
 failed_tests=""
 timeout_tests=""
 modules_not_found=""
+loadables_not_found=""
 unexpected_faults=""
 
 search_expression="-type f"
@@ -223,6 +224,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         fi
 
         mbd_module_not_found=""
+        mbd_loadable_not_found=""
 
         case ${rc} in
             0)
@@ -231,11 +233,16 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                 ;;
             1)
                 mbd_module_not_found=`awk -v FPAT='[^:<>]+' '/^ModuleLoad_int: unable to open module\>/{print $3;}' "${mbd_log_file}"`
+                mbd_loadable_not_found=`awk -v FPAT='[^<>]+' '/^ParseUserDefinedElem\([0-9]+\): unknown user-defined element type at line [0-9]+, file <.+>$/{ print $2 }' "${mbd_log_file}"`
 
                 if ! test -z "${mbd_module_not_found}"; then
                     status="module"
                 else
-                    status="failed"
+                    if ! test -z "${mbd_loadable_not_found}"; then
+                        status="loadable"
+                    else
+                        status="failed"
+                    fi
                 fi
                 ;;
             124)
@@ -283,6 +290,9 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
             module)
                 modules_not_found="${modules_not_found} ${mbd_filename}[${mbd_module_not_found}]:${status}(${rc})"
                 ;;
+            loadable)
+                loadables_not_found="${loadables_not_found} ${mbd_filename}:${status}(${rc})"
+                ;;
             failed)
                 failed_tests="${failed_tests} ${mbd_filename}:${status}(${rc})"
                 ;;
@@ -329,18 +339,26 @@ else
     ((exit_status|=0x4))
 fi
 
+if test -z "${loadables_not_found}"; then
+    echo "All loadables were found"
+else
+    print_files "The following %d tests failed because a loadable element was not found:\n" ${loadables_not_found}
+    ((exit_status|=0x8))
+fi
+
 if test -z "${failed_tests}"; then
     echo "No tests failed with status 1"
 else
     print_files "The following %d tests failed with status 1:\n" ${failed_tests}
-    ((exit_status|=0x8))
+    ((exit_status|=0x10))
 fi
 
 if test -z "${unexpected_faults}"; then
     echo "No tests returned with unexpected exit status"
 else
     print_files "The following %d tests failed with unexpected exit status:\n" ${unexpected_faults}
-    ((exit_status|=0x10))
+    ((exit_status|=0x40))
 fi
 
+printf "${program_name} exit status %2X\n" $((exit_status))
 exit $((exit_status))

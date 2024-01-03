@@ -659,14 +659,25 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
       - chmod +x testsuite/simple_testsuite.sh
       - |
+        declare -i rc
+        declare -i mask
+
         ## FIXME: It seems that everything must be on one long line ...
-        if testsuite/simple_testsuite.sh --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_MODULE_TEST_FLAGS}; then
-          echo "MBDyn modules test job passed"
+        testsuite/simple_testsuite.sh --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_MODULE_TEST_FLAGS}
+
+        rc=$?
+        ## Errors like "module not found" and "loadable not found" must be ignored until all the modules are compiled with all their dependencies ...
+        ((mask=(0x4|0x8)))
+        ((status=rc&~mask))
+
+        if test $((status)) = 0; then
+          message="passed"
         else
-          echo "MBDyn modules test job failed - exit status will not be checked yet"
-          ## FIXME: Enable the next line as soon as all tests pass
-          ## exit 1
+          message="failed"
         fi
+
+        printf "MBDyn modules test job %s with with status 0x%2X\n" $((status))
+        exit $((status))
 
 octave-pkg-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
