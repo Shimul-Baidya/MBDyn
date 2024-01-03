@@ -22,7 +22,7 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
        - gmsh_bin=`find ${GMSH_BUILD_DIR} '(' -type f -and -path '*/bin/gmsh' ')'`
        - |
          for f in ${gmsh_bin}; do
-          install "${f}"" "${GMSH_INSTALL_PREFIX}/bin"
+          install "${f}" "${GMSH_INSTALL_PREFIX}/bin"
           break
          done
        - rm -rf ${GMSH_BUILD_DIR}/*
