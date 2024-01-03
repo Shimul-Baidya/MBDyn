@@ -46,6 +46,7 @@ mbdyn_testsuite_prefix_output=""
 mbdyn_testsuite_prefix_input=""
 mbdyn_input_filter=""
 mbdyn_verbose_output="no"
+declare i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 
 ## Disable multithreaded BLAS by default
@@ -81,6 +82,10 @@ while ! test -z "$1"; do
         --help)
             printf "%s\n  --prefix-output <output-dir>\n  --prefix-input <input-dir>\n  --timeout <timeout-seconds>\n  --help\n" "${program_name}"
             exit 1;
+            ;;
+        --exit-status-mask)
+            ((mbd_exit_status_mask=$2))
+            shift
             ;;
         *)
             printf "%s: invalid argument \"%s\"\n" "${program_name}" "$1"
@@ -361,5 +366,12 @@ else
     ((exit_status|=0x40))
 fi
 
-printf "${program_name} exit status %2X\n" $((exit_status))
+if test $((exit_status&~mbd_exit_status_mask)) == 0 && test $((exit_status)) != 0; then
+    printf "Minor failures (0x%X) were detected during this test, but they will be ignored!\n" $((exit_status&mbd_exit_status_mask))
+fi
+
+## Mask all the error codes which should be ignored for the current test
+((exit_status&=~mbd_exit_status_mask))
+
+printf "${program_name} exit status 0x%X\n" $((exit_status))
 exit $((exit_status))
