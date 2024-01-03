@@ -10,11 +10,11 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
     - job: netcdf-c-build-job
       artifacts: true
   script:
-        - MKL_INSTALL_PREFIX=$(realpath ${MKL_INSTALL_PREFIX})
-        - NL_INSTALL_PREFIX=$(realpath ${NL_INSTALL_PREFIX})
-        - NC_INSTALL_PREFIX=$(realpath ${NC_INSTALL_PREFIX})
-        - OCT_PKG_BUILD_DIR=$(realpath ${OCT_PKG_BUILD_DIR})
-        - OCT_PKG_INSTALL_PREFIX=$(realpath ${OCT_PKG_INSTALL_PREFIX})
+        - MKL_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${MKL_INSTALL_PREFIX})
+        - NL_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX})
+        - NC_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX})
+        - OCT_PKG_BUILD_DIR=$(realpath ${CI_PROJECT_DIR}/${OCT_PKG_BUILD_DIR})
+        - OCT_PKG_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX})
         - echo "octave packages installation job"
         - echo "Detecting MKL ..."
         - |

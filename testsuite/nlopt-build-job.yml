@@ -3,8 +3,8 @@ nlopt-build-job:       # This job runs in the build stage, which runs first.
   needs:
     - job: mbdyn-cleanup-job
   script:
-      - NL_INSTALL_PREFIX=$(realpath ${NL_INSTALL_PREFIX})
-      - NL_BUILD_DIR=$(realpath ${NL_BUILD_DIR})
+      - NL_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX})
+      - NL_BUILD_DIR=$(realpath ${CI_PROJECT_DIR}/${NL_BUILD_DIR})
       - |
         if test -d "${NL_INSTALL_PREFIX}"; then
           NL_PKG_CONFIG=`find ${NL_INSTALL_PREFIX} '(' -type d -and -name pkgconfig ')'`
