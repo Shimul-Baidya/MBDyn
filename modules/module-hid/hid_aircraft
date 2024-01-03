@@ -45,6 +45,10 @@ begin: initial value;
 		output, no;
 		# output, yes;
 
+        remark: "Warning: hid_aircraft requires user interaction and cannot be executed by MBDyn's testsuite!";
+        remark: "Warning: Simulation will be aborted after input!";
+        abort after: input;
+        threads: disable;
 	# output: iterations;
 end: initial value;
 
@@ -66,7 +70,7 @@ reference: AIRCRAFT,
 	reference, global, null;
 
 # load the joystick module
-module load: "libmodule-hid";
+module load: "libmodule-hid.la";
 
 # include joystick label declarations and set them to values
 # specific for the joystick in use
