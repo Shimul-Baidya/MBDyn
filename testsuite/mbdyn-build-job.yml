@@ -1,0 +1,154 @@
+mbdyn-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+  script:
+    #- echo "Cleanup some garbage ..."
+    #- |
+    #  for dirent in autom4te.cache build contrib CVS etc include libraries manual mbdyn modules packaging tests utils var; do
+     #   if test -d ${HOME}/${dirent}; then
+          #find ${HOME}/${dirent} -type f
+          #rm -rf ${HOME}/${dirent}
+      #  fi
+    #  done
+    - MBD_INSTALL_PREFIX=$(realpath ${MBD_INSTALL_PREFIX})
+    - NC_INSTALL_PREFIX=$(realpath ${NC_INSTALL_PREFIX})
+    - NL_INSTALL_PREFIX=$(realpath ${NL_INSTALL_PREFIX})
+    - MKL_INSTALL_PREFIX=$(realpath ${MKL_INSTALL_PREFIX})
+    - MBD_BUILD_DIR=$(realpath ${MBD_BUILD_DIR})
+    - |
+      if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
+        echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
+        exit 0
+      fi
+
+    - echo "checkout branch $CI_COMMIT_BRANCH"
+    - git checkout $CI_COMMIT_BRANCH --force
+    ## FIXME: git pull --force fails whenever workflow rules are active
+    ## Need to set upstream branch in order to fix it
+    - git branch --set-upstream-to=origin/$CI_COMMIT_BRANCH
+    - printf "pulling\n"
+    - git pull --force
+    ## Let's try to speed up the build process a bit
+    ## Execute bootstrap.sh and configure only if needed
+    ## This conditional execution may be removed as soon as the testsuite is finished
+    - |
+      if ! test -x ./configure ; then
+        chmod u+x ./bootstrap.sh
+        ./bootstrap.sh
+      fi
+    - test -x ./configure
+    - MBD_SOURCE_DIR=$(realpath $CI_PROJECT_DIR)
+    - echo "Create build directory ..."
+    - |
+      if test ${MBD_CLEAN_BUILD} = "yes" -o ${MBD_CLEAN_ALL} = "yes"; then
+        echo "cleanup build directory ..."
+        rm -rf ${MBD_BUILD_DIR}
+      fi
+    - echo "create build directory ..."
+    - if ! test -d ${MBD_BUILD_DIR}; then mkdir -p ${MBD_BUILD_DIR}; fi
+    - test -d ${MBD_BUILD_DIR}
+    - if ! test -d ${MBD_INSTALL_PREFIX}; then mkdir -p ${MBD_INSTALL_PREFIX}; fi
+    - test -d ${MBD_INSTALL_PREFIX}
+    - cd ${MBD_BUILD_DIR}
+    - echo "Build directory"
+    - pwd
+    - ls -lhF .
+    - export PATH="${NC_INSTALL_PREFIX}/bin:${PATH}"
+    - LDFLAGS=""
+    - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0"
+    - echo "Detecting NetCDF ..."
+    - |
+      if ncxx4-config --help >& /dev/null; then
+        NC_INCDIR=`ncxx4-config --includedir`
+        NC_LIBDIR=`ncxx4-config --libdir`
+        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
+        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
+      fi
+    - echo "Detecting MKL ..."
+    - |
+          if test -d "${MKL_INSTALL_PREFIX}"; then
+              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
+              find "${MKL_INSTALL_PREFIX}" '(' -name pkgconfig -or -name '*.pc' ')'
+              echo "Search for ${MKL_PKG_CONFIG}.pc ..."
+              MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
+              if test -f "${MKL_PKG_CONFIG_FILE}"; then
+                  MKL_PKG_CONFIG_PATH=`dirname "${MKL_PKG_CONFIG_FILE}"`
+                  echo "MKL_PKG_CONFIG_PATH=${MKL_PKG_CONFIG_PATH}"
+              else
+                  echo "File ${MKL_PKG_CONFIG}.pc not found"
+              fi
+          fi
+    - PARDISO_FLAGS="--without-pardiso"
+    - |
+        if test -d "${MKL_PKG_CONFIG_PATH}"; then
+            export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
+            if pkg-config --validate "${MKL_PKG_CONFIG}"; then
+                PARDISO_FLAGS="--with-pardiso"
+                CPPFLAGS="${CPPFLAGS} `pkg-config --cflags-only-I ${MKL_PKG_CONFIG}`"
+                LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG}`"
+                LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG} | sed  's/^-L\//-Wl,-rpath=\//g'`"
+            else
+                echo "pkg-config ${MKL_PKG_CONFIG} is not valid"
+            fi
+        else
+            echo "Warning: MKL_PKG_CONFIG_PATH could not be detected"
+        fi
+    ## FIXME: We cannot use "${MBD_WITH_MODULE}" or "$MBD_WITH_MODULE" because this will prevent substitution of variables.
+    ## FIXME: On the other hand --with-module=$MBD_WITH_MODULE would be invalid as well.
+    - mbd_with_module=$MBD_WITH_MODULE
+    - printf "configure ...\n"
+    - |
+      if ! test -f Makefile || test ${MBD_SOURCE_DIR}/configure -nt Makefile; then
+        if ! ${MBD_SOURCE_DIR}/configure \
+                    PYTHON_VERSION=3 \
+                    CPPFLAGS="${CPPFLAGS}" \
+                    LDFLAGS="${LDFLAGS}" \
+                    CXXFLAGS="${MBD_COMPILER_FLAGS}" \
+                    CFLAGS="${MBD_COMPILER_FLAGS}" \
+                    FFLAGS="${MBD_COMPILER_FLAGS}" \
+                    FCFLAGS="${MBD_COMPILER_FLAGS}" \
+                    --enable-python \
+                    --enable-octave \
+                    --enable-install_test_progs \
+                    --enable-netcdf \
+                    --prefix="${MBD_INSTALL_PREFIX}" \
+                    --with-octave-pkg-prefix="${OCT_PKG_INSTALL_PREFIX}" \
+                    --with-umfpack \
+                    --with-klu \
+                    ${PARDISO_FLAGS} \
+                    --with-suitesparseqr \
+                    --with-static-modules \
+                    --with-module="${mbd_with_module}" \
+                    --disable-Werror \
+                    --with-trilinos ; then
+                    ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
+                    ## FIXME: Recent versions of NetCDF require --Wno-unused-variable
+          echo "Failed to run configure"
+          exit 1
+        fi
+      fi
+    - test -f Makefile
+    - printf "Compiling the code using %s jobs ...\n" ${MBD_NUM_BUILD_JOBS}
+    - make -j${MBD_NUM_BUILD_JOBS}
+    - echo "Clean up local installation directory"
+    - rm -rf ${MBD_INSTALL_PREFIX}
+    - printf "Install the code in \"%s\"\n" "${MBD_INSTALL_PREFIX}"
+    - make install
+    - echo "MBDyn version:"
+    - ${MBD_INSTALL_PREFIX}/bin/mbdyn --version
+    - echo "Shared libraries used by MBDyn:"
+    - ldd ${MBD_INSTALL_PREFIX}/bin/mbdyn
+    - echo "Run built-in unit tests"
+    - make test
+  artifacts:
+   name: mbdyn-binaries
+   expire_in: 14 days
+   paths:
+    - $MBD_BUILD_DIR
+    - $MBD_INSTALL_PREFIX

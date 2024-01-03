@@ -1,0 +1,34 @@
+octave-pkg-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  needs:
+    - job: octave-pkg-build-job
+    - job: gmsh-build-job
+    - job: mbdyn-build-job
+  script:
+      - MBD_INSTALL_PREFIX=$(realpath ${MBD_INSTALL_PREFIX})
+      - OCT_PKG_INSTALL_PREFIX=$(realpath ${OCT_PKG_INSTALL_PREFIX})
+      - GMSH_INSTALL_PREFIX=$(realpath ${GMSH_INSTALL_PREFIX})
+      - OCT_PKG_TEST_OUTPUT_DIR=$(realpath ${OCT_PKG_TEST_OUTPUT_DIR})
+      - echo "octave packages test job"
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - which mbdyn
+      - mbdyn --version
+      - which mbdyn2easyanim.sh
+      - which gmsh
+      - gmsh --version
+      - which octave
+      - ${OCTAVE_EXEC} -qfH --version
+      # Let's see if mboct-fem-pkg is now able to locate mkl/mkl_pardiso.h
+      - echo "pardiso solver ..."
+      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=pardiso(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
+      - echo "umfpack solver ..."
+      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=umfpack(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
+      - echo "mumps solver ..."
+      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=mumps(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
+      - chmod +x testsuite/octave_pkg_testsuite.sh
+      ## FIXME: It seems that everything must be on one long line
+      - testsuite/octave_pkg_testsuite.sh --print-resources time+profile --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}"
+  artifacts:
+    paths:
+      - $OCT_PKG_TEST_OUTPUT_DIR

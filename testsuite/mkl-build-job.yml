@@ -1,0 +1,71 @@
+mkl-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+       - job: mbdyn-cleanup-job
+  script:
+       - MKL_INSTALL_PREFIX=$(realpath ${MKL_INSTALL_PREFIX})
+       - MKL_BUILD_DIR=$(realpath ${MKL_BUILD_DIR})
+       - echo "MKL installation job"
+       - |
+          if test -d "${MKL_INSTALL_PREFIX}"; then
+              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
+              find "${MKL_INSTALL_PREFIX}" '(' -name pkgconfig -or -name '*.pc' ')'
+              echo "Search for ${MKL_PKG_CONFIG}.pc ..."
+              MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
+              if test -f "${MKL_PKG_CONFIG_FILE}"; then
+                  MKL_PKG_CONFIG_PATH=`dirname "${MKL_PKG_CONFIG_FILE}"`
+              else
+                  echo "File ${MKL_PKG_CONFIG}.pc not found"
+              fi
+          fi
+       - |
+        if test -d "${MKL_PKG_CONFIG_PATH}" -a "${MBD_CLEAN_ALL}" = "no"; then
+          echo "MKL was already installed in ${MKL_PKG_CONFIG_PATH}"
+          exit 0
+        fi
+       - mkdir -p ${MKL_BUILD_DIR}
+       - cd ${MKL_BUILD_DIR}
+       - |
+          if test -z "${MKL_URL}"; then
+            echo "MKL_URL was not defined"
+            exit 0
+          fi
+          if test -z "${MKL_PACKAGE}"; then
+            echo "MKL_PACKAGE was not defined"
+            exit 0
+          fi
+          if test -f "./${MKL_PACKAGE}"; then
+            rm -f "./${MKL_PACKAGE}"
+          fi
+          if ! wget "${MKL_URL}${MKL_PACKAGE}"; then
+            echo "Failed to download ${MKL_URL}${MKL_PACKAGE}"
+            exit 1
+          fi
+          if ! test -f "./${MKL_PACKAGE}"; then
+            echo "File not found ${MKL_PACKAGE}"
+            exit 1
+          fi
+       - chmod u+x "./${MKL_PACKAGE}"
+       - MKL_STATUS="failed"
+       - |
+          # FIXME: Need to remove MKL before we are able to install it again
+          if ! sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action remove --install-dir "${MKL_INSTALL_PREFIX}"; then
+              echo "Failed to remove MKL ..."
+          fi
+       - echo "removing ${MKL_INSTALL_PREFIX} ..."
+       - rm -rf ${MKL_INSTALL_PREFIX}
+       - |
+          if sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action install --install-dir "${MKL_INSTALL_PREFIX}"; then
+              MKL_STATUS="succeeded"
+          fi
+       - rm -f "./${MKL_PACKAGE}"
+       - |
+          if test "${MKL_STATUS}" != "succeeded"; then
+              echo "Failed to install MKL"
+              exit 1
+          fi
+       - rm -rf ${MKL_BUILD_DIR}/* ## Keep the files just in case of errors
+  artifacts:
+   paths:
+      - $MKL_INSTALL_PREFIX
+      - $MKL_BUILD_DIR
