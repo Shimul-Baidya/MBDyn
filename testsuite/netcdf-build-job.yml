@@ -4,8 +4,8 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
     - job: mbdyn-cleanup-job
   script:
       - echo "netcdf-c installation job"
-      - NC_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX})
-      - NC_C_BUILD_DIR=$(realpath ${CI_PROJECT_DIR}/${NC_C_BUILD_DIR})
+      - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+      - NC_C_BUILD_DIR=${CI_PROJECT_DIR}/${NC_C_BUILD_DIR}
       - |
         if "${NC_INSTALL_PREFIX}/bin/nc-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
           echo "netcdf-c was already installed"
@@ -35,8 +35,8 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
       artifacts: true
   script:
       - echo "netcdf-cxx4 installation job"
-      - NC_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX})
-      - NC_CXX_BUILD_DIR=$(realpath ${CI_PROJECT_DIR}/${NC_CXX_BUILD_DIR})
+      - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+      - NC_CXX_BUILD_DIR=${CI_PROJECT_DIR}/${NC_CXX_BUILD_DIR}
       - |
         if "${NC_INSTALL_PREFIX}/bin/ncxx4-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
           echo "netcdf-cxx4 was already installed"

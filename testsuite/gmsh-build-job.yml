@@ -3,8 +3,8 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
    needs:
      - job: mbdyn-cleanup-job
    script:
-       - GMSH_INSTALL_PREFIX=$(realpath ${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX})
-       - GMSH_BUILD_DIR=$(realpath ${CI_PROJECT_DIR}/${GMSH_BUILD_DIR})
+       - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
+       - GMSH_BUILD_DIR=${CI_PROJECT_DIR}/${GMSH_BUILD_DIR}
        - echo "gmsh build"
        - |
          if ${GMSH_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test "${GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
