@@ -169,27 +169,18 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
-include: 'testsuite/mbdyn-cleanup-job.yml'
-
-include: 'testsuite/mkl-build-job.yml'
-
-include: 'testsuite/netcdf-build-job.yml'
-
-include: 'testsuite/nlopt-build-job.yml'
-
-include: 'testsuite/mbdyn-build-job.yml'
-
-include: 'testsuite/octave-pkg-build-job.yml'
-
-include: 'testsuite/gmsh-build-job.yml'
-
-include: 'testsuite/mbdyn-tests-private-test-job.yml'
-
-include: 'testsuite/mbdyn-tests-public-test-job.yml'
-
-include: 'testsuite/mbdyn-modules-test-job.yml'
-
-include: 'testsuite/octave-pkg-test-job.yml'
+include: 
+    - local: '/testsuite/mbdyn-cleanup-job.yml'
+    - local: '/testsuite/mkl-build-job.yml'
+    - local: '/testsuite/netcdf-build-job.yml'
+    - local: '/testsuite/nlopt-build-job.yml'
+    - local: '/testsuite/mbdyn-build-job.yml'
+    - local: '/testsuite/octave-pkg-build-job.yml'
+    - local: '/testsuite/gmsh-build-job.yml'
+    - local: '/testsuite/mbdyn-tests-private-test-job.yml'
+    - local: '/testsuite/mbdyn-tests-public-test-job.yml'
+    - local: '/testsuite/mbdyn-modules-test-job.yml'
+    - local: '/testsuite/octave-pkg-test-job.yml'  
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
