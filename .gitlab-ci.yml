@@ -115,6 +115,14 @@ variables:
   MBD_TESTS_PUBLIC_TIMEOUT: "unlimited"
   MBD_TESTS_PRIVATE_TIMEOUT: "600s"
 
+  ## Error codes which should not cause the pipeline to fail:
+  ## - timeout                    (0x2)
+  ## - module not found           (0x4)
+  ## - loadable element not found (0x8)
+  MBD_MODULE_TEST_EXIT_STATUS_MASK: "0xC"
+  MBD_TESTS_PUBLIC_EXIT_STATUS_MASK: "0x0"
+  MBD_TESTS_PRIVATE_EXIT_STATUS_MASK: "0xE"
+
   MBD_MODULE_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-modules-testjob/"
   MBD_TESTS_PUBLIC_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-public-testjob/"
   MBD_TESTS_PRIVATE_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-private-testjob/"
@@ -123,7 +131,7 @@ variables:
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
-  MBD_MODULE_TEST_FLAGS: ""
+  MBD_SIMPLE_TESTSUITE_FLAGS: ""
 
   ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
   ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
@@ -627,7 +635,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - test -d "${mbd_tests_private_input_dir}"
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: It seems that everything must be on one long line ...
-      - testsuite/simple_testsuite.sh --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${mbd_tests_private_input_dir}"
+      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${mbd_tests_private_input_dir}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
 
 mbdyn-tests-public-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
@@ -637,14 +645,17 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - echo "mbdyn-tests-public test job"
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - mbd_tests_public_input_dir="mbdyn-tests-public"
+      - mbd_tests_public_input_dir=testsuite/var/tmp/mbdyn-tests-public
       - rm -rf "${mbd_tests_public_input_dir}"
       - git clone $MBD_TESTS_PUBLIC_GITLAB "${mbd_tests_public_input_dir}"
       - test -d "${mbd_tests_public_input_dir}"
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: It seems that everything must be on one long line ...
-      - testsuite/simple_testsuite.sh --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${mbd_tests_public_input_dir}"
-
+      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${mbd_tests_public_input_dir}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
+  artifacts:
+    paths:
+      - testsuite/var/tmp/mbdyn-tests-public
+      
 mbdyn-modules-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
@@ -658,26 +669,8 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - MBD_MODULE_TEST_INPUT_DIR="`pwd`/modules"
       - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
       - chmod +x testsuite/simple_testsuite.sh
-      - |
-        declare -i rc
-        declare -i mask
+      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
 
-        ## FIXME: It seems that everything must be on one long line ...
-        testsuite/simple_testsuite.sh --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_MODULE_TEST_FLAGS}
-
-        rc=$?
-        ## Errors like "module not found" and "loadable not found" must be ignored until all the modules are compiled with all their dependencies ...
-        ((mask=(0x4|0x8)))
-        ((status=rc&~mask))
-
-        if test $((status)) = 0; then
-          message="passed"
-        else
-          message="failed"
-        fi
-
-        printf "MBDyn modules test job %s with with status 0x%2X\n" $((status))
-        exit $((status))
 
 octave-pkg-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
