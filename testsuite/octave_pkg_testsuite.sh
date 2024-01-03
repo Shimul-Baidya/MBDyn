@@ -50,6 +50,7 @@ OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
 OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
+OCT_PKG_INSTALL_PREFIX="${OCT_PKG_INSTALL_PREFIX}:-"
 
 ## Do not print any output from Octave which does not pass through this filter, even if "--verbose yes" is used!
 ## This is strictly required because the amount of output is limited to 4194304 bytes by GitLab
@@ -99,6 +100,10 @@ while ! test -z "$1"; do
             OCT_PKG_TEST_MODE="$2"
             shift
             ;;
+        --octave-pkg-install-prefix)
+            OCT_PKG_INSTALL_PREFIX="$2"
+            shift
+            ;;
         --verbose)
             OCT_PKG_TESTS_VERBOSE="$2"
             shift
@@ -125,14 +130,21 @@ done
 
 if ! test -d "${OCT_PKG_TEST_DIR}"; then
     if ! mkdir -p "${OCT_PKG_TEST_DIR}"; then
-        echo "Failed to create directory \"${OCT_PKG_TEST_DIR}\""
+        echo "Failed to create directory \"${OCT_PKG_TEST_DIR}\"!"
         exit 1
     fi
 fi
 
 if ! test -d "${OCT_PKG_TEST_DIR}"; then
-    echo "Directory \"${OCT_PKG_TEST_DIR}\" does not exist"
+    echo "Directory \"${OCT_PKG_TEST_DIR}\" does not exist!"
     exit 1
+fi
+
+if ! test -z "${OCT_PKG_INSTALL_PREFIX}"; then
+    if ! test -f "${OCT_PKG_INSTALL_PREFIX}/octave_packages"; then
+        echo "Directory \"${OCT_PKG_INSTALL_PREFIX}\" is not valid!"
+        exit 1
+    fi
 fi
 
 case "${OCT_PKG_TEST_MODE}" in
@@ -188,6 +200,12 @@ for pkgname in ${OCT_PKG_LIST}; do
     ## This will make it easier to delete those files.
     export TMPDIR="${OCT_PKG_TEST_DIR}/${pkgname}"
 
+    if test -z "${OCT_PKG_INSTALL_PREFIX}"; then
+        oct_pkg_prefix_cmd=""
+    else
+        oct_pkg_prefix_cmd=$(printf "pkg('local_list','%s');" "${OCT_PKG_INSTALL_PREFIX}/octave_packages")
+    fi
+
     oct_pkg_sigterm_dumps_core="sigterm_dumps_octave_core(false);"
     oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/${pkgname}/${pkgname}.mat"
     oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
@@ -197,11 +215,11 @@ for pkgname in ${OCT_PKG_LIST}; do
 
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
-            OCTAVE_CODE="${oct_pkg_sigterm_dumps_core}${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
+            OCTAVE_CODE="${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
             ;;
         single)
             OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('describe','-verbose','%s'); for i=1:numel(p{1}.provides) for j=1:numel(p{1}.provides{i}.functions) disp(p{1}.provides{i}.functions{j}); endfor; endfor" "${pkgname}")
-            OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} --eval "${OCTAVE_CMD_FUNCTIONS}"`
+            OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} --eval "${oct_pkg_prefix_cmd}${OCTAVE_CMD_FUNCTIONS}"`
             rc=$?
             if test ${rc} != 0; then
                 echo "${OCTAVE_CMD_FUNCTIONS} failed with status ${rc}"
@@ -210,7 +228,7 @@ for pkgname in ${OCT_PKG_LIST}; do
             OCTAVE_CODE=""
             for pkg_function_name in ${OCTAVE_PKG_FUNCTIONS}; do
                 oct_pkg_test_function_cmd=$(printf "test('%s');" "${pkg_function_name}")
-                OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_sigterm_dumps_core}${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
+                OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
             done
             ;;
         *)

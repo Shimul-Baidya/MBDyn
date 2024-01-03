@@ -210,9 +210,12 @@ OL_ARG_ENABLE(octave_utils,[  --enable-octave-utils   enable Octave utility func
 AC_ARG_WITH(mkoctfile,[  --with-mkoctfile=exec-path Octave build tool mkoctfile],[
 	ol_with_mkoctfile_exec="$withval"
 ],[ol_with_mkoctfile_exec=mkoctfile])
-AC_ARG_WITH(octave-cli,[ --with-octave-cli=exec-path Octave command line interpreter],[
+AC_ARG_WITH(octave-cli,[  --with-octave-cli=exec-path Octave command line interpreter],[
         ol_with_octave_cli_exec="$withval"
 ],[ol_with_octave_cli_exec=""])
+AC_ARG_WITH(octave-pkg-prefix,[  --with-octave-pkg-prefix=path for local installation of Octave packages],[
+        ol_with_octave_pkg_prefix="$withval"
+],[ol_with_octave_pkg_prefix=""])
 OL_ARG_ENABLE(install_test_progs, [  --enable-install_test_progs       enable installation of some test programs which are otherwise not installed], no)
 dnl ----------------------------------------------------------------
 dnl General "with" options
@@ -422,6 +425,7 @@ OCTAVE_LIBS=
 OCTAVE_INCLUDE=
 OCTAVE_MKOCTFILE=
 OCTAVE_CLI=
+OCTAVE_PKG_PREFIX=
 dnl GINACLIB_CONFIG=
 GINACLIB_LIBS=
 GINACLIB_CPPFLAGS=
@@ -881,6 +885,10 @@ if test "$ol_enable_octave" != no || test "$ol_enable_octave_utils" != no ; then
 
         if test -z "${OCTAVE_CLI}"; then
            OCTAVE_CLI=octave-cli
+        fi
+
+        if ! test -z "${ol_with_octave_pkg_prefix}"; then
+           OCTAVE_PKG_PREFIX=`printf "pkg('prefix','%s','%s');pkg('local_list','%s');" "${ol_with_octave_pkg_prefix}" "${ol_with_octave_pkg_prefix}" "${ol_with_octave_pkg_prefix}/octave_packages"`
         fi
 fi
 
@@ -3619,6 +3627,7 @@ AC_SUBST(OCTAVE_LIBS)
 AC_SUBST(OCTAVE_INCLUDE)
 AC_SUBST(OCTAVE_MKOCTFILE)
 AC_SUBST(OCTAVE_CLI)
+AC_SUBST(OCTAVE_PKG_PREFIX)
 AC_SUBST(MODULES_DIRS)
 AC_SUBST(MODULE_LOADPATH)
 AC_SUBST(wl)
