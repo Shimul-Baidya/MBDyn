@@ -1,7 +1,10 @@
 netcdf-c-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  # needs:
-  #   - job: mbdyn-cleanup-job
+  needs:
+      - project: $CI_PROJECT_PATH
+        job: $DEPENDENCY_JOB_NAME
+        ref: $ARTIFACTS_DOWNLOAD_REF
+        artifacts: true
   script:
       - echo "netcdf-c installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -23,15 +26,19 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
       - rm -rf ${NC_C_BUILD_DIR}/* ## Keep the files just in case of errors
   artifacts:
     name: netcdf-binaries
-    expire_in: 2 weeks    
+    expire_in: 2 weeks
     paths:
       - $NC_INSTALL_PREFIX
 
 netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   needs:
-     - job: netcdf-c-build-job
-       artifacts: true
+      - project: $CI_PROJECT_PATH
+        job: $DEPENDENCY_JOB_NAME
+        ref: $ARTIFACTS_DOWNLOAD_REF
+        artifacts: true
+      - job: netcdf-c-build-job
+        artifacts: true
   script:
       - echo "netcdf-cxx4 installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -53,6 +60,6 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
       - rm -rf ${NC_CXX_BUILD_DIR}
   artifacts:
     name: netcdf-cxx4-binaries
-    expire_in: 2 weeks    
+    expire_in: 2 weeks
     paths:
       - $NC_CXX4_INSTALL_PREFIX
