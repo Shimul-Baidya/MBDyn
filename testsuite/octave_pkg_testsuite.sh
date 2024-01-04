@@ -100,7 +100,7 @@ while ! test -z "$1"; do
             OCT_PKG_TEST_MODE="$2"
             shift
             ;;
-        --octave-pkg-install-prefix)
+        --octave-pkg-prefix)
             OCT_PKG_INSTALL_PREFIX="$2"
             shift
             ;;
