@@ -27,8 +27,8 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: It seems that everything must be on one long line ...
       - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${mbd_tests_private_input_dir}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
-  artifacts:
-   name: mbdyn-tests-private-test-job
-   expire_in: 2 days
-   paths:
-    - $MBD_TESTS_PRIVATE_OUTPUT_DIR
+  # artifacts:
+  #  name: mbdyn-tests-private-test-job
+  #  expire_in: 2 days
+  #  paths:
+  #   - $MBD_TESTS_PRIVATE_OUTPUT_DIR
