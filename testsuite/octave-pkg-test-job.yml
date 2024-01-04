@@ -1,11 +1,11 @@
 octave-pkg-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
-  # needs:
+  needs:
   #   - job: netcdf-c-build-job
   #   - job: nlopt-build-job
   #     artifacts: true
   #   - job: octave-pkg-build-job
-  #     artifacts: true
+        artifacts: true
   #   - job: gmsh-build-job
   #     artifacts: true
   #   - job: mbdyn-build-job

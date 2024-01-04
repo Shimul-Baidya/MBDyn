@@ -1,8 +1,8 @@
 mbdyn-tests-private-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
-  # needs:
+  needs:
   #   - job: mbdyn-build-job
-  #     artifacts: true
+       artifacts: true
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
@@ -14,7 +14,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - mbd_tests_private_input_dir="mbdyn-tests"
       - rm -rf "${mbd_tests_private_input_dir}"
       - |
-        if ! git clone $MBD_TESTS_PRIVATE_GITLAB "${mbd_tests_private_input_dir}"; then
+        if ! git clone --bare $MBD_TESTS_PRIVATE_GITLAB "${mbd_tests_private_input_dir}"; then
           echo "$MBD_TESTS_PRIVATE_GITLAB is not accessible"
           echo "Until that issue is fixed, this test will exit with status 0"
           exit 0

@@ -12,7 +12,7 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
           exit 0
         fi
       - rm -rf ${NC_C_BUILD_DIR}
-      - git clone -b main https://github.com/Unidata/netcdf-c.git ${NC_C_BUILD_DIR}
+      - git clone --bare -b main https://github.com/Unidata/netcdf-c.git ${NC_C_BUILD_DIR}
       - cd ${NC_C_BUILD_DIR}
       - mkdir build_dir
       - cd build_dir
@@ -28,9 +28,9 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
 
 netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  # needs:
+  needs:
   #   - job: netcdf-c-build-job
-  #     artifacts: true
+       artifacts: true
   script:
       - echo "netcdf-cxx4 installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -42,7 +42,7 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
           exit 0
         fi
       - rm -rf ${NC_CXX_BUILD_DIR}
-      - git clone -b master https://github.com/Unidata/netcdf-cxx4.git ${NC_CXX_BUILD_DIR}
+      - git clone --bare -b master https://github.com/Unidata/netcdf-cxx4.git ${NC_CXX_BUILD_DIR}
       - cd ${NC_CXX_BUILD_DIR}
       - mkdir build_dir
       - cd build_dir

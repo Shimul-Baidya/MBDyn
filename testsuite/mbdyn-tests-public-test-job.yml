@@ -1,7 +1,8 @@
 mbdyn-tests-public-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
-  # needs:
+   needs:
   #   - job: mbdyn-build-job
+        artifacts: true
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
@@ -13,7 +14,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
 
       - rm -rf ${MBD_TESTS_PUBLIC_INPUT_DIR}
-      - git clone $MBD_TESTS_PUBLIC_GITLAB ${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - git clone --bare $MBD_TESTS_PUBLIC_GITLAB ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: It seems that everything must be on one long line ...

@@ -1,5 +1,7 @@
 mbdyn-build-job:       # This job runs in the build stage, which runs first.
   stage: build
+  needs:
+        artifacts: true
   # needs:
   #   - job: netcdf-c-build-job
   #     artifacts: true
