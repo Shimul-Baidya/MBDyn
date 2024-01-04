@@ -69,13 +69,17 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0"
     - echo "Detecting NetCDF ..."
     - |
-      if ncxx4-config --help; then
+      if ncxx4-config --help >& /dev/null; then
         NC_INCDIR=`ncxx4-config --includedir`
         NC_LIBDIR=`ncxx4-config --libdir`
         CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
         LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
-      else
-        exit 1
+      fi
+      if nc-config --help >& /dev/null; then
+        NC_INCDIR=`nc-config --includedir`
+        NC_LIBDIR=`nc-config --libdir`
+        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
+        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
       fi
     - echo "Detecting MKL ..."
     - |
