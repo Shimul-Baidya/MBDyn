@@ -16,6 +16,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - git clone ${MBD_TESTS_PUBLIC_GITLAB} ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - chmod +x testsuite/simple_testsuite.sh
+      - mkdir -p ${MBD_TESTS_PUBLIC_OUTPUT_DIR} ## needed for realpath
         ## FIXME: It seems that everything must be on one long line ...
       - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
   # artifacts:
