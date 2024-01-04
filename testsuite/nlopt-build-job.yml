@@ -14,7 +14,7 @@ nlopt-build-job:       # This job runs in the build stage, which runs first.
           exit 0
         fi
       - rm -rf ${NL_BUILD_DIR}
-      - git clone --bare -b master https://github.com/stevengj/nlopt.git ${NL_BUILD_DIR}
+      - git clone --single-branch -b master https://github.com/stevengj/nlopt.git ${NL_BUILD_DIR}
       - cd ${NL_BUILD_DIR}
       - mkdir build_dir
       - cd build_dir
