@@ -109,7 +109,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - mbd_with_module=$MBD_WITH_MODULE
     - printf "configure ...\n"
     - |
-      if ! test -f Makefile || test ${MBD_SOURCE_DIR}/configure -nt Makefile; then
+      if ! test -f Makefile; then
         if ! ${MBD_SOURCE_DIR}/configure \
                     PYTHON_VERSION=3 \
                     CPPFLAGS="${CPPFLAGS}" \
@@ -157,6 +157,11 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    paths:
     - $MBD_INSTALL_PREFIX
     - $OCT_PKG_INSTALL_PREFIX
+    
+  cache:
+   key: mbdyn-build-job-build-directory
+   paths:
+    - $MBD_BUILD_DIR
     - Makefile.in
     - aclocal.m4
     - autom4te.cache/
@@ -209,8 +214,3 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - testsuite/var/
     - utils/Makefile.in
     - var/Makefile.in
-    
-  cache:
-   key: mbdyn-build-job-build-directory
-   paths:
-    - $MBD_BUILD_DIR
