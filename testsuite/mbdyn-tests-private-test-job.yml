@@ -12,21 +12,22 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
       - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
       - MBD_TESTS_PRIVATE_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_TESTS_PRIVATE_OUTPUT_DIR}
+      - MBD_TESTS_PRIVATE_INPUT_DIR=${CI_PROJECT_DIR}/${MBD_TESTS_PRIVATE_INPUT_DIR}
       - echo "mbdyn-tests-private test job"
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - mbd_tests_private_input_dir="mbdyn-tests"
-      - rm -rf "${mbd_tests_private_input_dir}"
+      - rm -rf "${MBD_TESTS_PRIVATE_INPUT_DIR}"
       - |
-        if ! git clone $MBD_TESTS_PRIVATE_GITLAB "${mbd_tests_private_input_dir}"; then
+        if ! git clone $MBD_TESTS_PRIVATE_GITLAB "${MBD_TESTS_PRIVATE_INPUT_DIR}"; then
           echo "$MBD_TESTS_PRIVATE_GITLAB is not accessible"
           echo "Until that issue is fixed, this test will exit with status 0"
           exit 0
         fi
-      - test -d "${mbd_tests_private_input_dir}"
+      - test -d "${MBD_TESTS_PRIVATE_INPUT_DIR}"
       - chmod +x testsuite/simple_testsuite.sh
+      - mkdir -p "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" ## needed for realpath
         ## FIXME: It seems that everything must be on one long line ...
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${mbd_tests_private_input_dir}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
+      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
   # artifacts:
   #  name: mbdyn-tests-private-test-job
   #  expire_in: 2 days
