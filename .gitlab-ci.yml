@@ -46,6 +46,9 @@ variables:
   ## Local installation directory for NetCDF
   NC_INSTALL_PREFIX: "testsuite/var/cache/netcdf/"
 
+  ## Local installation directory for NetCDF
+  NC_CXX4_INSTALL_PREFIX: "testsuite/var/cache/netcdf-cxx4/"
+
   ## Local installation directory for nlopt
   NL_INSTALL_PREFIX: "testsuite/var/cache/nlopt/"
 
@@ -169,7 +172,7 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
-include: 
+include:
     - local: '/testsuite/mbdyn-cleanup-job.yml'
     - local: '/testsuite/mkl-build-job.yml'
     - local: '/testsuite/netcdf-build-job.yml'
@@ -180,7 +183,7 @@ include:
     - local: '/testsuite/mbdyn-tests-private-test-job.yml'
     - local: '/testsuite/mbdyn-tests-public-test-job.yml'
     - local: '/testsuite/mbdyn-modules-test-job.yml'
-    - local: '/testsuite/octave-pkg-test-job.yml'  
+    - local: '/testsuite/octave-pkg-test-job.yml'
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.

@@ -1,9 +1,9 @@
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs:
-       - job: mbdyn-cleanup-job
+  # needs:
+  #      - job: mbdyn-cleanup-job
   script:
-       - MKL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MKL_INSTALL_PREFIX}
+       - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
        - MKL_BUILD_DIR=${CI_PROJECT_DIR}/${MKL_BUILD_DIR}
        - echo "MKL installation job"
        - |
@@ -67,5 +67,6 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
        - rm -rf ${MKL_BUILD_DIR}/* ## Keep the files just in case of errors
   # artifacts:
   #  paths:
-  #     - $MKL_INSTALL_PREFIX
-  #     - $MKL_BUILD_DIR
+      ## FIXME: MKL_INSTALL_PREFIX cannot be used as an artifact because it is really huge!!
+      ## - $MKL_INSTALL_PREFIX
+      ## - $MKL_BUILD_DIR

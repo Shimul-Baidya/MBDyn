@@ -1,7 +1,7 @@
 netcdf-c-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs:
-    - job: mbdyn-cleanup-job
+  # needs:
+  #   - job: mbdyn-cleanup-job
   script:
       - echo "netcdf-c installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -21,24 +21,23 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
       - if test -d "${NC_INSTALL_PREFIX}"; then rm -rf "${NC_INSTALL_PREFIX}"; fi
       - make install
       - rm -rf ${NC_C_BUILD_DIR}/* ## Keep the files just in case of errors
-  # artifacts:
-  #   name: netcdf-binaries
-  #   expire_in: never
-  #   paths:
-  #     - $NC_INSTALL_PREFIX
-  #     - $NC_C_BUILD_DIR
+  artifacts:
+    name: netcdf-binaries
+    paths:
+      - $NC_INSTALL_PREFIX
 
 netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs:
-    - job: netcdf-c-build-job
-      #artifacts: true
+  # needs:
+  #   - job: netcdf-c-build-job
+  #     artifacts: true
   script:
       - echo "netcdf-cxx4 installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+      - NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
       - NC_CXX_BUILD_DIR=${CI_PROJECT_DIR}/${NC_CXX_BUILD_DIR}
       - |
-        if "${NC_INSTALL_PREFIX}/bin/ncxx4-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
+        if "${NC_CXX4_INSTALL_PREFIX}/bin/ncxx4-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
           echo "netcdf-cxx4 was already installed"
           exit 0
         fi
@@ -47,11 +46,11 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
       - cd ${NC_CXX_BUILD_DIR}
       - mkdir build_dir
       - cd build_dir
-      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}" -DnetCDF_DIR="${NC_INSTALL_PREFIX}/lib/cmake/netCDF"
+      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX}" -DnetCDF_DIR="${NC_INSTALL_PREFIX}/lib/cmake/netCDF"
       - make -j${MBD_NUM_BUILD_JOBS}
       - make install
       - rm -rf ${NC_CXX_BUILD_DIR}
-  # artifacts:
-  #   paths:
-  #     - $NC_INSTALL_PREFIX
-  #     - $NC_CXX_BUILD_DIR
+  artifacts:
+    name: netcdf-cxx4-binaries
+    paths:
+      - $NC_CXX4_INSTALL_PREFIX

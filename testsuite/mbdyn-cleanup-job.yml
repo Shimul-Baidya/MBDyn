@@ -1,6 +1,6 @@
 mbdyn-cleanup-job:
   stage: .pre
-  needs: []
+  # needs: []
   script:
         - OUTPUT_FORMAT=pid,comm,tty,state,cputime,vsize,uname,pcpu,pmem,tty
         - AWK_FILTER_CMD="/mbdyn|octave/{if(\$3==\"?\"&&\$4!=\"Z\"){print \$1};}"

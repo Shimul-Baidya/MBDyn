@@ -1,7 +1,7 @@
 mbdyn-tests-public-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
-  needs:
-    - job: mbdyn-build-job
+  # needs:
+  #   - job: mbdyn-build-job
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
@@ -18,7 +18,6 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: It seems that everything must be on one long line ...
       - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
-  # artifacts:
-  #   paths:
-  #     - $MBD_TESTS_PUBLIC_INPUT_DIR
-  #     - $MBD_TESTS_PUBLIC_OUTPUT_DIR
+  artifacts:
+    paths:
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR
