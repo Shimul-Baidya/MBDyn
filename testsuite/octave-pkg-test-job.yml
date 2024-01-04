@@ -1,13 +1,13 @@
 octave-pkg-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
-      - job: mkl-build-job    
+      - job: mkl-build-job
       - job: netcdf-c-build-job
         artifacts: true
       - job: netcdf-cxx4-build-job
         artifacts: true
       - job: nlopt-build-job
-        artifacts: true        
+        artifacts: true
       - job: mbdyn-build-job
         artifacts: true
       - job: gmsh-build-job
@@ -35,6 +35,6 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - testsuite/octave_pkg_testsuite.sh --print-resources time+profile --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}"
   # artifacts:
   #    name: octave-pkg-test-output-dir
-  #    expire_in: 2 days     
+  #    expire_in: 2 days
   #    paths:
   #      - $OCT_PKG_TEST_OUTPUT_DIR

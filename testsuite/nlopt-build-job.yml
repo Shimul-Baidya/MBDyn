@@ -13,17 +13,29 @@ nlopt-build-job:       # This job runs in the build stage, which runs first.
           echo "nlopt was already installed"
           exit 0
         fi
-      - rm -rf ${NL_BUILD_DIR}
-      - git clone -b master https://github.com/stevengj/nlopt.git ${NL_BUILD_DIR}
+      - |
+        if ! test -d ${NL_BUILD_DIR}; then
+          git clone -b master https://github.com/stevengj/nlopt.git ${NL_BUILD_DIR}
+        fi
       - cd ${NL_BUILD_DIR}
-      - mkdir build_dir
+      - |
+        if ! test -d build_dir; then
+          mkdir build_dir
+        fi
       - cd build_dir
-      - cmake .. -DCMAKE_INSTALL_PREFIX="${NL_INSTALL_PREFIX}" -DBUILD_SHARED_LIBS=ON -DNLOPT_OCTAVE=OFF -DNLOPT_PYTHON=OFF
+      - |
+        if ! test -f Makefile; then
+          cmake .. -DCMAKE_INSTALL_PREFIX="${NL_INSTALL_PREFIX}" -DBUILD_SHARED_LIBS=ON -DNLOPT_OCTAVE=OFF -DNLOPT_PYTHON=OFF
+        fi
       - make -j${MBD_NUM_BUILD_JOBS}
+      - rm -rf ${NL_INSTALL_PREFIX}
       - make install
-      - rm -rf ${NL_BUILD_DIR}
   artifacts:
      name: nlopt-binaries
      expire_in: 2 weeks     
      paths:
       - $NL_INSTALL_PREFIX
+  cache:
+   key: nlopt-build-job
+   paths:
+      - $NL_BUILD_DIR

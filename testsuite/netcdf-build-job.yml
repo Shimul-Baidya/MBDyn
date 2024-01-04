@@ -9,29 +9,39 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
           echo "netcdf-c was already installed"
           exit 0
         fi
-      - rm -rf ${NC_C_BUILD_DIR}
-      - git clone -b main https://github.com/Unidata/netcdf-c.git ${NC_C_BUILD_DIR}
+      - |
+        if ! test -d ${NC_C_BUILD_DIR}; then
+          git clone -b main https://github.com/Unidata/netcdf-c.git ${NC_C_BUILD_DIR}
+        fi
       - cd ${NC_C_BUILD_DIR}
-      - mkdir build_dir
+      - git pull --force
+      - |
+        if ! test -d build_dir; then
+          mkdir build_dir
+        fi
       - cd build_dir
-      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}"
+      - |
+        if ! test -f Makefile; then
+          cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}"
+        fi
       - make -j${MBD_NUM_BUILD_JOBS}
-      - if test -d "${NC_INSTALL_PREFIX}"; then rm -rf "${NC_INSTALL_PREFIX}"; fi
+      - rm -rf "${NC_INSTALL_PREFIX}"
       - make install
-      - rm -rf ${NC_C_BUILD_DIR}/* ## Keep the files just in case of errors
-  # needs:
-  #     - project: $CI_PROJECT_PATH
-  #       job: $DEPENDENCY_JOB_NAME
-  #       ref: $ARTIFACTS_DOWNLOAD_REF
-  #       artifacts: true           
   artifacts:
     name: netcdf-binaries
     expire_in: 2 weeks
     paths:
       - $NC_INSTALL_PREFIX
+  cache:
+   key: netcdf-c-build-job
+   paths:
+    - $NC_C_BUILD_DIR
 
 netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
   stage: build
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
   script:
       - echo "netcdf-cxx4 installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -42,22 +52,30 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
           echo "netcdf-cxx4 was already installed"
           exit 0
         fi
-      - rm -rf ${NC_CXX_BUILD_DIR}
-      - git clone -b master https://github.com/Unidata/netcdf-cxx4.git ${NC_CXX_BUILD_DIR}
+      - |
+        if ! test -f ${NC_CXX_BUILD_DIR}; then
+          git clone -b master https://github.com/Unidata/netcdf-cxx4.git ${NC_CXX_BUILD_DIR}
+        fi
       - cd ${NC_CXX_BUILD_DIR}
-      - mkdir build_dir
+      - git pull --force
+      - |
+        if ! test -d build_dir; then
+          mkdir build_dir
+        fi
       - cd build_dir
-      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX}" -DnetCDF_DIR="${NC_INSTALL_PREFIX}/lib/cmake/netCDF"
+      - |
+        if ! test -f Makefile; then
+          cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX}" -DnetCDF_DIR="${NC_INSTALL_PREFIX}/lib/cmake/netCDF"
+        fi
       - make -j${MBD_NUM_BUILD_JOBS}
+      - rm -rf "${NC_CXX4_INSTALL_PREFIX}"
       - make install
-      - rm -rf ${NC_CXX_BUILD_DIR}
-  # needs:
-  #     - project: $CI_PROJECT_PATH
-  #       job: $DEPENDENCY_JOB_NAME
-  #       ref: $ARTIFACTS_DOWNLOAD_REF
-  #       artifacts: true      
   artifacts:
     name: netcdf-cxx4-binaries
     expire_in: 2 weeks
     paths:
       - $NC_CXX4_INSTALL_PREFIX
+  cache:
+   key: netcdf-cxx4-build-job
+   paths:
+      - $NC_CXX4_BUILD_DIR

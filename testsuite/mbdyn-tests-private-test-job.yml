@@ -1,6 +1,8 @@
 mbdyn-tests-private-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
+     - job: mkl-build-job
+       artifacts: true   
      - job: netcdf-c-build-job
        artifacts: true
      - job: netcdf-cxx4-build-job

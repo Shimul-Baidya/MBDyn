@@ -1,8 +1,14 @@
 mbdyn-tests-public-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
-    - job: mbdyn-build-job
+    - job: netcdf-c-build-job
       artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+    - job: mbdyn-build-job
+      artifacts: true      
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
