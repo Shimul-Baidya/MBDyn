@@ -149,7 +149,8 @@ variables:
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
-  MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
+  ## In order to enable verbose output for MBDyn use: MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
+  MBD_SIMPLE_TESTSUITE_FLAGS: ""
 
   ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
   ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
