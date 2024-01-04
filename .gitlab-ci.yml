@@ -149,7 +149,7 @@ variables:
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
-  MBD_SIMPLE_TESTSUITE_FLAGS: ""
+  MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
 
   ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
   ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
