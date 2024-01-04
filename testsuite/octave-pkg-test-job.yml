@@ -1,15 +1,19 @@
 octave-pkg-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
-  #   - job: netcdf-c-build-job
-  #   - job: nlopt-build-job
-  #     artifacts: true
-  #   - job: octave-pkg-build-job
+      - job: mkl-build-job    
+      - job: netcdf-c-build-job
         artifacts: true
-  #   - job: gmsh-build-job
-  #     artifacts: true
-  #   - job: mbdyn-build-job
-  #     artifacts: true
+      - job: netcdf-cxx4-build-job
+        artifacts: true
+      - job: nlopt-build-job
+        artifacts: true        
+      - job: mbdyn-build-job
+        artifacts: true
+      - job: gmsh-build-job
+        artifacts: true
+      - job: octave-pkg-build-job
+        artifacts: true
   script:
       - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}

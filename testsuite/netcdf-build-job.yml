@@ -29,7 +29,7 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
 netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   needs:
-  #   - job: netcdf-c-build-job
+     - job: netcdf-c-build-job
        artifacts: true
   script:
       - echo "netcdf-cxx4 installation job"
