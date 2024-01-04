@@ -68,6 +68,7 @@ variables:
   MKL_BUILD_DIR: "testsuite/var/tmp/build/mkl/"
 
   MBD_TESTS_PUBLIC_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-public/"
+  MBD_TESTS_PRIVATE_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-private/"
 
   ## Clean up the build directory of MBDyn
   MBD_CLEAN_BUILD: "no"
