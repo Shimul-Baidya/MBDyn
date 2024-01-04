@@ -157,6 +157,59 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    paths:
     - $MBD_INSTALL_PREFIX
     - $OCT_PKG_INSTALL_PREFIX
+    - Makefile.in
+    - aclocal.m4
+    - autom4te.cache/
+    - build/Makefile.in
+    - build/compile
+    - build/config.guess
+    - build/config.sub
+    - build/depcomp
+    - build/install-sh
+    - build/ltmain.sh
+    - build/missing
+    - configure
+    - contrib/n2m/Makefile.in
+    - contrib/n2m/aclocal.m4
+    - contrib/n2m/autom4te.cache/
+    - contrib/n2m/compile
+    - contrib/n2m/config.guess
+    - contrib/n2m/config.h.in
+    - contrib/n2m/config.sub
+    - contrib/n2m/configure
+    - contrib/n2m/depcomp
+    - contrib/n2m/install-sh
+    - contrib/n2m/ltmain.sh
+    - contrib/n2m/missing
+    - etc/Makefile.in
+    - etc/modal.d/Makefile.in
+    - etc/pam.d/Makefile.in
+    - include/Makefile.in
+    - include/ac/Makefile.in
+    - include/mbconfig.h.in
+    - libraries/Makefile.in
+    - libraries/libann/Makefile.in
+    - libraries/libcolamd/Makefile.in
+    - libraries/libmbc/Makefile.in
+    - libraries/libmbmath/Makefile.in
+    - libraries/libmbutil/Makefile.in
+    - libraries/libmbwrap/Makefile.in
+    - libraries/libnaive/Makefile.in
+    - libraries/libobjs/Makefile.in
+    - libraries/liby12/Makefile.in
+    - manual/Makefile.in
+    - mbdyn/Makefile.in
+    - mbdyn/aero/Makefile.in
+    - mbdyn/base/Makefile.in
+    - mbdyn/elec/Makefile.in
+    - mbdyn/hydr/Makefile.in
+    - mbdyn/struct/Makefile.in
+    - mbdyn/thermo/Makefile.in
+    - modules/Makefile.in
+    - testsuite/var/
+    - utils/Makefile.in
+    - var/Makefile.in
+    
   cache:
    key: mbdyn-build-job-build-directory
    paths:
