@@ -28,6 +28,6 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
        - rm -rf ${GMSH_BUILD_DIR}/*
        - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
    artifacts:
+     expire_in: 2 weeks
      paths:
-       expire_in: 2 weeks
        - $GMSH_INSTALL_PREFIX
