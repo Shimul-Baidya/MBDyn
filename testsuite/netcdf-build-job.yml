@@ -1,10 +1,5 @@
 netcdf-c-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs:
-      - project: $CI_PROJECT_PATH
-        job: $DEPENDENCY_JOB_NAME
-        ref: $ARTIFACTS_DOWNLOAD_REF
-        artifacts: true
   script:
       - echo "netcdf-c installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -24,6 +19,11 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
       - if test -d "${NC_INSTALL_PREFIX}"; then rm -rf "${NC_INSTALL_PREFIX}"; fi
       - make install
       - rm -rf ${NC_C_BUILD_DIR}/* ## Keep the files just in case of errors
+  needs:
+      - project: $CI_PROJECT_PATH
+        job: $DEPENDENCY_JOB_NAME
+        ref: $ARTIFACTS_DOWNLOAD_REF
+        artifacts: true      
   artifacts:
     name: netcdf-binaries
     expire_in: 2 weeks
@@ -32,13 +32,6 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
 
 netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  needs:
-      - project: $CI_PROJECT_PATH
-        job: $DEPENDENCY_JOB_NAME
-        ref: $ARTIFACTS_DOWNLOAD_REF
-        artifacts: true
-      - job: netcdf-c-build-job
-        artifacts: true
   script:
       - echo "netcdf-cxx4 installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -58,6 +51,11 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
       - make -j${MBD_NUM_BUILD_JOBS}
       - make install
       - rm -rf ${NC_CXX_BUILD_DIR}
+  needs:
+      - project: $CI_PROJECT_PATH
+        job: $DEPENDENCY_JOB_NAME
+        ref: $ARTIFACTS_DOWNLOAD_REF
+        artifacts: true      
   artifacts:
     name: netcdf-cxx4-binaries
     expire_in: 2 weeks
