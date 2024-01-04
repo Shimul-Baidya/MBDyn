@@ -6,9 +6,6 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - job: netcdf-cxx4-build-job
       artifacts: true
     - job: mkl-build-job
-    - project: $CI_PROJECT_PATH
-      job: $DEPENDENCY_JOB_NAME
-      ref: $ARTIFACTS_DOWNLOAD_REF
       artifacts: true      
   script:
     #- echo "Cleanup some garbage ..."
