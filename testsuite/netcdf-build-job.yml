@@ -23,6 +23,7 @@ netcdf-c-build-job:       # This job runs in the build stage, which runs first.
       - rm -rf ${NC_C_BUILD_DIR}/* ## Keep the files just in case of errors
   artifacts:
     name: netcdf-binaries
+    expire_in: 2 weeks    
     paths:
       - $NC_INSTALL_PREFIX
 
@@ -52,5 +53,6 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
       - rm -rf ${NC_CXX_BUILD_DIR}
   artifacts:
     name: netcdf-cxx4-binaries
+    expire_in: 2 weeks    
     paths:
       - $NC_CXX4_INSTALL_PREFIX

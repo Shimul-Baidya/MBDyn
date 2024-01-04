@@ -21,6 +21,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
     - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
     - MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR}
+    - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
     - echo $CI_PROJECT_DIR/testsuite
     - find $CI_PROJECT_DIR/testsuite -type f
     - |
@@ -149,6 +150,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - echo "Run built-in unit tests"
     - make test
   artifacts:
+   expire_in: 2 weeks
    name: mbdyn-install-prefix
    paths:
     - $MBD_INSTALL_PREFIX
