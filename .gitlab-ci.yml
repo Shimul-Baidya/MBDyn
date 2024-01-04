@@ -57,7 +57,7 @@ variables:
   MBD_BUILD_DIR: "testsuite/var/tmp/build/mbdyn/"
 
   NC_C_BUILD_DIR: "testsuite/var/tmp/build/netcdf-c/"
-  NC_CXX_BUILD_DIR: "testsuite/var/tmp/build/netcdf-cxx4/"
+  NC_CXX4_BUILD_DIR: "testsuite/var/tmp/build/netcdf-cxx4/"
 
   NL_BUILD_DIR: "testsuite/var/tmp/build/nlopt/"
 
@@ -168,6 +168,12 @@ variables:
   ## "disabled" Ignore running processes. Probably not a safe option.
   MBD_FORCE_KILL: "no"
 
+default:
+  cache:
+    key: testsuite-$CI_PROJECT_NAME-$CI_COMMIT_BRANCH
+    paths:
+      - testsuite/var/tmp/build
+  
 stages:          # List of stages for jobs, and their order of execution
   - .pre
   - build

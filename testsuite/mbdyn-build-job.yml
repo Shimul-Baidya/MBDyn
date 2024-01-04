@@ -169,7 +169,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
   cache:
    key: mbdyn-build-job-build-directory
    paths:
-    - $MBD_BUILD_DIR
+   # - $MBD_BUILD_DIR
     - Makefile.in
     - aclocal.m4
     - autom4te.cache/
