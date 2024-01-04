@@ -6,7 +6,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - job: netcdf-cxx4-build-job
       artifacts: true
     - job: mkl-build-job
-      artifacts: true      
+      artifacts: true
   script:
     #- echo "Cleanup some garbage ..."
     #- |
@@ -69,11 +69,13 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0"
     - echo "Detecting NetCDF ..."
     - |
-      if ncxx4-config --help >& /dev/null; then
+      if ncxx4-config --help; then
         NC_INCDIR=`ncxx4-config --includedir`
         NC_LIBDIR=`ncxx4-config --libdir`
         CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
         LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
+      else
+        exit 1
       fi
     - echo "Detecting MKL ..."
     - |
@@ -106,6 +108,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         fi
     ## FIXME: We cannot use "${MBD_WITH_MODULE}" or "$MBD_WITH_MODULE" because this will prevent substitution of variables.
     ## FIXME: On the other hand --with-module=$MBD_WITH_MODULE would be invalid as well.
+    - echo CPPFLAGS="${CPPFLAGS}"
+    - echo LDFLAGS="${LDFLAGS}"
     - mbd_with_module=$MBD_WITH_MODULE
     - printf "configure ...\n"
     - |
@@ -157,7 +161,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    paths:
     - $MBD_INSTALL_PREFIX
     - $OCT_PKG_INSTALL_PREFIX
-    
+
   cache:
    key: mbdyn-build-job-build-directory
    paths:
