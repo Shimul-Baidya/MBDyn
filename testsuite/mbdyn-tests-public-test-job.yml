@@ -14,7 +14,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
 
       - rm -rf ${MBD_TESTS_PUBLIC_INPUT_DIR}
-      - git clone --single-branch -b master $MBD_TESTS_PUBLIC_GITLAB ${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - git clone -b master $MBD_TESTS_PUBLIC_GITLAB ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: It seems that everything must be on one long line ...

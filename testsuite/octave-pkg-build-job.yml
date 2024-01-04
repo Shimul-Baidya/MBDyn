@@ -116,7 +116,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                       if test -d "${pkgname}"; then
                           rm -rf "${pkgname}"
                       fi
-                      if ! git clone --single-branch -b "${pkg_branch}" "https://github.com/octave-user/${pkgname}.git"; then
+                      if ! git clone -b "${pkg_branch}" "https://github.com/octave-user/${pkgname}.git"; then
                           printf "failed to clone package \"%s\" from github.com\n" "${pkgname}"
                           exit 1
                       fi
