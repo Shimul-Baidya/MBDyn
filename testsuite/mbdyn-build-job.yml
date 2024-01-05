@@ -24,8 +24,6 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR}
     - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
     - mkdir -p ${OCT_PKG_INSTALL_PREFIX}
-    - echo $CI_PROJECT_DIR/testsuite
-    - find $CI_PROJECT_DIR/testsuite -type f
     - |
       if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
         echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
@@ -56,9 +54,9 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         rm -rf ${MBD_BUILD_DIR}
       fi
     - echo "create build directory ..."
-    - if ! test -d ${MBD_BUILD_DIR}; then mkdir -p ${MBD_BUILD_DIR}; fi
+    - mkdir -p ${MBD_BUILD_DIR}
     - test -d ${MBD_BUILD_DIR}
-    - if ! test -d ${MBD_INSTALL_PREFIX}; then mkdir -p ${MBD_INSTALL_PREFIX}; fi
+    - mkdir -p ${MBD_INSTALL_PREFIX}
     - test -d ${MBD_INSTALL_PREFIX}
     - cd ${MBD_BUILD_DIR}
     - echo "Build directory"
@@ -69,17 +67,21 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0"
     - echo "Detecting NetCDF ..."
     - |
-      if ncxx4-config --help >& /dev/null; then
-        NC_INCDIR=`ncxx4-config --includedir`
-        NC_LIBDIR=`ncxx4-config --libdir`
-        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
-        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
-      fi
       if nc-config --help >& /dev/null; then
         NC_INCDIR=`nc-config --includedir`
         NC_LIBDIR=`nc-config --libdir`
         CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
         LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
+      else
+        echo "Warning: nc-config was not found in ${NC_INSTALL_PREFIX}!"
+      fi
+      if ncxx4-config --help >& /dev/null; then
+        NC_INCDIR=`ncxx4-config --includedir`
+        NC_LIBDIR=`ncxx4-config --libdir`
+        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
+        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
+      else
+        echo "Warning: ncxx4-config was not found in ${NC_CXX4_INSTALL_PREFIX}!"
       fi
     - echo "Detecting MKL ..."
     - |
@@ -94,6 +96,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
               else
                   echo "File ${MKL_PKG_CONFIG}.pc not found"
               fi
+          else
+              echo "Warning: MKL was not found in ${MKL_INSTALL_PREFIX}!"
           fi
     - PARDISO_FLAGS="--without-pardiso"
     - |
@@ -118,6 +122,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - printf "configure ...\n"
     - |
       if ! test -f Makefile; then
+        echo "${MBD_BUILD_DIR}/Makefile does not exist!"
+        echo "Run configure step ..."
         if ! ${MBD_SOURCE_DIR}/configure \
                     PYTHON_VERSION=3 \
                     CPPFLAGS="${CPPFLAGS}" \
@@ -141,10 +147,12 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
                     --disable-Werror \
                     --with-trilinos ; then
                     ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
-                    ## FIXME: Recent versions of NetCDF require --Wno-unused-variable
-          echo "Failed to run configure"
+          echo "Failed to run  ${MBD_SOURCE_DIR}/configure"
           exit 1
         fi
+      else
+          echo "${MBD_BUILD_DIR}/Makefile exist"
+          echo "configure step will be skipped ..."
       fi
     - test -f Makefile
     - printf "Compiling the code using %s jobs ...\n" ${MBD_NUM_BUILD_JOBS}
@@ -164,12 +172,11 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    name: mbdyn-install-prefix
    paths:
     - $MBD_INSTALL_PREFIX
-    - $OCT_PKG_INSTALL_PREFIX
+    - $OCT_PKG_INSTALL_PREFIX ## Because mbdyn_util_oct will be installed there!
 
   cache:
    key: mbdyn-build-job-build-directory
    paths:
-   # - $MBD_BUILD_DIR
     - Makefile.in
     - aclocal.m4
     - autom4te.cache/
