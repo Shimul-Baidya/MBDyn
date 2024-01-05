@@ -23,6 +23,8 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - MBD_MODULE_TEST_INPUT_DIR=${CI_PROJECT_DIR}/modules
+      - export LD_LIBRARY_PATH=${MBD_INSTALL_PREFIX}/libexec:${LD_LIBRARY_PATH}
+      - ls -lhF ${MBD_INSTALL_PREFIX}/libexec
       - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
       - mkdir -p "${MBD_MODULE_TEST_OUTPUT_DIR}" ## needed for realpath
       - chmod +x testsuite/simple_testsuite.sh
