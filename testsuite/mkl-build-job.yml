@@ -1,7 +1,5 @@
 mkl-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  # needs:
-  #      - job: mbdyn-cleanup-job
   script:
        - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
        - MKL_BUILD_DIR=${CI_PROJECT_DIR}/${MKL_BUILD_DIR}
@@ -30,22 +28,20 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
             echo "MKL_URL was not defined"
             exit 0
           fi
+       - |
           if test -z "${MKL_PACKAGE}"; then
             echo "MKL_PACKAGE was not defined"
             exit 0
           fi
-          if test -f "./${MKL_PACKAGE}"; then
-            rm -f "./${MKL_PACKAGE}"
+       - |
+          if ! test -f "${MKL_PACKAGE}"; then
+            if ! wget "${MKL_URL}${MKL_PACKAGE}"; then
+              echo "Failed to download ${MKL_URL}${MKL_PACKAGE}"
+              exit 1
+            fi
           fi
-          if ! wget "${MKL_URL}${MKL_PACKAGE}"; then
-            echo "Failed to download ${MKL_URL}${MKL_PACKAGE}"
-            exit 1
-          fi
-          if ! test -f "./${MKL_PACKAGE}"; then
-            echo "File not found ${MKL_PACKAGE}"
-            exit 1
-          fi
-       - chmod u+x "./${MKL_PACKAGE}"
+       - test -f "${MKL_PACKAGE}"
+       - chmod u+x "${MKL_PACKAGE}"
        - MKL_STATUS="failed"
        - |
           # FIXME: Need to remove MKL before we are able to install it again
@@ -58,15 +54,12 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
           if sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action install --install-dir "${MKL_INSTALL_PREFIX}"; then
               MKL_STATUS="succeeded"
           fi
-       - rm -f "./${MKL_PACKAGE}"
        - |
           if test "${MKL_STATUS}" != "succeeded"; then
               echo "Failed to install MKL"
               exit 1
           fi
-       - rm -rf ${MKL_BUILD_DIR}/* ## Keep the files just in case of errors
   # artifacts:
   #  paths:
       ## FIXME: MKL_INSTALL_PREFIX cannot be used as an artifact because it is really huge!!
       ## - $MKL_INSTALL_PREFIX
-      ## - $MKL_BUILD_DIR
