@@ -167,6 +167,10 @@ variables:
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
 
+  ## Allow us to execute a one line command only once, although it might be not very secure.
+  ## So, we do not need to modify .gitlab-ci.yml every time.
+  MBD_TESTSUITE_BOOTLOADER: ""
+  
   ## Send a kill -9 to all running octave and mbdyn processes owned by the same user and without a terminal connected.
   ## For whatever reason, it could happen that those processes are not terminated if a pipeline is cancelled.
   ## "no"       Do not start the pipeline if there are any running processes! This option should be safe.
