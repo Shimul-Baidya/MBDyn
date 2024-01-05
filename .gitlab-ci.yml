@@ -77,7 +77,7 @@ variables:
   MBD_NUM_BUILD_JOBS: "12"
 
   ## Remove and reinstall all the software which was installed by previous pipeline executions.
-  MBD_CLEAN_ALL: "yes"
+  MBD_CLEAN_ALL: "no"
 
   ## Force no rebuild of MBDyn; The default must be "no", but it could be overridden manually when the pipeline is started!
   MBD_SKIP_BUILD: "no"
