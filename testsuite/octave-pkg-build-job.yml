@@ -180,7 +180,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                           fi
                       fi
 
-                      OCTAVE_CMD=$(printf 'pkg("prefix","%s","%s");pkg("local_list","%s");pkg("install","-local","-verbose","%s","%s");' "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}/octave_packages" "${pkg_tar_file_binary}")
+                      OCTAVE_CMD=$(printf 'pkg("prefix","%s","%s");pkg("local_list","%s");pkg("install","-local","-verbose","%s");' "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}/octave_packages" "${pkg_tar_file_binary}")
 
                       echo "Installing binary package ..."
                       echo ${OCTAVE_EXEC} --eval "${OCTAVE_CMD}"
@@ -232,9 +232,9 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
               esac
 
               OCTAVE_CMD=$(printf 'pkg("local_list","%s");pkg("list");pkg("load","%s");' "${OCT_PKG_INSTALL_PREFIX}/octave_packages" "${pkgname}")
-              
+
               echo ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CMD}"
-              
+
               if ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CMD}"; then
                   printf "package \"%s\" was loaded successfully\n" "${pkgname}"
               else
