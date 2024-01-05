@@ -144,7 +144,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
 
                       pkg_tar_file_binary=$(find "${OCT_PKG_BINARY_DIR}" -name "${pkgname}*.tar.gz" | tail -n1)
 
-                      if ! test -f "${pkg_tar_file_binary}"; then
+                      if ! test -f "${pkg_tar_file_binary}" || test test "${pkg_rebuild_flag}" == "yes"; then
                           if ! make -C "${pkgname}" dist; then
                               printf "failed to build package \"%s\"\n" "${pkgname}"
                               exit 1
