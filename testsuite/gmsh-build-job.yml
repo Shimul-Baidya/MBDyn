@@ -1,7 +1,5 @@
 gmsh-build-job:       # This job runs in the build stage, which runs first.
    stage: build
-   # needs:
-   #   - job: mbdyn-cleanup-job
    script:
        - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
        - GMSH_BUILD_DIR=${CI_PROJECT_DIR}/${GMSH_BUILD_DIR}
@@ -12,20 +10,26 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
            exit 0
          fi
        - GMSH_TAR=`basename ${GMSH_URL}`
-       - mkdir -p ${GMSH_BUILD_DIR}
+       - |
+         if ! test -d ${GMSH_BUILD_DIR}; then
+           mkdir -p ${GMSH_BUILD_DIR}
+         fi
        - cd ${GMSH_BUILD_DIR}
-       - rm -f ${GMSH_TAR}
-       - wget ${GMSH_URL}
-       - tar -zxvf ${GMSH_TAR}
-       - rm -rf ${GMSH_INSTALL_PREFIX}
-       - mkdir -p "${GMSH_INSTALL_PREFIX}/bin"
+       - |
+         if ! test -f ${GMSH_TAR}; then
+           wget ${GMSH_URL}
+         fi
+       - test -f ${GMSH_TAR}
        - gmsh_bin=`find ${GMSH_BUILD_DIR} '(' -type f -and -path '*/bin/gmsh' ')'`
        - |
-         for f in ${gmsh_bin}; do
-          install "${f}" "${GMSH_INSTALL_PREFIX}/bin"
-          break
-         done
-       - rm -rf ${GMSH_BUILD_DIR}/*
+         if ! test -f "${gmsh_bin}"; then
+           tar -zxvf ${GMSH_TAR}
+         fi
+       - gmsh_bin=`find ${GMSH_BUILD_DIR} '(' -type f -and -path '*/bin/gmsh' ')'`
+       - test -f "${gmsh_bin}"
+       - rm -rf ${GMSH_INSTALL_PREFIX}
+       - mkdir -p "${GMSH_INSTALL_PREFIX}/bin"
+       - install "${gmsh_bin}" "${GMSH_INSTALL_PREFIX}/bin"
        - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
    artifacts:
      expire_in: 2 weeks
