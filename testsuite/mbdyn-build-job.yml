@@ -117,6 +117,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     ## FIXME: We cannot use "${MBD_WITH_MODULE}" or "$MBD_WITH_MODULE" because this will prevent substitution of variables.
     ## FIXME: On the other hand --with-module=$MBD_WITH_MODULE would be invalid as well.
     - MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS} -rdynamic" ## Needed for --enable-runtime-loading
+    - MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS} -Wno-unknown-pragmas" ## Needed for Trilinos library
     - echo CXXFLAGS="${MBD_COMPILER_FLAGS}"
     - echo CPPFLAGS="${CPPFLAGS}"
     - echo LDFLAGS="${LDFLAGS}"
@@ -171,7 +172,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - echo "Run built-in unit tests"
     - make test
   artifacts:
-   expire_in: 1 hour   
+   expire_in: 1 hour
    name: mbdyn-install-prefix
    paths:
     - $MBD_INSTALL_PREFIX

@@ -16,12 +16,14 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
         - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
         - OCT_PKG_BUILD_DIR=${CI_PROJECT_DIR}/${OCT_PKG_BUILD_DIR}
         - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
+        - mkdir -p "${OCT_PKG_INSTALL_PREFIX}"
+        - mkdir -p "${OCT_PKG_BUILD_DIR}"
+        - OCT_PKG_BINARY_DIR="${OCT_PKG_BUILD_DIR}/binary-packages"
+        - mkdir -p "${OCT_PKG_BINARY_DIR}"
         - echo "octave packages installation job"
         - echo "Detecting MKL ..."
         - |
           if test -d "${MKL_INSTALL_PREFIX}"; then
-              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
-              find "${MKL_INSTALL_PREFIX}" '(' -name pkgconfig -or -name '*.pc' ')'
               echo "Search for ${MKL_PKG_CONFIG}.pc ..."
               MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
               if test -f "${MKL_PKG_CONFIG_FILE}"; then
@@ -68,18 +70,6 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
         - echo NLOPT_INC="${NLOPT_INC}"
         - echo PARDISO_LIBS="${PARDISO_LIBS}"
         - echo PARDISO_INC="${PARDISO_INC}"
-        - mkdir -p "${OCT_PKG_BUILD_DIR}"
-        - |
-          if ! test -z ${OCT_PKG_TMP_DIR}; then
-            if ! mkdir -p ${OCT_PKG_TMP_DIR}; then
-              exit 1
-            fi
-            ## Move all temporary files inside this directory instead of "/tmp"!
-            ## $OCT_PKG_TMP_DIR will be cleaned up after each stage.
-            export TMPDIR=${OCT_PKG_TMP_DIR}
-          fi
-        - OCT_PKG_BINARY_DIR="${OCT_PKG_BUILD_DIR}/binary-packages"
-        - mkdir -p ${OCT_PKG_BINARY_DIR}
         - cd "${OCT_PKG_BUILD_DIR}"
         - |
           for pkgname in ${OCT_PKG_LIST}; do

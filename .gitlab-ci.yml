@@ -111,10 +111,6 @@ variables:
   ## Force rebuild of Octave packages to be installed from github.com or octave-forge
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
 
-  ## Used by Octave to store temporary data.
-  ## Since it cannot be reused, it should not be located inside "testsuite/var/tmp/build".
-  OCT_PKG_TMP_DIR: "testsuite/var/tmp/octave/packages/build/"
-
   ## Branch passed to git clone -b for all mboct-*-pkg packages.
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
 
