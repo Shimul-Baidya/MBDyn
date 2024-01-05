@@ -26,9 +26,11 @@
 #     - when: never
 
 variables:
-  ## Installation directories - they should be relative to $CI_PROJECT_DIR
-  ## Then we could use it as "artifacts"
+  ## Installation directories - they must be relative to $CI_PROJECT_DIR
+  ## So, we can use them as "artifacts".
   ## Every build stage needs one directory of it's own!
+  ## The content of those directories will be lost after the pipeline ends.
+  ## There would be an option to reuse artifacts for other pipelines, but it is not enabled yet.
 
   ## Local installation directory for MBDyn:
   MBD_INSTALL_PREFIX: "testsuite/var/cache/mbdyn/"
@@ -52,8 +54,15 @@ variables:
   ## Local installation directory for nlopt
   NL_INSTALL_PREFIX: "testsuite/var/cache/nlopt/"
 
-  ## Local build directory for MBDyn
-  ## Will be cleaned only if MBD_CLEAN_BUILD=yes or MBD_CLEAN_ALL=yes
+  ## Local build directories
+  ## They must be relative to $CI_PROJECT_DIR, so we can use them for caches!
+  ## Everything inside "testsuite/var/tmp/build" will be collected in the cache.
+  ## It may be reused for other pipelines at the same branch.
+  ## Only things which can help us to speed up compilation should be stored there!
+
+  ## If you want to free disk space at the runner, go to
+  ## "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines"
+  ## and select "Clear runner caches"!
   MBD_BUILD_DIR: "testsuite/var/tmp/build/mbdyn/"
 
   NC_C_BUILD_DIR: "testsuite/var/tmp/build/netcdf-c/"
@@ -102,6 +111,10 @@ variables:
   ## Force rebuild of Octave packages to be installed from github.com or octave-forge
   OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
 
+  ## Used by Octave to store temporary data.
+  ## Since it cannot be reused, it should not be located inside "testsuite/var/tmp/build".
+  OCT_PKG_TMP_DIR: "testsuite/var/tmp/octave/packages/build/"
+
   ## Branch passed to git clone -b for all mboct-*-pkg packages.
   OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
 
@@ -113,10 +126,6 @@ variables:
   ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h" or "unlimited")
   ## There should be no need to enable a timeout here.
   OCT_PKG_TIMEOUT: "nurbs:unlimited netcdf:unlimited mboct-octave-pkg:unlimited mboct-numerical-pkg:unlimited mboct-mbdyn-pkg:unlimited mboct-fem-pkg:unlimited"
-
-  ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
-  ## This makes it easier to clean up temporary files and ther is no need to use /tmp
-  OCT_PKG_TEST_OUTPUT_DIR: "testsuite/var/tmp/octave-pkg-testjob/"
 
   ## Execution mode for all Octave package tests:
   ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.
@@ -140,17 +149,21 @@ variables:
   MBD_TESTS_PUBLIC_EXIT_STATUS_MASK: "0x0"
   MBD_TESTS_PRIVATE_EXIT_STATUS_MASK: "0xE"
 
+  ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
+  ## This makes it easier to clean up temporary files and ther is no need to use /tmp
   ## Paths must be relative to CI_PROJECT_PATH
-  MBD_MODULE_TEST_OUTPUT_DIR: "testsuite/var/tmp/mbdyn-modules-testjob/"
-  MBD_TESTS_PUBLIC_OUTPUT_DIR: "testsuite/var/tmp/mbdyn-tests-public-testjob/"
-  MBD_TESTS_PRIVATE_OUTPUT_DIR: "testsuite/var/tmp/mbdyn-tests-private-testjob/"
+  OCT_PKG_TEST_OUTPUT_DIR: "testsuite/var/tmp/tests/octave-pkg-testjob/"
+  MBD_MODULE_TEST_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-modules-testjob/"
+  MBD_TESTS_PUBLIC_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-public-testjob/"
+  MBD_TESTS_PRIVATE_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-private-testjob/"
+
   MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
   MBD_TESTS_PRIVATE_GITLAB: "git@gitlab.com:zanoni-mbdyn/mbdyn-tests.git"
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
   ## In order to enable verbose output for MBDyn use: MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
-  MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
+  MBD_SIMPLE_TESTSUITE_FLAGS: ""
 
   ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
   ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
@@ -173,7 +186,7 @@ default:
     key: testsuite-$CI_PROJECT_NAME-$CI_COMMIT_BRANCH
     paths:
       - testsuite/var/tmp/build
-  
+
 stages:          # List of stages for jobs, and their order of execution
   - .pre
   - build

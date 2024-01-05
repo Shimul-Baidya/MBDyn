@@ -72,7 +72,7 @@ netcdf-cxx4-build-job:       # This job runs in the build stage, which runs firs
       - make install
   artifacts:
     name: netcdf-cxx4-binaries
-    expire_in: 2 weeks
+    expire_in: 1 hour    
     paths:
       - $NC_CXX4_INSTALL_PREFIX
   # cache:

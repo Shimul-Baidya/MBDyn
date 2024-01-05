@@ -171,7 +171,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - echo "Run built-in unit tests"
     - make test
   artifacts:
-   expire_in: 2 weeks
+   expire_in: 1 hour   
    name: mbdyn-install-prefix
    paths:
     - $MBD_INSTALL_PREFIX

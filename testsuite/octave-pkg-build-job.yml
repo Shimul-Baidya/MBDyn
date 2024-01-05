@@ -1,13 +1,13 @@
 octave-pkg-build-job:       # This job runs in the build stage, which runs first.
   stage: build
   needs:
-      - job: mkl-build-job    
+      - job: mkl-build-job
       - job: netcdf-c-build-job
         artifacts: true
       - job: netcdf-cxx4-build-job
         artifacts: true
       - job: nlopt-build-job
-        artifacts: true        
+        artifacts: true
       - job: mbdyn-build-job
         artifacts: true
   script:
@@ -68,8 +68,19 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
         - echo NLOPT_INC="${NLOPT_INC}"
         - echo PARDISO_LIBS="${PARDISO_LIBS}"
         - echo PARDISO_INC="${PARDISO_INC}"
-        - if ! test -d ${OCT_PKG_BUILD_DIR}; then mkdir -p ${OCT_PKG_BUILD_DIR}; fi
-        - cd ${OCT_PKG_BUILD_DIR}
+        - mkdir -p "${OCT_PKG_BUILD_DIR}"
+        - |
+          if ! test -z ${OCT_PKG_TMP_DIR}; then
+            if ! mkdir -p ${OCT_PKG_TMP_DIR}; then
+              exit 1
+            fi
+            ## Move all temporary files inside this directory instead of "/tmp"!
+            ## $OCT_PKG_TMP_DIR will be cleaned up after each stage.
+            export TMPDIR=${OCT_PKG_TMP_DIR}
+          fi
+        - OCT_PKG_BINARY_DIR="${OCT_PKG_BUILD_DIR}/binary-packages"
+        - mkdir -p ${OCT_PKG_BINARY_DIR}
+        - cd "${OCT_PKG_BUILD_DIR}"
         - |
           for pkgname in ${OCT_PKG_LIST}; do
               printf "build package \"%s\"\n" "${pkgname}"
@@ -113,34 +124,80 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
 
               case "${pkgname}" in
                   mboct-*-pkg)
-                      if test -d "${pkgname}"; then
-                          rm -rf "${pkgname}"
+                      if ! test -d "${pkgname}"; then
+                          if ! git clone -b "${pkg_branch}" "https://github.com/octave-user/${pkgname}.git" "${pkgname}"; then
+                              printf "failed to clone package \"%s\" from github.com\n" "${pkgname}"
+                              exit 1
+                          fi
                       fi
-                      if ! git clone -b "${pkg_branch}" "https://github.com/octave-user/${pkgname}.git"; then
-                          printf "failed to clone package \"%s\" from github.com\n" "${pkgname}"
+
+                      if ! test -d "${pkgname}"; then
+                          printf "package \"%s\" not found!\n" "${pkgname}"
                           exit 1
                       fi
 
-                      if ! make -C "${pkgname}" dist; then
-                          printf "failed to build package \"%s\"\n" "${pkgname}"
+                      pushd "${pkgname}"
+
+                      if ! git checkout "${pkg_branch}" --force; then
+                          exit 1
                       fi
 
-                      pkg_tar_file=$(find "${pkgname}" '(' -type f -and -path "*/target/${pkgname}*.tar.gz" ')')
-
-                      if test -z "${pkg_tar_file}"; then
-                        printf "failed to install package \"%s\"\n" "${pkgname}"
-                        exit 1
+                      if ! git pull --force; then
+                          exit 1
                       fi
 
-                      OCTAVE_CMD=$(printf 'pkg("prefix","%s","%s");pkg("local_list","%s");pkg("install","-local","-verbose","%s");' "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}/octave_packages" "${pkg_tar_file}")
+                      popd
 
+                      pkg_tar_files_binary=$(find "${OCT_PKG_BINARY_DIR}" -name "${pkgname}*.tar.gz")
+
+                      for pkg_tar_file_binary in ${pkg_tar_files_binary}; do
+                          echo "A binary package found: ${pkg_tar_file_binary}"
+                      done
+
+                      if ! test -f "${pkg_tar_file_binary}"; then
+                          if ! make -C "${pkgname}" dist; then
+                              printf "failed to build package \"%s\"\n" "${pkgname}"
+                              exit 1
+                          fi
+
+                          pkg_tar_file=$(find "${pkgname}" '(' -type f -and -path "*/target/${pkgname}*.tar.gz" ')')
+
+                          if ! test -f "${pkg_tar_file}"; then
+                              printf "failed to create the package file \"%s\"\n" "${pkgname}"
+                              exit 1
+                          fi
+
+                          OCTAVE_CMD=$(printf 'pkg("prefix","%s","%s");pkg("local_list","%s");pkg("build","-nodeps","-verbose","%s","%s");' "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}/octave_packages" "${OCT_PKG_BINARY_DIR}" "${pkg_tar_file}")
+
+                          echo ${OCTAVE_EXEC} --eval "${OCTAVE_CMD}"
+
+                          CXXFLAGS="${MBD_COMPILER_FLAGS}" ${OCTAVE_EXEC} --eval "${OCTAVE_CMD}"
+
+                          if test $? != 0; then
+                              printf "failed to build binary package \"%s\"\n" "${pkgname}"
+                              exit 1
+                          fi
+
+                          pkg_tar_files_binary=$(find "${OCT_PKG_BINARY_DIR}" -name "${pkgname}*.tar.gz")
+
+                          for pkg_tar_file_binary in ${pkg_tar_files_binary}; do
+                              echo "A binary package was found: ${pkg_tar_file_binary}"
+                          done
+
+                          if ! test -f "${pkg_tar_file_binary}"; then
+                              printf "binary package \"%s\" not found\n" "${pkgname}"
+                              exit 1
+                          fi
+                      fi
+
+                      OCTAVE_CMD=$(printf 'pkg("prefix","%s","%s");pkg("local_list","%s");pkg("install","-local","-verbose","%s","%s");' "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}/octave_packages" "${pkg_tar_file_binary}")
+
+                      echo "Installing binary package ..."
                       echo ${OCTAVE_EXEC} --eval "${OCTAVE_CMD}"
 
-                      CXXFLAGS="${MBD_COMPILER_FLAGS}" ${OCTAVE_EXEC} --eval "${OCTAVE_CMD}"
-
-                      if test $? != 0; then
-                        printf "failed to install package \"%s\"\n" "${pkgname}"
-                        exit 1
+                      if ! ${OCTAVE_EXEC} --eval "${OCTAVE_CMD}"; then
+                          printf "failed to install binary package \"%s\"\n" "${pkg_tar_file_binary}"
+                          exit 1
                       fi
 
                       case "${pkgname}" in
@@ -148,10 +205,14 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                           ## FIXME: Need install fem_pre_mesh_size since octave's package manager does not run "make install"
                           mkdir -p "${OCT_PKG_INSTALL_PREFIX}/bin"
                           pushd "${pkgname}/src"
-                          chmod u+x bootstrap
-                          ./bootstrap
-                          ./configure CXXFLAGS="${MBD_COMPILER_FLAGS}" --prefix="${OCT_PKG_INSTALL_PREFIX}"
-                          make
+                          if ! test -x configure; then
+                            chmod u+x bootstrap
+                            ./bootstrap
+                          fi
+                          if ! test -f Makefile; then
+                            ./configure CXXFLAGS="${MBD_COMPILER_FLAGS}" --prefix="${OCT_PKG_INSTALL_PREFIX}"
+                          fi
+                          make -j${MBD_NUM_BUILD_JOBS}
                           make install
                           popd
                           ;;
@@ -181,7 +242,9 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
               esac
 
               OCTAVE_CMD=$(printf 'pkg("local_list","%s");pkg("list");pkg("load","%s");' "${OCT_PKG_INSTALL_PREFIX}/octave_packages" "${pkgname}")
+              
               echo ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CMD}"
+              
               if ${OCTAVE_EXEC} -qfH --eval "${OCTAVE_CMD}"; then
                   printf "package \"%s\" was loaded successfully\n" "${pkgname}"
               else
@@ -189,9 +252,8 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                   exit 1
               fi
           done
-        - rm -rf ${OCT_PKG_BUILD_DIR}/*
   artifacts:
    name: octave-pkg-install-prefix
-   expire_in: 2 weeks   
+   expire_in: 1 hour
    paths:
      - $OCT_PKG_INSTALL_PREFIX
