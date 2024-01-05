@@ -80,7 +80,7 @@ variables:
   MBD_TESTS_PRIVATE_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-private/"
 
   ## Clean up the build directory of MBDyn
-  MBD_CLEAN_BUILD: "yes"
+  MBD_CLEAN_BUILD: "no"
 
   # Number of processes to build MBDyn (e.g. make -j$MBD_NUM_BUILD_JOBS)
   MBD_NUM_BUILD_JOBS: "12"
