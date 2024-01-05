@@ -116,9 +116,10 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         fi
     ## FIXME: We cannot use "${MBD_WITH_MODULE}" or "$MBD_WITH_MODULE" because this will prevent substitution of variables.
     ## FIXME: On the other hand --with-module=$MBD_WITH_MODULE would be invalid as well.
+    - MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS} -rdynamic" ## Needed for --enable-runtime-loading
+    - echo CXXFLAGS="${MBD_COMPILER_FLAGS}"
     - echo CPPFLAGS="${CPPFLAGS}"
     - echo LDFLAGS="${LDFLAGS}"
-    - MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS} -rdynamic" ## Needed for --enable-runtime-loading
     - mbd_with_module=$MBD_WITH_MODULE
     - printf "configure ...\n"
     - |
