@@ -34,3 +34,4 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
      name: mbdyn-modules-test-job
      paths:
        - $MBD_MODULE_TEST_OUTPUT_DIR/mbdyn-module-tests-job.log
+   on-cancel: mbdyn-cleanup-job
