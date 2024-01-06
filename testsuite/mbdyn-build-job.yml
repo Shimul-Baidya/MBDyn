@@ -8,14 +8,6 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - job: mkl-build-job
       artifacts: true
   script:
-    #- echo "Cleanup some garbage ..."
-    #- |
-    #  for dirent in autom4te.cache build contrib CVS etc include libraries manual mbdyn modules packaging tests utils var; do
-     #   if test -d ${HOME}/${dirent}; then
-          #find ${HOME}/${dirent} -type f
-          #rm -rf ${HOME}/${dirent}
-      #  fi
-    #  done
     - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
     - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
     - NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
