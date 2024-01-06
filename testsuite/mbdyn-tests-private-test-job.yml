@@ -18,11 +18,13 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - echo "mbdyn-tests-private test job"
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - mkdir -p "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" ## needed for realpath
+      - log_file="${MBD_TESTS_PRIVATE_OUTPUT_DIR}/mbdyn-tests-private-test-job.log"
       - |
         if ! test -d ${MBD_TESTS_PRIVATE_INPUT_DIR}; then
           if ! git clone $MBD_TESTS_PRIVATE_GITLAB ${MBD_TESTS_PRIVATE_INPUT_DIR}; then
-            echo "$MBD_TESTS_PRIVATE_GITLAB is not accessible"
-            echo "Until that issue is fixed, this test will exit with status 0"
+            echo "$MBD_TESTS_PRIVATE_GITLAB is not accessible" | tee "${log_file}"
+            echo "Until that issue is fixed, this test will exit with status 0" | tee -a "${log_file}"
             exit 0
           fi
         fi
@@ -31,9 +33,8 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - git pull --force
       - cd ..
       - chmod +x testsuite/simple_testsuite.sh
-      - mkdir -p "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" ## needed for realpath
         ## FIXME: It seems that everything must be on one long line ...
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "$[MBD_TESTS_PRIVATE_OUTPUT_DIR}/mbdyn-tests-private-test-job.log"
+      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
   artifacts:
     name: mbdyn-tests-private-test-job
     expire_in: 2 days
