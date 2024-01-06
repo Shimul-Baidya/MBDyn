@@ -26,32 +26,58 @@
 #     - when: never
 
 variables:
-  ## Installation directories - they should be moved to $CI_PROJECT_DIR
-  ## Then we could use it like "artefacts"
+  ## Installation directories - they must be relative to $CI_PROJECT_DIR
+  ## So, we can use them as "artifacts".
   ## Every build stage needs one directory of it's own!
+  ## The content of those directories will be lost after the pipeline ends.
+  ## There would be an option to reuse artifacts for other pipelines, but it is not enabled yet.
 
   ## Local installation directory for MBDyn:
-  MBD_INSTALL_PREFIX: "/home/gitlab-runner/local/mbdyn-test-install/"
+  MBD_INSTALL_PREFIX: "testsuite/var/cache/mbdyn/"
 
   ## Local installation directory for Gmsh:
-  GMSH_INSTALL_PREFIX: "/home/gitlab-runner/local/gmsh-test-install/"
+  GMSH_INSTALL_PREFIX: "testsuite/var/cache/gmsh/"
 
   ## Local installation directory for fem_pre_mesh_size
   ## This program is needed to calculate the mesh size for Gmsh only for a very specific test case.
-  MBOCT_INSTALL_PREFIX: "/home/gitlab-runner/local/mboct-test-install/"
+  OCT_PKG_INSTALL_PREFIX: "testsuite/var/cache/share/octave/"
 
   ## Local installation directory for Intel oneMKL
-  MKL_INSTALL_PREFIX: "/home/gitlab-runner/local/mkl-test-install/"
+  MKL_INSTALL_PREFIX: "testsuite/var/cache/mkl/"
 
   ## Local installation directory for NetCDF
-  NC_INSTALL_PREFIX: "/home/gitlab-runner/local/netcdf-test-install/"
+  NC_INSTALL_PREFIX: "testsuite/var/cache/netcdf/"
+
+  ## Local installation directory for NetCDF
+  NC_CXX4_INSTALL_PREFIX: "testsuite/var/cache/netcdf-cxx4/"
 
   ## Local installation directory for nlopt
-  NL_INSTALL_PREFIX: "/home/gitlab-runner/local/nlopt-test-install/"
+  NL_INSTALL_PREFIX: "testsuite/var/cache/nlopt/"
 
-  ## Local build directory for MBDyn
-  ## Will be cleaned only if MBD_CLEAN_BUILD=yes or MBD_CLEAN_ALL=yes
-  MBD_BUILD_DIR: "/home/gitlab-runner/install/mbdyn-test-build/"
+  ## Local build directories
+  ## They must be relative to $CI_PROJECT_DIR, so we can use them for caches!
+  ## Everything inside "testsuite/var/tmp/build" will be collected in the cache.
+  ## It may be reused for other pipelines at the same branch.
+  ## Only things which can help us to speed up compilation should be stored there!
+
+  ## If you want to free disk space at the runner, go to
+  ## "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines"
+  ## and select "Clear runner caches"!
+  MBD_BUILD_DIR: "testsuite/var/tmp/build/mbdyn/"
+
+  NC_C_BUILD_DIR: "testsuite/var/tmp/build/netcdf-c/"
+  NC_CXX4_BUILD_DIR: "testsuite/var/tmp/build/netcdf-cxx4/"
+
+  NL_BUILD_DIR: "testsuite/var/tmp/build/nlopt/"
+
+  GMSH_BUILD_DIR: "testsuite/var/tmp/build/gmsh/"
+
+  OCT_PKG_BUILD_DIR: "testsuite/var/tmp/build/octave-pkg/"
+
+  MKL_BUILD_DIR: "testsuite/var/tmp/build/mkl/"
+
+  MBD_TESTS_PUBLIC_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-public/"
+  MBD_TESTS_PRIVATE_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-private/"
 
   ## Clean up the build directory of MBDyn
   MBD_CLEAN_BUILD: "no"
@@ -97,10 +123,6 @@ variables:
   ## There should be no need to enable a timeout here.
   OCT_PKG_TIMEOUT: "nurbs:unlimited netcdf:unlimited mboct-octave-pkg:unlimited mboct-numerical-pkg:unlimited mboct-mbdyn-pkg:unlimited mboct-fem-pkg:unlimited"
 
-  ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
-  ## This makes it easier to clean up temporary files and ther is no need to use /tmp
-  OCT_PKG_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/octave-pkg-testjob/"
-
   ## Execution mode for all Octave package tests:
   ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.
   ## The value of $OCT_PKG_TIMEOUT will be applied to each function.
@@ -123,14 +145,20 @@ variables:
   MBD_TESTS_PUBLIC_EXIT_STATUS_MASK: "0x0"
   MBD_TESTS_PRIVATE_EXIT_STATUS_MASK: "0xE"
 
-  MBD_MODULE_TEST_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-modules-testjob/"
-  MBD_TESTS_PUBLIC_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-public-testjob/"
-  MBD_TESTS_PRIVATE_OUTPUT_DIR: "/home/gitlab-runner/tmp/mbdyn-tests-private-testjob/"
+  ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
+  ## This makes it easier to clean up temporary files and ther is no need to use /tmp
+  ## Paths must be relative to CI_PROJECT_PATH
+  OCT_PKG_TEST_OUTPUT_DIR: "testsuite/var/tmp/tests/octave-pkg-testjob/"
+  MBD_MODULE_TEST_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-modules-testjob/"
+  MBD_TESTS_PUBLIC_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-public-testjob/"
+  MBD_TESTS_PRIVATE_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-private-testjob/"
+
   MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
   MBD_TESTS_PRIVATE_GITLAB: "git@gitlab.com:zanoni-mbdyn/mbdyn-tests.git"
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
+  ## In order to enable verbose output for MBDyn use: MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
   MBD_SIMPLE_TESTSUITE_FLAGS: ""
 
   ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
@@ -139,15 +167,25 @@ variables:
   MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
 
+  ## Allow us to execute a one line command only once, although it might be not very secure.
+  ## So, we do not need to modify .gitlab-ci.yml every time.
+  MBD_TESTSUITE_BOOTLOADER: ""
+  
   ## Send a kill -9 to all running octave and mbdyn processes owned by the same user and without a terminal connected.
   ## For whatever reason, it could happen that those processes are not terminated if a pipeline is cancelled.
   ## "no"       Do not start the pipeline if there are any running processes! This option should be safe.
   ## "yes"      Kill all running processes!
-  ##            This must not be the default, and it should be used only as a last resort solution!
-  ##            In such a situation go to "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines/new"
-  ##            and override the default value!
+  ##            This must not be the default option, and it should be used only as a last resort solution!
+  ##            In such a situation just go to "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines/new"
+  ##            and override the default value by "yes"!
   ## "disabled" Ignore running processes. Probably not a safe option.
   MBD_FORCE_KILL: "no"
+
+default:
+  cache:
+    key: testsuite-$CI_PROJECT_NAME-$CI_COMMIT_BRANCH
+    paths:
+      - testsuite/var/tmp/build
 
 stages:          # List of stages for jobs, and their order of execution
   - .pre
@@ -155,551 +193,18 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
-mbdyn-cleanup-job:
-  stage: .pre
-  needs: []
-  script:
-        - OUTPUT_FORMAT=pid,comm,tty,state,cputime,vsize,uname,pcpu,pmem,tty
-        - AWK_FILTER_CMD="/mbdyn|octave/{if(\$3==\"?\"&&\$4!=\"Z\"){print \$1};}"
-        - ps -u $(whoami) -o ${OUTPUT_FORMAT} | awk "${AWK_FILTER_CMD}"
-        - |
-          success="yes"
-          for pid in $(ps -u $(whoami) -o pid,comm,tty,state | awk "${AWK_FILTER_CMD}"); do
-            ps -p ${pid} -o ${OUTPUT_FORMAT}
-            if test "${MBD_FORCE_KILL}" = "yes"; then
-                echo "Process ${pid} will be killed"
-                if ! kill -9 ${pid}; then
-                    echo "Failed to kill ${pid}"
-                    success="no"
-                fi
-            else
-                echo "Process ${pid} is still running: use MBD_FORCE_KILL=yes to kill this process!"
-                success="no"
-            fi
-          done
-        - ps -u $(whoami) -o ${OUTPUT_FORMAT} | awk "${AWK_FILTER_CMD}"
-        - if test "${MBD_FORCE_KILL}" = "yes" && ! test "${success}" = "yes"; then exit 1; fi
-        - if test "${MBD_FORCE_KILL}" = "no" && ! test "${success}" = "yes"; then exit 1; fi
-
-mkl-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  needs:
-    - job: mbdyn-cleanup-job
-  script:
-      - echo "MKL installation job"
-      - |
-          if test -d "${MKL_INSTALL_PREFIX}"; then
-              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
-              find "${MKL_INSTALL_PREFIX}" '(' -name pkgconfig -or -name '*.pc' ')'
-              echo "Search for ${MKL_PKG_CONFIG}.pc ..."
-              MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
-              if test -f "${MKL_PKG_CONFIG_FILE}"; then
-                  MKL_PKG_CONFIG_PATH=`dirname "${MKL_PKG_CONFIG_FILE}"`
-              else
-                  echo "File ${MKL_PKG_CONFIG}.pc not found"
-              fi
-          fi
-      - |
-        if test -d "${MKL_PKG_CONFIG_PATH}" -a "${MBD_CLEAN_ALL}" = "no"; then
-          echo "MKL was already installed in ${MKL_PKG_CONFIG_PATH}"
-          exit 0
-        fi
-      - |
-          rm -rf "${MKL_INSTALL_PREFIX}"
-          if test -z "${MKL_URL}"; then
-            echo "MKL_URL was not defined"
-            exit 0
-          fi
-          if test -z "${MKL_PACKAGE}"; then
-            echo "MKL_PACKAGE was not defined"
-            exit 0
-          fi
-          if test -f "./${MKL_PACKAGE}"; then
-            rm -f "./${MKL_PACKAGE}"
-          fi
-          if ! wget "${MKL_URL}${MKL_PACKAGE}"; then
-            echo "Failed to download ${MKL_URL}${MKL_PACKAGE}"
-            exit 1
-          fi
-          if ! test -f "./${MKL_PACKAGE}"; then
-            echo "File not found ${MKL_PACKAGE}"
-            exit 1
-          fi
-      - chmod u+x "./${MKL_PACKAGE}"
-      - MKL_STATUS="failed"
-      - |
-          # FIXME: Need to remove MKL before we are able to install it again
-          if ! sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action remove --install-dir "${MKL_INSTALL_PREFIX}"; then
-              echo "Failed to remove MKL ..."
-          fi
-      - echo "removing ${MKL_INSTALL_PREFIX} ..."
-      - rm -rf ${MKL_INSTALL_PREFIX}
-      - |
-          if sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action install --install-dir "${MKL_INSTALL_PREFIX}"; then
-              MKL_STATUS="succeeded"
-          fi
-      - rm -f "./${MKL_PACKAGE}"
-      - |
-          if test "${MKL_STATUS}" != "succeeded"; then
-              echo "Failed to install MKL"
-              exit 1
-          fi
-
-netcdf-c-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  needs:
-    - job: mbdyn-cleanup-job
-  script:
-      - echo "netcdf-c installation job"
-      - |
-        if "${NC_INSTALL_PREFIX}/bin/nc-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
-          echo "netcdf-c was already installed"
-          exit 0
-        fi
-      - rm -rf netcdf-c
-      - git clone -b main https://github.com/Unidata/netcdf-c.git
-      - cd netcdf-c
-      - mkdir build_dir
-      - cd build_dir
-      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}"
-      - make -j${MBD_NUM_BUILD_JOBS}
-      - if test -d "${NC_INSTALL_PREFIX}"; then rm -rf "${NC_INSTALL_PREFIX}"; fi
-      - make install
-
-netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  needs:
-    - job: netcdf-c-build-job
-  script:
-      - echo "netcdf-cxx4 installation job"
-      - |
-        if "${NC_INSTALL_PREFIX}/bin/ncxx4-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
-          echo "netcdf-cxx4 was already installed"
-          exit 0
-        fi
-      - rm -rf netcdf-cxx4
-      - git clone -b master https://github.com/Unidata/netcdf-cxx4.git
-      - cd netcdf-cxx4
-      - mkdir build_dir
-      - cd build_dir
-      - cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}" -DnetCDF_DIR="${NC_INSTALL_PREFIX}/lib/cmake/netCDF"
-      - make -j${MBD_NUM_BUILD_JOBS}
-      - make install
-
-nlopt-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  needs:
-    - job: mbdyn-cleanup-job
-  script:
-      - |
-        if test -d "${NL_INSTALL_PREFIX}"; then
-          NL_PKG_CONFIG=`find ${NL_INSTALL_PREFIX} '(' -type d -and -name pkgconfig ')'`
-        fi
-        if ! test -z "${NL_PKG_CONFIG}" && test -f "${NL_PKG_CONFIG}/nlopt.pc" && test "${MBD_CLEAN_ALL}" = "no"; then
-          echo "nlopt was already installed"
-          exit 0
-        fi
-      - rm -rf nlopt
-      - git clone -b master https://github.com/stevengj/nlopt.git
-      - cd nlopt
-      - mkdir build
-      - cd build
-      - cmake .. -DCMAKE_INSTALL_PREFIX="${NL_INSTALL_PREFIX}" -DBUILD_SHARED_LIBS=ON -DNLOPT_OCTAVE=OFF -DNLOPT_PYTHON=OFF
-      - make -j${MBD_NUM_BUILD_JOBS}
-      - make install
-
-mbdyn-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  needs:
-    - job: netcdf-cxx4-build-job
-    - job: mkl-build-job
-  script:
-    #- echo "Cleanup some garbage ..."
-    #- |
-    #  for dirent in autom4te.cache build contrib CVS etc include libraries manual mbdyn modules packaging tests utils var; do
-     #   if test -d ${HOME}/${dirent}; then
-          #find ${HOME}/${dirent} -type f
-          #rm -rf ${HOME}/${dirent}
-      #  fi
-    #  done
-    - |
-      if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
-        echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
-        exit 0
-      fi
-
-    - echo "checkout branch $CI_COMMIT_BRANCH"
-    - git checkout $CI_COMMIT_BRANCH --force
-    ## FIXME: git pull --force fails whenever workflow rules are active
-    ## Need to set upstream branch in order to fix it
-    - git branch --set-upstream-to=origin/$CI_COMMIT_BRANCH
-    - printf "pulling\n"
-    - git pull --force
-    ## Let's try to speed up the build process a bit
-    ## Execute bootstrap.sh and configure only if needed
-    ## This conditional execution may be removed as soon as the testsuite is finished
-    - |
-      if ! test -x ./configure ; then
-        chmod u+x ./bootstrap.sh
-        ./bootstrap.sh
-      fi
-    - test -x ./configure
-    - MBD_SOURCE_DIR=`pwd`
-    - echo "Create build directory ..."
-    - |
-      if test ${MBD_CLEAN_BUILD} = "yes" -o ${MBD_CLEAN_ALL} = "yes"; then
-        echo "cleanup build directory ..."
-        rm -rf ${MBD_BUILD_DIR}
-      fi
-    - echo "create build directory ..."
-    - if ! test -d ${MBD_BUILD_DIR}; then mkdir -p ${MBD_BUILD_DIR}; fi
-    - test -d ${MBD_BUILD_DIR}
-    - if ! test -d ${MBD_INSTALL_PREFIX}; then mkdir -p ${MBD_INSTALL_PREFIX}; fi
-    - test -d ${MBD_INSTALL_PREFIX}
-    - cd ${MBD_BUILD_DIR}
-    - echo "Build directory"
-    - pwd
-    - ls -lhF .
-    - export PATH="${NC_INSTALL_PREFIX}/bin:${PATH}"
-    - LDFLAGS=""
-    - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0"
-    - echo "Detecting NetCDF ..."
-    - |
-      if ncxx4-config --help >& /dev/null; then
-        NC_INCDIR=`ncxx4-config --includedir`
-        NC_LIBDIR=`ncxx4-config --libdir`
-        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
-        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
-      fi
-    - echo "Detecting MKL ..."
-    - |
-          if test -d "${MKL_INSTALL_PREFIX}"; then
-              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
-              find "${MKL_INSTALL_PREFIX}" '(' -name pkgconfig -or -name '*.pc' ')'
-              echo "Search for ${MKL_PKG_CONFIG}.pc ..."
-              MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
-              if test -f "${MKL_PKG_CONFIG_FILE}"; then
-                  MKL_PKG_CONFIG_PATH=`dirname "${MKL_PKG_CONFIG_FILE}"`
-                  echo "MKL_PKG_CONFIG_PATH=${MKL_PKG_CONFIG_PATH}"
-              else
-                  echo "File ${MKL_PKG_CONFIG}.pc not found"
-              fi
-          fi
-    - PARDISO_FLAGS="--without-pardiso"
-    - |
-        if test -d "${MKL_PKG_CONFIG_PATH}"; then
-            export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
-            if pkg-config --validate "${MKL_PKG_CONFIG}"; then
-                PARDISO_FLAGS="--with-pardiso"
-                CPPFLAGS="${CPPFLAGS} `pkg-config --cflags-only-I ${MKL_PKG_CONFIG}`"
-                LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG}`"
-                LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG} | sed  's/^-L\//-Wl,-rpath=\//g'`"
-            else
-                echo "pkg-config ${MKL_PKG_CONFIG} is not valid"
-            fi
-        else
-            echo "Warning: MKL_PKG_CONFIG_PATH could not be detected"
-        fi
-    ## FIXME: We cannot use "${MBD_WITH_MODULE}" or "$MBD_WITH_MODULE" because this will prevent substitution of variables.
-    ## FIXME: On the other hand --with-module=$MBD_WITH_MODULE would be invalid as well.
-    - mbd_with_module=$MBD_WITH_MODULE
-    - printf "configure ...\n"
-    - |
-      if ! test -f Makefile || test ${MBD_SOURCE_DIR}/configure -nt Makefile; then
-        if ! ${MBD_SOURCE_DIR}/configure \
-                    PYTHON_VERSION=3 \
-                    CPPFLAGS="${CPPFLAGS}" \
-                    LDFLAGS="${LDFLAGS}" \
-                    CXXFLAGS="${MBD_COMPILER_FLAGS}" \
-                    CFLAGS="${MBD_COMPILER_FLAGS}" \
-                    FFLAGS="${MBD_COMPILER_FLAGS}" \
-                    FCFLAGS="${MBD_COMPILER_FLAGS}" \
-                    --enable-python \
-                    --enable-octave \
-                    --enable-install_test_progs \
-                    --enable-netcdf \
-                    --prefix="${MBD_INSTALL_PREFIX}" \
-                    --with-umfpack \
-                    --with-klu \
-                    ${PARDISO_FLAGS} \
-                    --with-suitesparseqr \
-                    --with-static-modules \
-                    --with-module="${mbd_with_module}" \
-                    --disable-Werror \
-                    --with-trilinos ; then
-                    ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
-                    ## FIXME: Recent versions of NetCDF require --Wno-unused-variable
-          echo "Failed to run configure"
-          exit 1
-        fi
-      fi
-    - test -f Makefile
-    - printf "Compiling the code using %s jobs ...\n" ${MBD_NUM_BUILD_JOBS}
-    - make -j${MBD_NUM_BUILD_JOBS}
-    - echo "Clean up local installation directory"
-    - rm -rf ${MBD_INSTALL_PREFIX}
-    - printf "Install the code in \"%s\"\n" "${MBD_INSTALL_PREFIX}"
-    - make install
-    - echo "MBDyn version:"
-    - ${MBD_INSTALL_PREFIX}/bin/mbdyn --version
-    - echo "Shared libraries used by MBDyn:"
-    - ldd ${MBD_INSTALL_PREFIX}/bin/mbdyn
-    - echo "Run built-in unit tests"
-    - make test
-
-octave-pkg-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  needs:
-    - job: mbdyn-build-job
-    - job: mkl-build-job
-    - job: nlopt-build-job
-    - job: netcdf-c-build-job
-  script:
-        - echo "octave packages installation job"
-        - echo "Detecting MKL ..."
-        - |
-          if test -d "${MKL_INSTALL_PREFIX}"; then
-              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
-              find "${MKL_INSTALL_PREFIX}" '(' -name pkgconfig -or -name '*.pc' ')'
-              echo "Search for ${MKL_PKG_CONFIG}.pc ..."
-              MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
-              if test -f "${MKL_PKG_CONFIG_FILE}"; then
-                  MKL_PKG_CONFIG_PATH=`dirname "${MKL_PKG_CONFIG_FILE}"`
-                  echo "MKL_PKG_CONFIG_PATH=${MKL_PKG_CONFIG_PATH}"
-              else
-                  echo "File ${MKL_PKG_CONFIG}.pc not found"
-              fi
-          fi
-        - |
-            if test -d "${MKL_PKG_CONFIG_PATH}"; then
-                export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
-                if pkg-config --validate "${MKL_PKG_CONFIG}"; then
-                  export PARDISO_INC=`pkg-config --cflags ${MKL_PKG_CONFIG}`
-                  export PARDISO_LIBS=`pkg-config --libs ${MKL_PKG_CONFIG}`
-                  export PARDISO_LIBS="${PARDISO_LIBS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG} | sed  's/^-L\//-Wl,-rpath=\//g'`"
-                else
-                  echo "Warning: MKL pkg-config ${MKL_PKG_CONFIG} is not valid"
-                fi
-            else
-                echo "Warning: MKL_PKG_CONFIG_PATH does not exist"
-            fi
-        - |
-          NL_PKG_CONFIG_PATH=`find ${NL_INSTALL_PREFIX} '(' -type d -and -name pkgconfig ')'`
-          if ! test -z "${NL_PKG_CONFIG_PATH}"; then
-            export PKG_CONFIG_PATH="${NL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
-            export NLOPT_LIBS=`pkg-config --libs nlopt`
-            export NLOPT_INC=`pkg-config --cflags nlopt`
-            NL_LIBDIR=`pkg-config --variable=libdir nlopt`
-            if ! test -z "${NL_LIBDIR}"; then
-                NLOPT_LIBS="${NLOPT_LIBS} -Wl,-rpath=${NL_LIBDIR}"
-            fi
-          fi
-        - |
-          if "${NC_INSTALL_PREFIX}/bin/nc-config" --version >& /dev/null; then
-            NC_PKG_CONFIG_PATH=`find ${NC_INSTALL_PREFIX} '(' -type d -and -name pkgconfig ')'`
-            if ! test -z "${NC_PKG_CONFIG_PATH}"; then
-              export PKG_CONFIG_PATH="${NC_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
-            fi
-            export PATH="${NC_INSTALL_PREFIX}/bin:${PATH}"
-          fi
-        - echo PKG_CONFIG_PATH="${PKG_CONFIG_PATH}"
-        - echo NLOPT_LIBS="${NLOPT_LIBS}"
-        - echo NLOPT_INC="${NLOPT_INC}"
-        - echo PARDISO_LIBS="${PARDISO_LIBS}"
-        - echo PARDISO_INC="${PARDISO_INC}"
-        - |
-          for pkgname in ${OCT_PKG_LIST}; do
-              printf "build package \"%s\"\n" "${pkgname}"
-
-              pkg_rebuild_flag=$(echo ${OCT_PKG_REBUILD} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
-
-              case "${pkg_rebuild_flag}" in
-                  yes|no)
-                      ;;
-                  *)
-                      pkg_rebuild_flag="no"
-                      ;;
-              esac
-
-              pkg_branch=$(echo ${OCT_PKG_BRANCH} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
-
-              if test -z "${pkg_branch}"; then
-                  pkg_branch="master"
-              fi
-
-              if test "${pkg_rebuild_flag}" = "no" -a "${MBD_CLEAN_ALL}" = "no"; then
-                  if ${OCTAVE_EXEC} -qfH --eval "pkg load ${pkgname}"; then
-                      printf "installation of \"%s\" will be skipped, because the package is already installed\n" "${pkgname}"
-                      continue
-                  fi
-              fi
-
-              # Force a new installation
-              if ! ${OCTAVE_EXEC} -qfH --eval "pkg uninstall -nodeps -verbose -local ${pkgname}"; then
-                  printf "Warning: failed to uninstall package \"%s\"\n" "${pkgname}"
-              fi
-
-              case "${pkgname}" in
-                  mboct-*-pkg)
-                      if test -d "${pkgname}"; then
-                          rm -rf "${pkgname}"
-                      fi
-                      if ! git clone -b "${pkg_branch}" "https://github.com/octave-user/${pkgname}.git"; then
-                          printf "failed to clone package \"%s\" from github.com\n" "${pkgname}"
-                          exit 1
-                      fi
-
-                      if ! make CXXFLAGS="${MBD_COMPILER_FLAGS}" -C "${pkgname}" install_local; then
-                          printf "failed to build package \"%s\"\n" "${pkgname}"
-                      fi
-                      case "${pkgname}" in
-                      mboct-fem-pkg)
-                          ## FIXME: Need install fem_pre_mesh_size since octave's package manager does not run "make install"
-                          mkdir -p "${MBOCT_INSTALL_PREFIX}/bin"
-                          pushd "${pkgname}/src"
-                          chmod u+x bootstrap
-                          ./bootstrap
-                          ./configure CXXFLAGS="${MBD_COMPILER_FLAGS}" --prefix="${MBOCT_INSTALL_PREFIX}"
-                          make
-                          make install
-                          popd
-                          ;;
-                      esac
-                      ;;
-                  *)
-                      SAVE_LDFLAGS=""
-
-                      case "${pkgname}" in
-                          netcdf)
-                              SAVE_LDFLAGS="${LDFLAGS}"
-                              export LDFLAGS="-Wl,-rpath=`${NC_INSTALL_PREFIX}/bin/nc-config --libdir`"
-                              ;;
-                      esac
-
-                      # Assume that the package is hosted at octave-forge
-                      if ! ${OCTAVE_EXEC} -qfH --eval "pkg install -verbose -local -forge ${pkgname}"; then
-                          printf "failed to install package \"%s\" from octave-forge\n" "${pkgname}"
-                          exit 1
-                      fi
-
-                      export LDFLAGS="${SAVE_LDFLAGS}"
-                      ;;
-              esac
-
-              if ${OCTAVE_EXEC} -qfH --eval "pkg load ${pkgname}"; then
-                  printf "package \"%s\" was loaded successfully\n" "${pkgname}"
-              else
-                  printf "failed to load package \"%s\"\n" "${pkgname}"
-                  exit 1
-              fi
-          done
-
-gmsh-build-job:       # This job runs in the build stage, which runs first.
-   stage: build
-   needs:
-     - job: mbdyn-cleanup-job
-   script:
-       - echo "gmsh build"
-       - |
-         if ${GMSH_INSTALL_PREFIX}/bin/gmsh --version >& /dev/null && test "${GMSH_REINSTALL}" = "no" && test "${MBD_CLEAN_ALL}" = "no" ; then
-           echo "Gmsh was already installed ..."
-           exit 0
-         fi
-       - GMSH_TAR=`basename ${GMSH_URL}`
-       - rm -f ${GMSH_TAR}
-       - wget ${GMSH_URL}
-       - tar -zxvf ${GMSH_TAR}
-       - rm -rf ${GMSH_INSTALL_PREFIX}
-       - mkdir -p "${GMSH_INSTALL_PREFIX}/bin"
-       - install gmsh-*.*.*-Linux64/bin/gmsh "${GMSH_INSTALL_PREFIX}/bin"
-       - rm -rf gmsh-*.*.*-Linux64
-       - rm -f ${GMSH_TAR}
-       - ${GMSH_INSTALL_PREFIX}/bin/gmsh --version
-
-mbdyn-tests-private-test-job:   # This job runs in the test stage.
-  stage: test    # It only starts when the job in the build stage completes successfully.
-  needs:
-    - job: mbdyn-build-job
-  script:
-      - echo "mbdyn-tests-private test job"
-      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
-      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - mbd_tests_private_input_dir="mbdyn-tests"
-      - rm -rf "${mbd_tests_private_input_dir}"
-      - |
-        if ! git clone $MBD_TESTS_PRIVATE_GITLAB "${mbd_tests_private_input_dir}"; then
-          echo "$MBD_TESTS_PRIVATE_GITLAB is not accessible"
-          echo "Until that issue is fixed, this test will exit with status 0"
-          exit 0
-        fi
-      - test -d "${mbd_tests_private_input_dir}"
-      - chmod +x testsuite/simple_testsuite.sh
-        ## FIXME: It seems that everything must be on one long line ...
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${mbd_tests_private_input_dir}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
-
-mbdyn-tests-public-test-job:   # This job runs in the test stage.
-  stage: test    # It only starts when the job in the build stage completes successfully.
-  needs:
-    - job: mbdyn-build-job
-  script:
-      - echo "mbdyn-tests-public test job"
-      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
-      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - mbd_tests_public_input_dir=testsuite/var/tmp/mbdyn-tests-public
-      - rm -rf "${mbd_tests_public_input_dir}"
-      - git clone $MBD_TESTS_PUBLIC_GITLAB "${mbd_tests_public_input_dir}"
-      - test -d "${mbd_tests_public_input_dir}"
-      - chmod +x testsuite/simple_testsuite.sh
-        ## FIXME: It seems that everything must be on one long line ...
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${mbd_tests_public_input_dir}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
-  artifacts:
-    paths:
-      - testsuite/var/tmp/mbdyn-tests-public
-      
-mbdyn-modules-test-job:   # This job runs in the test stage.
-  stage: test    # It only starts when the job in the build stage completes successfully.
-  needs:
-    - job: octave-pkg-build-job ## module-triangular_contact is using Octave
-    - job: gmsh-build-job ## module-triangular_contact is using Gmsh
-    - job: mbdyn-build-job
-  script:
-      - echo "MBDyn modules test job"
-      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
-      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - MBD_MODULE_TEST_INPUT_DIR="`pwd`/modules"
-      - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
-      - chmod +x testsuite/simple_testsuite.sh
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
-
-
-octave-pkg-test-job:   # This job runs in the test stage.
-  stage: test    # It only starts when the job in the build stage completes successfully.
-  needs:
-    - job: octave-pkg-build-job
-    - job: gmsh-build-job
-    - job: mbdyn-build-job
-  script:
-      - echo "octave packages test job"
-      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${MBOCT_INSTALL_PREFIX}/bin:${PATH}
-      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - which mbdyn
-      - mbdyn --version
-      - which mbdyn2easyanim.sh
-      - which gmsh
-      - gmsh --version
-      - which octave
-      - ${OCTAVE_EXEC} -qfH --version
-      # Let's see if mboct-fem-pkg is now able to locate mkl/mkl_pardiso.h
-      - echo "pardiso solver ..."
-      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=pardiso(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
-      - echo "umfpack solver ..."
-      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=umfpack(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
-      - echo "mumps solver ..."
-      - if ! ${OCTAVE_EXEC} -qf --eval "pkg load mboct-numerical-pkg; A=rand(10,10); b=rand(10,1); x=mumps(A,b,struct()); norm(A*x-b)/norm(A*x+b)"; then echo failed; fi
-      - chmod +x testsuite/octave_pkg_testsuite.sh
-      ## FIXME: It seems that everything must be on one long line
-      - testsuite/octave_pkg_testsuite.sh --print-resources time+profile --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}"
-
+include:
+    - local: '/testsuite/mbdyn-cleanup-job.yml'
+    - local: '/testsuite/mkl-build-job.yml'
+    - local: '/testsuite/netcdf-build-job.yml'
+    - local: '/testsuite/nlopt-build-job.yml'
+    - local: '/testsuite/mbdyn-build-job.yml'
+    - local: '/testsuite/octave-pkg-build-job.yml'
+    - local: '/testsuite/gmsh-build-job.yml'
+    - local: '/testsuite/mbdyn-tests-private-test-job.yml'
+    - local: '/testsuite/mbdyn-tests-public-test-job.yml'
+    - local: '/testsuite/mbdyn-modules-test-job.yml'
+    - local: '/testsuite/octave-pkg-test-job.yml'
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.

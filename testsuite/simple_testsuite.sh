@@ -46,7 +46,9 @@ mbdyn_testsuite_prefix_output=""
 mbdyn_testsuite_prefix_input=""
 mbdyn_input_filter=""
 mbdyn_verbose_output="no"
-declare i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
+declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
+declare -i mbd_test_idx_start=1
+declare -i mbd_test_idx_offset=1
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 
 ## Disable multithreaded BLAS by default
@@ -75,6 +77,14 @@ while ! test -z "$1"; do
             mbdyn_input_filter="$2"
             shift
             ;;
+        --test-index-start)
+            mbd_test_idx_start="$2"
+            shift
+            ;;
+        --test-index-offset)
+            mbd_test_idx_offset="$2"
+            shift
+            ;;
         --verbose)
             mbdyn_verbose_output="$2"
             shift
@@ -94,6 +104,16 @@ while ! test -z "$1"; do
     esac
     shift
 done
+
+if test ${mbd_test_idx_start} -lt 1; then
+    printf "%s: invalid argument --test-index-start %d\n" "${program_name}" ${mbd_test_idx_start}
+    exit 1
+fi
+
+if test ${mbd_test_idx_offset} -lt 1; then
+    printf "%s: invalid argument --test-index-offset %d\n" "${program_name}" ${mbd_test_idx_offset}
+    exit 1
+fi
 
 if test -z "${mbdyn_testsuite_timeout}"; then
     mbdyn_testsuite_timeout="unlimited"
@@ -141,8 +161,20 @@ fi
 ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
 ## This will make it easier to delete those files.
 export TMPDIR="${mbdyn_testsuite_prefix_output}"
+declare -i idx_test=0
 
 for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk "/begin: initial value;/{print FILENAME}"`; do
+    ((++idx_test))
+    
+    printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
+    
+    if test $((idx_test)) -lt $((mbd_test_idx_start)); then
+        echo "  skipped ..."
+        continue
+    fi
+    
+    ((mbd_test_idx_start+=mbd_test_idx_offset))
+
     mbd_basename=`basename -s ".mbdyn" "${mbd_filename}"`
     mbd_basename=`basename -s ".mbd" "${mbd_basename}"`
 
@@ -328,41 +360,41 @@ if test -z "${passed_tests}"; then
     echo "No tests passed"
     ((exit_status|=0x1))
 else
-    print_files "The following %d tests passed with zero exit status:\n" ${passed_tests}
+    print_files "PASSED:The following %d tests passed with zero exit status:\n" ${passed_tests}
 fi
 
 if test -z "${timeout_tests}"; then
     echo "No tests were killed because of timeout"
 else
-    print_files "The following %d tests were killed because of timeout:\n" ${timeout_tests}
+    print_files "TIMEOUT:The following %d tests were killed because of timeout:\n" ${timeout_tests}
     ((exit_status|=0x2))
 fi
 
 if test -z "${modules_not_found}"; then
     echo "All modules were found"
 else
-    print_files "The following %d tests failed because a loadable module was not found:\n" ${modules_not_found}
+    print_files "FAILED-MODULE:The following %d tests failed because a loadable module was not found:\n" ${modules_not_found}
     ((exit_status|=0x4))
 fi
 
 if test -z "${loadables_not_found}"; then
     echo "All loadables were found"
 else
-    print_files "The following %d tests failed because a loadable element was not found:\n" ${loadables_not_found}
+    print_files "FAILED-LOADABLE:The following %d tests failed because a loadable element was not found:\n" ${loadables_not_found}
     ((exit_status|=0x8))
 fi
 
 if test -z "${failed_tests}"; then
     echo "No tests failed with status 1"
 else
-    print_files "The following %d tests failed with status 1:\n" ${failed_tests}
+    print_files "FAILED:The following %d tests failed with status 1:\n" ${failed_tests}
     ((exit_status|=0x10))
 fi
 
 if test -z "${unexpected_faults}"; then
     echo "No tests returned with unexpected exit status"
 else
-    print_files "The following %d tests failed with unexpected exit status:\n" ${unexpected_faults}
+    print_files "FAILED-UNEXPECTED:The following %d tests failed with unexpected exit status:\n" ${unexpected_faults}
     ((exit_status|=0x40))
 fi
 

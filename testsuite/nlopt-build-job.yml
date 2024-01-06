@@ -1,0 +1,41 @@
+nlopt-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  # needs:
+  #   - job: mbdyn-cleanup-job
+  script:
+      - NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+      - NL_BUILD_DIR=${CI_PROJECT_DIR}/${NL_BUILD_DIR}
+      - |
+        if test -d "${NL_INSTALL_PREFIX}"; then
+          NL_PKG_CONFIG=`find ${NL_INSTALL_PREFIX} '(' -type d -and -name pkgconfig ')'`
+        fi
+        if ! test -z "${NL_PKG_CONFIG}" && test -f "${NL_PKG_CONFIG}/nlopt.pc" && test "${MBD_CLEAN_ALL}" = "no"; then
+          echo "nlopt was already installed"
+          exit 0
+        fi
+      - |
+        if ! test -d ${NL_BUILD_DIR}; then
+          git clone -b master https://github.com/stevengj/nlopt.git ${NL_BUILD_DIR}
+        fi
+      - cd ${NL_BUILD_DIR}
+      - |
+        if ! test -d build_dir; then
+          mkdir build_dir
+        fi
+      - cd build_dir
+      - |
+        if ! test -f Makefile; then
+          cmake .. -DCMAKE_INSTALL_PREFIX="${NL_INSTALL_PREFIX}" -DBUILD_SHARED_LIBS=ON -DNLOPT_OCTAVE=OFF -DNLOPT_PYTHON=OFF
+        fi
+      - make -j${MBD_NUM_BUILD_JOBS}
+      - rm -rf ${NL_INSTALL_PREFIX}
+      - make install
+  artifacts:
+     name: nlopt-binaries
+     expire_in: 1 hour     
+     paths:
+      - $NL_INSTALL_PREFIX
+  # cache:
+  #  key: nlopt-build-job
+  #  paths:
+  #     - $NL_BUILD_DIR
