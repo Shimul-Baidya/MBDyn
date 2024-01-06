@@ -193,9 +193,9 @@ stages:          # List of stages for jobs, and their order of execution
   - build
   - test
   - deploy
-  - cleanup
 
 include:
+    - local: '/testsuite/mbdyn-cleanup-job.yml'
     - local: '/testsuite/mbdyn-bootloader-job.yml'
     - local: '/testsuite/mkl-build-job.yml'
     - local: '/testsuite/netcdf-build-job.yml'
@@ -208,4 +208,3 @@ include:
     - local: '/testsuite/mbdyn-modules-test-job.yml'
     - local: '/testsuite/octave-pkg-test-job.yml'
     - local: '/testsuite/mbdyn-deploy-job.yml'
-    - local: '/testsuite/mbdyn-cleanup-job.yml'
