@@ -153,7 +153,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                           if ! test -d "${pkgname}"; then
                               exit 1
                           fi
-                          
+
                           pkg_tar_file=$(find "${pkgname}" '(' -type f -and -path "*/target/${pkgname}*.tar.gz" ')')
 
                           if ! test -f "${pkg_tar_file}"; then
@@ -192,7 +192,8 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
 
                       case "${pkgname}" in
                       mboct-fem-pkg)
-                          ## FIXME: Need install fem_pre_mesh_size since octave's package manager does not run "make install"
+                          ## FIXME: Need to install fem_pre_mesh_size since octave's package manager does not run "make install"
+
                           mkdir -p "${OCT_PKG_INSTALL_PREFIX}/bin"
                           if ! cd "${pkgname}/src"; then
                               exit 1
@@ -204,10 +205,17 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                           if ! test -f Makefile; then
                             ./configure CXXFLAGS="${MBD_COMPILER_FLAGS}" --prefix="${OCT_PKG_INSTALL_PREFIX}"
                           fi
-                          if ! make -j${MBD_NUM_BUILD_JOBS}; then
+
+                          ## No need to recompile the whole package!
+                          if ! make fem_pre_mesh_size; then
                               exit 1
                           fi
-                          if ! make install; then
+
+                          if ! ./fem_pre_mesh_size >& /dev/null; then
+                            exit 1
+                          fi
+
+                          if ! install fem_pre_mesh_size "${OCT_PKG_INSTALL_PREFIX}/bin"; then
                               exit 1
                           fi
                           if ! cd ..; then
