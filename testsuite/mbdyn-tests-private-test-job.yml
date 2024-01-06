@@ -19,15 +19,15 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - |
-        if ! test -d "${MBD_TESTS_PRIVATE_INPUT_DIR}"; then
-          if ! git clone $MBD_TESTS_PRIVATE_GITLAB "${MBD_TESTS_PRIVATE_INPUT_DIR}"; then
+        if ! test -d ${MBD_TESTS_PRIVATE_INPUT_DIR}; then
+          if ! git clone $MBD_TESTS_PRIVATE_GITLAB ${MBD_TESTS_PRIVATE_INPUT_DIR}; then
             echo "$MBD_TESTS_PRIVATE_GITLAB is not accessible"
             echo "Until that issue is fixed, this test will exit with status 0"
             exit 0
           fi
         fi
-      - test -d "${MBD_TESTS_PRIVATE_INPUT_DIR}"
-      - cd "${MBD_TESTS_PRIVATE_INPUT_DIR}"
+      - test -d ${MBD_TESTS_PRIVATE_INPUT_DIR}
+      - cd ${MBD_TESTS_PRIVATE_INPUT_DIR}
       - git pull --force
       - cd ..
       - chmod +x testsuite/simple_testsuite.sh
