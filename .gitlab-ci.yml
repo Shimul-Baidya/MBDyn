@@ -64,7 +64,8 @@ variables:
   ## "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines"
   ## and select "Clear runner caches"!
   MBD_BUILD_DIR: "testsuite/var/tmp/build/mbdyn/"
-
+  MBD_BUILD_DIR_MANUALS: "testsuite/var/tmp/build/mbdyn-manuals/"
+  
   NC_C_BUILD_DIR: "testsuite/var/tmp/build/netcdf-c/"
   NC_CXX4_BUILD_DIR: "testsuite/var/tmp/build/netcdf-cxx4/"
 
