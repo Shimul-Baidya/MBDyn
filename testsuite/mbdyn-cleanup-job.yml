@@ -1,14 +1,5 @@
-mbdyn-bootloader-job:
-  stage: .pre
-  script:
-        - |
-          if ! test -z "${MBD_TESTSUITE_BOOTLOADER}"; then
-            echo ${MBD_TESTSUITE_BOOTLOADER}
-            ${MBD_TESTSUITE_BOOTLOADER}
-          fi
-        
 mbdyn-cleanup-job:
-  stage: .pre
+  stage: cleanup
   script:
         - OUTPUT_FORMAT=pid,comm,tty,state,cputime,vsize,uname,pcpu,pmem,tty
         - AWK_FILTER_CMD="/mbdyn|octave/{if(\$3==\"?\"&&\$4!=\"Z\"){print \$1};}"
