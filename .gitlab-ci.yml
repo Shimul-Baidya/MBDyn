@@ -155,7 +155,7 @@ variables:
   MBD_TESTS_PRIVATE_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-private-testjob/"
 
   MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
-  MBD_TESTS_PRIVATE_GITLAB: "git@gitlab.com:zanoni-mbdyn/mbdyn-tests.git"
+  MBD_TESTS_PRIVATE_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests.git"
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
