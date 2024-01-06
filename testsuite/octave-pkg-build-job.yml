@@ -196,6 +196,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
 
                           mkdir -p "${OCT_PKG_INSTALL_PREFIX}/bin"
                           if ! cd "${pkgname}/src"; then
+                              echo "Directory src not found"
                               exit 1
                           fi
                           if ! test -x configure; then
@@ -203,22 +204,24 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                             ./bootstrap
                           fi
                           if ! test -f Makefile; then
-                            ./configure CXXFLAGS="${MBD_COMPILER_FLAGS}" --prefix="${OCT_PKG_INSTALL_PREFIX}"
+                            if ! ./configure CXXFLAGS="${MBD_COMPILER_FLAGS}" --prefix="${OCT_PKG_INSTALL_PREFIX}"; then
+                              echo "configure failed"
+                              exit 1
+                            fi
                           fi
 
                           ## No need to recompile the whole package!
                           if ! make fem_pre_mesh_size; then
+                              echo "Failed to build fem_pre_mesh_size"
                               exit 1
-                          fi
-
-                          if ! ./fem_pre_mesh_size >& /dev/null; then
-                            exit 1
                           fi
 
                           if ! install fem_pre_mesh_size "${OCT_PKG_INSTALL_PREFIX}/bin"; then
+                              echo "Failed to install fem_pre_mesh_size"
                               exit 1
                           fi
                           if ! cd ..; then
+                              echo "Directory is not valid"
                               exit 1
                           fi
                           ;;
