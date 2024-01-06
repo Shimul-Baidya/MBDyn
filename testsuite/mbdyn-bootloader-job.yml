@@ -1,0 +1,8 @@
+mbdyn-bootloader-job:
+  stage: .pre
+  script:
+        - |
+          if ! test -z "${MBD_TESTSUITE_BOOTLOADER}"; then
+            echo ${MBD_TESTSUITE_BOOTLOADER}
+            ${MBD_TESTSUITE_BOOTLOADER}
+          fi
