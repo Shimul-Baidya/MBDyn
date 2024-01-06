@@ -38,4 +38,4 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
     expire_in: 2 hours
     paths:
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR/mbdyn-tests-public-test-job.log
-  on-cancel: mbdyn-cleanup-job
+  on_cancel: mbdyn-cleanup-job
