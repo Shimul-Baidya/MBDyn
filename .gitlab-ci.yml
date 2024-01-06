@@ -65,7 +65,7 @@ variables:
   ## and select "Clear runner caches"!
   MBD_BUILD_DIR: "testsuite/var/tmp/build/mbdyn/"
   MBD_BUILD_DIR_MANUALS: "testsuite/var/tmp/build/mbdyn-manuals/"
-  
+
   NC_C_BUILD_DIR: "testsuite/var/tmp/build/netcdf-c/"
   NC_CXX4_BUILD_DIR: "testsuite/var/tmp/build/netcdf-cxx4/"
 
@@ -171,7 +171,7 @@ variables:
   ## Allow us to execute a one line command only once, although it might be not very secure.
   ## So, we do not need to modify .gitlab-ci.yml every time.
   MBD_TESTSUITE_BOOTLOADER: ""
-  
+
   ## Send a kill -9 to all running octave and mbdyn processes owned by the same user and without a terminal connected.
   ## For whatever reason, it could happen that those processes are not terminated if a pipeline is cancelled.
   ## "no"       Do not start the pipeline if there are any running processes! This option should be safe.
@@ -206,10 +206,4 @@ include:
     - local: '/testsuite/mbdyn-tests-public-test-job.yml'
     - local: '/testsuite/mbdyn-modules-test-job.yml'
     - local: '/testsuite/octave-pkg-test-job.yml'
-
-deploy-job:      # This job runs in the deploy stage.
-  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
-  environment: production
-  script:
-    - echo "Deploying application..."
-    - echo "Application successfully deployed."
+    - local: '/testsuite/mbdyn-deploy-job.yml'
