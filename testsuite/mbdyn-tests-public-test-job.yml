@@ -8,7 +8,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
     - job: mkl-build-job
       artifacts: true
     - job: mbdyn-build-job
-      artifacts: true      
+      artifacts: true
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
@@ -28,13 +28,13 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - cd ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - git pull --force
-      - cd ..
+      - cd ${CI_PROJECT_DIR}
       - chmod +x testsuite/simple_testsuite.sh
       - mkdir -p ${MBD_TESTS_PUBLIC_OUTPUT_DIR} ## needed for realpath
         ## FIXME: It seems that everything must be on one long line ...
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS}
-  # artifacts:
-  #   name: mbdyn-tests-public-output-dir
-  #   expire_in: 2 days
-  #   paths:
-  #     - $MBD_TESTS_PUBLIC_OUTPUT_DIR
+      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${MBD_TESTS_PUBLIC_OUTPUT_DIR}/mbdyn-tests-public-test-job.log"
+  artifacts:
+    name: mbdyn-tests-public-test-job
+    expire_in: 2 hours
+    paths:
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/mbdyn-tests-public-test-job.log
