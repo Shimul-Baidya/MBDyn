@@ -26,59 +26,74 @@
 #     - when: never
 
 variables:
-  ## Installation directories - they must be relative to $CI_PROJECT_DIR
-  ## So, we can use them as "artifacts".
-  ## Every build stage needs one directory of it's own!
-  ## The content of those directories will be lost after the pipeline ends.
-  ## There would be an option to reuse artifacts for other pipelines, but it is not enabled yet.
+  ## Directories for binaries and temporary storage:
+  ## All paths must be relative to $CI_PROJECT_DIR!
+  ## So, we can use them with "artifacts:" and "cache:".
+  ## Regarding artifacts, every build stage should have one directory of it's own!
+  ## By default, the content of those directories will be lost after each job ends.
+  ## The only exception is MKL, because it is too big for "artifacts:" and "cache:"
+  TESTSUITE_PREFIX: testsuite/var
+
+  ## All the job artefacts are stored inside $TESTSUITE_PREFIX_CACHE.
+  ## They will be cleaned up after each job, but the can be restored by indiviual jobs using "needs:"
+  TESTSUITE_PREFIX_CACHE: $TESTSUITE_PREFIX/cache
+
+  ## Temporary files are store inside $TESTSUITE_PREFIX_TMP and will be cleaned up after each job,
+  ## unless they are cached by individual jobs.
+  TESTSUITE_PREFIX_TMP: $TESTSUITE_PREFIX/tmp
+
+  ## Compiled object files are stored inside $TESTSUITE_PREFIX_BUILD
+  ## Those directories may be cached by individual jobs in order to speed up compilation.
+  TESTSUITE_PREFIX_BUILD: $TESTSUITE_PREFIX_TMP/build
 
   ## Local installation directory for MBDyn:
-  MBD_INSTALL_PREFIX: "testsuite/var/cache/mbdyn/"
+  MBD_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/mbdyn
 
   ## Local installation directory for Gmsh:
-  GMSH_INSTALL_PREFIX: "testsuite/var/cache/gmsh/"
+  GMSH_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/gmsh
 
   ## Local installation directory for fem_pre_mesh_size
   ## This program is needed to calculate the mesh size for Gmsh only for a very specific test case.
-  OCT_PKG_INSTALL_PREFIX: "testsuite/var/cache/share/octave/"
+  OCT_PKG_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/share/octave
 
   ## Local installation directory for Intel oneMKL
-  MKL_INSTALL_PREFIX: "testsuite/var/cache/mkl/"
+  ## FIXME: MKL cannot be used as an artifact because it is too big!
+  ## FIMXE: So, $MKL_INSTALL_PREFIX is relative to $HOME instead of CI_PROJECT_DIR
+  MKL_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/mkl
 
   ## Local installation directory for NetCDF
-  NC_INSTALL_PREFIX: "testsuite/var/cache/netcdf/"
+  NC_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/netcdf
 
   ## Local installation directory for NetCDF
-  NC_CXX4_INSTALL_PREFIX: "testsuite/var/cache/netcdf-cxx4/"
+  NC_CXX4_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/netcdf-cxx4
 
   ## Local installation directory for nlopt
-  NL_INSTALL_PREFIX: "testsuite/var/cache/nlopt/"
+  NL_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/nlopt
 
   ## Local build directories
-  ## They must be relative to $CI_PROJECT_DIR, so we can use them for caches!
-  ## Everything inside "testsuite/var/tmp/build" will be collected in the cache.
-  ## It may be reused for other pipelines at the same branch.
-  ## Only things which can help us to speed up compilation should be stored there!
+  ## They must be relative to $CI_PROJECT_DIR, so we can use them with "cache:"
 
   ## If you want to free disk space at the runner, go to
   ## "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines"
   ## and select "Clear runner caches"!
-  MBD_BUILD_DIR: "testsuite/var/tmp/build/mbdyn/"
-  MBD_BUILD_DIR_MANUALS: "testsuite/var/tmp/build/mbdyn-manuals/"
+  MBD_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/mbdyn
+  MBD_BUILD_DIR_MANUALS: $TESTSUITE_PREFIX_BUILD/mbdyn-manuals
 
-  NC_C_BUILD_DIR: "testsuite/var/tmp/build/netcdf-c/"
-  NC_CXX4_BUILD_DIR: "testsuite/var/tmp/build/netcdf-cxx4/"
+  NC_C_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/netcdf-c
+  NC_CXX4_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/netcdf-cxx4
 
-  NL_BUILD_DIR: "testsuite/var/tmp/build/nlopt/"
+  NL_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/nlopt
 
-  GMSH_BUILD_DIR: "testsuite/var/tmp/build/gmsh/"
+  GMSH_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/gmsh
 
-  OCT_PKG_BUILD_DIR: "testsuite/var/tmp/build/octave-pkg/"
+  OCT_PKG_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/octave-pkg
 
-  MKL_BUILD_DIR: "testsuite/var/tmp/build/mkl/"
+  ## FIXME: MKL cannot be used as cache because it is too big!
+  ## FIXME: So, $MKL_BUILD_DIR is relative to $HOME instead of $CI_PROJECT_DIR
+  MKL_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/mkl
 
-  MBD_TESTS_PUBLIC_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-public/"
-  MBD_TESTS_PRIVATE_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-private/"
+  MBD_TESTS_PUBLIC_INPUT_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-tests-public
+  MBD_TESTS_PRIVATE_INPUT_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-tests-private
 
   # Number of processes to build MBDyn (e.g. make -j$MBD_NUM_BUILD_JOBS)
   MBD_NUM_BUILD_JOBS: "12"
