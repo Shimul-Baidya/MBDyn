@@ -1,4 +1,9 @@
 mkl-build-job:       # This job runs in the build stage, which runs first.
+  variables:
+    ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
+    ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
+    MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
+    MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
   stage: build
   script:
        - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}

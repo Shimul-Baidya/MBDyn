@@ -80,31 +80,14 @@ variables:
   MBD_TESTS_PUBLIC_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-public/"
   MBD_TESTS_PRIVATE_INPUT_DIR: "testsuite/var/cache/mbdyn-tests-private/"
 
-  ## Clean up the build directory of MBDyn
-  MBD_CLEAN_BUILD: "no"
-
   # Number of processes to build MBDyn (e.g. make -j$MBD_NUM_BUILD_JOBS)
   MBD_NUM_BUILD_JOBS: "12"
 
   ## Remove and reinstall all the software which was installed by previous pipeline executions.
   MBD_CLEAN_ALL: "no"
 
-  ## Force no rebuild of MBDyn; The default must be "no", but it could be overridden manually when the pipeline is started!
-  MBD_SKIP_BUILD: "no"
-
-  ## Install the latest stable release of Gmsh via wget
-  GMSH_URL: "http://www.gmsh.info/bin/Linux/gmsh-stable-Linux64.tgz"
-
-  ## Force reinstallation of a new version of Gmsh from $GMSH_URL
-  ## The default value should be "no", but may be overridden manually when the pipeline is started.
-  GMSH_REINSTALL: "no"
-
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
-
-  ## Run MBDyn's configure with the following modules enabled.
-  ## In order to enable additional modules, it would be necessary also to install their dependencies.
-  MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
 
   ## Octave packages to be installed from github.com or octave-forge
   OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
@@ -132,20 +115,6 @@ variables:
   OCT_PKG_TEST_MODE: "pkg"
   OCTAVE_EXEC: "octave"
 
-  ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
-  ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
-  MBD_MODULE_TEST_TIMEOUT: "unlimited"
-  MBD_TESTS_PUBLIC_TIMEOUT: "unlimited"
-  MBD_TESTS_PRIVATE_TIMEOUT: "600s"
-
-  ## Error codes which should not cause the pipeline to fail:
-  ## - timeout                    (0x2)
-  ## - module not found           (0x4)
-  ## - loadable element not found (0x8)
-  MBD_MODULE_TEST_EXIT_STATUS_MASK: "0xC"
-  MBD_TESTS_PUBLIC_EXIT_STATUS_MASK: "0x0"
-  MBD_TESTS_PRIVATE_EXIT_STATUS_MASK: "0xE"
-
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
   ## This makes it easier to clean up temporary files and ther is no need to use /tmp
   ## Paths must be relative to CI_PROJECT_PATH
@@ -154,24 +123,12 @@ variables:
   MBD_TESTS_PUBLIC_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-public-testjob/"
   MBD_TESTS_PRIVATE_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-private-testjob/"
 
-  MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests-public.git"
-  MBD_TESTS_PRIVATE_GITLAB: "https://gitlab.com/zanoni-mbdyn/mbdyn-tests.git"
+  MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
   ## In order to enable verbose output for MBDyn use: MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
   MBD_SIMPLE_TESTSUITE_FLAGS: ""
-
-  ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
-  ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
-  MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
-  MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
-  MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
-
-  ## Allow us to execute a one line command only once, although it might be not very secure.
-  ## So, we do not need to modify .gitlab-ci.yml every time.
-  MBD_TESTSUITE_BOOTLOADER: ""
-
 stages:          # List of stages for jobs, and their order of execution
   - .pre
   - build

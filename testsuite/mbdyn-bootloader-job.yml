@@ -1,4 +1,8 @@
 mbdyn-bootloader-job:
+  variables:
+    ## Allow us to execute a one line command only once, although it might be not very secure.
+    ## So, we do not need to modify .gitlab-ci.yml every time if we want to clean up some garbage.
+    MBD_TESTSUITE_BOOTLOADER: ""
   stage: .pre
   script:
         - |
