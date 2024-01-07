@@ -116,7 +116,7 @@ variables:
   ## Octave package tests to be executed
   ## Actually only mboct-mbdyn-pkg contains validating tests for MBDyn.
   ## However, the other packages are required to run those tests.
-  OCT_PKG_TESTS: "nurbs:yes netcdf:yes mboct-octave-pkg:yes mboct-numerical-pkg:yes mboct-mbdyn-pkg:no mboct-fem-pkg:no"
+  OCT_PKG_TESTS: "nurbs:yes netcdf:yes mboct-octave-pkg:yes mboct-numerical-pkg:yes mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
 
   ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h" or "unlimited")
   ## There should be no need to enable a timeout here.
