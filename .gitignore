@@ -1,6 +1,9 @@
 ## ebrowse - class hierarchy database
 BROWSE
 
+## GNU Octave workspace
+octave-workspace
+
 include/mbconfig.h
 include/mbconfig.h.in
 include/mbconfig.h.in~
