@@ -2,6 +2,10 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
   variables:
     ## Clean up the build directory of MBDyn
     MBD_CLEAN_BUILD: "no"
+
+    ## Force no rebuild of MBDyn; The default must be "no", but it could be overridden manually when the pipeline is started!
+    MBD_SKIP_BUILD: "no"
+
     ## Run MBDyn's configure with the following modules enabled.
     ## In order to enable additional modules, it would be necessary also to install their dependencies.
     MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
@@ -23,11 +27,10 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
     - mkdir -p ${OCT_PKG_INSTALL_PREFIX}
     - |
-      if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null; then
-        echo "Do not build MBDyn because it was already installed"
+      if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
+        echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
         exit 0
       fi
-
     - echo "checkout branch $CI_COMMIT_BRANCH"
     - git checkout $CI_COMMIT_BRANCH --force
     ## FIXME: git pull --force fails whenever workflow rules are active
@@ -173,7 +176,6 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    paths:
     - $MBD_INSTALL_PREFIX
     - $OCT_PKG_INSTALL_PREFIX ## Because mbdyn_util_oct will be installed there!
-
   cache:
    key: mbdyn-build-job
    paths:
