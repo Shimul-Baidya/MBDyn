@@ -257,7 +257,7 @@ Wheel4::OutputPrepare(OutputHandler &OH)
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
 		        std::ostringstream os;
-		        os << "loadable." << GetLabel();
+		        os << "elem.loadable." << GetLabel();
 		        (void)OH.CreateVar(os.str(), "wheel4");
 
 		        // joint sub-data
