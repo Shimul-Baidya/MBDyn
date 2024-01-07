@@ -17,6 +17,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       artifacts: true
     - job: mkl-build-job
       artifacts: true
+    - job: mbdyn-checkout-job
   script:
     - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
     - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
@@ -31,13 +32,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
         echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
         exit 0
       fi
-    - echo "checkout branch $CI_COMMIT_BRANCH"
-    - git checkout $CI_COMMIT_BRANCH --force
-    ## FIXME: git pull --force fails whenever workflow rules are active
-    ## Need to set upstream branch in order to fix it
-    - git branch --set-upstream-to=origin/$CI_COMMIT_BRANCH
-    - printf "pulling\n"
-    - git pull --force
+
     ## Let's try to speed up the build process a bit
     ## Execute bootstrap.sh and configure only if needed
     ## This conditional execution may be removed as soon as the testsuite is finished
@@ -235,6 +230,8 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
 
 mbdyn-build-job-manuals:       # This job runs in the build stage, which runs first.
   stage: build
+  needs:
+    - job: mbdyn-checkout-job
   script:
     - MBD_BUILD_DIR_MANUALS=${CI_PROJECT_DIR}/${MBD_BUILD_DIR_MANUALS}
     - echo "checkout branch $CI_COMMIT_BRANCH"
