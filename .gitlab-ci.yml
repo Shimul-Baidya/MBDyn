@@ -182,11 +182,11 @@ variables:
   ## "disabled" Ignore running processes. Probably not a safe option.
   MBD_FORCE_KILL: "no"
 
-default:
-  cache:
-    key: testsuite-$CI_PROJECT_NAME-$CI_COMMIT_BRANCH
-    paths:
-      - testsuite/var/tmp/build
+# default:
+#   cache:
+#     key: testsuite-$CI_PROJECT_NAME-$CI_COMMIT_BRANCH
+#     paths:
+#       - testsuite/var/tmp/build
 
 stages:          # List of stages for jobs, and their order of execution
   - .pre
