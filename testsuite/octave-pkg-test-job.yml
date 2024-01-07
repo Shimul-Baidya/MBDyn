@@ -32,9 +32,9 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - ${OCTAVE_EXEC} -qfH --version
       - chmod +x testsuite/octave_pkg_testsuite.sh
       ## FIXME: It seems that everything must be on one long line
-      - testsuite/octave_pkg_testsuite.sh --print-resources time+profile --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" 2>&1 | tee "${OCT_PKG_TEST_OUTPUT_DIR}/octave-pkg-test-job.log"
-  artifacts:
-    name: octave-pkg-test-output-dir
-    expire_in: 2 days
-    paths:
-      - $OCT_PKG_TEST_OUTPUT_DIR/octave-pkg-test-job.log
+      - testsuite/octave_pkg_testsuite.sh --print-resources time+profile --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-tests "${OCT_PKG_TESTS}" --timeout "${OCT_PKG_TIMEOUT}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}"
+  # artifacts:
+  #   name: octave-pkg-test-output-dir
+  #   expire_in: 2 days
+  #   paths:
+  #     - $OCT_PKG_TEST_OUTPUT_DIR/octave-pkg-test-job.log

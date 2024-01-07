@@ -386,10 +386,11 @@ done
 
 case "${test_status}" in
     passed)
-        echo "all tests passed"
+        echo "All tests passed"
+        exit 0
         ;;
     *)
-        echo "the following packages did not pass:"
+        echo "The following packages did not pass:"
         for pkgname in ${failed_packages}; do
             printf "%s\n" "${pkgname}"
         done

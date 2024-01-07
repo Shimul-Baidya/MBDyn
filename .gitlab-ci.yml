@@ -118,7 +118,7 @@ variables:
   ## Octave package tests to be executed
   ## Actually only mboct-mbdyn-pkg contains validating tests for MBDyn.
   ## However, the other packages are required to run those tests.
-  OCT_PKG_TESTS: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
+  OCT_PKG_TESTS: "nurbs:yes netcdf:yes mboct-octave-pkg:yes mboct-numerical-pkg:yes mboct-mbdyn-pkg:no mboct-fem-pkg:no"
 
   ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h" or "unlimited")
   ## There should be no need to enable a timeout here.
@@ -180,7 +180,7 @@ variables:
   ##            In such a situation just go to "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines/new"
   ##            and override the default value by "yes"!
   ## "disabled" Ignore running processes. Probably not a safe option.
-  MBD_FORCE_KILL: "yes"
+  MBD_FORCE_KILL: "no"
 
 default:
   cache:
@@ -203,8 +203,8 @@ include:
     - local: '/testsuite/mbdyn-build-job.yml'
     - local: '/testsuite/octave-pkg-build-job.yml'
     - local: '/testsuite/gmsh-build-job.yml'
+    - local: '/testsuite/octave-pkg-test-job.yml'
     - local: '/testsuite/mbdyn-tests-private-test-job.yml'
     - local: '/testsuite/mbdyn-tests-public-test-job.yml'
     - local: '/testsuite/mbdyn-modules-test-job.yml'
-    - local: '/testsuite/octave-pkg-test-job.yml'
     - local: '/testsuite/mbdyn-deploy-job.yml'
