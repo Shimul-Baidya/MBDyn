@@ -1,4 +1,6 @@
 octave-pkg-test-job:   # This job runs in the test stage.
+  variables:
+      OCT_PKG_TEST_JOB_LOG: "octave-pkg-test-job.log"
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
       - job: mkl-build-job
@@ -20,21 +22,23 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
       - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
       - OCT_PKG_TEST_OUTPUT_DIR=${CI_PROJECT_DIR}/${OCT_PKG_TEST_OUTPUT_DIR}
-      - echo "octave packages test job"
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - which mbdyn
-      - mbdyn --version
-      - which mbdyn2easyanim.sh
-      - which gmsh
-      - gmsh --version
-      - which octave
-      - ${OCTAVE_EXEC} -qfH --version
+      - mkdir -p "${OCT_PKG_TEST_OUTPUT_DIR}"
+      - log_file="${OCT_PKG_TEST_OUTPUT_DIR}/${OCT_PKG_TEST_JOB_LOG}"
+      - echo "octave packages test job" | tee "${log_file}"
+      - which mbdyn | tee -a "${log_file}"
+      - mbdyn --version | tee -a "${log_file}"
+      - which mbdyn2easyanim.sh | tee -a "${log_file}"
+      - which gmsh | tee -a "${log_file}"
+      - gmsh --version | tee -a "${log_file}"
+      - which octave | tee -a "${log_file}"
+      - ${OCTAVE_EXEC} -qfH --version | tee -a "${log_file}"
       - chmod +x testsuite/octave_pkg_testsuite.sh
       ## FIXME: It seems that everything must be on one long line
-      - testsuite/octave_pkg_testsuite.sh --print-resources time+profile --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}"
-  # artifacts:
-  #   name: octave-pkg-test-output-dir
-  #   expire_in: 2 days
-  #   paths:
-  #     - $OCT_PKG_TEST_OUTPUT_DIR/octave-pkg-test-job.log
+      - testsuite/octave_pkg_testsuite.sh --print-resources time+profile --verbose yes --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}"  2>&1 | tee -a "${log_file}"
+  artifacts:
+    name: octave-pkg-test-output-dir
+    expire_in: 2 days
+    paths:
+      - $OCT_PKG_TEST_OUTPUT_DIR/$OCT_PKG_TEST_JOB_LOG
