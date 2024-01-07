@@ -266,3 +266,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
    expire_in: 1 hour
    paths:
      - $OCT_PKG_INSTALL_PREFIX
+  cache:
+    key: octave-pkg-build-job
+    paths:
+     - $OCT_PKG_BUILD_DIR
