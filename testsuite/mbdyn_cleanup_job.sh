@@ -47,7 +47,8 @@ program_name=$0
 while ! test -z "$1"; do
     case "$1" in
         --force-kill)
-            MBD_FORCE_KILL="yes"
+            MBD_FORCE_KILL="$2"
+            shift
             ;;
     esac
     shift
