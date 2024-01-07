@@ -38,4 +38,7 @@ gmsh-build-job:       # This job runs in the build stage, which runs first.
    cache:
      key: libraries-build-job
      paths:
+       - $NC_C_BUILD_DIR
+       - $NC_CXX4_BUILD_DIR
+       - $NL_BUILD_DIR
        - $GMSH_BUILD_DIR
