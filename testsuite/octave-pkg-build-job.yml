@@ -73,11 +73,10 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
         - cd "${OCT_PKG_BUILD_DIR}"
         - |
           for pkgname_and_flags in ${OCT_PKG_LIST}; do
-              printf "build package \"%s\"\n" "${pkgname}"
-
               pkgname=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$1}")
               pkg_rebuild_flag=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$2}")
               pkg_branch=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$3}")
+              printf "build package \"%s\" branch \"%s\"\n" "${pkgname}" "${pkg_branch}"
 
               case "${pkg_rebuild_flag}" in
                   yes|no)
