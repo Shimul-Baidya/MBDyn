@@ -1,5 +1,15 @@
 mbdyn-cleanup-job:
+  variables:
+    ## Send a kill -9 to all running octave and mbdyn processes owned by the same user and without a terminal connected.
+    ## For whatever reason, it could happen that those processes are not terminated if a pipeline is cancelled.
+    ## "no"       Do not start the pipeline if there are any running processes! This option should be safe.
+    ## "yes"      Kill all running processes!
+    ##            This must not be the default option, and it should be used only as a last resort solution!
+    ##            In such a situation just go to "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines/new"
+    ##            and override the default value by "yes"!
+    ## "disabled" Ignore running processes. Probably not a safe option.
+    MBD_FORCE_KILL: "no"
   stage: .pre
   cache: []
   script:
-        - testsuite/mbdyn_cleanup_job.sh
+        - testsuite/mbdyn_cleanup_job.sh --force-kill ${MBD_FORCE_KILL}
