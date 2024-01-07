@@ -1,0 +1,10 @@
+mbdyn-checkout-job:
+  stage: .pre
+  cache: []
+  script:
+    - echo "checkout branch $CI_COMMIT_BRANCH ..."
+    - git checkout $CI_COMMIT_BRANCH --force
+    ## FIXME: git pull --force fails whenever workflow rules are active
+    ## Need to set upstream branch in order to fix it
+    - echo "pulling ..."
+    - git pull --force

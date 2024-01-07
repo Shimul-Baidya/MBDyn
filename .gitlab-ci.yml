@@ -153,6 +153,7 @@ stages:          # List of stages for jobs, and their order of execution
 include:
     - local: '/testsuite/mbdyn-cleanup-job.yml'
     - local: '/testsuite/mbdyn-bootloader-job.yml'
+    - local: '/testsuite/mbdyn-checkout-job.yml'
     - local: '/testsuite/mkl-build-job.yml'
     - local: '/testsuite/netcdf-build-job.yml'
     - local: '/testsuite/nlopt-build-job.yml'
