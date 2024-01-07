@@ -105,22 +105,14 @@ variables:
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
 
   ## Octave packages to be installed from github.com or octave-forge
-  OCT_PKG_LIST: "nurbs netcdf mboct-octave-pkg mboct-numerical-pkg mboct-mbdyn-pkg mboct-fem-pkg"
-
-  ## Force rebuild of Octave packages to be installed from github.com or octave-forge
-  OCT_PKG_REBUILD: "nurbs:no netcdf:no mboct-octave-pkg:no mboct-numerical-pkg:no mboct-mbdyn-pkg:no mboct-fem-pkg:no"
-
-  ## Branch passed to git clone -b for all mboct-*-pkg packages.
-  OCT_PKG_BRANCH: "nurbs:master netcdf:master mboct-octave-pkg:master mboct-numerical-pkg:master mboct-mbdyn-pkg:master mboct-fem-pkg:master"
-
-  ## Octave package tests to be executed
-  ## Actually only mboct-mbdyn-pkg contains validating tests for MBDyn.
-  ## However, the other packages are required to run those tests.
-  OCT_PKG_TESTS: "nurbs:yes netcdf:yes mboct-octave-pkg:yes mboct-numerical-pkg:yes mboct-mbdyn-pkg:yes mboct-fem-pkg:no"
-
-  ## Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h" or "unlimited")
-  ## There should be no need to enable a timeout here.
-  OCT_PKG_TIMEOUT: "nurbs:unlimited netcdf:unlimited mboct-octave-pkg:unlimited mboct-numerical-pkg:unlimited mboct-mbdyn-pkg:unlimited mboct-fem-pkg:unlimited"
+  ## List of package names separated by space: <OCTAVE_PKG_NAME>:<REBUILD_FLAG>:<BRANCH_TAG>:<TEST_FLAG>:<TEST_TIMEOUT>
+  ## <OCTAVE_PKG_NAME> Name of the package which will be passed to Octave's pkg load function (e.g. pkg("load","<OCTAVE_PKG_NAME>"))
+  ## <REBUILD_FLAG>    If this value is set to "yes", the package will be reinstalled. Otherwise the package may be reused from the cache.
+  ## <BRANCH_TAG>      Name of the branch (e.g. git clone -b <BRANCH_TAG>). In case of packages from octave-forge, this value will be ignored.
+  ## <TEST_FLAG>       If this value is set to "yes", Octave's __run_test_suite__ or test function will be executed in octave-pkg-test-job.
+  ## <TEST_TIMEOUT>    Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h" or "unlimited")
+  ##                   There should be no need to enable a timeout here.
+  OCT_PKG_LIST: "nurbs:no:master:yes:unlimited netcdf:no:master:yes:unlimited mboct-octave-pkg:no:master:yes:unlimited mboct-numerical-pkg:no:master:yes:unlimited mboct-mbdyn-pkg:no:master:yes:unlimited mboct-fem-pkg:no:master:no:unlimited"
 
   ## Execution mode for all Octave package tests:
   ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.

@@ -72,10 +72,12 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
         - echo PARDISO_INC="${PARDISO_INC}"
         - cd "${OCT_PKG_BUILD_DIR}"
         - |
-          for pkgname in ${OCT_PKG_LIST}; do
+          for pkgname_and_flags in ${OCT_PKG_LIST}; do
               printf "build package \"%s\"\n" "${pkgname}"
 
-              pkg_rebuild_flag=$(echo ${OCT_PKG_REBUILD} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
+              pkgname=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$1}")
+              pkg_rebuild_flag=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$2}")
+              pkg_branch=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$3}")
 
               case "${pkg_rebuild_flag}" in
                   yes|no)
@@ -85,7 +87,6 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                       ;;
               esac
 
-              pkg_branch=$(echo ${OCT_PKG_BRANCH} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
 
               if test -z "${pkg_branch}"; then
                   pkg_branch="master"
