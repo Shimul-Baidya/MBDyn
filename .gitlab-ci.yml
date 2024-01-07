@@ -180,7 +180,7 @@ variables:
   ##            In such a situation just go to "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines/new"
   ##            and override the default value by "yes"!
   ## "disabled" Ignore running processes. Probably not a safe option.
-  MBD_FORCE_KILL: "yes"
+  MBD_FORCE_KILL: "no"
 
 default:
   cache:
@@ -203,8 +203,8 @@ include:
     - local: '/testsuite/mbdyn-build-job.yml'
     - local: '/testsuite/octave-pkg-build-job.yml'
     - local: '/testsuite/gmsh-build-job.yml'
+    - local: '/testsuite/octave-pkg-test-job.yml'
     - local: '/testsuite/mbdyn-tests-private-test-job.yml'
     - local: '/testsuite/mbdyn-tests-public-test-job.yml'
     - local: '/testsuite/mbdyn-modules-test-job.yml'
-    - local: '/testsuite/octave-pkg-test-job.yml'
     - local: '/testsuite/mbdyn-deploy-job.yml'
