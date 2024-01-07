@@ -83,7 +83,16 @@ DrivenElem::OutputPrepare(OutputHandler& OH)
         using namespace std::string_literals;
 	ASSERT(pElem != NULL);
 	pElem->OutputPrepare(OH);
-	m_sOutputNameBase = "driven."s + std::to_string(GetLabel());
+
+        // Note: Although we are calling pElem->OutputPrepare(OH),
+        //       pElem->sGetOutputNameBase() might be empty
+        //       if the "driven element" did not override OutputPrepare().
+        //       In such a situation we could get an exception from the NetCDF library.
+        //       But if we are always using the suffix "elem.driven.",
+        //       then the name of the output variable would be always valid,
+        //       no matter if OutputPrepare was overridden or not.
+
+	m_sOutputNameBase = "elem.driven."s + std::to_string(GetLabel());
 
 #ifdef USE_NETCDF
 	if (pElem->bToBeOutput() && OH.UseNetCDF(OutputHandler::NETCDF))
