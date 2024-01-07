@@ -42,9 +42,7 @@
 set -o pipefail ## Needed for commands like "octave --eval ${cmd} |& tee logfile"
 
 program_name="$0"
-OCT_PKG_LIST="${OCT_PKG_LIST:-mboct-mbdyn-pkg}"
-OCT_PKG_TESTS="${OCT_PKG_TESTS:-mboct-mbdyn-pkg:yes}"
-OCT_PKG_TIMEOUT="${OCT_PKG_TIMEOUT:-mboct-mbdyn-pkg:unlimited}"
+OCT_PKG_LIST="${OCT_PKG_LIST:-mboct-mbdyn-pkg:no:master:yes:unlimited}"
 OCT_PKG_TEST_DIR="${OCT_PKG_TEST_DIR:-octave-pkg-testsuite}"
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
@@ -84,10 +82,6 @@ while ! test -z "$1"; do
             OCT_PKG_LIST="$2"
             shift
             ;;
-        --octave-pkg-tests)
-            OCT_PKG_TESTS="$2"
-            shift
-            ;;
         --octave-pkg-test-dir)
             OCT_PKG_TEST_DIR="$2"
             shift
@@ -108,16 +102,12 @@ while ! test -z "$1"; do
             OCT_PKG_TESTS_VERBOSE="$2"
             shift
             ;;
-        --timeout)
-            OCT_PKG_TIMEOUT="$2"
-            shift
-            ;;
         --print-resources)
             OCT_PKG_PRINT_RES="$2"
             shift
             ;;
         --help|-h)
-            printf "%s\n --octave-pkg-list <list-of-packages>\n --octave-pkg-tests <list-of-tests>\n --octave-pkg-test-dir <output-dir>\n --timeout <timeout-value>\n --help\n" "${program_name}"
+            printf "%s\n --octave-pkg-list <list-of-packages-and-flags>\n --octave-pkg-test-dir <output-dir>\n --print-resources {all|time|disc|profile}\n --octave-pkg-prefix <pkg-install-dir>\n --octave-exec <octave-executable>\n --octave-pkg-test-mode {pkg|single}\n --help\n" "${program_name}"
             exit 1;
             ;;
         *)
@@ -174,8 +164,14 @@ case "${OCT_PKG_PRINT_RES}" in
         ;;
 esac
 
-for pkgname in ${OCT_PKG_LIST}; do
-    pkg_test_flag=$(echo ${OCT_PKG_TESTS} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
+for pkgname_and_flags in ${OCT_PKG_LIST}; do
+    pkgname=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$1}")
+    pkg_test_flag=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$4}")
+    pkg_test_timeout=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$5}")
+
+    if test -z "${pkg_test_timeout}"; then
+        pkg_test_timeout="unlimited"
+    fi
 
     case "${pkg_test_flag}" in
         yes)
@@ -235,12 +231,6 @@ for pkgname in ${OCT_PKG_LIST}; do
             exit 1
             ;;
     esac
-
-    pkg_test_timeout=$(echo ${OCT_PKG_TIMEOUT} | awk -v RS=" " -F ":" "/^${pkgname}\>/{print \$2}")
-
-    if test -z "${pkg_test_timeout}"; then
-        pkg_test_timeout="unlimited"
-    fi
 
     case "${pkg_test_timeout}" in
         unlimited)
