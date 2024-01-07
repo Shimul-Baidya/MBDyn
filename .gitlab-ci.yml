@@ -116,9 +116,9 @@ variables:
 
   ## Execution mode for all Octave package tests:
   ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.
-  ## The value of $OCT_PKG_TIMEOUT will be applied to each function.
+  ## The value of <TEST_TIMEOUT> will be applied to each function.
   ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
-  ## The value $OCT_PKG_TIMEOUT will be applied to the whole package.
+  ## The value <TEST_TIMEOUT> will be applied to the whole package.
   OCT_PKG_TEST_MODE: "pkg"
   OCTAVE_EXEC: "octave"
 
