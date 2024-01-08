@@ -257,7 +257,7 @@ Wheel4::OutputPrepare(OutputHandler &OH)
 			ASSERT(OH.IsOpen(OutputHandler::NETCDF));
 
 		        std::ostringstream os;
-		        os << "loadable." << GetLabel();
+		        os << "elem.loadable." << GetLabel();
 		        (void)OH.CreateVar(os.str(), "wheel4");
 
 		        // joint sub-data
@@ -267,120 +267,120 @@ Wheel4::OutputPrepare(OutputHandler &OH)
 			 * and save the NcVar* pointer returned from add_var
 			 * as handle for later write accesses.
 			 * Define also variable attributes */
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Fint",
-                                                OutputHandler::Dimensions::Force,
-                                                "force btwn ring and patch acting on patch (x, y, z)");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xpar",
-                                                OutputHandler::Dimensions::Length,
-                                                "rel pos of patch (x, y, z)");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xparp",
-                                                OutputHandler::Dimensions::Length,
-                                                "rel pos of patch expressed in the ring non-rotating reference frame (x, y, z)");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dXxProj",
-                                                OutputHandler::Dimensions::Length,
-                                                "patch center point x-value of the road profile (attention: this is not the same thing as the patch position)");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoad",
-                                                OutputHandler::Dimensions::Length,
-                                                "road height");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
-                                                OutputHandler::Dimensions::Force,
-                                                "Road-patch friction force expressed in absolute reference frame (x, y, z)");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Fn",
-                                                OutputHandler::Dimensions::Force,
-                                                "Normal force at the patch");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "debug",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "Debugging variable");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dSr",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dSr");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "ddistM",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "ddistM");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Fcent",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "Fcent");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dLs",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dLs");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "R_e",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "R_e");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dSa",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dSa");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvax",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dvax");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvx",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dvx");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvay",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dvay");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dMuY",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dMuY");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dMuX",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dMuX");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "KE",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "KE");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "PE",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "PE");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "E",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "E");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoadAhead",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dRoadAhead");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoadBehind",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dRoadBehind");
-			OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dCt",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "dCt");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "M");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "distM",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "distM");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "n",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "n");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xpa",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "Xpa");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Vpa",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "Vpa");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Vpar",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "Vpar");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwd",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "fwd");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwdRing",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "fwdRing");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwdRingFlat",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "fwdRingFlat");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "pcRing",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "pcRing");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "VparWheel",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "VparWheel");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Fr",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "Fr");
-			OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Mz",
-                                                OutputHandler::Dimensions::UnknownDimension,
-                                                "Mz");
+			Var_Fint = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Fint",
+                                                      OutputHandler::Dimensions::Force,
+                                                      "force btwn ring and patch acting on patch (x, y, z)");
+			Var_Xpar = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xpar",
+                                                      OutputHandler::Dimensions::Length,
+                                                      "rel pos of patch (x, y, z)");
+			Var_Xparp = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xparp",
+                                                       OutputHandler::Dimensions::Length,
+                                                       "rel pos of patch expressed in the ring non-rotating reference frame (x, y, z)");
+			Var_dXxProj = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dXxProj",
+                                                               OutputHandler::Dimensions::Length,
+                                                               "patch center point x-value of the road profile (attention: this is not the same thing as the patch position)");
+			Var_dRoad = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoad",
+                                                             OutputHandler::Dimensions::Length,
+                                                             "road height");
+			Var_F = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "F",
+                                                   OutputHandler::Dimensions::Force,
+                                                   "Road-patch friction force expressed in absolute reference frame (x, y, z)");
+			Var_Fn = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Fn",
+                                                          OutputHandler::Dimensions::Force,
+                                                          "Normal force at the patch");
+			Var_debug = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "debug",
+                                                             OutputHandler::Dimensions::UnknownDimension,
+                                                             "Debugging variable");
+			Var_dSr = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dSr",
+                                                           OutputHandler::Dimensions::UnknownDimension,
+                                                           "dSr");
+			Var_ddistM = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "ddistM",
+                                                              OutputHandler::Dimensions::UnknownDimension,
+                                                              "ddistM");
+			Var_Fcent = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "Fcent",
+                                                             OutputHandler::Dimensions::UnknownDimension,
+                                                             "Fcent");
+			Var_dLs = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dLs",
+                                                           OutputHandler::Dimensions::UnknownDimension,
+                                                           "dLs");
+			Var_R_e = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "R_e",
+                                                           OutputHandler::Dimensions::UnknownDimension,
+                                                           "R_e");
+			Var_dSa = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dSa",
+                                                           OutputHandler::Dimensions::UnknownDimension,
+                                                           "dSa");
+			Var_dvax = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvax",
+                                                            OutputHandler::Dimensions::UnknownDimension,
+                                                            "dvax");
+			Var_dvx = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvx",
+                                                           OutputHandler::Dimensions::UnknownDimension,
+                                                           "dvx");
+			Var_dvay = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dvay",
+                                                            OutputHandler::Dimensions::UnknownDimension,
+                                                            "dvay");
+			Var_dMuY = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dMuY",
+                                                            OutputHandler::Dimensions::UnknownDimension,
+                                                            "dMuY");
+			Var_dMuX = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dMuX",
+                                                            OutputHandler::Dimensions::UnknownDimension,
+                                                            "dMuX");
+			Var_KE = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "KE",
+                                                          OutputHandler::Dimensions::UnknownDimension,
+                                                          "KE");
+			Var_PE = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "PE",
+                                                          OutputHandler::Dimensions::UnknownDimension,
+                                                          "PE");
+			Var_E = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "E",
+                                                         OutputHandler::Dimensions::UnknownDimension,
+                                                         "E");
+			Var_dRoadAhead = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoadAhead",
+                                                                  OutputHandler::Dimensions::UnknownDimension,
+                                                                  "dRoadAhead");
+			Var_dRoadBehind = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dRoadBehind",
+                                                                   OutputHandler::Dimensions::UnknownDimension,
+                                                                   "dRoadBehind");
+			Var_dCt = OH.CreateVar<doublereal>(m_sOutputNameBase + "." "dCt",
+                                                           OutputHandler::Dimensions::UnknownDimension,
+                                                           "dCt");
+			Var_M = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "M",
+                                                   OutputHandler::Dimensions::UnknownDimension,
+                                                   "M");
+			Var_distM = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "distM",
+                                                       OutputHandler::Dimensions::UnknownDimension,
+                                                       "distM");
+			Var_n = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "n",
+                                                   OutputHandler::Dimensions::UnknownDimension,
+                                                   "n");
+			Var_Xpa = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Xpa",
+                                                     OutputHandler::Dimensions::UnknownDimension,
+                                                     "Xpa");
+			Var_Vpa = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Vpa",
+                                                     OutputHandler::Dimensions::UnknownDimension,
+                                                     "Vpa");
+			Var_Vpar = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Vpar",
+                                                      OutputHandler::Dimensions::UnknownDimension,
+                                                      "Vpar");
+			Var_fwd = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwd",
+                                                     OutputHandler::Dimensions::UnknownDimension,
+                                                     "fwd");
+			Var_fwdRing = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwdRing",
+                                                         OutputHandler::Dimensions::UnknownDimension,
+                                                         "fwdRing");
+			Var_fwdRingFlat = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "fwdRingFlat",
+                                                             OutputHandler::Dimensions::UnknownDimension,
+                                                             "fwdRingFlat");
+			Var_pcRing = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "pcRing",
+                                                        OutputHandler::Dimensions::UnknownDimension,
+                                                        "pcRing");
+			Var_VparWheel = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "VparWheel",
+                                                           OutputHandler::Dimensions::UnknownDimension,
+                                                           "VparWheel");
+			Var_Fr = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Fr",
+                                                    OutputHandler::Dimensions::UnknownDimension,
+                                                    "Fr");
+			Var_Mz = OH.CreateVar<Vec3>(m_sOutputNameBase + "." "Mz",
+                                                    OutputHandler::Dimensions::UnknownDimension,
+                                                    "Mz");
 
 
 		}
