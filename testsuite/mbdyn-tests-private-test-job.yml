@@ -55,3 +55,4 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
     expire_in: 2 days
     paths:
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR/mbdyn-tests-private-test-job.log
+      - $MBD_TESTS_PRIVATE_OUTPUT_DIR/*_mbdyn_output.stdout
