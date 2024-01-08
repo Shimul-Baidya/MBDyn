@@ -1637,10 +1637,10 @@ The \kw{reference} directive:
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{card} ::= \kw{reference} : \bnt{unique_label} , 
         [ \kw{name} , (\ty{string}) \bnt{name} , ]
-        (\hty{Vec3}) \bnt{absolute_position} ,
-        (\hty{OrientationMatrix}) \bnt{absolute_orientation_matrix} ,
-        (\hty{Vec3}) \bnt{absolute_velocity} ,
-        (\hty{Vec3}) \bnt{absolute_angular_velocity} ;
+        [ \kw{position} , ]         (\hty{Vec3}) \bnt{absolute_position} ,
+        [ \kw{orientation} , ]      (\hty{OrientationMatrix}) \bnt{absolute_orientation_matrix} ,
+        [ \kw{velocity} , ]         (\hty{Vec3}) \bnt{absolute_velocity} ,
+        [ \kw{angular velocity} , ] (\hty{Vec3}) \bnt{absolute_angular_velocity} ;
 \end{Verbatim}
 %\end{verbatim}
 A \kw{reference} system is declared and defined.
@@ -3700,7 +3700,7 @@ Currently implemented shape functions for friction models are:
     the \kw{half thread angle} angle $\gamma$ should be equal to half of the thread angle.
   \begin{figure}[h]
     \begin{center}
-      \includegraphics{../tecman/Screw_sketch}
+      \includegraphics{Screw_sketch}
     \end{center}
     \caption{3D screw thread sketch.}
     \label{fig:screw_sketch_3D}
