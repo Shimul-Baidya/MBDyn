@@ -46,6 +46,7 @@ mbdyn_testsuite_prefix_output=""
 mbdyn_testsuite_prefix_input=""
 mbdyn_input_filter=""
 mbdyn_verbose_output="no"
+mbdyn_keep_output="none"
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
 declare -i mbd_test_idx_start=1
 declare -i mbd_test_idx_offset=1
@@ -87,6 +88,10 @@ while ! test -z "$1"; do
             ;;
         --verbose)
             mbdyn_verbose_output="$2"
+            shift
+            ;;
+        --keep-output)
+            mbdyn_keep_output="$2"
             shift
             ;;
         --help)
@@ -165,14 +170,14 @@ declare -i idx_test=0
 
 for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk "/begin: initial value;/{print FILENAME}"`; do
     ((++idx_test))
-    
+
     printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
-    
+
     if test $((idx_test)) -lt $((mbd_test_idx_start)); then
         echo "  skipped ..."
         continue
     fi
-    
+
     ((mbd_test_idx_start+=mbd_test_idx_offset))
 
     mbd_basename=`basename -s ".mbdyn" "${mbd_filename}"`
@@ -309,14 +314,38 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
             cat "${mbd_time_file}"
         fi
 
+        keep_output_flag="no"
+
+        case "${mbdyn_keep_output}" in
+            all)
+                keep_output_flag="yes"
+                ;;
+            failed)
+                case "${status}" in
+                    failed|unexpected)
+                        keep_output_flag="yes"
+                        ;;
+                esac
+                ;;
+            unexpected)
+                case "${status}" in
+                    unexpected)
+                        keep_output_flag="yes"
+                        ;;
+                esac
+                ;;
+        esac
+
         mbd_output_file=$(awk -F '"' '/^output in file\>/{print $2}' "${mbd_log_file}")
 
-        if test -f "${mbd_output_file}.log"; then
-            find "${mbdyn_testsuite_prefix_output}" '(' -type f -and -wholename $(printf '%s.*' "${mbd_output_file}") ')' -delete
-        fi
+        if test "${keep_output_flag}" = "no"; then
+            if test -f "${mbd_output_file}.log"; then
+                find "${mbdyn_testsuite_prefix_output}" '(' -type f -and -wholename $(printf '%s.*' "${mbd_output_file}") ')' -delete
+            fi
 
-        rm -f "${mbd_log_file}"
-        rm -f "${mbd_time_file}"
+            rm -f "${mbd_log_file}"
+            rm -f "${mbd_time_file}"
+        fi
 
         case "${status}" in
             passed*)
