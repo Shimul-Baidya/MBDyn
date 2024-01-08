@@ -1,6 +1,8 @@
 mbdyn-checkout-job:
   stage: .pre
   cache: []
+  needs:
+    - job: mbdyn-cleanup-job
   script:
     - echo "checkout branch $CI_COMMIT_BRANCH ..."
     - git checkout $CI_COMMIT_BRANCH --force
