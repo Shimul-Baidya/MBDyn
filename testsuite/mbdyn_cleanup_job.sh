@@ -38,8 +38,8 @@
 
 # Purpose:
 # Make sure that we are not starting a new pipeline until all remaining processes from a previous pipeline were terminated.
-# Although this should be ensured by the gitlab runner, but actually it is not always the case if a pipeline was cancelled.
-# Probably the issue could be resolved by a docker based gitlab runner as well.
+# Although this should be ensured by the gitlab runner, actually it is not always the case if a pipeline was cancelled.
+# For a better solution see also https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27443#note_1197449654
 
 MBD_FORCE_KILL=${MBD_FORCE_KILL:-no}
 program_name=$0

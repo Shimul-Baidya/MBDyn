@@ -36,7 +36,7 @@
 # for use in the software MBDyn as described
 # in the GNU Public License version 2.1
 
-## Use the simple testsuite in order to check if a model can run or not
+## Use simple_testsuite.sh in order to check if a model can run or not
 
 set -o pipefail ## Needed for commands like "mbdyn -f input_file |& tee logfile"
 
@@ -52,11 +52,20 @@ declare -i mbd_test_idx_start=1
 declare -i mbd_test_idx_offset=1
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 
+program_dir=$(realpath $(dirname "${program_name}"))
+
+if ! test -f "${program_dir}/mbdyn_input_file_format.awk"; then
+    program_dir=$(realpath $(which "${program_name}"))
+fi
+
+if test -f "${program_dir}/mbdyn_input_file_format.awk"; then
+    export AWKPATH=${program_dir}:${AWKPATH}
+fi
+
 ## Disable multithreaded BLAS by default
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
-
 ## Might be used for Octave scripts (e.g. via mboct-mbdyn-pkg)
 export MBD_NUM_THREADS=${MBD_NUM_THREADS:-`awk -F ':' 'BEGIN{cores=-1;}/^cpu cores\>/{cores=strtonum($2);}END {print cores;}' /proc/cpuinfo`}
 
@@ -168,7 +177,7 @@ fi
 export TMPDIR="${mbdyn_testsuite_prefix_output}"
 declare -i idx_test=0
 
-for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk "/begin: initial value;/{print FILENAME}"`; do
+for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`; do
     ((++idx_test))
 
     printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
