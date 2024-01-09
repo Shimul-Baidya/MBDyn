@@ -194,7 +194,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         mbd_script_name=`basename -s .mbdyn ${mbd_script_name}`
         mbd_dir_name=`dirname ${mbd_filename}`
         mbd_script_name_sh="${mbd_dir_name}/${mbd_script_name}_run.sh"
-        mbd_script_name_m1="${mbd_dir_name}/${mbd_script_name}.m"
+        mbd_script_name_m1="${mbd_dir_name}/${mbd_script_name}_run.m"
         mbd_script_name_m2="${mbd_dir_name}/${mbd_script_name}_gen.m"
         mbd_command=""
 
@@ -208,10 +208,10 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                     *_gen.m)
                         mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}; mbdyn -C -f ${mbd_filename} -o ${mbd_output_file}"
                         ;;
-                    *.m)
+                    *_run.m)
                         mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
                         ;;
-                    *.sh)
+                    *_run.sh)
                         chmod +x "${mbd_script_name}"
                         mbd_command="${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
                         ;;
@@ -435,4 +435,5 @@ fi
 ((exit_status&=~mbd_exit_status_mask))
 
 printf "${program_name} exit status 0x%X\n" $((exit_status))
+
 exit $((exit_status))
