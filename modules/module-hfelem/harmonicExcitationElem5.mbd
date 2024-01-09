@@ -180,7 +180,7 @@ begin: elements;
 			drive, node, 2, structural, string, "X[1]", direct,
 			drive, node, 2, structural, string, "XP[1]", direct;
 	*/
-	module load: "libmodule-hfelem";
+	#module load: "libmodule-hfelem";
 	user defined: 99, harmonic excitation,
 		inputs number, 2,
 			node, 2, structural, string, "X[1]", direct,
