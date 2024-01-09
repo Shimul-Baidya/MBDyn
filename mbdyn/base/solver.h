@@ -499,7 +499,12 @@ public:
 	virtual void PrintSolution(const VectorHandler& Sol, integer iIterCnt) const;
 	virtual void CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const /*throw(NonlinearSolver::TimeStepLimitExceeded, NonlinearSolver::MaxResidualExceeded)*/;
         std::ostream& PrintSolverTime(std::ostream& os) const {
-	     return pNLS->PrintSolverTime(os);
+             if (pNLS) {
+                  // If we are using "abort after: assembly;", then pNLS will be NULL!
+                  pNLS->PrintSolverTime(os);
+             }
+
+             return os;
         }
 };
 
