@@ -9,6 +9,8 @@ mbdyn-cleanup-job:
     ##            and override the default value by "yes"!
     ## "disabled" Ignore running processes. Probably not a safe option.
     MBD_FORCE_KILL: "no"
+  needs:
+        - job: mbdyn-bootloader-job
   stage: .pre
   cache: []
   script:

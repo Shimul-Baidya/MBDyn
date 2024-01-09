@@ -1,7 +1,7 @@
 nlopt-build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  # needs:
-  #   - job: mbdyn-cleanup-job
+  needs:
+      - job: mbdyn-cleanup-job
   script:
       - NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
       - NL_BUILD_DIR=${CI_PROJECT_DIR}/${NL_BUILD_DIR}

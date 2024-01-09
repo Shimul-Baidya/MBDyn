@@ -40,4 +40,4 @@
 
 OCTAVE_EXEC=${OCTAVE_EXEC:-octave}
 
-exec ${OCTAVE_EXEC} -q -f triangular_contact.m
+exec ${OCTAVE_EXEC} -q -f triangular_contact_run.m

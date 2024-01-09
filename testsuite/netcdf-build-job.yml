@@ -1,5 +1,7 @@
 netcdf-c-build-job:       # This job runs in the build stage, which runs first.
   stage: build
+  needs:
+      - job: mbdyn-cleanup-job
   script:
       - echo "netcdf-c installation job"
       - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}

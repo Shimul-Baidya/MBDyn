@@ -5,6 +5,8 @@ mkl-build-job:       # This job runs in the build stage, which runs first.
     MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
     MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
   stage: build
+  needs:
+       - job: mbdyn-cleanup-job
   script:
        - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
        - MKL_BUILD_DIR=${CI_PROJECT_DIR}/${MKL_BUILD_DIR}
