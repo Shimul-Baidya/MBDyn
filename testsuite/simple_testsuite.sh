@@ -47,6 +47,7 @@ mbdyn_testsuite_prefix_input=""
 mbdyn_input_filter=""
 mbdyn_verbose_output="no"
 mbdyn_keep_output="unexpected"
+mbdyn_patch_input="no"
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
 declare -i mbd_test_idx_start=1
 declare -i mbd_test_idx_offset=1
@@ -60,6 +61,9 @@ fi
 
 if test -f "${program_dir}/mbdyn_input_file_format.awk"; then
     export AWKPATH=${program_dir}:${AWKPATH}
+    sed_prefix=${program_dir}/
+else
+    sed_prefix=""
 fi
 
 ## Disable multithreaded BLAS by default
@@ -101,6 +105,10 @@ while ! test -z "$1"; do
             ;;
         --keep-output)
             mbdyn_keep_output="$2"
+            shift
+            ;;
+        --patch-input)
+            mbdyn_patch_input="$2"
             shift
             ;;
         --help)
@@ -194,18 +202,31 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
 
     if test -f "${mbd_filename}"; then
         mbd_time_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_time.log"
-        mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output"
+        mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output"       
         mbd_log_file="${mbd_output_file}.stdout"
         echo ${mbd_log_file}
 
         mbd_script_name=`basename ${mbd_filename}`
         mbd_script_name=`basename -s .mbd ${mbd_script_name}`
         mbd_script_name=`basename -s .mbdyn ${mbd_script_name}`
-        mbd_dir_name=`dirname ${mbd_filename}`
+        mbd_dir_name=`dirname "${mbd_filename}"`
         mbd_script_name_sh="${mbd_dir_name}/${mbd_script_name}_run.sh"
         mbd_script_name_m1="${mbd_dir_name}/${mbd_script_name}_run.m"
         mbd_script_name_m2="${mbd_dir_name}/${mbd_script_name}_gen.m"
         mbd_command=""
+
+        if test "${mbdyn_patch_input}" != "no"; then
+            mbd_filename_patched=$(tempfile -d "${mbd_dir_name}" -p "${mbd_basename}_patched_" -s ".mbd")
+
+            mbd_filename_patched_copy="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_input_file_patched.mbd"
+            
+            if ! sed -E -f "${sed_prefix}mbdyn_testsuite_patch.sed" "${mbd_filename}" | tee "${mbd_filename_patched}" > "${mbd_filename_patched_copy}"; then
+                rm -f "${mbd_filename_patched}"
+                exit 1
+            fi
+        else
+            mbd_filename_patched="${mbd_filename}"
+        fi
 
         for mbd_script_name in "${mbd_script_name_m2}" "${mbd_script_name_m1}" "${mbd_script_name_sh}"; do
             if ! test -z "${mbd_command}"; then
@@ -230,7 +251,13 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
 
         if test -z "${mbd_command}"; then
             echo "No custom test script was found for input file ${mbd_filename}; The default command will be used to run the model"
-            mbd_command="mbdyn -C -f ${mbd_filename} -o ${mbd_output_file}"
+            mbd_command="mbdyn --pedantic --pedantic --pedantic -C -f ${mbd_filename_patched} -o ${mbd_output_file}"
+        else
+            if test "${mbdyn_patch_input}" != "no"; then
+                echo "Warning: Input file ${mbd_filename} must be processed by a custom script files cannot be patched!"
+                rm -f "${mbd_filename_patched}"                
+                continue
+            fi
         fi
 
         mbd_command="/usr/bin/time --verbose --output ${mbd_time_file} ${mbd_command}"
@@ -270,6 +297,10 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
 
         rc=$?
 
+        if test "${mbdyn_patch_input}" != "no"; then
+            rm -f "${mbd_filename_patched}"
+        fi
+        
         if ! cd "${curr_dir}"; then
             exit 1
         fi
