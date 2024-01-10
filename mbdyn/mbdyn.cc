@@ -219,6 +219,8 @@ mbdyn_usage(const char *sShortOpts)
 		<< "                             instead of '{input-file}.<ext>'" << std::endl
 		<< "                             (or 'Mbdyn.<ext>' when input from stdin)" << std::endl
 		<< std::endl);
+	silent_cout(
+		   "  -C, --solver-time         log nonlinear solver time" << std::endl);
 #ifdef DEBUG
 	silent_cout(
 		   "  -d, --debug {level[:level[...]]}  when using the debug version of the code," << std::endl
