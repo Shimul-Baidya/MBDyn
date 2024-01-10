@@ -180,9 +180,6 @@ if ! test -z "${mbdyn_input_filter}"; then
     search_expression=`printf -- "-name %s -and %s" "${mbdyn_input_filter}" "${search_expression}"`
 fi
 
-## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
-## This will make it easier to delete those files.
-export TMPDIR="${mbdyn_testsuite_prefix_output}"
 declare -i idx_test=0
 
 for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`; do
@@ -202,7 +199,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
 
     if test -f "${mbd_filename}"; then
         mbd_time_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_time.log"
-        mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output"       
+        mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output"
         mbd_log_file="${mbd_output_file}.stdout"
         echo ${mbd_log_file}
 
@@ -216,10 +213,11 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         mbd_command=""
 
         if test "${mbdyn_patch_input}" != "no"; then
-            mbd_filename_patched=$(tempfile -d "${mbd_dir_name}" -p "${mbd_basename}_patched_" -s ".mbd")
+            ## Use env -i in order to ensure that we are not using ${TMPDIR}
+            mbd_filename_patched=$(env -i tempfile -d "${mbd_dir_name}" -p "${mbd_basename}_patched_" -s ".mbd")
 
             mbd_filename_patched_copy="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_input_file_patched.mbd"
-            
+
             if ! sed -E -f "${sed_prefix}mbdyn_testsuite_patch.sed" "${mbd_filename}" | tee "${mbd_filename_patched}" > "${mbd_filename_patched_copy}"; then
                 rm -f "${mbd_filename_patched}"
                 exit 1
@@ -255,7 +253,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         else
             if test "${mbdyn_patch_input}" != "no"; then
                 echo "Warning: Input file ${mbd_filename} must be processed by a custom script files cannot be patched!"
-                rm -f "${mbd_filename_patched}"                
+                rm -f "${mbd_filename_patched}"
                 continue
             fi
         fi
@@ -289,10 +287,12 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         rm -f "${mbd_time_file}"
         rm -f "${mbd_log_file}"
 
+        ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
+        ## This will make it easier to delete those files, just in case that we are using *_run.m to run the test case.
         if test "${mbdyn_verbose_output}" = "yes"; then
-            ${mbd_command} |& tee "${mbd_log_file}"
+            TMPDIR="${mbdyn_testsuite_prefix_output}" ${mbd_command} |& tee "${mbd_log_file}"
         else
-            ${mbd_command} >& "${mbd_log_file}"
+            TMPDIR="${mbdyn_testsuite_prefix_output}" ${mbd_command} >& "${mbd_log_file}"
         fi
 
         rc=$?
@@ -300,7 +300,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
         if test "${mbdyn_patch_input}" != "no"; then
             rm -f "${mbd_filename_patched}"
         fi
-        
+
         if ! cd "${curr_dir}"; then
             exit 1
         fi
