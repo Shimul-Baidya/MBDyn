@@ -85,7 +85,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - git pull --force
       - cd ${curr_dir}
       - chmod +x testsuite/simple_testsuite.sh
-        ## FIXME: It seems that everything must be on one long line ...
+        ## FIXME: drives/string/distance will fail with status 139 if we are passing --pedantic --pedantic --pedantic
       - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
   artifacts:
     name: mbdyn-tests-private-test-job

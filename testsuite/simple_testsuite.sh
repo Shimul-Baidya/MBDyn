@@ -48,6 +48,7 @@ mbdyn_input_filter=""
 mbdyn_verbose_output="no"
 mbdyn_keep_output="unexpected"
 mbdyn_patch_input="no"
+mbdyn_args_add="-C"
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
 declare -i mbd_test_idx_start=1
 declare -i mbd_test_idx_offset=1
@@ -109,6 +110,10 @@ while ! test -z "$1"; do
             ;;
         --patch-input)
             mbdyn_patch_input="$2"
+            shift
+            ;;
+        --mbdyn-args-add)
+            mbdyn_args_add="$2"
             shift
             ;;
         --help)
@@ -234,7 +239,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                 echo "A custom test script ${mbd_script_name} was found for input file ${mbd_filename}; It will be used to run the model"
                 case "${mbd_script_name}" in
                     *_gen.m)
-                        mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}; mbdyn -C -f ${mbd_filename} -o ${mbd_output_file}"
+                        mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}; mbdyn ${mbdyn_args_add} -f ${mbd_filename} -o ${mbd_output_file}"
                         ;;
                     *_run.m)
                         mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
@@ -249,7 +254,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
 
         if test -z "${mbd_command}"; then
             echo "No custom test script was found for input file ${mbd_filename}; The default command will be used to run the model"
-            mbd_command="mbdyn --pedantic --pedantic --pedantic -C -f ${mbd_filename_patched} -o ${mbd_output_file}"
+            mbd_command="mbdyn ${mbdyn_args_add} -f ${mbd_filename_patched} -o ${mbd_output_file}"
         else
             if test "${mbdyn_patch_input}" != "no"; then
                 echo "Warning: Input file ${mbd_filename} must be processed by a custom script files cannot be patched!"
