@@ -332,7 +332,8 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                     fi
                 fi
                 ;;
-            124)
+            124|137)
+                ## FIXME: 137 will be returned also if SIGKILL was sent from another process
                 status="timeout"
                 echo "Timeout"
                 ;;
