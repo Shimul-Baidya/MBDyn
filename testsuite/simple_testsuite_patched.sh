@@ -63,7 +63,7 @@ while ! test -z "$1"; do
         --exit-status-mask)
             ((mbd_exit_status_mask=$2))
             shift
-            ;;        
+            ;;
         *)
             other_arguments="${other_arguments} $1 $2"
             shift
@@ -171,7 +171,8 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                 printf '    threads: disable;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                 printf '    nonlinear solver: %s%s;\n' "${mbd_nonlin_solver}" "${mbd_nonlin_solver_flags}" >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                 printf '    output: iterations;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-
+                printf '    derivatives max iterations: 10;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                printf '    derivatives coefficient: auto;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                 case ${mbd_use_autodiff} in
                     autodiff)
                         mbd_use_autodiff_cmd="use automatic differentiation;"
