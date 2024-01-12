@@ -182,10 +182,12 @@ unexpected_faults=""
 search_expression="-type f"
 
 if ! test -z "${mbdyn_input_filter}"; then
-    search_expression=`printf -- "-name %s -and %s" "${mbdyn_input_filter}" "${search_expression}"`
+    search_expression=`printf -- "%s -and %s" "${mbdyn_input_filter}" "${search_expression}"`
 fi
 
 declare -i idx_test=0
+
+echo find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')'
 
 for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`; do
     ((++idx_test))
@@ -276,8 +278,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                 ;;
             *)
                 echo "timeout after ${mbdyn_testsuite_timeout}"
-                ## Octave will not dump a core file on SIGINT
-                mbd_command="timeout --signal=SIGKILL ${mbdyn_testsuite_timeout} ${mbd_command}"
+                mbd_command="timeout --signal=SIGTERM ${mbdyn_testsuite_timeout} ${mbd_command}"
             ;;
         esac
 
@@ -332,7 +333,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
                     fi
                 fi
                 ;;
-            124|137)
+            124)
                 ## FIXME: 137 will be returned also if SIGKILL was sent from another process
                 status="timeout"
                 echo "Timeout"
