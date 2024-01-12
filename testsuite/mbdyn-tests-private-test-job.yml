@@ -46,6 +46,9 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
      ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
      ## Actually the overall timeout of 12 hours per job must be considered.
      MBD_TESTS_PRIVATE_TIMEOUT: "30s"
+     ## FIXME: It seems that MBDyn's EDGE interface does not respond to SIGTERM.
+     ## FIXME: Until this issues is fixed, all those tests must be disabled unless we use timeout --signal SIGKILL.     
+     MBD_TESTS_PRIVATE_FILTER_EXPR:"-not -path \"*/mbdyn-tests-private/forces/modalext/edge*\" -and -not -path \"*/mbdyn-tests-private/forces/strext/edge*\""
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
      - job: mkl-build-job
@@ -85,12 +88,8 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - git pull --force
       - cd ${curr_dir}
       - chmod +x testsuite/simple_testsuite.sh
-      - ## FIXME: It seems that MBDyn's EDGE interface does not respond to SIGTERM.
-      - ## FIXME: Until this issues is fixed, all those tests must be disabled unless we use timeout --signal SIGKILL.
-      - |
-        mbd_tests_private_filter_expr="-not -path '*/mbdyn-tests-private/forces/modalext/edge*' -and -not -path '*/mbdyn-tests-private/forces/strext/edge*'"
         ## FIXME: drives/string/distance will fail with status 139 if we are passing --pedantic --pedantic --pedantic
-        testsuite/simple_testsuite.sh --filter "${mbd_tests_private_filter_expr}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
+      - testsuite/simple_testsuite.sh --filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
   artifacts:
     name: mbdyn-tests-private-test-job
     expire_in: 2 days
