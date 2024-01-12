@@ -277,7 +277,7 @@ for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expressio
             *)
                 echo "timeout after ${mbdyn_testsuite_timeout}"
                 ## Octave will not dump a core file on SIGINT
-                mbd_command="timeout --signal=SIGTERM --kill-after=${mbdyn_testsuite_timeout} ${mbdyn_testsuite_timeout} ${mbd_command}"
+                mbd_command="timeout --signal=SIGKILL ${mbdyn_testsuite_timeout} ${mbd_command}"
             ;;
         esac
 
