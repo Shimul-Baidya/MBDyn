@@ -47,8 +47,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
      ## Actually the overall timeout of 12 hours per job must be considered.
      MBD_TESTS_PRIVATE_TIMEOUT: "30s"
      ## FIXME: It seems that MBDyn's EDGE interface does not respond to SIGTERM.
-     ## FIXME: Until this issues is fixed, all those tests must be disabled unless we use timeout --signal SIGKILL.     
-     MBD_TESTS_PRIVATE_FILTER_EXPR:"-not -path */mbdyn-tests-private/forces/modalext/edge* -and -not -path */mbdyn-tests-private/forces/strext/edge*"
+     ## FIXME: Until this issues is fixed, all those tests must be disabled unless we use timeout --signal SIGKILL.
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
      - job: mkl-build-job
