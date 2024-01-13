@@ -49,6 +49,14 @@ fi
 
 mbdyn_testsuite_prefix_output=""
 mbdyn_keep_output="unexpected"
+## FIXME: amesos fails with linesearch
+#mbdyn_linear_solvers="aztecoo amesos naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
+mbdyn_linear_solvers="naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
+mbdyn_matrix_handlers="map cc dir grad"
+mbdyn_matrix_scale_methods="rowmaxcolumnmax iterative lapack rowmax columnmax rowsum columnsum"
+mbdyn_matrix_scale_when="never always once"
+mbdyn_nonlinear_solvers="newtonraphson linesearch nox nox-newton-krylov nox-direct nox-broyden mcpnewtonminfb mcpnewtonfb bfgs"
+mbdyn_autodiff_options="autodiff noautodiff"
 declare -i mbd_exit_status_mask=0
 other_arguments=""
 
@@ -56,6 +64,26 @@ while ! test -z "$1"; do
     case "$1" in
         --prefix-output)
             mbdyn_testsuite_prefix_output="$2"
+            shift
+            ;;
+        --linear-solvers)
+            mbdyn_linear_solvers="$2"
+            shift
+            ;;
+        --matrix-handlers)
+            mbdyn_matrix_handlers="$2"
+            shift
+            ;;
+        --scale-methods)
+            mbdyn_matrix_scale_methods="$2"
+            shift
+            ;;
+        --scale-when)
+            mbdyn_matrix_scale_when="$2"
+            shift
+            ;;
+        --nonlinear-solvers)
+            mbdyn_nonlinear_solvers="$2"
             shift
             ;;
         --patch-input)
@@ -81,10 +109,39 @@ done
 ((mbd_exit_status_mask|=0x1))
 failed_tests=""
 
-for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 'spqr' 'qr' 'lapack'; do
-    for mbd_mh_type in 'map' 'cc' 'dir' 'grad'; do
-        for mbd_mat_scale in 'rowmaxcolumnmax' 'iterative' 'lapack' 'rowmax' 'columnmax' 'rowsum' 'columnsum'; do
-            for mbd_mat_scale_when in 'never' 'always' 'once'; do
+for mbd_linear_solver in ${mbdyn_linear_solvers}; do
+    for mbd_mh_type in ${mbdyn_matrix_handlers}; do
+        case "${mbd_linear_solver}" in
+            naive|lapack|qr|aztecoo|amesos)
+                case "${mbd_mh_type}" in
+                    map)
+                    ;;
+                    *)
+                        continue
+                        ;;
+                esac
+                ;;
+            y12)
+                case "${mbd_mh_type}" in
+                    map|cc|dir)
+                    ;;
+                    *)
+                        continue
+                        ;;
+                esac
+                ;;
+            pardiso|pardiso_64|spqr)
+                case "${mbd_mh_type}" in
+                    map|grad)
+                    ;;
+                    *)
+                        continue
+                        ;;
+                esac
+                ;;
+        esac
+        for mbd_mat_scale in ${mbdyn_matrix_scale_methods}; do
+            for mbd_mat_scale_when in ${mbdyn_matrix_scale_when}; do
                 case "${mbd_mat_scale_when}" in
                     never)
                         case "${mbd_mat_scale}" in
@@ -97,32 +154,16 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                         ;;
                 esac
                 case "${mbd_linear_solver}" in
-                    naive|lapack|qr)
-                        case "${mbd_mh_type}" in
-                            map)
-                            ;;
+                    aztecoo|amesos)
+                        case "${mbd_mat_scale_when}" in
+                            never)
+                                ;;
                             *)
                                 continue
                                 ;;
                         esac
                         ;;
-                    y12)
-                        case "${mbd_mh_type}" in
-                            map|cc|dir)
-                            ;;
-                            *)
-                                continue
-                                ;;
-                        esac
-                        ;;
-                    pardiso|pardiso_64|spqr)
-                        case "${mbd_mh_type}" in
-                            map|grad)
-                            ;;
-                            *)
-                                continue
-                                ;;
-                        esac
+                    pardiso|pardiso_64|qr|spqr)
                         case "${mbd_mat_scale_when}" in
                             never)
                                 ;;
@@ -131,7 +172,7 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                                 ;;
                         esac
                 esac
-                for mbd_use_autodiff in 'autodiff' 'noautodiff'; do
+                for mbd_use_autodiff in ${mbdyn_autodiff_options}; do
                     case "${mbd_mh_type}" in
                         grad)
                             case "${mbd_use_autodiff}" in
@@ -141,7 +182,7 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                             esac
                             ;;
                     esac
-                    for mbd_nonlin_solver in 'newtonraphson' 'linesearch' 'nox' 'nox-newton-krylov' 'nox-direct' 'nox-broyden' 'mcpnewtonminfb' 'mcpnewtonfb' 'bfgs'; do
+                    for mbd_nonlin_solver in ${mbdyn_nonlinear_solvers}; do
                         case "${mbd_nonlin_solver}" in
                             mcpnewtonminfb)
                                 case "${mbd_use_autodiff}" in
@@ -169,10 +210,16 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
 
                         case "${mbd_linear_solver}" in
                             naive)
-                                mbd_linear_solver_flags=",colamd"
+                                mbd_linear_solver_flags_pre=",colamd"
+                                mbd_linear_solver_flags_post=""
+                                ;;
+                            amesos|aztecoo)
+                                mbd_linear_solver_flags_pre=""
+                                mbd_linear_solver_flags_post=", tolerance, 1e-1, max iterations, 100, preconditioner, klu,verbose,3"
                                 ;;
                             *)
-                                mbd_linear_solver_flags=""
+                                mbd_linear_solver_flags_pre=""
+                                mbd_linear_solver_flags_post=""
                                 ;;
                         esac
 
@@ -189,6 +236,9 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                             nox-broyden)
                                 mbd_nonlin_solver_flags="nox, modified, 10, direction, broyden, minimum step, 1e-12, recovery step, 1e-12"
                                 ;;
+                            linesearch)
+                                mbd_nonlin_solver_flags="linesearch, modified, 0, default solver options, heavy nonlinear, divergence check, no, lambda min, 1,print convergence info, yes, verbose, yes"
+                                ;;
                             *)
                                 mbd_nonlin_solver_flags="${mbd_nonlin_solver}"
                                 ;;
@@ -201,7 +251,7 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                         export MBD_TESTSUITE_CONTROL_DATA_BEGIN="${mbd_output_dir}/mbd_control_data_begin.set"
                         export MBD_TESTSUITE_CONTROL_DATA_END="${mbd_output_dir}/mbd_control_data_end.set"
                         printf '    # mbd_init_val_begin.set currently not used!\n' > "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}"
-                        printf '    linear solver: %s,%s%s,scale,%s,%s;\n' "${mbd_linear_solver}" "${mbd_mh_type}" "${mbd_linear_solver_flags}" "${mbd_mat_scale}" "${mbd_mat_scale_when}" > "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                        printf '    linear solver: %s,%s%s,scale,%s,%s%s;\n' "${mbd_linear_solver}" "${mbd_mh_type}" "${mbd_linear_solver_flags_pre}" "${mbd_mat_scale}" "${mbd_mat_scale_when}" "${mbd_linear_solver_flags_post}" > "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                         printf '    abort after: derivatives;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                         printf '    threads: disable;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                         printf '    nonlinear solver: %s;\n' "${mbd_nonlin_solver_flags}" >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
@@ -221,7 +271,6 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                         printf '    %s\n' "${mbd_use_autodiff_cmd}" > "${MBD_TESTSUITE_CONTROL_DATA_END}"
 
                         simple_testsuite_log_file="${mbd_output_dir}/mbdyn-testsuite-patched.log"
-                        cat "${MBD_TESTSUITE_INITIAL_VALUE_END}" "${MBD_TESTSUITE_CONTROL_DATA_END}"
 
                         simple_testsuite.sh --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) >& "${simple_testsuite_log_file}"
 
@@ -268,7 +317,7 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                             rm -f "${simple_testsuite_log_file}" "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}" "${MBD_TESTSUITE_INITIAL_VALUE_END}" "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" "${MBD_TESTSUITE_CONTROL_DATA_END}"
                         fi
 
-                        printf 'TEST %s\n' "${test_status}"
+                        printf 'TEST \"%s\" %s\n' "${mbd_output_dir}" "${test_status}"
                     done
                 done
             done
