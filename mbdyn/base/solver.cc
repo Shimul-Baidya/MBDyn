@@ -7340,13 +7340,18 @@ Solver::AllocateNonlinearSolver()
                                        MCPNewtonMinFB(pDM, *this, oLineSearchParam));
                 break;
 #ifdef USE_TRILINOS
-        case NonlinearSolver::NOX:
+        case NonlinearSolver::NOX: {
                 // FIXME: Since access to the Jacobian matrix through the Trilinos library is not under our control,
                 // FIXME: we have to ensure that the content of the matrix is not destroyed by the linear solver.
+                constexpr unsigned uMaskCCDir = LinSol::SOLVER_FLAGS_ALLOWS_CC | LinSol::SOLVER_FLAGS_ALLOWS_DIR;
+                unsigned uSolFlags = CurrLinearSolver.GetSolverFlags();
+                const bool bCompactSpmh = (uSolFlags & uMaskCCDir) != 0u;
+                const bool bJacOpNewton = (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON) != 0u;
+                bool bAllowCompactSpmh = true;
+
                 switch (CurrLinearSolver.GetSolver()) {
                 case LinSol::UMFPACK_SOLVER:
                 case LinSol::KLU_SOLVER:
-                case LinSol::Y12_SOLVER:
                 case LinSol::PARDISO_SOLVER:
                 case LinSol::PARDISO_64_SOLVER:
                 case LinSol::PASTIX_SOLVER:
@@ -7355,10 +7360,16 @@ Solver::AllocateNonlinearSolver()
                 case LinSol::AZTECOO_SOLVER:
                 case LinSol::AMESOS_SOLVER:
                 case LinSol::SICONOS_SPARSE_SOLVER:
-                        // All solvers which do not destroy the Jacobian during factorization can be added here.
+                        // All linear solvers which do not destroy the Jacobian during factorization should be added here.
+                        break;
+                case LinSol::Y12_SOLVER:
+                        // Y12 will destroy the Jacobian only if a "dir" or "cc" matrix handler is used.
+                        if (bJacOpNewton) {
+                                bAllowCompactSpmh = false;
+                        }
                         break;
                 default:
-                        if (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON) {
+                        if (bJacOpNewton) {
                                 silent_cerr("Nonlinear solver \"nox\" cannot "
                                             "be used with linear solver \""
                                             << CurrLinearSolver.GetSolverName()
@@ -7366,24 +7377,32 @@ Solver::AllocateNonlinearSolver()
                                 throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                         }
                 }
-                {
-                        const SolutionManager::ScaleOpt& oScale = CurrLinearSolver.GetScale();
-                        const bool bScaleEnabled = oScale.when != SolutionManager::SCALEW_NEVER && oScale.algorithm != SolutionManager::SCALEA_NONE;
-                        const unsigned uSolFlags = CurrLinearSolver.GetSolverFlags();
-                        const unsigned uMaskCCDir = LinSol::SOLVER_FLAGS_ALLOWS_CC | LinSol::SOLVER_FLAGS_ALLOWS_DIR;
-                        const bool bCompactSpmh = (uSolFlags & uMaskCCDir) != 0;
 
-                        if (bScaleEnabled && bCompactSpmh) {
+                const SolutionManager::ScaleOpt& oScale = CurrLinearSolver.GetScale();
+                const bool bScaleEnabled = oScale.when != SolutionManager::SCALEW_NEVER && oScale.algorithm != SolutionManager::SCALEA_NONE;
+
+                if (bScaleEnabled) {
+                        if (bCompactSpmh) {
                                 silent_cerr("Warning: Nonlinear solver \"nox\" cannot "
                                             "be used with compact sparse matrix handlers "
                                             "\"cc\" or \"dir\" and matrix scaling enabled at the same time!\n"
                                             "Warning: using matrix handler \"map\" instead\n");
-                                CurrLinearSolver.SetSolverFlags((uSolFlags & ~uMaskCCDir) | LinSol::SOLVER_FLAGS_ALLOWS_MAP);
                         }
+                        bAllowCompactSpmh = false;
                 }
-                
+
+                if (!bAllowCompactSpmh && bCompactSpmh) {
+                        silent_cerr("Warning: Nonlinear solver \"nox\" cannot "
+                                    "be used with linear solver \""
+                                    << CurrLinearSolver.GetSolverName()
+                                    << "\" and \"cc\" or \"dir\" matrix handlers enabled, "
+                                    << "unless the \"newton krylov\" option is used!\n");
+                        uSolFlags = (uSolFlags & ~uMaskCCDir) | LinSol::SOLVER_FLAGS_ALLOWS_MAP;
+                }
+
+                CurrLinearSolver.SetSolverFlags(uSolFlags);
                 pNLS = pAllocateNoxNonlinearSolver(*this, oNoxSolverParam);
-                break;
+        } break;
 #endif
 #ifdef USE_SICONOS
         case NonlinearSolver::SICONOS_MCP_NEWTON_FB:
