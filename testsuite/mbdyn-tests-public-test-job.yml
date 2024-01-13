@@ -84,7 +84,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       ## FIXME: nox solver will fail with linear solver y12 if it is used with "jacobian operator, newton".
       - echo "-------------- PATCHED TESTS --------------------" | tee -a "${mbd_log_file}"
       - |
-        if ! testsuite/simple_testsuite_patched.sh --keep-output failed --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"; then
+        if ! testsuite/simple_testsuite_patched.sh --keep-output all --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"; then
           echo "test failed, but keep the output"
         fi
 
