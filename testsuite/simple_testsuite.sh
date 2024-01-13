@@ -179,17 +179,24 @@ modules_not_found=""
 loadables_not_found=""
 unexpected_faults=""
 
-search_expression="-type f"
-
-if ! test -z "${mbdyn_input_filter}"; then
-    search_expression=`printf -- "%s -and %s" "${mbdyn_input_filter}" "${search_expression}"`
+if test -z "${mbdyn_input_filter}"; then
+    mbdyn_input_filter="-type f"
 fi
 
 declare -i idx_test=0
 
-echo find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')'
+MBD_INPUT_FILES_FOUND=`find ${mbdyn_testsuite_prefix_input} '(' ${mbdyn_input_filter} ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`
 
-for mbd_filename in `find ${mbdyn_testsuite_prefix_input} '(' ${search_expression} ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`; do
+printf '%d valid input files were found\n' `echo ${MBD_INPUT_FILES_FOUND} | wc -w`
+
+((idx_test=0))
+for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
+    ((++idx_test))
+    printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
+done
+
+((idx_test=0))
+for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
     ((++idx_test))
 
     printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
