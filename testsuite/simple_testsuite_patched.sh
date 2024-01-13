@@ -48,6 +48,7 @@ if test -f "${program_dir}/mbdyn_input_file_format.awk"; then
 fi
 
 mbdyn_testsuite_prefix_output=""
+mbdyn_keep_output="unexpected"
 declare -i mbd_exit_status_mask=0
 other_arguments=""
 
@@ -58,6 +59,11 @@ while ! test -z "$1"; do
             shift
             ;;
         --patch-input)
+            shift
+            ;;
+        --keep-output)
+            other_arguments="${other_arguments} $1 $2"
+            mbdyn_keep_output="$2"
             shift
             ;;
         --exit-status-mask)
@@ -185,9 +191,10 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                 printf '    # mbd_control_data_begin.set currently not used!\n' > "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}"
                 printf '    %s\n' "${mbd_use_autodiff_cmd}" > "${MBD_TESTSUITE_CONTROL_DATA_END}"
 
+                simple_testsuite_log_file="${mbd_output_dir}/mbdyn-testsuite-patched.log"
                 cat "${MBD_TESTSUITE_INITIAL_VALUE_END}" "${MBD_TESTSUITE_CONTROL_DATA_END}"
 
-                simple_testsuite.sh --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) >& "${mbd_output_dir}/mbdyn-testsuite-patched.log"
+                simple_testsuite.sh --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) >& "${simple_testsuite_log_file}"
 
                 if test $? -eq 0; then
                     test_status="PASSED"
@@ -210,6 +217,25 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                     failed_tests="${failed_tests} ${mbd_output_dir}"
                 fi
 
+                keep_output_flag="no"
+
+                case "${mbdyn_keep_output}" in
+                    all)
+                        keep_output_flag="yes"
+                        ;;
+                    failed)
+                        case "${status}" in
+                            FAILED)
+                                keep_output_flag="yes"
+                                ;;
+                        esac
+                        ;;
+                esac
+
+                if test "${keep_output_flag}" = "no"; then
+                    rm -f "${simple_testsuite_log_file}" "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}" "${MBD_TESTSUITE_INITIAL_VALUE_END}" "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" "${MBD_TESTSUITE_CONTROL_DATA_END}"
+                fi
+
                 printf 'TEST %s\n' "${test_status}"
             done
         done
@@ -224,4 +250,5 @@ else
     for failed_test in ${failed_tests}; do
         printf "Test %s failed\n" "${failed_test}"
     done
+    exit 1
 fi
