@@ -231,7 +231,7 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
             ## FIXME: However, MBDyn is not able to located additional input files, if ${mbd_filename_patched}
             ## FIXME: would be created inside a different directory than the original input file.
             ## Use env -u TMPDIR in order to ensure that tempfile is not using ${TMPDIR} instead of ${mbd_dir_name}
-            mbd_filename_patched=$(env -u TMPDIR tempfile -d "${mbd_dir_name}" -p "${mbd_basename}_patched_" -s ".mbd")
+            mbd_filename_patched=$(mktemp -p "${mbd_dir_name}" "${mbd_basename}_patched_XXXXXXXXXX.mbd")
 
             mbd_filename_patched_copy="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_input_file_patched.mbd"
 
