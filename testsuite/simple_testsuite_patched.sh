@@ -196,10 +196,14 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
 
                 simple_testsuite.sh --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) >& "${simple_testsuite_log_file}"
 
-                if test $? -eq 0; then
+                rc=$?
+
+                test_status="FAILED"
+
+                if test ${rc} -eq 0; then
                     test_status="PASSED"
                 else
-                    case $? in
+                    case ${rc} in
                         130)
                             echo "Interrupted"
                             exit 1;
@@ -213,7 +217,6 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                             exit 1
                             ;;
                     esac
-                    test_status="FAILED"
                     failed_tests="${failed_tests} ${mbd_output_dir}"
                 fi
 
@@ -224,7 +227,7 @@ for mbd_linear_solver in 'naive' 'umfpack' 'klu' 'pardiso' 'pardiso_64' 'y12' 's
                         keep_output_flag="yes"
                         ;;
                     failed)
-                        case "${status}" in
+                        case "${test_status}" in
                             FAILED)
                                 keep_output_flag="yes"
                                 ;;
