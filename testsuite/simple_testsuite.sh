@@ -227,8 +227,11 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
         mbd_command=""
 
         if test "${mbdyn_patch_input}" != "no"; then
-            ## Use env -i in order to ensure that we are not using ${TMPDIR}
-            mbd_filename_patched=$(env -i tempfile -d "${mbd_dir_name}" -p "${mbd_basename}_patched_" -s ".mbd")
+            ## FIXME: actually ${mbd_filename_patched} should be created inside the output directory.
+            ## FIXME: However, MBDyn is not able to located additional input files, if ${mbd_filename_patched}
+            ## FIXME: would be created inside a different directory than the original input file.
+            ## Use env -u TMPDIR in order to ensure that tempfile is not using ${TMPDIR} instead of ${mbd_dir_name}
+            mbd_filename_patched=$(env -u TMPDIR tempfile -d "${mbd_dir_name}" -p "${mbd_basename}_patched_" -s ".mbd")
 
             mbd_filename_patched_copy="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_input_file_patched.mbd"
 
@@ -267,7 +270,7 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
         else
             if test "${mbdyn_patch_input}" != "no"; then
                 echo "Warning: Input file ${mbd_filename} must be processed by a custom script files cannot be patched!"
-                rm -f "${mbd_filename_patched}"
+                rm -f "${mbd_filename_patched}" "${mbd_filename_patched_copy}"
                 continue
             fi
         fi
@@ -311,6 +314,8 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
         rc=$?
 
         if test "${mbdyn_patch_input}" != "no"; then
+            ## Must be deleted in any case because it is located inside the input directory!
+            ## In case of failure, we will just keep "${mbd_filename_patched_copy}"
             rm -f "${mbd_filename_patched}"
         fi
 
@@ -390,15 +395,34 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
                 ;;
         esac
 
-        mbd_output_file=$(awk -F '"' '/^output in file\>/{print $2}' "${mbd_log_file}")
+        ## If we were executing a script, MBDyn's -o option might be ignored
+        mbd_real_output_file=$(awk -F '"' '/^output in file\>/{print $2}' "${mbd_log_file}")
+
+        ## FIXME: If we use "abort after: derivatives;", then MBDyn does not print the output file name, although output might be generated.
+        if ! test -z "${mbd_real_output_file}"; then
+            mbd_output_file="${mbd_real_output_file}"
+        fi
 
         if test "${keep_output_flag}" = "no"; then
+            echo "Clean up output in \"${mbd_output_file}\""
+
             if test -f "${mbd_output_file}.log"; then
                 find "${mbdyn_testsuite_prefix_output}" '(' -type f -and -wholename $(printf '%s.*' "${mbd_output_file}") ')' -delete
             fi
 
             rm -f "${mbd_log_file}"
             rm -f "${mbd_time_file}"
+
+            if test "${mbdyn_patch_input}" != "no"; then
+                if ! test -f ${mbd_filename_patched_copy}; then
+                    echo "File not found: \"${mbd_filename_patched_copy}\""
+                fi
+                rm -f "${mbd_filename_patched_copy}"
+            else
+                echo "File \"${mbd_filename_patched_copy}\" was not patched"
+            fi
+        else
+            echo "Keep output in \"${mbd_output_file}\""
         fi
 
         case "${status}" in
