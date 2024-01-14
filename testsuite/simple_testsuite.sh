@@ -47,11 +47,12 @@ mbdyn_testsuite_prefix_input=""
 mbdyn_input_filter=""
 mbdyn_verbose_output="no"
 mbdyn_keep_output="unexpected"
+mbdyn_print_res="no"
 mbdyn_patch_input="no"
 mbdyn_args_add="-C"
+mbdyn_exec_gen="yes"
+mbdyn_exec_solver="yes"
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
-declare -i mbd_test_idx_start=1
-declare -i mbd_test_idx_offset=1
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 
 program_dir=$(realpath $(dirname "${program_name}"))
@@ -62,9 +63,9 @@ fi
 
 if test -f "${program_dir}/mbdyn_input_file_format.awk"; then
     export AWKPATH=${program_dir}:${AWKPATH}
-    sed_prefix=${program_dir}/
+    mbdyn_sed_prefix=${program_dir}/
 else
-    sed_prefix=""
+    mbdyn_sed_prefix=""
 fi
 
 ## Disable multithreaded BLAS by default
@@ -72,7 +73,9 @@ export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 ## Might be used for Octave scripts (e.g. via mboct-mbdyn-pkg)
-export MBD_NUM_THREADS=${MBD_NUM_THREADS:-`awk -F ':' 'BEGIN{cores=-1;}/^cpu cores\>/{cores=strtonum($2);}END {print cores;}' /proc/cpuinfo`}
+
+MBD_NUM_TASKS=${MBD_NUM_TASKS:-$(( $(lscpu | awk '/^Socket\(s\)/{ print $2 }') * $(lscpu | awk '/^Core\(s\) per socket/{ print $4 }') ))}
+MBD_NUM_THREADS=${MBD_NUM_THREADS:-1}
 
 while ! test -z "$1"; do
     case "$1" in
@@ -92,12 +95,12 @@ while ! test -z "$1"; do
             mbdyn_input_filter="$2"
             shift
             ;;
-        --test-index-start)
-            mbd_test_idx_start="$2"
+        --threads)
+            MBD_NUM_THREADS="$2"
             shift
             ;;
-        --test-index-offset)
-            mbd_test_idx_offset="$2"
+        --tasks)
+            MBD_NUM_TASKS="$2"
             shift
             ;;
         --verbose)
@@ -116,12 +119,24 @@ while ! test -z "$1"; do
             mbdyn_args_add="$2"
             shift
             ;;
+        --exec-gen)
+            mbdyn_exec_gen="$2"
+            shift
+            ;;
+        --exec-solver)
+            mbdyn_exec_solver="$2"
+            shift
+            ;;
         --help)
             printf "%s\n  --prefix-output <output-dir>\n  --prefix-input <input-dir>\n  --timeout <timeout-seconds>\n  --help\n" "${program_name}"
             exit 1;
             ;;
         --exit-status-mask)
             ((mbd_exit_status_mask=$2))
+            shift
+            ;;
+        --print-resources)
+            mbdyn_print_res="$2"
             shift
             ;;
         *)
@@ -131,16 +146,6 @@ while ! test -z "$1"; do
     esac
     shift
 done
-
-if test ${mbd_test_idx_start} -lt 1; then
-    printf "%s: invalid argument --test-index-start %d\n" "${program_name}" ${mbd_test_idx_start}
-    exit 1
-fi
-
-if test ${mbd_test_idx_offset} -lt 1; then
-    printf "%s: invalid argument --test-index-offset %d\n" "${program_name}" ${mbd_test_idx_offset}
-    exit 1
-fi
 
 if test -z "${mbdyn_testsuite_timeout}"; then
     mbdyn_testsuite_timeout="unlimited"
@@ -170,8 +175,19 @@ if ! test -d "${mbdyn_testsuite_prefix_input}"; then
     exit 1
 fi
 
+if test "${MBD_NUM_TASKS}" -lt 1; then
+    printf "%s: argument --tasks \"%s\" is not valid\n" "${program_name}" "${MBD_NUM_TASKS}"
+    exit 1
+fi
+
+if test "${MBD_NUM_THREADS}" -lt 1; then
+    printf "%s: argument --threads \"%s\" is not valid\n" "${program_name}" "${MBD_NUM_THREADS}"
+    exit 1
+fi
+
 mbdyn_testsuite_prefix_input=`realpath ${mbdyn_testsuite_prefix_input}`
 
+skipped_tests=""
 passed_tests=""
 failed_tests=""
 timeout_tests=""
@@ -195,27 +211,70 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
     printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
 done
 
-((idx_test=0))
-for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
-    ((++idx_test))
+function simple_testsuite_run_test()
+{
+    mbd_status_file=""
+    mbd_filename=""
+    mbd_exec_gen_script="yes"
+    mbd_exec_run_script="yes"
+    mbd_exec_solver="yes"
 
-    printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
+    while ! test -z "$1"; do
+        case "$1" in
+            --status|-s)
+                mbd_status_file="$2"
+                shift
+                ;;
+            --input|-i)
+                mbd_filename="$2"
+                shift
+                ;;
+            --exec-gen|-g)
+                mbd_exec_gen_script="$2"
+                shift
+                ;;
+            --exec-run|-r)
+                mbd_exec_run_script="$2"
+                shift
+                ;;
+            --exec-solver|-s)
+                mbd_exec_solver="$2"
+                shift
+                ;;
+            *)
+                echo "Invalid argument $1"
+                return 0x80
+                ;;
+        esac
+        shift
+    done
 
-    if test $((idx_test)) -lt $((mbd_test_idx_start)); then
-        echo "  skipped ..."
-        continue
+    if test -z "${mbd_status_file}"; then
+        echo "Invalid argument"
+        return 0x80
     fi
 
-    ((mbd_test_idx_start+=mbd_test_idx_offset))
+    if test -z "${mbd_filename}"; then
+        echo "Invalid argument"
+        return 0x80
+    fi
 
-    mbd_basename=`basename -s ".mbdyn" "${mbd_filename}"`
-    mbd_basename=`basename -s ".mbd" "${mbd_basename}"`
+    declare -i exit_status=-1
 
-    if test -f "${mbd_filename}"; then
-        mbd_time_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_time.log"
-        mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output"
+    status="unexpected"
+
+    rm -f "${mbd_status_file}"
+
+    if ! test -f "${mbd_filename}"; then
+        echo "File \"${mbd_filename}\" not found"
+        status=$(printf 'file[%]' "${mbd_filename}")
+    else
+        mbd_basename=`basename -s ".mbdyn" "${mbd_filename}"`
+        mbd_basename=`basename -s ".mbd" "${mbd_basename}"`
+
+        mbd_time_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output_time_$$.log"
+        mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output_$$"
         mbd_log_file="${mbd_output_file}.stdout"
-        echo ${mbd_log_file}
 
         mbd_script_name=`basename ${mbd_filename}`
         mbd_script_name=`basename -s .mbd ${mbd_script_name}`
@@ -230,18 +289,20 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
             ## FIXME: actually ${mbd_filename_patched} should be created inside the output directory.
             ## FIXME: However, MBDyn is not able to located additional input files, if ${mbd_filename_patched}
             ## FIXME: would be created inside a different directory than the original input file.
-            ## Use env -u TMPDIR in order to ensure that tempfile is not using ${TMPDIR} instead of ${mbd_dir_name}
             mbd_filename_patched=$(mktemp -p "${mbd_dir_name}" "${mbd_basename}_patched_XXXXXXXXXX.mbd")
-
             mbd_filename_patched_copy="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_input_file_patched.mbd"
 
-            if ! sed -E -f "${sed_prefix}mbdyn_testsuite_patch.sed" "${mbd_filename}" | tee "${mbd_filename_patched}" > "${mbd_filename_patched_copy}"; then
+            if ! sed -E -f "${mbdyn_sed_prefix}mbdyn_testsuite_patch.sed" "${mbd_filename}" | tee "${mbd_filename_patched}" > "${mbd_filename_patched_copy}"; then
                 rm -f "${mbd_filename_patched}"
-                exit 1
+                rm -f "${mbd_filename_patched_copy}"
+                echo "Failed to patch input file \"${mbd_filename}\""
+                return 0x80
             fi
         else
             mbd_filename_patched="${mbd_filename}"
         fi
+
+        mbd_allow_patch="yes"
 
         for mbd_script_name in "${mbd_script_name_m2}" "${mbd_script_name_m1}" "${mbd_script_name_sh}"; do
             if ! test -z "${mbd_command}"; then
@@ -251,32 +312,53 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
                 echo "A custom test script ${mbd_script_name} was found for input file ${mbd_filename}; It will be used to run the model"
                 case "${mbd_script_name}" in
                     *_gen.m)
-                        mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}; mbdyn ${mbdyn_args_add} -f ${mbd_filename} -o ${mbd_output_file}"
+                        ## It seems that all the Octave scripts from mbdyn-tests-public need to be executed only once, and their output may be reused for all patched tests.
+                        if test "${mbd_exec_gen_script}" != "no"; then
+                            mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+
+                            if test "${mbd_exec_solver}" != "yes"; then
+                                ## Generate the input
+                                mbd_exec_solver="yes"
+                            else
+                                ## Generate the input and execute MBDyn
+                                mbd_command="${mbd_command}; mbdyn ${mbdyn_args_add} -f ${mbd_filename} -o ${mbd_output_file}"
+                            fi
+                        fi
                         ;;
                     *_run.m)
-                        mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+                        if test "${mbd_exec_run_script}" != "no"; then
+                            mbd_command="${OCTAVE_EXEC} -q -f ${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+                        else
+                            mbd_allow_patch="no"
+                        fi
                         ;;
                     *_run.sh)
-                        chmod +x "${mbd_script_name}"
-                        mbd_command="${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+                        if test "${mbd_exec_run_script}" != "no"; then
+                            chmod +x "${mbd_script_name}"
+                            mbd_command="${mbd_script_name} -f ${mbd_filename} -o ${mbd_output_file}"
+                        else
+                            mbd_allow_patch="no"
+                        fi
                         ;;
                 esac
             fi
         done
 
+        if test "${mbdyn_patch_input}" != "no" && test "${mbd_allow_patch}" != "yes"; then
+            echo "Cannot execute test \"${mbd_filename}\""
+            mbd_exec_solver="no"
+        fi
+
         if test -z "${mbd_command}"; then
             echo "No custom test script was found for input file ${mbd_filename}; The default command will be used to run the model"
             mbd_command="mbdyn ${mbdyn_args_add} -f ${mbd_filename_patched} -o ${mbd_output_file}"
-        else
-            if test "${mbdyn_patch_input}" != "no"; then
-                echo "Warning: Input file ${mbd_filename} must be processed by a custom script files cannot be patched!"
-                rm -f "${mbd_filename_patched}" "${mbd_filename_patched_copy}"
-                continue
-            fi
         fi
 
-        mbd_command="/usr/bin/time --verbose --output ${mbd_time_file} ${mbd_command}"
-        status="failed"
+        case "${mbdyn_print_res}" in
+            all|*time*)
+                mbd_command="/usr/bin/time --verbose --output ${mbd_time_file} ${mbd_command}"
+                ;;
+        esac
 
         if test -z "${mbdyn_testsuite_timeout}"; then
             mbdyn_testsuite_timeout="unlimited"
@@ -289,29 +371,44 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
             *)
                 echo "timeout after ${mbdyn_testsuite_timeout}"
                 mbd_command="timeout --signal=SIGTERM ${mbdyn_testsuite_timeout} ${mbd_command}"
-            ;;
+                ;;
         esac
 
         printf "%s:%s\n" "${mbd_basename}" "${mbd_command}"
 
-        curr_dir="$(pwd)"
+        if test "${mbd_exec_solver}" != "no"; then
+            curr_dir="$(pwd)"
 
-        if ! cd "${mbd_dir_name}"; then
-            exit 1
-        fi
+            if ! cd "${mbd_dir_name}"; then
+                echo "Invalid directory"
+                return 0x80
+            fi
 
-        rm -f "${mbd_time_file}"
-        rm -f "${mbd_log_file}"
+            rm -f "${mbd_time_file}"
+            rm -f "${mbd_log_file}"
 
-        ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
-        ## This will make it easier to delete those files, just in case that we are using *_run.m to run the test case.
-        if test "${mbdyn_verbose_output}" = "yes"; then
-            TMPDIR="${mbdyn_testsuite_prefix_output}" ${mbd_command} |& tee "${mbd_log_file}"
+            ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
+            ## This will make it easier to delete those files, just in case that we are using *_run.m to run the test case.
+            export TMPDIR="${mbdyn_testsuite_prefix_output}"
+
+            if test "${mbdyn_verbose_output}" = "yes"; then
+                mbd_command="${mbd_command} |& tee ${mbd_log_file}"
+            else
+                mbd_command="${mbd_command} >& ${mbd_log_file}"
+            fi
+
+            eval ${mbd_command}
+
+            rc=$?
+
+            if ! cd "${curr_dir}"; then
+                echo "Invalid directory"
+                return 0x80
+            fi
         else
-            TMPDIR="${mbdyn_testsuite_prefix_output}" ${mbd_command} >& "${mbd_log_file}"
+            ## According to "man(3) exit", status & 0xFF is returned to the parent
+            rc=-1
         fi
-
-        rc=$?
 
         if test "${mbdyn_patch_input}" != "no"; then
             ## Must be deleted in any case because it is located inside the input directory!
@@ -319,14 +416,13 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
             rm -f "${mbd_filename_patched}"
         fi
 
-        if ! cd "${curr_dir}"; then
-            exit 1
-        fi
-
         mbd_module_not_found=""
         mbd_loadable_not_found=""
 
         case ${rc} in
+            -1)
+                status="skipped"
+                ;;
             0)
                 num_steps=`awk 'BEGIN{num_steps=0}/^End of simulation at time [0-9.-]+ after [0-9]+ steps;$/{num_steps=$8} END{print num_steps}' "${mbd_log_file}"`
                 status=$(printf 'passed{Steps=%d}' "${num_steps}")
@@ -346,28 +442,23 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
                 fi
                 ;;
             124)
-                ## FIXME: 137 will be returned also if SIGKILL was sent from another process
                 status="timeout"
-                echo "Timeout"
                 ;;
             130)
-                echo "Interrupted"
-                exit ${rc}
+                status="interrupted"
                 ;;
             143)
-                echo "Terminated"
-                exit ${rc}
+                status="terminated"
                 ;;
             137)
-                echo "Killed"
-                exit ${rc}
+                status="killed"
                 ;;
             *)
                 status="unexpected"
                 ;;
         esac
 
-        printf "Test \"%s\" %s with status %d\n" "${mbd_basename}" "${status}" "${rc}"
+        printf "Test \"%s\" returned exit status %d (%s)\n" "${mbd_basename}" "${rc}" "${status}"
 
         if test -f "${mbd_time_file}"; then
             cat "${mbd_time_file}"
@@ -395,19 +486,25 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
                 ;;
         esac
 
-        ## If we were executing a script, MBDyn's -o option might be ignored
-        mbd_real_output_file=$(awk -F '"' '/^output in file\>/{print $2}' "${mbd_log_file}")
-
-        ## FIXME: If we use "abort after: derivatives;", then MBDyn does not print the output file name, although output might be generated.
-        if ! test -z "${mbd_real_output_file}"; then
-            mbd_output_file="${mbd_real_output_file}"
-        fi
-
         if test "${keep_output_flag}" = "no"; then
+            mbd_real_output_file=""
+
+            if test -f "${mbd_log_file}"; then
+                ## If we were executing a script, MBDyn's -o option might be ignored
+                mbd_real_output_file=$(awk -F '"' '/^output in file\>/{print $2}' "${mbd_log_file}")
+            fi
+
+            ## FIXME: If we use "abort after: derivatives;", then MBDyn does not print the output file name, although output might be generated.
+            if ! test -z "${mbd_real_output_file}"; then
+                mbd_output_file="${mbd_real_output_file}"
+            fi
+
             echo "Clean up output in \"${mbd_output_file}\""
 
             if test -f "${mbd_output_file}.log"; then
-                find "${mbdyn_testsuite_prefix_output}" '(' -type f -and -wholename $(printf '%s.*' "${mbd_output_file}") ')' -delete
+                ## Need to remove also _[0-9]*.m files
+                mbd_output_file_pattern=`printf '%s*' "${mbd_output_file}"`
+                find "${mbdyn_testsuite_prefix_output}" '(' -type f -and -wholename "${mbd_output_file_pattern}" ')' -delete
             fi
 
             rm -f "${mbd_log_file}"
@@ -419,33 +516,136 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
                 fi
                 rm -f "${mbd_filename_patched_copy}"
             else
-                echo "File \"${mbd_filename_patched_copy}\" was not patched"
+                echo "File \"${mbd_filename}\" was not patched"
             fi
         else
             echo "Keep output in \"${mbd_output_file}\""
         fi
-
-        case "${status}" in
-            passed*)
-                passed_tests="${passed_tests} ${mbd_filename}:${status}(${rc})"
-                ;;
-            timeout)
-                timeout_tests="${timeout_tests} ${mbd_filename}:${status}(${rc})"
-                ;;
-            module)
-                modules_not_found="${modules_not_found} ${mbd_filename}[${mbd_module_not_found}]:${status}(${rc})"
-                ;;
-            loadable)
-                loadables_not_found="${loadables_not_found} ${mbd_filename}:${status}(${rc})"
-                ;;
-            failed)
-                failed_tests="${failed_tests} ${mbd_filename}:${status}(${rc})"
-                ;;
-            *)
-                unexpected_faults="${unexpected_faults} ${mbd_filename}:${status}(${rc})"
-                ;;
-        esac
     fi
+
+    case "${status}" in
+        skipped)
+            ## Skipped tests are not considered as an error
+            ((exit_status=0x0))
+            ;;
+        passed*)
+            ((exit_status=0x0))
+            ;;
+        file*)
+            ((exit_status=0x1))
+            ;;
+        timeout)
+            ((exit_status=0x2))
+            ;;
+        module)
+            ((exit_status=0x4))
+            ;;
+        loadable)
+            ((exit_status=0x8))
+            ;;
+        failed)
+            ((exit_status=0x10))
+            ;;
+        *)
+            ((exit_status=0x40))
+            ;;
+    esac
+
+    printf "%s(%d)\n" "${status}" ${rc} > "${mbd_status_file}"
+
+    return $((exit_status))
+}
+
+mbdyn_simple_testsuite_pid=$$
+
+mbd_status_file_format=`printf '%s/mbdyn_simple_testsuite_run_test_%08X_%%s.status' "${mbdyn_testsuite_prefix_output}" "${mbdyn_simple_testsuite_pid}"`
+
+if test $((idx_test)) -le 1 || test "${MBD_NUM_TASKS}" -le 1; then
+    ## Sequential execution
+    ((idx_test=0))
+    for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
+        ((++idx_test))
+        mbd_status_file=`printf "${mbd_status_file_format}" $((idx_test))`
+
+        simple_testsuite_args="--status ${mbd_status_file} --input ${mbd_filename}"
+
+        if test "${mbdyn_verbose_output}" = "disabled"; then
+            simple_testsuite_run_test ${simple_testsuite_args} >& /dev/null
+        else
+            simple_testsuite_run_test ${simple_testsuite_args}
+        fi
+    done
+else
+    ## Parallel execution
+    export mbdyn_testsuite_prefix_output
+    export mbdyn_sed_prefix
+    export mbdyn_patch_input
+    export mbdyn_args_add
+    export mbdyn_testsuite_timeout
+    export mbdyn_verbose_output
+    export mbdyn_keep_output
+    export mbdyn_print_res
+    export MBD_NUM_THREADS
+    export OCTAVE_EXEC
+    export -f simple_testsuite_run_test
+
+    if test "${mbdyn_exec_gen}" != "no"; then
+        ## Sequential execution of *_gen.m scripts
+        ((idx_test=0))
+        for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
+            ((++idx_test))
+            mbd_status_file=`printf "${mbd_status_file_format}" $((idx_test))`
+            simple_testsuite_run_test --status "${mbd_status_file}" --input "${mbd_filename}" --exec-solver no
+        done
+    fi
+
+    if test "${mbdyn_exec_solver}" != "no"; then
+        ## Parallel execution of the solver
+        mbd_status_file=`printf "${mbd_status_file_format}" '{#}'`
+        mbd_parallel_args="-j${MBD_NUM_TASKS} -n1 simple_testsuite_run_test --status ${mbd_status_file} --input '{}' --exec-gen no"
+        printf '%s\n' ${MBD_INPUT_FILES_FOUND} | parallel ${mbd_parallel_args}
+    fi
+fi
+
+((idx_test=0))
+for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
+    ((++idx_test))
+
+    printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
+
+    mbd_status_file=`printf "${mbd_status_file_format}" $((idx_test))`
+
+    status="unexpected"
+
+    if test -f "${mbd_status_file}"; then
+        status=`cat ${mbd_status_file}`
+    fi
+
+    rm -f "${mbd_status_file}"
+
+    case "${status}" in
+        skipped*)
+            skipped_tests="${skipped_tests} ${mbd_filename}:${status}"
+            ;;
+        passed*)
+            passed_tests="${passed_tests} ${mbd_filename}:${status}"
+            ;;
+        timeout*)
+            timeout_tests="${timeout_tests} ${mbd_filename}:${status}"
+            ;;
+        module*)
+            modules_not_found="${modules_not_found} ${mbd_filename}[${mbd_module_not_found}]:${status}"
+            ;;
+        loadable*)
+            loadables_not_found="${loadables_not_found} ${mbd_filename}:${status}"
+            ;;
+        failed*)
+            failed_tests="${failed_tests} ${mbd_filename}:${status}"
+            ;;
+        *)
+            unexpected_faults="${unexpected_faults} ${mbd_filename}:${status}"
+            ;;
+    esac
 done
 
 declare -i exit_status=0x0
@@ -468,6 +668,12 @@ if test -z "${passed_tests}"; then
     ((exit_status|=0x1))
 else
     print_files "PASSED:The following %d tests passed with zero exit status:\n" ${passed_tests}
+fi
+
+if test -z "${skipped_tests}"; then
+    echo "No tests were skipped"
+else
+    print_files "SKIPPED:The following %d tests were skipped:\n" ${skipped_tests}
 fi
 
 if test -z "${timeout_tests}"; then

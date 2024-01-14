@@ -49,7 +49,7 @@ fi
 
 mbdyn_testsuite_prefix_output=""
 mbdyn_keep_output="unexpected"
-## FIXME: fourbar_int will fail with aztecoo and amesos 
+## FIXME: fourbar_int will fail with aztecoo and amesos
 ## mbdyn_linear_solvers="aztecoo amesos naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
 mbdyn_linear_solvers="naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
 mbdyn_matrix_handlers="map cc dir grad"
@@ -106,7 +106,26 @@ while ! test -z "$1"; do
     shift
 done
 
+
 ((mbd_exit_status_mask|=0x1))
+
+
+if ! test -d "${mbdyn_testsuite_prefix_output}"; then
+    if ! mkdir -p "${mbdyn_testsuite_prefix_output}"; then
+        exit 1
+    fi
+fi
+
+simple_testsuite_log_file="${mbdyn_testsuite_prefix_output}/mbdyn-testsuite-patched.log"
+
+simple_testsuite.sh --prefix-output "${mbdyn_testsuite_prefix_output}" ${other_arguments} --exec-solver no --exit-status-mask $((mbd_exit_status_mask)) >& "${simple_testsuite_log_file}"
+
+rc=$?
+
+if test "${keep_output_flag}" = "no" && test ${rc} = 0; then
+    rm -f "${simple_testsuite_log_file}"
+fi
+
 failed_tests=""
 
 for mbd_linear_solver in ${mbdyn_linear_solvers}; do
@@ -272,7 +291,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
 
                         simple_testsuite_log_file="${mbd_output_dir}/mbdyn-testsuite-patched.log"
 
-                        simple_testsuite.sh --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) >& "${simple_testsuite_log_file}"
+                        simple_testsuite.sh --exec-gen "no" --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) >& "${simple_testsuite_log_file}"
 
                         rc=$?
 
