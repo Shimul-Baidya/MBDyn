@@ -44,6 +44,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
     ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
     ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
     MBD_MODULE_TEST_TIMEOUT: "unlimited"
+    MBD_MODULE_TEST_NUM_TASKS: 12
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
       - job: mkl-build-job
@@ -73,7 +74,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
       - mkdir -p "${MBD_MODULE_TEST_OUTPUT_DIR}" ## needed for realpath
       - chmod +x testsuite/simple_testsuite.sh
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${MBD_MODULE_TEST_OUTPUT_DIR}/mbdyn-module-tests-job.log"
+      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" --tasks "${MBD_MODULE_TEST_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${MBD_MODULE_TEST_OUTPUT_DIR}/mbdyn-module-tests-job.log"
   artifacts:
      expire_in: 2 days
      name: mbdyn-modules-test-job
