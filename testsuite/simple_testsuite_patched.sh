@@ -49,8 +49,8 @@ fi
 
 mbdyn_testsuite_prefix_output=""
 mbdyn_keep_output="unexpected"
-## FIXME: amesos fails with linesearch
-#mbdyn_linear_solvers="aztecoo amesos naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
+## FIXME: fourbar_int will fail with aztecoo and amesos 
+## mbdyn_linear_solvers="aztecoo amesos naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
 mbdyn_linear_solvers="naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
 mbdyn_matrix_handlers="map cc dir grad"
 mbdyn_matrix_scale_methods="rowmaxcolumnmax iterative lapack rowmax columnmax rowsum columnsum"
@@ -215,7 +215,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                 ;;
                             amesos|aztecoo)
                                 mbd_linear_solver_flags_pre=""
-                                mbd_linear_solver_flags_post=", tolerance, 1e-1, max iterations, 100, preconditioner, klu,verbose,3"
+                                mbd_linear_solver_flags_post=", tolerance, 1e-8, max iterations, 100, preconditioner, klu,verbose,3"
                                 ;;
                             *)
                                 mbd_linear_solver_flags_pre=""
