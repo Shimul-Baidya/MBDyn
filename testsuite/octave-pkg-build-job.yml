@@ -264,11 +264,8 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                       esac
                       ;;
                   *)
-                      SAVE_LDFLAGS=""
-
                       case "${pkgname}" in
                           netcdf)
-                              SAVE_LDFLAGS="${LDFLAGS}"
                               export LDFLAGS="-Wl,-rpath=`${NC_INSTALL_PREFIX}/bin/nc-config --libdir`"
                               ;;
                       esac
@@ -282,7 +279,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                           exit 1
                       fi
 
-                      export LDFLAGS="${SAVE_LDFLAGS}"
+                      export LDFLAGS=
                       ;;
               esac
 
