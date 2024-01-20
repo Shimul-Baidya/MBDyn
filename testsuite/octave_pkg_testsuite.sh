@@ -213,7 +213,7 @@ function octave_pkg_testsuite_run()
     fi
 
     rm -f "${octave_status_file}"
-    
+
     pid=$$
 
     ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
@@ -428,7 +428,10 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
     octave_pkg_testsuite_pid=$$
     octave_status_file_format=`printf '%s/octave_pkg_testsuite_run_%08X_%%s.status' "${OCT_PKG_TEST_DIR}/${pkgname}" "${octave_pkg_testsuite_pid}"`
 
-    if test ${MBD_NUM_TASKS} -gt 1; then
+    oct_pkg_num_tests=`echo ${OCTAVE_CODE} | wc -w`
+
+    if test ${MBD_NUM_TASKS} -gt 1 && test ${oct_pkg_num_tests} -gt 1; then
+        echo "Parallel execution using ${MBD_NUM_TASKS} tasks:"
         export MBD_NUM_THREADS
         export TIMEOUT_CMD
         export OCTAVE_EXEC
@@ -442,6 +445,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         octave_parallel_args="-j${MBD_NUM_TASKS} -n1 octave_pkg_testsuite_run --status ${octave_status_file} --exec {} --pkg ${pkgname}"
         printf '%s\n' ${OCTAVE_CODE} | parallel ${octave_parallel_args}
     else
+        echo "Serial execution:"
         ((idx_test=0))
         for octave_code_cmd in ${OCTAVE_CODE}; do
             ((++idx_test))
