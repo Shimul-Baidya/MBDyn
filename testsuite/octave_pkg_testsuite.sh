@@ -60,7 +60,8 @@ export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 
 ## Will be used only by mboct-mbdyn-pkg
-export MBD_NUM_THREADS=${MBD_NUM_THREADS:-`awk -F ':' 'BEGIN{cores=-1;}/^cpu cores\>/{cores=strtonum($2);}END {print cores;}' /proc/cpuinfo`}
+MBD_NUM_TASKS=${MBD_NUM_TASKS:-$(( $(lscpu | awk '/^Socket\(s\)/{ print $2 }') * $(lscpu | awk '/^Core\(s\) per socket/{ print $4 }') ))}
+MBD_NUM_THREADS=${MBD_NUM_THREADS:-1}
 
 echo $program_name
 
@@ -73,7 +74,7 @@ fi
 program_name=`realpath ${program_name}`
 
 if ! test -z "${program_name}"; then
-    AWKPATH="$(dirname "${program_name}"):${AWKPATH}" ## Needed for parse_test_suite_status.awk
+    export AWKPATH="$(dirname "${program_name}"):${AWKPATH}" ## Needed for parse_test_suite_status.awk
 fi
 
 while ! test -z "$1"; do
@@ -96,6 +97,14 @@ while ! test -z "$1"; do
             ;;
         --octave-pkg-prefix)
             OCT_PKG_INSTALL_PREFIX="$2"
+            shift
+            ;;
+        --tasks)
+            MBD_NUM_TASKS="$2"
+            shift
+            ;;
+        --threads)
+            MBD_NUM_THREADS="$2"
             shift
             ;;
         --verbose)
@@ -164,6 +173,193 @@ case "${OCT_PKG_PRINT_RES}" in
         ;;
 esac
 
+function octave_pkg_testsuite_run()
+{
+    octave_code_cmd=""
+    octave_status_file=""
+    octave_pkg_name=""
+    octave_pkg_profile_data=""
+
+    while ! test -z "$1"; do
+        case "$1" in
+            --exec)
+                octave_code_cmd="$2"
+                shift
+                ;;
+            --pkg)
+                octave_pkg_name="$2"
+                shift
+                ;;
+            --status)
+                octave_status_file="$2"
+                shift
+                ;;
+            --profile-data)
+                octave_pkg_profile_data="$2"
+                shift
+                ;;
+        esac
+        shift
+    done
+
+    if test -z "${octave_code_cmd}"; then
+        echo "Invalid argument --exec"
+        return 1
+    fi
+
+    if test -z "${octave_status_file}"; then
+        echo "Invalid argument --status"
+        return 1
+    fi
+
+    if test -z "${octave_pkg_name}"; then
+        echo "Invalid argument --pkg"
+        return 1
+    fi
+
+    pid=$$
+
+    ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
+    ## This will make it easier to delete those files.
+    export TMPDIR="${OCT_PKG_TEST_DIR}/${octave_pkg_name}/${pid}"
+
+    if ! test -d "${TMPDIR}"; then
+        if ! mkdir "${TMPDIR}"; then
+            echo "Failed to create directory ${TMPDIR}"
+            return 1
+        fi
+    fi
+
+    octave_pkg_timing_file="${TMPDIR}/fntests.tm"
+
+    case "${OCT_PKG_PRINT_RES}" in
+        all|*time*)
+            octave_pkg_timing_cmd="/usr/bin/time --verbose --output ${octave_pkg_timing_file}"
+            ;;
+        *)
+            octave_pkg_timing_cmd=""
+            ;;
+    esac
+
+    OCTAVE_CMD=$(printf '%s%s %s -qfH --eval %s' "${TIMEOUT_CMD}" "${octave_pkg_timing_cmd}" "${OCTAVE_EXEC}" "${octave_code_cmd}")
+
+    case "${OCT_PKG_PRINT_RES}" in
+        all|*disk*)
+            echo "Memory usage before test:"
+            vmstat -S M
+            echo "Temporary files before test:"
+            ls -lhF "${TMPDIR}"
+            echo "Disk usage before test:"
+            df -h
+            ;;
+    esac
+
+    curr_test_status="failed"
+
+    pkg_test_output_file="${TMPDIR}/fntests.out"
+    pkg_test_log_file="${TMPDIR}/fntests.log" ## created by __run_test_suite__
+
+    ## Make sure that we do not read any old stuff ...
+    rm -f "${pkg_test_output_file}"
+    rm -f "${pkg_test_log_file}"
+
+    if ! test -z "${octave_pkg_profile_data}"; then
+        rm -f "${octave_pkg_profile_data}"
+    fi
+
+    if ! test -z "${octave_pkg_timing_file}"; then
+        rm -f "${octave_pkg_timing_file}"
+    fi
+
+    echo "${OCTAVE_CMD}"
+
+    curr_dir="`pwd`"
+
+    ## Octave's __run_test_suite__ function will create the file "fntests.log" inside the current directory.
+    if ! cd "${TMPDIR}"; then
+        echo "Invalid directory ${TMPDIR}"
+        return 1
+    fi
+
+    case "${OCT_PKG_TESTS_VERBOSE}" in
+        yes)
+            ## If grep returns a nonzero status, this is not considered as an error!
+            ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" | (grep -i -E "${OCT_GREP_FILTER_EXPR}" || true)
+            ;;
+        *)
+            ${OCTAVE_CMD} >& "${pkg_test_output_file}"
+            ;;
+    esac
+
+    cat "${pkg_test_output_file}"
+
+    if ! cd "${curr_dir}"; then
+        return 1
+    fi
+
+    rc=$?
+
+    case ${rc} in
+        0)
+            echo "${OCTAVE_CMD} completed with status 0"
+            case ${OCT_PKG_TEST_MODE} in
+                pkg|single)
+                    if awk -f parse_test_suite_status.awk "${pkg_test_output_file}"; then
+                        curr_test_status="passed"
+                    fi
+                    ;;
+            esac
+            ;;
+        124)
+            echo "${OCTAVE_CMD} failed with timeout"
+            ;;
+    esac
+
+    if test -f "${octave_pkg_profile_data}"; then
+        oct_pkg_profile_post_cmd=$(printf "${oct_pkg_profile_post_fmt}" "${octave_pkg_profile_data}")
+        ${OCTAVE_EXEC} -q -f --eval "${oct_pkg_profile_post_cmd}"
+        rm -f "${octave_pkg_profile_data}"
+    fi
+
+    if test -f "${octave_pkg_timing_file}"; then
+        echo "Resources used by ${OCTAVE_CMD}"
+        cat "${octave_pkg_timing_file}"
+        rm -f "${octave_pkg_timing_file}"
+    fi
+
+    case "${OCT_PKG_PRINT_RES}" in
+        all|*disk*)
+            echo "Memory usage after test:"
+            vmstat -S M
+            echo "Temporary files after test:"
+            ls -lhF ${OCT_PKG_TEST_DIR}
+            echo "Disk usage after test:"
+            df -h
+            ;;
+    esac
+
+    case "${curr_test_status}" in
+        passed)
+            printf "octave testsuite for package \"%s\" passed\n" "${octave_pkg_name}"
+            ;;
+        *)
+            printf "octave testsuite for package \"%s\" failed\n" "${octave_pkg_name}"
+            if test -f "${pkg_test_log_file}"; then
+                cat "${pkg_test_log_file}";
+            else
+                echo "${pkg_test_log_file} not found";
+            fi
+            ;;
+    esac
+
+    printf "%d:%s:%s:%s\n" "${rc}" "${curr_test_status}" "${octave_pkg_name}" "${octave_code_cmd}" > "${octave_status_file}"
+
+    echo "Remove all temporary files after the test:"
+    ## "oct-" is the default prefix of Octave's tempname() function
+    find "${TMPDIR}" '(' -type f -and '(' -name 'oct-*' -or -name 'fntests.*' ')' ')' -delete
+    rmdir "${TMPDIR}"
+}
+
 for pkgname_and_flags in ${OCT_PKG_LIST}; do
     pkgname=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$1}")
     pkg_test_flag=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$4}")
@@ -192,10 +388,6 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         fi
     fi
 
-    ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
-    ## This will make it easier to delete those files.
-    export TMPDIR="${OCT_PKG_TEST_DIR}/${pkgname}"
-
     if test -z "${OCT_PKG_INSTALL_PREFIX}"; then
         oct_pkg_prefix_cmd=""
     else
@@ -207,14 +399,15 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
     oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
     oct_pkg_load_cmd=$(printf "pkg('load','%s');" "${pkgname}")
     oct_pkg_list_cmd=$(printf "p=pkg('list','%s');" "${pkgname}")
-    oct_pkg_run_test_suite_cmd="__run_test_suite__({p{1}.dir},{});"
+    oct_pkg_run_test_suite_cmd="__run_test_suite__({p{1}.dir},{p{1}.dir});"
 
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
             OCTAVE_CODE="${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
             ;;
         single)
-            OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('describe','-verbose','%s'); for i=1:numel(p{1}.provides) for j=1:numel(p{1}.provides{i}.functions) disp(p{1}.provides{i}.functions{j}); endfor; endfor" "${pkgname}")
+            #OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('describe','-verbose','%s'); for i=1:numel(p{1}.provides) for j=1:numel(p{1}.provides{i}.functions) disp(p{1}.provides{i}.functions{j}); endfor; endfor" "${pkgname}")
+            OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('list','-verbose','%s');dir(fullfile(p{1}.dir,'*.m'));dir(fullfile(p{1}.dir,'*.tst'));" "${pkgname}")
             OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} --eval "${oct_pkg_prefix_cmd}${OCTAVE_CMD_FUNCTIONS}"`
             rc=$?
             if test ${rc} != 0; then
@@ -242,136 +435,59 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
             ;;
     esac
 
-    pkg_test_timing="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.tm"
+    octave_pkg_testsuite_pid=$$
+    octave_status_file_format=`printf '%s/octave_pkg_testsuite_run_%08X_%%s.status' "${OCT_PKG_TEST_DIR}/${pkgname}" "${octave_pkg_testsuite_pid}"`
 
-    case "${OCT_PKG_PRINT_RES}" in
-        all|*time*)
-            pkg_test_timing_cmd="/usr/bin/time --verbose --output ${pkg_test_timing}"
-            ;;
-        *)
-            pkg_test_timing_cmd=""
-            ;;
-    esac
+    if test ${MBD_NUM_TASKS} -gt 1; then
+        export MBD_NUM_THREADS
+        export TIMEOUT_CMD
+        export OCTAVE_EXEC
+        export OCT_PKG_PRINT_RES
+        export OCT_PKG_TEST_DIR
+        export OCT_GREP_FILTER_EXPR
+        export OCT_PKG_TEST_MODE
+        export OCT_PKG_TESTS_VERBOSE
+        export oct_pkg_profile_post_fmt
+        export oct_pkg_profile_data
+        export -f octave_pkg_testsuite_run
+        octave_status_file=`printf "${octave_status_file_format}" '{#}'`
+        octave_parallel_args="-j${MBD_NUM_TASKS} -n1 octave_pkg_testsuite_run --status ${octave_status_file} --exec {} --pkg ${pkgname}"
+        printf '%s\n' ${OCTAVE_CODE} | parallel ${octave_parallel_args}
+    else
+        ((idx_test=0))
+        for octave_code_cmd in ${OCTAVE_CODE}; do
+            ((++idx_test))
+            status_file=`printf ${octave_status_file_format} $((idx_test))`
+            octave_pkg_testsuite_run --exec "${octave_code_cmd}" --pkg "${pkgname}" --status "${status_file}"
+        done
+    fi
 
+    curr_pkg_status="passed"
+
+    ((idx_test=0))
     for octave_code_cmd in ${OCTAVE_CODE}; do
-        OCTAVE_CMD=$(printf '%s%s %s -qfH --eval %s' "${TIMEOUT_CMD}" "${pkg_test_timing_cmd}" "${OCTAVE_EXEC}" "${octave_code_cmd}")
+        ((++idx_test))
+        status_file=`printf ${octave_status_file_format} $((idx_test))`
 
-        case "${OCT_PKG_PRINT_RES}" in
-            all|*disk*)
-                echo "Memory usage before test:"
-                vmstat -S M
-                echo "Temporary files before test:"
-                ls -lhF "${OCT_PKG_TEST_DIR}/${pkgname}"
-                echo "Disk usage before test:"
-                df -h
-                ;;
-        esac
-
-        curr_test_status="failed"
-
-        pkg_test_output_file="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.out"
-        pkg_test_log_file="${OCT_PKG_TEST_DIR}/${pkgname}/fntests.log" ## created by __run_test_suite__
-
-        ## Make sure that we do not read any old stuff ...
-        rm -f "${pkg_test_output_file}"
-        rm -f "${pkg_test_log_file}"
-        rm -f "${oct_pkg_profile_data}"
-        rm -f "${pkg_test_timing}"
-
-        echo "${OCTAVE_CMD}"
-
-        curr_dir="`pwd`"
-
-        ## Octave's __run_test_suite__ function will create the file "fntests.log" inside the current directory.
-        if ! cd "${OCT_PKG_TEST_DIR}/${pkgname}"; then
-            exit 1
+        if ! test -f "${status_file}"; then
+            echo "Status file ${status_file} not found"
+            curr_pkg_status="failed"
+            continue
         fi
 
-        case "${OCT_PKG_TESTS_VERBOSE}" in
-            yes)
-                ## If grep returns a nonzero status, this is not considered as an error!
-                ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" | (grep -i -E "${OCT_GREP_FILTER_EXPR}" || true)
-                ;;
-            *)
-                ${OCTAVE_CMD} >& "${pkg_test_output_file}"
-                ;;
-        esac
+        curr_test_status=`awk -F ':' '{print $2}' ${status_file}`
 
-        if ! cd "${curr_dir}"; then
-            exit 1
+        if ! test "${curr_test_status}" = "passed"; then
+            curr_pkg_status="failed"
         fi
 
-        rc=$?
-
-        case ${rc} in
-            0)
-                echo "${OCTAVE_CMD} completed with status 0"
-                case ${OCT_PKG_TEST_MODE} in
-                    pkg|single)
-                        if awk -f parse_test_suite_status.awk "${pkg_test_output_file}"; then
-                            curr_test_status="passed"
-                        fi
-                        ;;
-                    single)
-                        ## If we are using the test function, then an exit status of zero already indicates that all tests have passed
-                        curr_test_status="passed"
-                        ;;
-                esac
-                ;;
-            124)
-                echo "${OCTAVE_CMD} failed with timeout"
-                ;;
-        esac
-
-        if test -f "${oct_pkg_profile_data}"; then
-            oct_pkg_profile_post_cmd=$(printf "${oct_pkg_profile_post_fmt}" "${oct_pkg_profile_data}")
-            ${OCTAVE_EXEC} -q -f --eval "${oct_pkg_profile_post_cmd}"
-        fi
-
-        rm -f "${oct_pkg_profile_data}"
-
-        if test -f "${pkg_test_timing}"; then
-            echo "Resources used by ${OCTAVE_CMD}"
-            cat "${pkg_test_timing}"
-        fi
-
-        rm -f "${pkg_test_timing}"
-
-        case "${OCT_PKG_PRINT_RES}" in
-            all|*disk*)
-                echo "Memory usage after test:"
-                vmstat -S M
-                echo "Temporary files after test:"
-                ls -lhF ${OCT_PKG_TEST_DIR}
-                echo "Disk usage after test:"
-                df -h
-                ;;
-        esac
-
-        case "${curr_test_status}" in
-            passed)
-                printf "octave testsuite for package \"%s\" passed\n" "${pkgname}"
-                ;;
-            *)
-                printf "octave testsuite for package \"%s\" failed\n" "${pkgname}"
-                if test -f "${pkg_test_log_file}"; then
-                    cat "${pkg_test_log_file}";
-                else
-                    echo "${pkg_test_log_file} not found";
-                fi
-                test_status="failed"
-                failed_packages="${failed_packages} ${pkgname}"
-                case "${OCT_PKG_TEST_MODE}" in
-                    single)
-                        failed_packages="${failed_packages}:${octave_code_cmd}"
-                        ;;
-                esac
-        esac
-
-        echo "Remove all temporary files after the test:"
-        ## "oct-" is the default prefix of Octave's tempname() function
-        find "${OCT_PKG_TEST_DIR}/${pkgname}" '(' -type f -and '(' -name 'oct-*' -or -name 'fntests.*' ')' ')' -delete
+        rm -rf "${status_file}"
     done
+
+    if ! test "${curr_pkg_status}" = "passed"; then
+        test_status="failed"
+        failed_packages="${failed_packages} ${pkgname}"
+    fi
 done
 
 case "${test_status}" in
