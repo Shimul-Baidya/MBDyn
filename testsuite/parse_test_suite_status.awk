@@ -64,13 +64,6 @@ BEGIN {
     failed = strtonum($2);
 }
 
-/\?\?\?\?\? .+has no tests available$/ {
-    ## Output from Octave's function "test"
-    ## This is not considered as a failure.
-    passed = 0;
-    failed = 0;
-}
-
 /\?\?\?\?\? .+has no tests available$|\?\?\?\?\? .+source code with tests for dynamically linked function not found$/ {
     ## Output from Octave's function "test"
     ## This is not considered as a failure.    

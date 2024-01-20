@@ -462,29 +462,35 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         done
     fi
 
-    curr_pkg_status="passed"
-
     ((idx_test=0))
+    ((tests_passed=0))
+    ((tests_failed=0))
+
     for octave_code_cmd in ${OCTAVE_CODE}; do
         ((++idx_test))
         status_file=`printf ${octave_status_file_format} $((idx_test))`
 
         if ! test -f "${status_file}"; then
             echo "Status file ${status_file} not found"
-            curr_pkg_status="failed"
+            ((++tests_failed))
             continue
         fi
 
         curr_test_status=`awk -F ':' '{print $2}' ${status_file}`
 
         if ! test "${curr_test_status}" = "passed"; then
-            curr_pkg_status="failed"
+            ((++tests_failed))
         fi
 
         rm -rf "${status_file}"
+
+        ((++tests_passed))
     done
 
-    if ! test "${curr_pkg_status}" = "passed"; then
+    printf "%s:%d/%d tests passed\n" "${pkgname}" $((tests_passed)) $((tests_passed+tests_failed))
+    printf "%s:%d/%d tests failed\n" "${pkgname}" $((tests_failed)) $((tests_passed+tests_failed))
+
+    if test $((tests_failed)) -gt 0 || test $((tests_passed)) -le 0; then
         test_status="failed"
         failed_packages="${failed_packages} ${pkgname}"
     fi
