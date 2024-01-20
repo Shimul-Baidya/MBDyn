@@ -341,8 +341,8 @@ function octave_pkg_testsuite_run()
 
     echo "Remove all temporary files after the test:"
     ## "oct-" is the default prefix of Octave's tempname() function
+    export -n TMPDIR
     find "${TMPDIR}" '(' -type f -and '(' -name 'oct-*' -or -name 'fntests.*' ')' ')' -delete
-    rmdir "${TMPDIR}"
 }
 
 for pkgname_and_flags in ${OCT_PKG_LIST}; do
