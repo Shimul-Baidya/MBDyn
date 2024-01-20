@@ -73,7 +73,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - ${OCTAVE_EXEC} -qfH --version | tee -a "${log_file}"
       - chmod +x testsuite/octave_pkg_testsuite.sh
       ## FIXME: It seems that everything must be on one long line
-      - /usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}"  2>&1 | tee -a "${log_file}"
+      - testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}"  2>&1 | tee -a "${log_file}"
   artifacts:
     name: octave-pkg-test-output-dir
     expire_in: 2 days

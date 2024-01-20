@@ -274,15 +274,15 @@ function octave_pkg_testsuite_run()
 
     case "${OCT_PKG_TESTS_VERBOSE}" in
         yes)
+            echo "Verbose output enabled:"
             ## If grep returns a nonzero status, this is not considered as an error!
             ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" | (grep -i -E "${OCT_GREP_FILTER_EXPR}" || true)
             ;;
         *)
+            echo "Verbose output disabled:"
             ${OCTAVE_CMD} >& "${pkg_test_output_file}"
             ;;
     esac
-
-    cat "${pkg_test_output_file}"
 
     if ! cd "${curr_dir}"; then
         return 1
@@ -386,12 +386,11 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
 
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
-            oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/oct_pkg_profile_data_${pkgname}.mat"
+            oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/oct_pkg_profile_data_$$_${pkgname}.mat"
             oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
             OCTAVE_CODE="${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
             ;;
         single)
-            #OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('describe','-verbose','%s'); for i=1:numel(p{1}.provides) for j=1:numel(p{1}.provides{i}.functions) disp(p{1}.provides{i}.functions{j}); endfor; endfor" "${pkgname}")
             OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('list','-verbose','%s');dir(fullfile(p{1}.dir,'*.m'));dir(fullfile(p{1}.dir,'*.tst'));" "${pkgname}")
             OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} --eval "${oct_pkg_prefix_cmd}${OCTAVE_CMD_FUNCTIONS}"`
             rc=$?
@@ -404,7 +403,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
             for pkg_function_name in ${OCTAVE_PKG_FUNCTIONS}; do
                 ((++oct_pkg_func_index))
                 oct_pkg_test_function_cmd=$(printf "test('%s');" "${pkg_function_name}")
-                oct_pkg_profile_data=`printf '%s/oct_pkg_profile_data_%s_%03d.mat' "${OCT_PKG_TEST_DIR}" "${pkgname}" $((oct_pkg_func_index))`
+                oct_pkg_profile_data=`printf '%s/oct_pkg_profile_data_%d_%s_%03d.mat' "${OCT_PKG_TEST_DIR}" $$ "${pkgname}" $((oct_pkg_func_index))`
                 oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
                 OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
             done
@@ -484,13 +483,13 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
 done
 
 if ! test -z "${oct_pkg_profile_post_fmt}"; then
-    oct_pkg_profile_files=`find "${OCT_PKG_TEST_DIR}" '(' -type f -and -name 'oct_pkg_profile_data_*.mat' ')'`
+    oct_pkg_profile_files=`find "${OCT_PKG_TEST_DIR}" '(' -type f -and -name "oct_pkg_profile_data_$$_*.mat" ')'`
 
     for oct_pkg_profile_file in ${oct_pkg_profile_files}; do
         oct_pkg_profile_post_cmd=$(printf "${oct_pkg_profile_post_fmt}" "${oct_pkg_profile_file}")
         echo "Profile information for \"${oct_pkg_profile_file}\":"
         ${OCTAVE_EXEC} -q -f --eval "${oct_pkg_profile_post_cmd}"
-        rm -f "${octave_pkg_profile_file}"
+        rm -f "${oct_pkg_profile_file}"
     done
 fi
 
