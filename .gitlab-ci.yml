@@ -119,7 +119,7 @@ variables:
   ## The value of <TEST_TIMEOUT> will be applied to each function.
   ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
   ## The value <TEST_TIMEOUT> will be applied to the whole package.
-  OCT_PKG_TEST_MODE: "pkg"
+  OCT_PKG_TEST_MODE: "single"
   OCTAVE_EXEC: "octave"
 
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
