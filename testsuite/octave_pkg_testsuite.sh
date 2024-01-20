@@ -212,6 +212,8 @@ function octave_pkg_testsuite_run()
         return 1
     fi
 
+    rm -f "${octave_status_file}"
+    
     pid=$$
 
     ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
