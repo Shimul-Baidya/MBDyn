@@ -279,18 +279,18 @@ function octave_pkg_testsuite_run()
             echo "Verbose output enabled:"
             ## If grep returns a nonzero status, this is not considered as an error!
             ${OCTAVE_CMD} 2>&1 | tee "${pkg_test_output_file}" | (grep -i -E "${OCT_GREP_FILTER_EXPR}" || true)
+            rc=$?
             ;;
         *)
             echo "Verbose output disabled:"
             ${OCTAVE_CMD} >& "${pkg_test_output_file}"
+            rc=$?
             ;;
     esac
 
     if ! cd "${curr_dir}"; then
         return 1
     fi
-
-    rc=$?
 
     case ${rc} in
         0)
