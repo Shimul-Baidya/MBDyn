@@ -178,7 +178,6 @@ function octave_pkg_testsuite_run()
     octave_code_cmd=""
     octave_status_file=""
     octave_pkg_name=""
-    octave_pkg_profile_data=""
 
     while ! test -z "$1"; do
         case "$1" in
@@ -192,10 +191,6 @@ function octave_pkg_testsuite_run()
                 ;;
             --status)
                 octave_status_file="$2"
-                shift
-                ;;
-            --profile-data)
-                octave_pkg_profile_data="$2"
                 shift
                 ;;
         esac
@@ -263,10 +258,6 @@ function octave_pkg_testsuite_run()
     rm -f "${pkg_test_output_file}"
     rm -f "${pkg_test_log_file}"
 
-    if ! test -z "${octave_pkg_profile_data}"; then
-        rm -f "${octave_pkg_profile_data}"
-    fi
-
     if ! test -z "${octave_pkg_timing_file}"; then
         rm -f "${octave_pkg_timing_file}"
     fi
@@ -314,12 +305,6 @@ function octave_pkg_testsuite_run()
             echo "${OCTAVE_CMD} failed with timeout"
             ;;
     esac
-
-    if test -f "${octave_pkg_profile_data}"; then
-        oct_pkg_profile_post_cmd=$(printf "${oct_pkg_profile_post_fmt}" "${octave_pkg_profile_data}")
-        ${OCTAVE_EXEC} -q -f --eval "${oct_pkg_profile_post_cmd}"
-        rm -f "${octave_pkg_profile_data}"
-    fi
 
     if test -f "${octave_pkg_timing_file}"; then
         echo "Resources used by ${OCTAVE_CMD}"
@@ -395,14 +380,14 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
     fi
 
     oct_pkg_sigterm_dumps_core="sigterm_dumps_octave_core(false);"
-    oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/${pkgname}/${pkgname}.mat"
-    oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
     oct_pkg_load_cmd=$(printf "pkg('load','%s');" "${pkgname}")
     oct_pkg_list_cmd=$(printf "p=pkg('list','%s');" "${pkgname}")
     oct_pkg_run_test_suite_cmd="__run_test_suite__({p{1}.dir},{p{1}.dir});"
 
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
+            oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/oct_pkg_profile_data_${pkgname}.mat"
+            oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
             OCTAVE_CODE="${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
             ;;
         single)
@@ -415,8 +400,12 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
                 exit 1
             fi
             OCTAVE_CODE=""
+            ((oct_pkg_func_index=0))
             for pkg_function_name in ${OCTAVE_PKG_FUNCTIONS}; do
+                ((++oct_pkg_func_index))
                 oct_pkg_test_function_cmd=$(printf "test('%s');" "${pkg_function_name}")
+                oct_pkg_profile_data=`printf '%s/oct_pkg_profile_data_%s_%03d.mat' "${OCT_PKG_TEST_DIR}" "${pkgname}" $((oct_pkg_func_index))`
+                oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
                 OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
             done
             ;;
@@ -447,8 +436,6 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         export OCT_GREP_FILTER_EXPR
         export OCT_PKG_TEST_MODE
         export OCT_PKG_TESTS_VERBOSE
-        export oct_pkg_profile_post_fmt
-        export oct_pkg_profile_data
         export -f octave_pkg_testsuite_run
         octave_status_file=`printf "${octave_status_file_format}" '{#}'`
         octave_parallel_args="-j${MBD_NUM_TASKS} -n1 octave_pkg_testsuite_run --status ${octave_status_file} --exec {} --pkg ${pkgname}"
@@ -495,6 +482,17 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         failed_packages="${failed_packages} ${pkgname}"
     fi
 done
+
+if ! test -z "${oct_pkg_profile_post_fmt}"; then
+    oct_pkg_profile_files=`find "${OCT_PKG_TEST_DIR}" '(' -type f -and -name 'oct_pkg_profile_data_*.mat' ')'`
+
+    for oct_pkg_profile_file in ${oct_pkg_profile_files}; do
+        oct_pkg_profile_post_cmd=$(printf "${oct_pkg_profile_post_fmt}" "${oct_pkg_profile_file}")
+        echo "Profile information for \"${oct_pkg_profile_file}\":"
+        ${OCTAVE_EXEC} -q -f --eval "${oct_pkg_profile_post_cmd}"
+        rm -f "${octave_pkg_profile_file}"
+    done
+fi
 
 case "${test_status}" in
     passed)
