@@ -89,6 +89,10 @@ while ! test -z "$1"; do
         --patch-input)
             shift
             ;;
+        --autodiff)
+            mbdyn_autodiff_options="$2"
+            shift
+            ;;
         --keep-output)
             other_arguments="${other_arguments} $1 $2"
             mbdyn_keep_output="$2"
@@ -106,9 +110,7 @@ while ! test -z "$1"; do
     shift
 done
 
-
 ((mbd_exit_status_mask|=0x1))
-
 
 if ! test -d "${mbdyn_testsuite_prefix_output}"; then
     if ! mkdir -p "${mbdyn_testsuite_prefix_output}"; then
@@ -122,7 +124,7 @@ simple_testsuite.sh --prefix-output "${mbdyn_testsuite_prefix_output}" ${other_a
 
 rc=$?
 
-if test "${keep_output_flag}" = "no" && test ${rc} = 0; then
+if test "${mbdyn_keep_output}" = "no"; then
     rm -f "${simple_testsuite_log_file}"
 fi
 
@@ -291,7 +293,14 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
 
                         simple_testsuite_log_file="${mbd_output_dir}/mbdyn-testsuite-patched.log"
 
-                        simple_testsuite.sh --exec-gen "no" --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) >& "${simple_testsuite_log_file}"
+                        echo "${mbd_output_dir}" > "${simple_testsuite_log_file}"
+
+                        cat "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}" >> "${simple_testsuite_log_file}"
+                        cat "${MBD_TESTSUITE_INITIAL_VALUE_END}" >> "${simple_testsuite_log_file}"
+                        cat "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" >> "${simple_testsuite_log_file}"
+                        cat "${MBD_TESTSUITE_CONTROL_DATA_END}" >> "${simple_testsuite_log_file}"
+
+                        simple_testsuite.sh --exec-gen "no" --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) 2>&1 >> "${simple_testsuite_log_file}"
 
                         rc=$?
 
