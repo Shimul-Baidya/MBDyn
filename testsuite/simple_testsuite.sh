@@ -201,15 +201,7 @@ fi
 
 declare -i idx_test=0
 
-MBD_INPUT_FILES_FOUND=`find ${mbdyn_testsuite_prefix_input} '(' ${mbdyn_input_filter} ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`
-
-printf '%d valid input files were found\n' `echo ${MBD_INPUT_FILES_FOUND} | wc -w`
-
-((idx_test=0))
-for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
-    ((++idx_test))
-    printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
-done
+MBD_INPUT_FILES_FOUND=`find ${mbdyn_testsuite_prefix_input} '(' '(' ${mbdyn_input_filter} ')' -and -not -name '*_simple_testsuite_patched_input.mbd' ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`
 
 function simple_testsuite_run_test()
 {
@@ -221,23 +213,23 @@ function simple_testsuite_run_test()
 
     while ! test -z "$1"; do
         case "$1" in
-            --status|-s)
+            --status)
                 mbd_status_file="$2"
                 shift
                 ;;
-            --input|-i)
+            --input)
                 mbd_filename="$2"
                 shift
                 ;;
-            --exec-gen|-g)
+            --exec-gen)
                 mbd_exec_gen_script="$2"
                 shift
                 ;;
-            --exec-run|-r)
+            --exec-run)
                 mbd_exec_run_script="$2"
                 shift
                 ;;
-            --exec-solver|-s)
+            --exec-solver)
                 mbd_exec_solver="$2"
                 shift
                 ;;
@@ -289,7 +281,7 @@ function simple_testsuite_run_test()
             ## FIXME: actually ${mbd_filename_patched} should be created inside the output directory.
             ## FIXME: However, MBDyn is not able to located additional input files, if ${mbd_filename_patched}
             ## FIXME: would be created inside a different directory than the original input file.
-            mbd_filename_patched=$(mktemp -p "${mbd_dir_name}" "${mbd_basename}_patched_XXXXXXXXXX.mbd")
+            mbd_filename_patched=$(mktemp -p "${mbd_dir_name}" "${mbd_basename}_XXXXXXXXXX_simple_testsuite_patched_input.mbd")
             mbd_filename_patched_copy="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_input_file_patched.mbd"
 
             if ! sed -E -f "${mbdyn_sed_prefix}mbdyn_testsuite_patch.sed" "${mbd_filename}" | tee "${mbd_filename_patched}" > "${mbd_filename_patched_copy}"; then
@@ -366,10 +358,10 @@ function simple_testsuite_run_test()
 
         case "${mbdyn_testsuite_timeout}" in
             unlimited)
-                echo "no timeout is applied"
+                echo "No timeout is applied"
                 ;;
             *)
-                echo "timeout after ${mbdyn_testsuite_timeout}"
+                echo "Timeout after ${mbdyn_testsuite_timeout}"
                 mbd_command="timeout --signal=SIGTERM ${mbdyn_testsuite_timeout} ${mbd_command}"
                 ;;
         esac
@@ -377,7 +369,7 @@ function simple_testsuite_run_test()
         printf "%s:%s\n" "${mbd_basename}" "${mbd_command}"
 
         if test "${mbd_exec_solver}" != "no"; then
-            curr_dir="$(pwd)"
+            curr_dir=`pwd`
 
             if ! cd "${mbd_dir_name}"; then
                 echo "Invalid directory"
@@ -399,7 +391,7 @@ function simple_testsuite_run_test()
 
             eval ${mbd_command}
 
-            rc=$?
+            ((rc=$?))
 
             if ! cd "${curr_dir}"; then
                 echo "Invalid directory"
@@ -407,7 +399,7 @@ function simple_testsuite_run_test()
             fi
         else
             ## According to "man(3) exit", status & 0xFF is returned to the parent
-            rc=-1
+            ((rc=-1))
         fi
 
         if test "${mbdyn_patch_input}" != "no"; then
@@ -419,9 +411,13 @@ function simple_testsuite_run_test()
         mbd_module_not_found=""
         mbd_loadable_not_found=""
 
-        case ${rc} in
+        case $((rc)) in
             -1)
-                status="skipped"
+                if test "${mbd_exec_solver}" = "no"; then
+                    status="skipped"
+                else
+                    status="unexpected"
+                fi
                 ;;
             0)
                 num_steps=`awk 'BEGIN{num_steps=0}/^End of simulation at time [0-9.-]+ after [0-9]+ steps;$/{num_steps=$8} END{print num_steps}' "${mbd_log_file}"`
@@ -559,6 +555,17 @@ function simple_testsuite_run_test()
 mbdyn_simple_testsuite_pid=$$
 
 mbd_status_file_format=`printf '%s/mbdyn_simple_testsuite_run_test_%08X_%%s.status' "${mbdyn_testsuite_prefix_output}" "${mbdyn_simple_testsuite_pid}"`
+
+printf '%d valid input files were found\n' `echo ${MBD_INPUT_FILES_FOUND} | wc -w`
+
+((idx_test=0))
+for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
+    ((++idx_test))
+    printf "%4d: \"%s\"\n" $((idx_test)) "${mbd_filename}"
+    mbd_status_file=`printf "${mbd_status_file_format}" $((idx_test))`
+    ## Make sure, that all tests were really executed.
+    rm -f "${mbd_status_file}"
+done
 
 if test $((idx_test)) -le 1 || test "${MBD_NUM_TASKS}" -le 1; then
     ## Sequential execution
