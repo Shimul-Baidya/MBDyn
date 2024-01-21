@@ -1,5 +1,5 @@
 mbdyn-testsuite-report-job:
-  stage: .post
+  stage: test
   needs:
     - job: mbdyn-modules-test-job
       artifacts: true
