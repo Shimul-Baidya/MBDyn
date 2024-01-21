@@ -40,11 +40,11 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
     ## - timeout                    (0x2)
     ## - module not found           (0x4)
     ## - loadable element not found (0x8)
-    MBD_MODULE_TEST_EXIT_STATUS_MASK: "0xE"
+    MBD_MODULE_TESTS_EXIT_STATUS_MASK: "0xE"
     ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
     ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
-    MBD_MODULE_TEST_TIMEOUT: "unlimited"
-    MBD_MODULE_TEST_NUM_TASKS: 12
+    MBD_MODULE_TESTS_TIMEOUT: "unlimited"
+    MBD_MODULE_TESTS_NUM_TASKS: 12
     MBD_MODULE_TESTS_LOG_FILE: "mbdyn-module-test-job.log"
     MBD_MODULE_TESTS_STATUS_FILE: "mbdyn-module-test-job.status"
   stage: test    # It only starts when the job in the build stage completes successfully.
@@ -66,21 +66,21 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
       - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
-      - MBD_MODULE_TEST_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_MODULE_TEST_OUTPUT_DIR}
+      - MBD_MODULE_TESTS_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_MODULE_TESTS_OUTPUT_DIR}
       - echo "MBDyn modules test job"
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
-      - MBD_MODULE_TEST_INPUT_DIR=${CI_PROJECT_DIR}/modules
+      - MBD_MODULE_TESTS_INPUT_DIR=${CI_PROJECT_DIR}/modules
       - export LD_LIBRARY_PATH=${MBD_INSTALL_PREFIX}/libexec:${LD_LIBRARY_PATH}
       - log_file="${MBD_MODULE_TESTS_OUTPUT_DIR}/${MBD_MODULE_TESTS_LOG_FILE}"
       - status_file="${MBD_MODULE_TESTS_OUTPUT_DIR}/${MBD_MODULE_TESTS_STATUS_FILE}"            
-      - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
-      - mkdir -p "${MBD_MODULE_TEST_OUTPUT_DIR}" ## needed for realpath
+      - test -d "${MBD_MODULE_TESTS_INPUT_DIR}"
+      - mkdir -p "${MBD_MODULE_TESTS_OUTPUT_DIR}" ## needed for realpath
       - echo "unexpected" > "${status_file}"
       - ls -lhF ${MBD_INSTALL_PREFIX}/libexec | tee ${log_file}
       - chmod +x testsuite/simple_testsuite.sh
       - |
-        /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" --tasks "${MBD_MODULE_TEST_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
+        /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
         rc=$?
         case ${rc} in
             0)
@@ -98,5 +98,5 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
      expire_in: 2 days
      name: mbdyn-modules-test-job
      paths:
-       - $MBD_MODULE_TEST_OUTPUT_DIR/$MBD_MODULE_TESTS_LOG_FILE
-       - $MBD_MODULE_TEST_OUTPUT_DIR/$MBD_MODULE_TESTS_STATUS_FILE
+       - $MBD_MODULE_TESTS_OUTPUT_DIR/$MBD_MODULE_TESTS_LOG_FILE
+       - $MBD_MODULE_TESTS_OUTPUT_DIR/$MBD_MODULE_TESTS_STATUS_FILE
