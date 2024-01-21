@@ -36,7 +36,6 @@
 
 mbdyn-tests-public-test-job:   # This job runs in the test stage.
   variables:
-    MBD_TESTS_PUBLIC_GITLAB: "https://gitlab.com/mbdyn.user1/mbdyn-tests-public-testsuite.git"
     ## Error codes which should not cause the pipeline to fail:
     ## - timeout                    (0x2)
     ## - module not found           (0x4)
@@ -46,6 +45,8 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
     ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
     MBD_TESTS_PUBLIC_TIMEOUT: "unlimited"
     MBD_TESTS_PUBLIC_NUM_TASKS: 12
+    MBD_TESTS_PUBLIC_LOG_FILE: "mbdyn-tests-public-test-job.log"
+    MBD_TESTS_PUBLIC_STATUS_FILE: "mbdyn-tests-public-test-job.status"
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
     - job: netcdf-c-build-job
@@ -78,16 +79,45 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - cd ${CI_PROJECT_DIR}
       - chmod +x testsuite/simple_testsuite.sh
       - mkdir -p ${MBD_TESTS_PUBLIC_OUTPUT_DIR} ## needed for realpath
-      - mbd_log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/mbdyn-tests-public-test-job.log"
+      - log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_LOG_FILE}"
+      - status_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_STATUS_FILE}"
+      - echo "unexpected" > "${status_file}"
       ## First of all we need to execute the original tests because some of them are using scripts to generate input files.
-      - echo "-------------- ORIGINAL TESTS --------------------" | tee -a "${mbd_log_file}"
-      - /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"
-      ## FIXME: nox solver will fail with linear solver y12 if it is used with "jacobian operator, newton".
-      - echo "-------------- PATCHED TESTS --------------------" | tee -a "${mbd_log_file}"
-      - /usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"
-
+      - |
+        echo "-------------- ORIGINAL TESTS --------------------" | tee -a "${log_file}"
+        /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
+        rc=$?
+        case ${rc} in
+            0)
+                test_status="passed"
+                ;;
+            1)
+                test_status="failed"
+                ;;
+            *)
+                test_status="fault"
+                ;;
+        esac
+        echo "${test_status}" > "${status_file}"
+        ## FIXME: nox solver will fail with linear solver y12 if it is used with "jacobian operator, newton".
+        echo "-------------- PATCHED TESTS --------------------" | tee -a "${log_file}"
+        /usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
+        rc=$?
+        case ${rc} in
+            0)
+                test_status="passed"
+                ;;
+            1)
+                test_status="failed"
+                ;;
+            *)
+                test_status="fault"
+                ;;
+        esac
+        echo "${test_status}" >> "${status_file}"
   artifacts:
     name: mbdyn-tests-public-test-job
     expire_in: 24h
     paths:
-      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/mbdyn-tests-public-test-job.log
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_LOG_FILE
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_STATUS_FILE

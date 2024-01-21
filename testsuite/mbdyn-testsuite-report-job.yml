@@ -1,0 +1,14 @@
+mbdyn-testsuite-report-job:
+  stage: .post
+  needs:
+    - job: mbdyn-modules-test-job
+      artifacts: true
+    - job: mbdyn-tests-private-test-job
+      artifacts: true
+    - job: mbdyn-tests-public-test-job
+      artifacts: true
+    - job: octave-pkg-test-job.yml
+      artifacts: true
+  script:
+    - status_files=`find "${TESTSUITE_PREFIX_TESTS}" -name '*-test-job.status'`
+    - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 4 || passed < tests || failed > 0) { exit 1; }}' ${status_files}

@@ -125,10 +125,11 @@ variables:
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
   ## This makes it easier to clean up temporary files and ther is no need to use /tmp
   ## Paths must be relative to CI_PROJECT_PATH
-  OCT_PKG_TEST_OUTPUT_DIR: "testsuite/var/tmp/tests/octave-pkg-testjob/"
-  MBD_MODULE_TEST_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-modules-testjob/"
-  MBD_TESTS_PUBLIC_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-public-testjob/"
-  MBD_TESTS_PRIVATE_OUTPUT_DIR: "testsuite/var/tmp/tests/mbdyn-tests-private-testjob/"
+  TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests/
+  OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob/
+  MBD_MODULE_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob/
+  MBD_TESTS_PUBLIC_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob/
+  MBD_TESTS_PRIVATE_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob/
 
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
 
@@ -141,6 +142,7 @@ stages:          # List of stages for jobs, and their order of execution
   - build
   - test
   - deploy
+  - .post
 
 include:
     - local: '/testsuite/mbdyn-cleanup-job.yml'
@@ -157,3 +159,4 @@ include:
     - local: '/testsuite/mbdyn-tests-public-test-job.yml'
     - local: '/testsuite/mbdyn-modules-test-job.yml'
     - local: '/testsuite/mbdyn-deploy-job.yml'
+    - local: '/testsuite/mbdyn-testsuite-report-job.yml'
