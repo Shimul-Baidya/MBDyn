@@ -50,7 +50,7 @@ OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
 OCT_PKG_INSTALL_PREFIX="${OCT_PKG_INSTALL_PREFIX:-}"
 OCTAVE_CMD_ARGS="-qfHW"
-OCTAVE_FUNCTION_FILTER='/.+\.(tst|m)\>/'
+OCT_PKG_FUNCTION_FILTER='/.+\.(tst|m)\>/'
 ## Do not print any output from Octave which does not pass through this filter, even if "--verbose yes" is used!
 ## This is strictly required because the amount of output is limited to 4194304 bytes by GitLab
 OCT_GREP_FILTER_EXPR='^command: "mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
@@ -101,7 +101,9 @@ while ! test -z "$1"; do
             shift
             ;;
         --octave-function-filter)
-            OCTAVE_FUNCTION_FILTER="$2"
+            if ! test -z "$2"; then
+                OCT_PKG_FUNCTION_FILTER="$2"
+            fi
             shift
             ;;
         --tasks)
@@ -421,7 +423,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
             ;;
         single)
             OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('list','-verbose','%s');dir(fullfile(p{1}.dir,'*.m'));dir(fullfile(p{1}.dir,'*.tst'));" "${pkgname}")
-            OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} ${OCTAVE_CMD_ARGS} --eval "${oct_pkg_prefix_cmd}${OCTAVE_CMD_FUNCTIONS}" | awk "${OCTAVE_FUNCTION_FILTER}"`
+            OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} ${OCTAVE_CMD_ARGS} --eval "${oct_pkg_prefix_cmd}${OCTAVE_CMD_FUNCTIONS}" | awk "${OCT_PKG_FUNCTION_FILTER}"`
             rc=$?
             if test ${rc} != 0; then
                 echo "${OCTAVE_CMD_FUNCTIONS} failed with status ${rc}"
