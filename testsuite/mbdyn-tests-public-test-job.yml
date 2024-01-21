@@ -81,10 +81,10 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - mbd_log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/mbdyn-tests-public-test-job.log"
       ## First of all we need to execute the original tests because some of them are using scripts to generate input files.
       - echo "-------------- ORIGINAL TESTS --------------------" | tee -a "${mbd_log_file}"
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"
+      - /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"
       ## FIXME: nox solver will fail with linear solver y12 if it is used with "jacobian operator, newton".
       - echo "-------------- PATCHED TESTS --------------------" | tee -a "${mbd_log_file}"
-      - testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"
+      - /usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${mbd_log_file}"
 
   artifacts:
     name: mbdyn-tests-public-test-job

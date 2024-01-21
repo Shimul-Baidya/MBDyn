@@ -74,7 +74,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - test -d "${MBD_MODULE_TEST_INPUT_DIR}"
       - mkdir -p "${MBD_MODULE_TEST_OUTPUT_DIR}" ## needed for realpath
       - chmod +x testsuite/simple_testsuite.sh
-      - testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" --tasks "${MBD_MODULE_TEST_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${MBD_MODULE_TEST_OUTPUT_DIR}/mbdyn-module-tests-job.log"
+      - /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TEST_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TEST_TIMEOUT}" --prefix-output "${MBD_MODULE_TEST_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TEST_INPUT_DIR}" --tasks "${MBD_MODULE_TEST_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${MBD_MODULE_TEST_OUTPUT_DIR}/mbdyn-module-tests-job.log"
   artifacts:
      expire_in: 2 days
      name: mbdyn-modules-test-job

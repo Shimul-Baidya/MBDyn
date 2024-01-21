@@ -49,7 +49,8 @@ OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
 OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
 OCT_PKG_INSTALL_PREFIX="${OCT_PKG_INSTALL_PREFIX:-}"
-
+OCTAVE_CMD_ARGS="-qfHW"
+OCTAVE_FUNCTION_FILTER='/.+\.(tst|m)\>/'
 ## Do not print any output from Octave which does not pass through this filter, even if "--verbose yes" is used!
 ## This is strictly required because the amount of output is limited to 4194304 bytes by GitLab
 OCT_GREP_FILTER_EXPR='^command: "mbdyn|^!!!!! test failed$|/^PASSES\>/|[[:alnum:]]+/[[:alnum:]]+/[[:alnum:]]+\.m\>|\<PASS\>|\<FAIL\>|\<pass\>|\<fail\>|^Summary|^Integrated test scripts|\.m files have no tests\.$'
@@ -97,6 +98,10 @@ while ! test -z "$1"; do
             ;;
         --octave-pkg-prefix)
             OCT_PKG_INSTALL_PREFIX="$2"
+            shift
+            ;;
+        --octave-function-filter)
+            OCTAVE_FUNCTION_FILTER="$2"
             shift
             ;;
         --tasks)
@@ -159,6 +164,7 @@ OCT_PKG_TEST_DIR="$(realpath ${OCT_PKG_TEST_DIR})"
 
 test_status="passed"
 failed_packages=""
+octave_pkg_testsuite_pid=$$
 
 case "${OCT_PKG_PRINT_RES}" in
     all|*profile*)
@@ -178,6 +184,7 @@ function octave_pkg_testsuite_run()
     octave_code_cmd=""
     octave_status_file=""
     octave_pkg_name=""
+    octave_pkg_task_id=""
 
     while ! test -z "$1"; do
         case "$1" in
@@ -191,6 +198,10 @@ function octave_pkg_testsuite_run()
                 ;;
             --status)
                 octave_status_file="$2"
+                shift
+                ;;
+            --task-id)
+                octave_pkg_task_id="$2"
                 shift
                 ;;
         esac
@@ -212,13 +223,16 @@ function octave_pkg_testsuite_run()
         return 1
     fi
 
-    rm -f "${octave_status_file}"
+    if test -z "${octave_pkg_task_id}"; then
+        echo "Invalid argument --task-id"
+        return 1
+    fi
 
-    pid=$$
+    rm -f "${octave_status_file}"
 
     ## Octave allows us to set TMPDIR in order to store all the temporary files in a single folder.
     ## This will make it easier to delete those files.
-    export TMPDIR="${OCT_PKG_TEST_DIR}/${octave_pkg_name}/${pid}"
+    export TMPDIR="${OCT_PKG_TEST_DIR}/${octave_pkg_name}/${octave_pkg_task_id}"
 
     if ! test -d "${TMPDIR}"; then
         if ! mkdir "${TMPDIR}"; then
@@ -238,7 +252,7 @@ function octave_pkg_testsuite_run()
             ;;
     esac
 
-    OCTAVE_CMD=$(printf '%s%s %s -qfH --eval %s' "${TIMEOUT_CMD}" "${octave_pkg_timing_cmd}" "${OCTAVE_EXEC}" "${octave_code_cmd}")
+    OCTAVE_CMD=$(printf '%s%s %s %s --eval %s' "${TIMEOUT_CMD}" "${octave_pkg_timing_cmd}" "${OCTAVE_EXEC}" "${OCTAVE_CMD_ARGS}" "${octave_code_cmd}")
 
     case "${OCT_PKG_PRINT_RES}" in
         all|*disk*)
@@ -297,8 +311,21 @@ function octave_pkg_testsuite_run()
             echo "${OCTAVE_CMD} completed with status 0"
             case ${OCT_PKG_TEST_MODE} in
                 pkg|single)
-                    if awk -f parse_test_suite_status.awk "${pkg_test_output_file}"; then
-                        curr_test_status="passed"
+                    if test -f "${pkg_test_output_file}"; then
+                        pkg_test_log_parse="${pkg_test_output_file}"
+                    else
+                        pkg_test_log_parse="${pkg_test_log_file}"
+                    fi
+
+                    if test -f "${pkg_test_log_parse}"; then
+                        if awk -f parse_test_suite_status.awk "${pkg_test_log_parse}"; then
+                            curr_test_status="passed"
+                        else
+                            cat "${pkg_test_log_parse}"
+                        fi
+                    else
+                        echo "File ${pkg_test_log_parse} not found"
+                        curr_test_status="unexpected"
                     fi
                     ;;
             esac
@@ -388,13 +415,13 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
 
     case "${OCT_PKG_TEST_MODE}" in
         pkg)
-            oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/oct_pkg_profile_data_$$_${pkgname}.mat"
+            oct_pkg_profile_data="${OCT_PKG_TEST_DIR}/oct_pkg_profile_data_${octave_pkg_testsuite_pid}_${pkgname}.mat"
             oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
             OCTAVE_CODE="${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_list_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_run_test_suite_cmd}${oct_pkg_profile_off_cmd}"
             ;;
         single)
             OCTAVE_CMD_FUNCTIONS=$(printf "p=pkg('list','-verbose','%s');dir(fullfile(p{1}.dir,'*.m'));dir(fullfile(p{1}.dir,'*.tst'));" "${pkgname}")
-            OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} --eval "${oct_pkg_prefix_cmd}${OCTAVE_CMD_FUNCTIONS}"`
+            OCTAVE_PKG_FUNCTIONS=`${OCTAVE_EXEC} ${OCTAVE_CMD_ARGS} --eval "${oct_pkg_prefix_cmd}${OCTAVE_CMD_FUNCTIONS}" | awk "${OCTAVE_FUNCTION_FILTER}"`
             rc=$?
             if test ${rc} != 0; then
                 echo "${OCTAVE_CMD_FUNCTIONS} failed with status ${rc}"
@@ -405,7 +432,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
             for pkg_function_name in ${OCTAVE_PKG_FUNCTIONS}; do
                 ((++oct_pkg_func_index))
                 oct_pkg_test_function_cmd=$(printf "test('%s');" "${pkg_function_name}")
-                oct_pkg_profile_data=`printf '%s/oct_pkg_profile_data_%d_%s_%03d.mat' "${OCT_PKG_TEST_DIR}" $$ "${pkgname}" $((oct_pkg_func_index))`
+                oct_pkg_profile_data=`printf '%s/oct_pkg_profile_data_%d_%s_%03d.mat' "${OCT_PKG_TEST_DIR}" ${octave_pkg_testsuite_pid} "${pkgname}" $((oct_pkg_func_index))`
                 oct_pkg_profile_off_cmd=$(printf "${oct_pkg_profile_off_fmt}" "${oct_pkg_profile_data}")
                 OCTAVE_CODE="${OCTAVE_CODE} ${oct_pkg_sigterm_dumps_core}${oct_pkg_prefix_cmd}${oct_pkg_load_cmd}${oct_pkg_profile_on_cmd}${oct_pkg_test_function_cmd}${oct_pkg_profile_off_cmd}"
             done
@@ -425,7 +452,6 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
             ;;
     esac
 
-    octave_pkg_testsuite_pid=$$
     octave_status_file_format=`printf '%s/octave_pkg_testsuite_run_%08X_%%s.status' "${OCT_PKG_TEST_DIR}/${pkgname}" "${octave_pkg_testsuite_pid}"`
 
     oct_pkg_num_tests=`echo ${OCTAVE_CODE} | wc -w`
@@ -435,6 +461,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         export MBD_NUM_THREADS
         export TIMEOUT_CMD
         export OCTAVE_EXEC
+        export OCTAVE_CMD_ARGS
         export OCT_PKG_PRINT_RES
         export OCT_PKG_TEST_DIR
         export OCT_GREP_FILTER_EXPR
@@ -442,7 +469,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         export OCT_PKG_TESTS_VERBOSE
         export -f octave_pkg_testsuite_run
         octave_status_file=`printf "${octave_status_file_format}" '{#}'`
-        octave_parallel_args="-j${MBD_NUM_TASKS} -n1 octave_pkg_testsuite_run --status ${octave_status_file} --exec {} --pkg ${pkgname}"
+        octave_parallel_args="-j${MBD_NUM_TASKS} -n1 octave_pkg_testsuite_run --status ${octave_status_file} --exec {} --pkg ${pkgname} --task-id {#}"
         printf '%s\n' ${OCTAVE_CODE} | parallel ${octave_parallel_args}
     else
         echo "Serial execution:"
@@ -450,7 +477,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         for octave_code_cmd in ${OCTAVE_CODE}; do
             ((++idx_test))
             status_file=`printf ${octave_status_file_format} $((idx_test))`
-            octave_pkg_testsuite_run --exec "${octave_code_cmd}" --pkg "${pkgname}" --status "${status_file}"
+            octave_pkg_testsuite_run --exec "${octave_code_cmd}" --pkg "${pkgname}" --status "${status_file}" --task-id $((idx_test))
         done
     fi
 
@@ -489,12 +516,12 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
 done
 
 if ! test -z "${oct_pkg_profile_post_fmt}"; then
-    oct_pkg_profile_files=`find "${OCT_PKG_TEST_DIR}" '(' -type f -and -name "oct_pkg_profile_data_$$_*.mat" ')'`
+    oct_pkg_profile_files=`find "${OCT_PKG_TEST_DIR}" '(' -type f -and -name "oct_pkg_profile_data_${octave_pkg_testsuite_pid}_*.mat" ')'`
 
     for oct_pkg_profile_file in ${oct_pkg_profile_files}; do
         oct_pkg_profile_post_cmd=$(printf "${oct_pkg_profile_post_fmt}" "${oct_pkg_profile_file}")
         echo "Profile information for \"${oct_pkg_profile_file}\":"
-        ${OCTAVE_EXEC} -q -f --eval "${oct_pkg_profile_post_cmd}"
+        ${OCTAVE_EXEC} ${OCTAVE_CMD_ARGS} --eval "${oct_pkg_profile_post_cmd}"
         rm -f "${oct_pkg_profile_file}"
     done
 fi

@@ -66,10 +66,20 @@ BEGIN {
 
 /\?\?\?\?\? .+has no tests available$|\?\?\?\?\? .+source code with tests for dynamically linked function not found$/ {
     ## Output from Octave's function "test"
-    ## This is not considered as a failure.    
+    ## This is not considered as a failure.
     passed = 0;
     failed = 0;
 }
+
+/^!!!!! test failed$/ {
+    if (failed < 0) {
+        failed = 0;
+        passed = 0;
+    }
+
+    ++failed;
+}
+
 END {
     if (failed < 0 || passed < 0) {
         printf("Failed to parse output file \"%s\"!\n", FILENAME);
@@ -79,7 +89,7 @@ END {
     printf("%d/%d tests passed!\n", passed, failed + passed);
 
     if (failed > 0) {
-        printf("%d tests failed!\n", failed);
+        printf("%d/%d tests failed!\n", failed, failed + passed);
         exit 1;
     }
 
