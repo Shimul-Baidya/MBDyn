@@ -7,7 +7,7 @@ mbdyn-testsuite-report-job:
       artifacts: true
     - job: mbdyn-tests-public-test-job
       artifacts: true
-    - job: octave-pkg-test-job.yml
+    - job: octave-pkg-test-job
       artifacts: true
   script:
     - status_files=`find "${TESTSUITE_PREFIX_TESTS}" -name '*-test-job.status'`
