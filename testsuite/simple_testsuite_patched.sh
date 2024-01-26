@@ -57,6 +57,9 @@ mbdyn_matrix_scale_methods="rowmaxcolumnmax iterative lapack rowmax columnmax ro
 mbdyn_matrix_scale_when="never always once"
 mbdyn_nonlinear_solvers="newtonraphson linesearch nox nox-newton-krylov nox-direct nox-broyden mcpnewtonminfb mcpnewtonfb bfgs"
 mbdyn_autodiff_options="autodiff noautodiff"
+mbdyn_method="impliciteuler cranknicolson ms2,0.6 ms3,0.6 ms4,0.6 ss2,0.6 ss3,0.6 ss4,0.6 hope,0.6 Bathe,0.6 msstc3,0.6 msstc4,0.6 msstc5,0.6 mssth3,0.6 mssth4,0.6 mssth5,0.6 DIRK33 DIRK43 DIRK54 hybrid,ms,0.6"
+mbdyn_output="netcdf-text"
+mbdyn_abort_after="input assembly derivatives firststep"
 declare -i mbd_exit_status_mask=0
 other_arguments=""
 
@@ -86,11 +89,23 @@ while ! test -z "$1"; do
             mbdyn_nonlinear_solvers="$2"
             shift
             ;;
+        --output-format)
+            mbdyn_output="$2"
+            shift
+            ;;
+        --abort-after)
+            mbdyn_abort_after="$2"
+            shift
+            ;;
         --patch-input)
             shift
             ;;
         --autodiff)
             mbdyn_autodiff_options="$2"
+            shift
+            ;;
+        --method)
+            mbdyn_method="$2"
             shift
             ;;
         --keep-output)
@@ -184,7 +199,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                 ;;
                         esac
                         ;;
-                    pardiso|pardiso_64|qr|spqr)
+                    pardiso|pardiso_64|qr|spqr|y12)
                         case "${mbd_mat_scale_when}" in
                             never)
                                 ;;
@@ -222,7 +237,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                             bfgs)
                                 case "${mbd_linear_solver}" in
                                     spqr|qr)
-                                    ;;
+                                        ;;
                                     *)
                                         continue
                                         ;;
@@ -265,93 +280,238 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                 ;;
                         esac
 
-                        mbd_output_dir="${mbdyn_testsuite_prefix_output}/${mbd_linear_solver}/${mbd_mh_type}/${mbd_mat_scale}/${mbd_mat_scale_when}/${mbd_use_autodiff}/${mbd_nonlin_solver}"
-                        mkdir -p "${mbd_output_dir}"
-                        export MBD_TESTSUITE_INITIAL_VALUE_BEGIN="${mbd_output_dir}/mbd_init_val_begin.set"
-                        export MBD_TESTSUITE_INITIAL_VALUE_END="${mbd_output_dir}/mbd_init_val_end.set"
-                        export MBD_TESTSUITE_CONTROL_DATA_BEGIN="${mbd_output_dir}/mbd_control_data_begin.set"
-                        export MBD_TESTSUITE_CONTROL_DATA_END="${mbd_output_dir}/mbd_control_data_end.set"
-                        printf '    # mbd_init_val_begin.set currently not used!\n' > "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}"
-                        printf '    linear solver: %s,%s%s,scale,%s,%s%s;\n' "${mbd_linear_solver}" "${mbd_mh_type}" "${mbd_linear_solver_flags_pre}" "${mbd_mat_scale}" "${mbd_mat_scale_when}" "${mbd_linear_solver_flags_post}" > "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                        printf '    abort after: derivatives;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                        printf '    threads: disable;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                        printf '    nonlinear solver: %s;\n' "${mbd_nonlin_solver_flags}" >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                        printf '    output: iterations;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                        printf '    derivatives max iterations: 10;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                        printf '    derivatives coefficient: auto;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                        case ${mbd_use_autodiff} in
-                            autodiff)
-                                mbd_use_autodiff_cmd="use automatic differentiation;"
-                                ;;
-                            *)
-                                mbd_use_autodiff_cmd="# automatic differentiation disabled"
-                                ;;
-                        esac
+                        for mbd_method in ${mbdyn_method}; do
+                            for mbd_output in ${mbdyn_output}; do
+                                for mbd_abort_after in ${mbdyn_abort_after}; do
+                                    case "${mbd_abort_after}" in
+                                        input)
+                                            case "${mbd_linear_solver}" in
+                                                umfpack)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_mh_type}" in
+                                                map)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_mat_scale}" in
+                                                rowmaxcolumnmax)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_mat_scale_when}" in
+                                                never)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_nonlin_solver}" in
+                                                newtonraphson)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_method}" in
+                                                impliciteuler)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            ;;
+                                        assembly)
+                                            case "${mbd_nonlin_solver}" in
+                                                newtonraphson)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_method}" in
+                                                impliciteuler)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            ;;
+                                        derivatives)
+                                            case "${mbd_method}" in
+                                                impliciteuler)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            ;;
+                                        firststep)
+                                            case "${mbd_nonlin_solver}" in
+                                                newtonraphson)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_linear_solver}" in
+                                                umfpack)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_mh_type}" in
+                                                map)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_mat_scale}" in
+                                                rowmaxcolumnmax)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac
+                                            case "${mbd_mat_scale_when}" in
+                                                never)
+                                                    ;;
+                                                *)
+                                                    continue
+                                                    ;;
+                                            esac                                            
+                                            ;;
+                                    esac
 
-                        printf '    # mbd_control_data_begin.set currently not used!\n' > "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}"
-                        printf '    %s\n' "${mbd_use_autodiff_cmd}" > "${MBD_TESTSUITE_CONTROL_DATA_END}"
+                                    mbd_output_dir="${mbdyn_testsuite_prefix_output}/${mbd_linear_solver}/${mbd_mh_type}/${mbd_mat_scale}/${mbd_mat_scale_when}/${mbd_use_autodiff}/${mbd_nonlin_solver}/${mbd_method}/${mbd_output}/${mbd_abort_after}"
 
-                        simple_testsuite_log_file="${mbd_output_dir}/mbdyn-testsuite-patched.log"
+                                    mkdir -p "${mbd_output_dir}"
 
-                        echo "${mbd_output_dir}" > "${simple_testsuite_log_file}"
+                                    export MBD_TESTSUITE_INITIAL_VALUE_BEGIN="${mbd_output_dir}/mbd_init_val_begin.set"
+                                    export MBD_TESTSUITE_INITIAL_VALUE_END="${mbd_output_dir}/mbd_init_val_end.set"
+                                    export MBD_TESTSUITE_CONTROL_DATA_BEGIN="${mbd_output_dir}/mbd_control_data_begin.set"
+                                    export MBD_TESTSUITE_CONTROL_DATA_END="${mbd_output_dir}/mbd_control_data_end.set"
+                                    printf '    # mbd_init_val_begin.set currently not used!\n' > "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}"
+                                    printf '    linear solver: %s,%s%s,scale,%s,%s%s;\n' "${mbd_linear_solver}" "${mbd_mh_type}" "${mbd_linear_solver_flags_pre}" "${mbd_mat_scale}" "${mbd_mat_scale_when}" "${mbd_linear_solver_flags_post}" > "${MBD_TESTSUITE_INITIAL_VALUE_END}"
 
-                        cat "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}" >> "${simple_testsuite_log_file}"
-                        cat "${MBD_TESTSUITE_INITIAL_VALUE_END}" >> "${simple_testsuite_log_file}"
-                        cat "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" >> "${simple_testsuite_log_file}"
-                        cat "${MBD_TESTSUITE_CONTROL_DATA_END}" >> "${simple_testsuite_log_file}"
-
-                        simple_testsuite.sh --exec-gen "no" --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) 2>&1 >> "${simple_testsuite_log_file}"
-
-                        rc=$?
-
-                        test_status="FAILED"
-
-                        if test ${rc} -eq 0; then
-                            test_status="PASSED"
-                        else
-                            case ${rc} in
-                                130)
-                                    echo "Interrupted"
-                                    exit 1;
-                                    ;;
-                                143)
-                                    echo "Terminated"
-                                    exit 1;
-                                    ;;
-                                137)
-                                    echo "Killed"
-                                    exit 1
-                                    ;;
-                            esac
-                            failed_tests="${failed_tests} ${mbd_output_dir}"
-                        fi
-
-                        keep_output_flag="no"
-
-                        case "${mbdyn_keep_output}" in
-                            all)
-                                keep_output_flag="yes"
-                                ;;
-                            failed)
-                                case "${test_status}" in
-                                    FAILED)
-                                        keep_output_flag="yes"
+                                    case ${mbd_abort_after} in
+                                        none)
                                         ;;
-                                esac
-                                ;;
-                        esac
+                                        *)
+                                            printf '    abort after: %s;\n' "${mbd_abort_after}" >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    esac
 
-                        if test "${keep_output_flag}" = "no"; then
-                            rm -f "${simple_testsuite_log_file}" "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}" "${MBD_TESTSUITE_INITIAL_VALUE_END}" "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" "${MBD_TESTSUITE_CONTROL_DATA_END}"
-                        fi
+                                    printf '    threads: disable;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    nonlinear solver: %s;\n' "${mbd_nonlin_solver_flags}" >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    output: iterations;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    tolerance: 1e-4;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    derivatives tolerance: 1e-4;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    derivatives max iterations: 10;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    derivatives coefficient: auto;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    method: %s;\n' "${mbd_method}" >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
 
-                        printf 'TEST \"%s\" %s\n' "${mbd_output_dir}" "${test_status}"
+
+                                    case ${mbd_use_autodiff} in
+                                        autodiff)
+                                            mbd_use_autodiff_cmd="use automatic differentiation;"
+                                            ;;
+                                        *)
+                                            mbd_use_autodiff_cmd="# automatic differentiation disabled"
+                                            ;;
+                                    esac
+
+                                    printf '    # mbd_control_data_begin.set currently not used!\n' > "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}"
+                                    printf '    %s\n' "${mbd_use_autodiff_cmd}" > "${MBD_TESTSUITE_CONTROL_DATA_END}"
+
+                                    case ${mbd_output} in
+                                        netcdf)
+                                            printf '    output results: netcdf, no text;\n' >> "${MBD_TESTSUITE_CONTROL_DATA_END}"
+                                            ;;
+                                        netcdf-text)
+                                            printf '    output results: netcdf, text;\n' >> "${MBD_TESTSUITE_CONTROL_DATA_END}"
+                                            ;;
+                                        text)
+                                            printf '    # output results: text;\n' >> "${MBD_TESTSUITE_CONTROL_DATA_END}"
+                                            ;;
+                                        none)
+                                            printf '    default output: none;\n' >> "${MBD_TESTSUITE_CONTROL_DATA_END}"
+                                            ;;
+                                    esac
+
+                                    simple_testsuite_log_file="${mbd_output_dir}/mbdyn-testsuite-patched.log"
+
+                                    echo "${mbd_output_dir}" > "${simple_testsuite_log_file}"
+
+                                    cat "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}" >> "${simple_testsuite_log_file}"
+                                    cat "${MBD_TESTSUITE_INITIAL_VALUE_END}" >> "${simple_testsuite_log_file}"
+                                    cat "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" >> "${simple_testsuite_log_file}"
+                                    cat "${MBD_TESTSUITE_CONTROL_DATA_END}" >> "${simple_testsuite_log_file}"
+
+                                    simple_testsuite.sh --exec-gen "no" --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) 2>&1 >> "${simple_testsuite_log_file}"
+
+                                    rc=$?
+
+                                    test_status="FAILED"
+
+                                    if test ${rc} -eq 0; then
+                                        test_status="PASSED"
+                                    else
+                                        case ${rc} in
+                                            130)
+                                                echo "Interrupted"
+                                                exit 1;
+                                                ;;
+                                            143)
+                                                echo "Terminated"
+                                                exit 1;
+                                                ;;
+                                            137)
+                                                echo "Killed"
+                                                exit 1
+                                                ;;
+                                        esac
+                                        failed_tests="${failed_tests} ${mbd_output_dir}"
+                                    fi
+
+                                    keep_output_flag="no"
+
+                                    case "${mbdyn_keep_output}" in
+                                        all)
+                                            keep_output_flag="yes"
+                                            ;;
+                                        failed)
+                                            case "${test_status}" in
+                                                FAILED)
+                                                    keep_output_flag="yes"
+                                                    ;;
+                                            esac
+                                            ;;
+                                    esac
+
+                                    if test "${keep_output_flag}" = "no"; then
+                                        rm -f "${simple_testsuite_log_file}" "${MBD_TESTSUITE_INITIAL_VALUE_BEGIN}" "${MBD_TESTSUITE_INITIAL_VALUE_END}" "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" "${MBD_TESTSUITE_CONTROL_DATA_END}"
+                                    fi
+
+                                    printf 'TEST \"%s\" %s\n' "${mbd_output_dir}" "${test_status}"
+                                done
+                            done
+                        done
                     done
                 done
             done
         done
     done
 done
+
 if test -z "${failed_tests}"; then
     echo "All tests passed"
     exit 0
