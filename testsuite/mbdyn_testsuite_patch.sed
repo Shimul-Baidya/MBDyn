@@ -49,7 +49,13 @@
 /^[[:space:]]*\<end\>:[[:space:]]*control[[:space:]]*data[[:space:]]*;[[:space:]]*$/i include: "${MBD_TESTSUITE_CONTROL_DATA_END}";
 
 ## Remove "method: <method_data>;"
-s/^[[:space:]]*\<method\>[[:space:]]*:([[:space:]]|[[:alnum:]]|[,]|[\.]|[\n])*;[[:space:]]*$//g
+s/^[[:space:]]*\<method\>[[:space:]]*:.*;.*//g
+
+## Remove "tolerance: <tolerance_data>;"
+s/^[[:space:]]*\<tolerance\>[[:space:]]*:.*;.*//g
+
+## Remove "derivatives tolerance: <tolerance_data>;"
+s/^[[:space:]]*\<derivatives[[:space:]]*tolerance\>[[:space:]]*:.*;.*//g
 
 ## Remove "linear solver: <solver_data>;"
 s/^[[:space:]]*(\<linear|\<nonlinear)[[:space:]]*solver[[:space:]]*:([[:space:]]|[[:alnum:]]|[,]|[\.]|[\n])*;[[:space:]]*$//g
