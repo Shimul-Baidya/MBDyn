@@ -599,6 +599,11 @@ Solver::Prepare(void)
 	/* Si fa dare l'std::ostream al file di output per il log */
 	std::ostream& Out = pDM->GetOutFile();
 
+	/*
+	 * Need to call OutputPrepare before calling Output!
+	 */
+	pDM->OutputPrepare();
+        
 	if (eAbortAfter == AFTER_INPUT) {
 		/* Esce */
 		pDM->Output(0, dTime, 0., true);
@@ -819,12 +824,6 @@ Solver::Prepare(void)
 	 */
 
 	pDM->SetValue(*pX, *pXPrime);
-
-
-	/*
-	 * Prepare output
-	 */
-	pDM->OutputPrepare();
 
 	/*
 	 * If eigenanalysis is requested, prepare output for it
@@ -2192,6 +2191,11 @@ Solver::Advance(void)
 
 	CurrStep = StepIntegrator::NEWSTEP;
 
+        if (eAbortAfter == AFTER_STARTUP) {
+                silent_cout("End of startup; no simulation is required.\n");
+                dFinalTime = dTime;
+        }
+       
 	if (pDM->EndOfSimulation() || dTime >= dFinalTime) {
                 // Make sure to execute all eigenanalyses after the end of the simulation
                 DEBUGCERR("Executing all remaining eigenanalyses\n");
@@ -2426,6 +2430,11 @@ IfStepIsToBeRepeated:
 	dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
 	DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
 
+        if (eAbortAfter == AFTER_FIRST_STEP) {
+                silent_cout("End of first step; no simulation is required.\n");
+                dFinalTime = dTime;
+        }
+        
 	return true;
 }
 
@@ -2779,7 +2788,8 @@ Solver::ReadData(MBDynParser& HP)
 
 			/* DEPRECATED */ "fictitious" "steps" /* END OF DEPRECATED */ ,
 			"dummy" "steps",
-
+                        "startup",
+                        "first" "step",
 		"output",
 			"none",
 			"iterations",
@@ -2906,12 +2916,13 @@ Solver::ReadData(MBDynParser& HP)
 		DUMMYSTEPSMAXITERATIONS,
 
 		ABORTAFTER,
-		INPUT,
-		ASSEMBLY,
-		DERIVATIVES,
-		FICTITIOUSSTEPS,
-		DUMMYSTEPS,
-
+			INPUT,
+			ASSEMBLY,
+			DERIVATIVES,
+			FICTITIOUSSTEPS,
+			DUMMYSTEPS,
+			STARTUP,
+                        FIRSTSTEP,
 		OUTPUT,
 			NONE,
 			ITERATIONS,
@@ -3240,7 +3251,18 @@ Solver::ReadData(MBDynParser& HP)
 					"Simulation will abort after"
 					" dummy steps solution" << std::endl);
 				break;
-
+                        case STARTUP:
+				eAbortAfter = AFTER_STARTUP;
+				DEBUGLCOUT(MYDEBUG_INPUT,
+					"Simulation will abort after"
+					" startup solution" << std::endl);
+				break;
+                        case FIRSTSTEP:
+				eAbortAfter = AFTER_FIRST_STEP;
+				DEBUGLCOUT(MYDEBUG_INPUT,
+					"Simulation will abort after"
+					" first step" << std::endl);
+				break;
 			default:
 				silent_cerr("Don't know when to abort,"
 					" so I'm going to abort now" << std::endl);
