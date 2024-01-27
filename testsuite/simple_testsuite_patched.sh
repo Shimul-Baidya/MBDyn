@@ -55,11 +55,11 @@ mbdyn_linear_solvers="naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
 mbdyn_matrix_handlers="map cc dir grad"
 mbdyn_matrix_scale_methods="rowmaxcolumnmax iterative lapack rowmax columnmax rowsum columnsum"
 mbdyn_matrix_scale_when="never always once"
-mbdyn_nonlinear_solvers="newtonraphson linesearch nox nox-newton-krylov nox-direct nox-broyden mcpnewtonminfb mcpnewtonfb bfgs"
+mbdyn_nonlinear_solvers="newtonraphson linesearch nox nox-newton-krylov nox-direct nox-broyden-linesearch nox-broyden-trust-region nox-broyden-inexact-trust-region mcpnewtonminfb mcpnewtonfb bfgs"
 mbdyn_autodiff_options="autodiff noautodiff"
 mbdyn_method="impliciteuler cranknicolson ms2,0.6 ms3,0.6 ms4,0.6 ss2,0.6 ss3,0.6 ss4,0.6 hope,0.6 Bathe,0.6 msstc3,0.6 msstc4,0.6 msstc5,0.6 mssth3,0.6 mssth4,0.6 mssth5,0.6 DIRK33 DIRK43 DIRK54 hybrid,ms,0.6"
 mbdyn_output="netcdf-text"
-mbdyn_abort_after="input assembly derivatives firststep"
+mbdyn_abort_after="input assembly derivatives step,2"
 declare -i mbd_exit_status_mask=0
 other_arguments=""
 
@@ -227,7 +227,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                         ;;
                                 esac
                                 ;;
-                            nox|nox-direct|nox-broyden)
+                            nox|nox-direct|nox-broyden*)
                                 case "${mbd_linear_solver}" in
                                     naive|qr|lapack)
                                         continue
@@ -269,8 +269,17 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                             nox-direct)
                                 mbd_nonlin_solver_flags="nox, use preconditioner as solver, yes, minimum step, 1e-12, recovery step, 1e-12"
                                 ;;
-                            nox-broyden)
+                            nox-broyden-linesearch)
                                 mbd_nonlin_solver_flags="nox, modified, 10, direction, broyden, minimum step, 1e-12, recovery step, 1e-12"
+                                ;;
+                            nox-broyden-trust-region)
+                                mbd_nonlin_solver_flags="nox, modified, 10, solver, trust region based, direction, broyden, minimum step, 1e-12, recovery step, 1e-12"
+                                ;;
+                            nox-broyden-inexact-trust-region)
+                                mbd_nonlin_solver_flags="nox, modified, 10, solver, inexact trust region based, direction, broyden, minimum step, 1e-12, recovery step, 1e-12"
+                                ;;
+                            nox-broyden-tensor)
+                                mbd_nonlin_solver_flags="nox, modified, 10, solver, tensor based, direction, broyden, minimum step, 1e-12, recovery step, 1e-12"
                                 ;;
                             linesearch)
                                 mbd_nonlin_solver_flags="linesearch, modified, 0, default solver options, heavy nonlinear, divergence check, no, lambda min, 1,print convergence info, yes, verbose, yes"
@@ -353,10 +362,11 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                                     ;;
                                             esac
                                             ;;
-                                        firststep)
+                                        step,*)
                                             case "${mbd_nonlin_solver}" in
                                                 newtonraphson)
                                                     ;;
+
                                                 *)
                                                     continue
                                                     ;;
@@ -388,7 +398,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                                 *)
                                                     continue
                                                     ;;
-                                            esac                                            
+                                            esac
                                             ;;
                                     esac
 
