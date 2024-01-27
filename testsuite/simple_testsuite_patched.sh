@@ -59,7 +59,7 @@ mbdyn_nonlinear_solvers="newtonraphson linesearch nox nox-newton-krylov nox-dire
 mbdyn_autodiff_options="autodiff noautodiff"
 mbdyn_method="impliciteuler cranknicolson ms2,0.6 ms3,0.6 ms4,0.6 ss2,0.6 ss3,0.6 ss4,0.6 hope,0.6 Bathe,0.6 msstc3,0.6 msstc4,0.6 msstc5,0.6 mssth3,0.6 mssth4,0.6 mssth5,0.6 DIRK33 DIRK43 DIRK54 hybrid,ms,0.6"
 mbdyn_output="netcdf-text"
-mbdyn_abort_after="input assembly derivatives step,2"
+mbdyn_abort_after="input assembly derivatives regularstep,2"
 declare -i mbd_exit_status_mask=0
 other_arguments=""
 
@@ -362,7 +362,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                                     ;;
                                             esac
                                             ;;
-                                        step,*)
+                                        regularstep,*)
                                             case "${mbd_nonlin_solver}" in
                                                 newtonraphson)
                                                     ;;
