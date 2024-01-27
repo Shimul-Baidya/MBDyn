@@ -425,7 +425,8 @@ dTest(std::numeric_limits<double>::max()),
 dSolTest(std::numeric_limits<double>::max()),
 bSolConv(false),
 bOut(false),
-lStep(0)
+lStep(0),
+lAbortAfterStep(std::numeric_limits<long>::max())
 {
 	DEBUGCOUTFNAME("Solver::Solver");
 	::InitTimeStepData();
@@ -1560,15 +1561,16 @@ Solver::Start(void)
 	ASSERT(pFirstRegularStep!= 0);
 	SetupSolmans(pFirstRegularStep->GetIntegratorNumUnknownStates(), true);
 	pCurrStepIntegrator = pFirstRegularStep;
-
+        int retries = -1;
 IfFirstStepIsToBeRepeated:
 	try {
+                retries++;
 		pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, 1);
 		if (outputStep()) {
 			if (outputCounter()) {
 				silent_cout(std::endl);
 			}
- 			silent_cout("Step(" << 1 << ':' << 0 << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+ 			silent_cout("Step(" << lStep << ':' << retries << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
 		}
 		dTest = pFirstRegularStep->Advance(this, dRefTimeStep,
 				dCurrTimeStep/dRefTimeStep, CurrStep,
@@ -2430,8 +2432,8 @@ IfStepIsToBeRepeated:
 	dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
 	DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
 
-        if (eAbortAfter == AFTER_FIRST_STEP) {
-                silent_cout("End of first step; no simulation is required.\n");
+        if (eAbortAfter == AFTER_STEP && lStep >= lAbortAfterStep) {
+                silent_cout("End of step " << lStep << "; no simulation is required.\n");
                 dFinalTime = dTime;
         }
         
@@ -2789,7 +2791,7 @@ Solver::ReadData(MBDynParser& HP)
 			/* DEPRECATED */ "fictitious" "steps" /* END OF DEPRECATED */ ,
 			"dummy" "steps",
                         "startup",
-                        "first" "step",
+                        "step",
 		"output",
 			"none",
 			"iterations",
@@ -2922,7 +2924,7 @@ Solver::ReadData(MBDynParser& HP)
 			FICTITIOUSSTEPS,
 			DUMMYSTEPS,
 			STARTUP,
-                        FIRSTSTEP,
+                        STEP,
 		OUTPUT,
 			NONE,
 			ITERATIONS,
@@ -3257,11 +3259,16 @@ Solver::ReadData(MBDynParser& HP)
 					"Simulation will abort after"
 					" startup solution" << std::endl);
 				break;
-                        case FIRSTSTEP:
-				eAbortAfter = AFTER_FIRST_STEP;
+                        case STEP:
+				eAbortAfter = AFTER_STEP;
+                                lAbortAfterStep = HP.GetInt();
+                                if (lAbortAfterStep < 1) {
+                                        silent_cerr("Step must be greater than zero at line " << HP.GetLineData() << "\n");
+                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                }
 				DEBUGLCOUT(MYDEBUG_INPUT,
 					"Simulation will abort after"
-					" first step" << std::endl);
+                                           " step " << lAbortAfterStep << "\n");
 				break;
 			default:
 				silent_cerr("Don't know when to abort,"
@@ -5711,6 +5718,7 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						dSolutionTol,
 						iMaxIterations,
 						bModResTest));
+                                ++lAbortAfterStep;
 				break;		
 
 		case INT_MS3:
@@ -5728,6 +5736,7 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pSecondRhoRegular,
 						pSecondRhoAlgebraicRegular,
 						bModResTest));
+                        lAbortAfterStep += 2;
 				break;
 
 		case INT_MS4:
@@ -5753,6 +5762,7 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pThirdRhoRegular,
 						pThirdRhoAlgebraicRegular,
 						bModResTest));
+                        lAbortAfterStep += 3;
 				break;
 	
 	default:

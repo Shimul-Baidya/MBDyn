@@ -285,7 +285,7 @@ protected:
 		AFTER_DERIVATIVES,
 		AFTER_DUMMY_STEPS,
                 AFTER_STARTUP,
-                AFTER_FIRST_STEP
+                AFTER_STEP
 	};
 	AbortAfter eAbortAfter;
 
@@ -446,6 +446,7 @@ protected:
 	bool bSolConv;
 	bool bOut;
 	long lStep;
+        long lAbortAfterStep;
 public:
    	/* costruttore */
    	Solver(MBDynParser& HP,
