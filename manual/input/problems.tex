@@ -1170,7 +1170,8 @@ with
         \{ \kw{input} 
             | \kw{assembly}
             | \kw{derivatives}
-            | \kw{dummy steps} \} ;
+            | \kw{dummy steps}
+            | \kw{regular step} , (\ty{integer}) \bnt{step_number} \} ;
 \end{Verbatim}
 %\end{verbatim}
 mainly used to cleanly check models and simulations at various phases.
@@ -1183,6 +1184,12 @@ time to compute initial momentum and momenta moment derivatives and
 reaction forces;
 when set to \kw{dummy steps}, the simulation ends after the dummy steps
 execution, if required.
+When set to \kw{regular step} and a single step method is used,
+then the simulation ends after \bnt{step\_number} steps.
+However, if a multistep method is used, then the simulation ends after
+\bnt{step\_number} plus the number of startup steps (e.g. \bnt{step\_number}
++ 1 for \kw{ms2}, \bnt{step\_number} + 2 for \kw{ms3}, \bnt{step\_number}
++ 3 for \kw{ms4}).
 In any case, the output is generated with the system configured 
 as resulting from the last computation phase, so this mode can be useful 
 to check how the system is actually configured after phases that are not 
