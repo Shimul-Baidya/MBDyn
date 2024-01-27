@@ -425,8 +425,7 @@ dTest(std::numeric_limits<double>::max()),
 dSolTest(std::numeric_limits<double>::max()),
 bSolConv(false),
 bOut(false),
-lStep(0),
-lAbortAfterStep(std::numeric_limits<long>::max())
+lStep(0)
 {
 	DEBUGCOUTFNAME("Solver::Solver");
 	::InitTimeStepData();
@@ -2193,11 +2192,11 @@ Solver::Advance(void)
 
 	CurrStep = StepIntegrator::NEWSTEP;
 
-        if (eAbortAfter == AFTER_STARTUP) {
-                silent_cout("End of startup; no simulation is required.\n");
+        if (eAbortAfter >= AFTER_REGULAR_STEP_0 && lStep >= eAbortAfter - AFTER_REGULAR_STEP_0) {
+                silent_cout("End of step " << lStep << "; no simulation is required.\n");
                 dFinalTime = dTime;
         }
-       
+        
 	if (pDM->EndOfSimulation() || dTime >= dFinalTime) {
                 // Make sure to execute all eigenanalyses after the end of the simulation
                 DEBUGCERR("Executing all remaining eigenanalyses\n");
@@ -2431,12 +2430,7 @@ IfStepIsToBeRepeated:
 	/* Calcola il nuovo timestep */
 	dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
 	DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
-
-        if (eAbortAfter == AFTER_STEP && lStep >= lAbortAfterStep) {
-                silent_cout("End of step " << lStep << "; no simulation is required.\n");
-                dFinalTime = dTime;
-        }
-        
+       
 	return true;
 }
 
@@ -2790,8 +2784,7 @@ Solver::ReadData(MBDynParser& HP)
 
 			/* DEPRECATED */ "fictitious" "steps" /* END OF DEPRECATED */ ,
 			"dummy" "steps",
-                        "startup",
-                        "step",
+                        "regular" "step",
 		"output",
 			"none",
 			"iterations",
@@ -2923,8 +2916,7 @@ Solver::ReadData(MBDynParser& HP)
 			DERIVATIVES,
 			FICTITIOUSSTEPS,
 			DUMMYSTEPS,
-			STARTUP,
-                        STEP,
+                        REGULARSTEP,
 		OUTPUT,
 			NONE,
 			ITERATIONS,
@@ -3253,23 +3245,17 @@ Solver::ReadData(MBDynParser& HP)
 					"Simulation will abort after"
 					" dummy steps solution" << std::endl);
 				break;
-                        case STARTUP:
-				eAbortAfter = AFTER_STARTUP;
-				DEBUGLCOUT(MYDEBUG_INPUT,
-					"Simulation will abort after"
-					" startup solution" << std::endl);
-				break;
-                        case STEP:
-				eAbortAfter = AFTER_STEP;
-                                lAbortAfterStep = HP.GetInt();
-                                if (lAbortAfterStep < 1) {
-                                        silent_cerr("Step must be greater than zero at line " << HP.GetLineData() << "\n");
+                        case REGULARSTEP: {
+                                const long lAbortAfterStep = HP.GetInt();
+                                if (lAbortAfterStep < 0) {
+                                        silent_cerr("Step must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
                                         throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                                 }
+                                eAbortAfter = static_cast<AbortAfter>(lAbortAfterStep + AFTER_REGULAR_STEP_0);
 				DEBUGLCOUT(MYDEBUG_INPUT,
 					"Simulation will abort after"
                                            " step " << lAbortAfterStep << "\n");
-				break;
+                        } break;
 			default:
 				silent_cerr("Don't know when to abort,"
 					" so I'm going to abort now" << std::endl);
@@ -5718,7 +5704,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						dSolutionTol,
 						iMaxIterations,
 						bModResTest));
-                                ++lAbortAfterStep;
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 1);
+                        }
 				break;		
 
 		case INT_MS3:
@@ -5736,7 +5724,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pSecondRhoRegular,
 						pSecondRhoAlgebraicRegular,
 						bModResTest));
-                        lAbortAfterStep += 2;
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 2);
+                        }                        
 				break;
 
 		case INT_MS4:
@@ -5762,7 +5752,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pThirdRhoRegular,
 						pThirdRhoAlgebraicRegular,
 						bModResTest));
-                        lAbortAfterStep += 3;
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 3);
+                        }                        
 				break;
 	
 	default:
