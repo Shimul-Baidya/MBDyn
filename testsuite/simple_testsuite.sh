@@ -52,6 +52,8 @@ mbdyn_patch_input="no"
 mbdyn_args_add="-C"
 mbdyn_exec_gen="yes"
 mbdyn_exec_solver="yes"
+mbdyn_suppressed_errors=""
+
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 
@@ -139,6 +141,10 @@ while ! test -z "$1"; do
             mbdyn_print_res="$2"
             shift
             ;;
+        --suppressed-errors)
+            mbdyn_suppressed_errors="$2"
+            shift
+            ;;
         *)
             printf "%s: invalid argument \"%s\"\n" "${program_name}" "$1"
             exit 1
@@ -192,7 +198,7 @@ passed_tests=""
 failed_tests=""
 timeout_tests=""
 modules_not_found=""
-loadables_not_found=""
+suppressed_failures=""
 unexpected_faults=""
 
 if test -z "${mbdyn_input_filter}"; then
@@ -408,9 +414,6 @@ function simple_testsuite_run_test()
             rm -f "${mbd_filename_patched}"
         fi
 
-        mbd_module_not_found=""
-        mbd_loadable_not_found=""
-
         case $((rc)) in
             -1)
                 if test "${mbd_exec_solver}" = "no"; then
@@ -424,17 +427,19 @@ function simple_testsuite_run_test()
                 status=$(printf 'passed{Steps=%d}' "${num_steps}")
                 ;;
             1)
-                mbd_module_not_found=`awk -v FPAT='[^:<>]+' '/^ModuleLoad_int: unable to open module\>/{print $3;}' "${mbd_log_file}"`
-                mbd_loadable_not_found=`awk -v FPAT='[^<>]+' '/^ParseUserDefinedElem\([0-9]+\): unknown user-defined element type at line [0-9]+, file <.+>$/{ print $2 }' "${mbd_log_file}"`
+                mbd_error_info=`awk -v suppressed_errors="${mbdyn_suppressed_errors}" -f parse_mbdyn_error_message.awk "${mbd_log_file}"`
 
-                if ! test -z "${mbd_module_not_found}"; then
-                    status="module"
+                if test $? -eq 0; then
+                    status="suppressed:${mbd_error_info}"
                 else
-                    if ! test -z "${mbd_loadable_not_found}"; then
-                        status="loadable"
-                    else
-                        status="failed"
-                    fi
+                    case "${mbd_error_info}" in
+                        module*|loadable*)
+                            status="module"
+                            ;;
+                        *)
+                            status="failed"
+                            ;;
+                    esac
                 fi
                 ;;
             124)
@@ -533,10 +538,10 @@ function simple_testsuite_run_test()
         timeout)
             ((exit_status=0x2))
             ;;
-        module)
+        suppressed)
             ((exit_status=0x4))
             ;;
-        loadable)
+        module|loadable)
             ((exit_status=0x8))
             ;;
         failed)
@@ -592,6 +597,7 @@ else
     export mbdyn_verbose_output
     export mbdyn_keep_output
     export mbdyn_print_res
+    export mbdyn_suppressed_errors
     export MBD_NUM_THREADS
     export OCTAVE_EXEC
     export -f simple_testsuite_run_test
@@ -641,10 +647,10 @@ for mbd_filename in ${MBD_INPUT_FILES_FOUND}; do
             timeout_tests="${timeout_tests} ${mbd_filename}:${status}"
             ;;
         module*)
-            modules_not_found="${modules_not_found} ${mbd_filename}[${mbd_module_not_found}]:${status}"
+            modules_not_found="${modules_not_found} ${mbd_filename}:${status}"
             ;;
-        loadable*)
-            loadables_not_found="${loadables_not_found} ${mbd_filename}:${status}"
+        suppressed*)
+            suppressed_failures="${suppressed_failures} ${mbd_filename}:${status}"
             ;;
         failed*)
             failed_tests="${failed_tests} ${mbd_filename}:${status}"
@@ -697,10 +703,10 @@ else
     ((exit_status|=0x4))
 fi
 
-if test -z "${loadables_not_found}"; then
-    echo "All loadables were found"
+if test -z "${suppressed_failures}"; then
+    echo "There were no suppressed failures"
 else
-    print_files "FAILED-LOADABLE:The following %d tests failed because a loadable element was not found:\n" ${loadables_not_found}
+    print_files "FAILED-SUPPRESSED:The following %d failures were suppressed:\n" ${suppressed_failures}
     ((exit_status|=0x8))
 fi
 
