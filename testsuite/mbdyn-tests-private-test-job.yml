@@ -96,7 +96,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: drives/string/distance will fail with status 139 if we are passing --pedantic --pedantic --pedantic
       - |
-        testsuite/simple_testsuite.sh --filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" --tasks "${MBD_TESTS_PRIVATE_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
+        testsuite/simple_testsuite.sh --suppressed-errors "${MBD_TESTS_PRIVATE_SUPPRESSED_ERRORS}" --filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" --tasks "${MBD_TESTS_PRIVATE_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
         rc=$?
         case ${rc} in
             0)
@@ -110,6 +110,20 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
                 ;;
         esac
         echo "${test_status}" > "${status_file}"
+        # testsuite/simple_testsuite_patched.sh --linear-solvers umfpack --matrix-handlers grad --scale-methods lapack --scale-when always --nonlinear-solvers nox-newton-krylov --filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" --tasks "${MBD_TESTS_PRIVATE_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
+        # rc=$?
+        # case ${rc} in
+        #     0)
+        #         test_status="passed"
+        #         ;;
+        #     1)
+        #         test_status="failed"
+        #         ;;
+        #     *)
+        #         test_status="fault"
+        #         ;;
+        # esac
+        # echo "${test_status}" >> "${status_file}"        
   artifacts:
     name: mbdyn-tests-private-test-job
     expire_in: 2 days
