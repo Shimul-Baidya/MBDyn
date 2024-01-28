@@ -76,21 +76,9 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - which octave | tee -a "${log_file}"
       - ${OCTAVE_EXEC} -qfH --version | tee -a "${log_file}"
       - chmod +x testsuite/octave_pkg_testsuite.sh
-      - |
-        /usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}"
-        rc=$?
-        case ${rc} in
-            0)
-                test_status="passed"
-                ;;
-            1)
-                test_status="failed"
-                ;;
-            *)
-                test_status="fault"
-                ;;
-        esac
-        echo "${test_status}" > "${status_file}"
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" > "${status_file}"
   artifacts:
     name: octave-pkg-test-output-dir
     expire_in: 2 days

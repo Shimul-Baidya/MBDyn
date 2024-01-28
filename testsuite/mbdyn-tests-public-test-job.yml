@@ -82,39 +82,14 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_LOG_FILE}"
       - status_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_STATUS_FILE}"
       - echo "unexpected" > "${status_file}"
-      ## First of all we need to execute the original tests because some of them are using scripts to generate input files.
-      - |
-        echo "-------------- ORIGINAL TESTS --------------------" | tee -a "${log_file}"
-        /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
-        rc=$?
-        case ${rc} in
-            0)
-                test_status="passed"
-                ;;
-            1)
-                test_status="failed"
-                ;;
-            *)
-                test_status="fault"
-                ;;
-        esac
-        echo "${test_status}" > "${status_file}"
-        ## FIXME: nox solver will fail with linear solver y12 if it is used with "jacobian operator, newton".
-        echo "-------------- PATCHED TESTS --------------------" | tee -a "${log_file}"
-        /usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
-        rc=$?
-        case ${rc} in
-            0)
-                test_status="passed"
-                ;;
-            1)
-                test_status="failed"
-                ;;
-            *)
-                test_status="fault"
-                ;;
-        esac
-        echo "${test_status}" >> "${status_file}"
+      - echo "-------------- ORIGINAL TESTS --------------------" | tee -a "${log_file}"
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" > "${status_file}"
+      - echo "-------------- PATCHED TESTS --------------------" | tee -a "${log_file}"
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" >> "${status_file}"
   artifacts:
     name: mbdyn-tests-public-test-job
     expire_in: 24h

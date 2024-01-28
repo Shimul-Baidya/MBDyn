@@ -73,27 +73,15 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - MBD_MODULE_TESTS_INPUT_DIR=${CI_PROJECT_DIR}/modules
       - export LD_LIBRARY_PATH=${MBD_INSTALL_PREFIX}/libexec:${LD_LIBRARY_PATH}
       - log_file="${MBD_MODULE_TESTS_OUTPUT_DIR}/${MBD_MODULE_TESTS_LOG_FILE}"
-      - status_file="${MBD_MODULE_TESTS_OUTPUT_DIR}/${MBD_MODULE_TESTS_STATUS_FILE}"            
+      - status_file="${MBD_MODULE_TESTS_OUTPUT_DIR}/${MBD_MODULE_TESTS_STATUS_FILE}"
       - test -d "${MBD_MODULE_TESTS_INPUT_DIR}"
       - mkdir -p "${MBD_MODULE_TESTS_OUTPUT_DIR}" ## needed for realpath
       - echo "unexpected" > "${status_file}"
       - ls -lhF ${MBD_INSTALL_PREFIX}/libexec | tee ${log_file}
       - chmod +x testsuite/simple_testsuite.sh
-      - |
-        /usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
-        rc=$?
-        case ${rc} in
-            0)
-                test_status="passed"
-                ;;
-            1)
-                test_status="failed"
-                ;;
-            *)
-                test_status="fault"
-                ;;
-        esac
-        echo "${test_status}" > "${status_file}"        
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" > "${status_file}"
   artifacts:
      expire_in: 2 days
      name: mbdyn-modules-test-job
