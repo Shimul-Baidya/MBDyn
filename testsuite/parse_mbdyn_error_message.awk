@@ -171,7 +171,9 @@ BEGINFILE {
 }
 
 /^Error while expecting "end: elements;" at line [[:digit:]]+, file <.+>$/ {
-    set_error("syntax", "elements");
+    if (!match(global::error_found, /module/)) {
+        set_error("syntax", "elements");
+    }
 }
 
 /^PlaneDispJoint\([[:digit:]]\): unsupported; use an InPlane and a RevoluteRotation$/ {
