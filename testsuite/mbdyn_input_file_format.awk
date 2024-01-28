@@ -150,7 +150,7 @@ BEGINFILE {
 }
 
 ENDFILE {
-    if (sections_found == MBD_SEC_ALL_INIT_VAL || sections_found == MBD_SEC_ALL_INV_DYN) {
+    if ((!exclude_initial_value && sections_found == MBD_SEC_ALL_INIT_VAL) || (!exclude_inverse_dynamics && sections_found == MBD_SEC_ALL_INV_DYN)) {
         print FILENAME;
     }
 }

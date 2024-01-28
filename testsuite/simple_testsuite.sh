@@ -52,6 +52,8 @@ mbdyn_patch_input="no"
 mbdyn_args_add="-C"
 mbdyn_exec_gen="yes"
 mbdyn_exec_solver="yes"
+declare -i mbdyn_exclude_inverse_dynamics=0
+declare -i mbdyn_exclude_initial_value=0
 mbdyn_suppressed_errors=""
 
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
@@ -93,8 +95,16 @@ while ! test -z "$1"; do
             mbdyn_testsuite_timeout="$2"
             shift
             ;;
-        --filter)
+        --regex-filter)
             mbdyn_input_filter="$2"
+            shift
+            ;;
+        --exclude-inverse-dynamics)
+            mbdyn_exclude_inverse_dynamics="$2"
+            shift
+            ;;
+        --exclude-initial-value)
+            mbdyn_exclude_initial_value="$2"
             shift
             ;;
         --threads)
@@ -201,13 +211,13 @@ modules_not_found=""
 suppressed_failures=""
 unexpected_faults=""
 
-if test -z "${mbdyn_input_filter}"; then
-    mbdyn_input_filter="-type f"
+if ! test -z "${mbdyn_input_filter}"; then
+    mbdyn_input_filter="-and -not -regex ${mbdyn_input_filter}"
 fi
 
 declare -i idx_test=0
 
-MBD_INPUT_FILES_FOUND=`find ${mbdyn_testsuite_prefix_input} '(' '(' ${mbdyn_input_filter} ')' -and -not -name '*_simple_testsuite_patched_input.mbd' ')' -print0 | xargs -0 awk -f mbdyn_input_file_format.awk`
+MBD_INPUT_FILES_FOUND=`find ${mbdyn_testsuite_prefix_input} '(' -type f ${mbdyn_input_filter} -and -not -name '*_simple_testsuite_patched_input.mbd' ')' -print0 | xargs -0 awk -v exclude_initial_value=$((mbdyn_exclude_initial_value)) -v exclude_inverse_dynamics=$((mbdyn_exclude_inverse_dynamics)) -f mbdyn_input_file_format.awk`
 
 function simple_testsuite_run_test()
 {

@@ -39,7 +39,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
     ## Error codes which should not cause the pipeline to fail:
     ## - timeout                    (0x2)
     ## - module not found           (0x4)
-    ## - loadable element not found (0x8)
+    ## - suppressed errors          (0x8)
     MBD_MODULE_TESTS_EXIT_STATUS_MASK: "0xE"
     ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
     ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!

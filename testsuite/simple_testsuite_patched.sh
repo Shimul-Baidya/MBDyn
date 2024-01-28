@@ -466,7 +466,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                     cat "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}" >> "${simple_testsuite_log_file}"
                                     cat "${MBD_TESTSUITE_CONTROL_DATA_END}" >> "${simple_testsuite_log_file}"
 
-                                    simple_testsuite.sh --exec-gen "no" --patch-input "yes" --prefix-output "${mbd_output_dir}" ${other_arguments} --exit-status-mask $((mbd_exit_status_mask)) 2>&1 >> "${simple_testsuite_log_file}"
+                                    simple_testsuite.sh --exec-gen "no" --patch-input "yes" --prefix-output "${mbd_output_dir}" --exit-status-mask $((mbd_exit_status_mask)) ${other_arguments} 2>&1 >> "${simple_testsuite_log_file}"
 
                                     rc=$?
 

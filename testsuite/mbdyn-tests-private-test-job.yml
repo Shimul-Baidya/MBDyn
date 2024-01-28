@@ -39,9 +39,9 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
      ## Error codes which should not cause the pipeline to fail:
      ## - timeout                    (0x2)
      ## - module not found           (0x4)
-     ## - loadable element not found (0x8)
+     ## - suppressed errors          (0x8)
      ## - test failed with status 1  (0x10)
-     MBD_TESTS_PRIVATE_EXIT_STATUS_MASK: "0x1E" ## FIXME: We need to check how many failed tests we have, and which tests actually failed.
+     MBD_TESTS_PRIVATE_EXIT_STATUS_MASK: "0x0A" ## FIXME: We need to check how many failed tests we have, and which tests actually failed.
      ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
      ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
      ## Actually the overall timeout of 12 hours per job must be considered.
@@ -96,7 +96,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - chmod +x testsuite/simple_testsuite.sh
         ## FIXME: drives/string/distance will fail with status 139 if we are passing --pedantic --pedantic --pedantic
       - |
-        testsuite/simple_testsuite.sh --suppressed-errors "${MBD_TESTS_PRIVATE_SUPPRESSED_ERRORS}" --filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" --tasks "${MBD_TESTS_PRIVATE_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
+        testsuite/simple_testsuite.sh --suppressed-errors "${MBD_TESTS_PRIVATE_SUPPRESSED_ERRORS}" --regex-filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" --tasks "${MBD_TESTS_PRIVATE_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee "${log_file}"
         rc=$?
         case ${rc} in
             0)
@@ -110,20 +110,20 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
                 ;;
         esac
         echo "${test_status}" > "${status_file}"
-        # testsuite/simple_testsuite_patched.sh --linear-solvers umfpack --matrix-handlers grad --scale-methods lapack --scale-when always --nonlinear-solvers nox-newton-krylov --filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" --tasks "${MBD_TESTS_PRIVATE_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
-        # rc=$?
-        # case ${rc} in
-        #     0)
-        #         test_status="passed"
-        #         ;;
-        #     1)
-        #         test_status="failed"
-        #         ;;
-        #     *)
-        #         test_status="fault"
-        #         ;;
-        # esac
-        # echo "${test_status}" >> "${status_file}"        
+        testsuite/simple_testsuite_patched.sh --linear-solvers "umfpack" --matrix-handlers "map cc grad" --scale-methods "rowmaxcolumnmax" --scale-when "never always" --nonlinear-solvers "newtonraphson linesearch nox" --method "impliciteuler ms2,0." --suppressed-errors "${MBD_TESTS_PRIVATE_SUPPRESSED_ERRORS}" --regex-filter "${MBD_TESTS_PRIVATE_FILTER_EXPR}" --exit-status-mask "${MBD_TESTS_PRIVATE_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PRIVATE_TIMEOUT}" --prefix-output "${MBD_TESTS_PRIVATE_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PRIVATE_INPUT_DIR}" --tasks "${MBD_TESTS_PRIVATE_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} --exclude-inverse-dynamics 1 2>&1 | tee -a "${log_file}"
+        rc=$?
+        case ${rc} in
+            0)
+                test_status="passed"
+                ;;
+            1)
+                test_status="failed"
+                ;;
+            *)
+                test_status="fault"
+                ;;
+        esac
+        echo "${test_status}" >> "${status_file}"
   artifacts:
     name: mbdyn-tests-private-test-job
     expire_in: 2 days
