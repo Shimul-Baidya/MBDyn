@@ -68,7 +68,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - |
         if ! test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
-          if ! git clone -b testsuite ${MBD_TESTS_PUBLIC_GITLAB} ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
+          if ! git clone -b ${MBD_TESTS_PUBLIC_GITLAB_BRANCH} ${MBD_TESTS_PUBLIC_GITLAB} ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
             echo "Failed to clone ${MBD_TESTS_PUBLIC_GITLAB}"
             exit 1
           fi

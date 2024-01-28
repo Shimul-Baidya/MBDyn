@@ -83,7 +83,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
         fi
       - |
         if ! test -d ${MBD_TESTS_PRIVATE_INPUT_DIR}; then
-          if ! git clone ${MBD_TESTS_PRIVATE_GITLAB} ${MBD_TESTS_PRIVATE_INPUT_DIR}; then
+          if ! git clone -b ${MBD_TESTS_PRIVATE_GITLAB_BRANCH} ${MBD_TESTS_PRIVATE_GITLAB} ${MBD_TESTS_PRIVATE_INPUT_DIR}; then
             echo "${MBD_TESTS_PRIVATE_GITLAB} is not accessible" | tee "${log_file}"
             exit 1
           fi
