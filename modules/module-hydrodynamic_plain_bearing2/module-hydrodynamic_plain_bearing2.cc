@@ -4483,8 +4483,6 @@ namespace {
           virtual ~HydroMesh();
           int GetNumConnectedNodes() const;
           void GetConnectedNodes(std::vector<const Node*>& rgNodes) const;
-          int GetNumConnectedElements() const;
-          void GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const;
           /**
            *  @param p returns the pressure at the node by taking into account
            *               the specific boundary conditions of the selected elements
@@ -22694,24 +22692,6 @@ namespace {
 
           if (pThermWallBoundCond) {
                pThermWallBoundCond->GetConnectedNodes(rgNodes);
-          }
-     }
-
-     int HydroMesh::GetNumConnectedElements() const
-     {
-          int iNumConnectedElements = 0;
-
-          if (pCompliance) {
-               iNumConnectedElements += pCompliance->GetNumConnectedElements();
-          }
-
-          return iNumConnectedElements;
-     }
-
-     void HydroMesh::GetConnectedElements(std::vector<const ElemWithDofs*>& rgElem) const
-     {
-          if (pCompliance) {
-               pCompliance->GetConnectedElements(rgElem);
           }
      }
 

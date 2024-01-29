@@ -160,7 +160,8 @@ public:
 		// for each analysis in the list
 		std::vector<doublereal> Analyses;
 		std::vector<doublereal>::iterator currAnalysis;
-
+                unsigned currAnalysisIndex;
+             
 		doublereal dParam;
 		bool bOutputModes;
 		enum { EIGAN_WIDTH_COMPUTE = -1 };
@@ -222,6 +223,7 @@ public:
 		EigenAnalysis(void)
 		: bAnalysis(false),
 		uFlags(EIG_NONE),
+                currAnalysisIndex(0),
 		dParam(1.),
 		bOutputModes(false),
 		iFNameWidth(0),
@@ -231,12 +233,17 @@ public:
                 eWhichEigVal(SM)
 		{
 			currAnalysis = Analyses.end();
-		};
+		}
 	};
 
 protected:
 	struct EigenAnalysis EigAn;
-
+        static bool EigAnTimeBeforeNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn < dTimeCurr; }
+        static bool EigAnTimeUntilNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn <= dTimeCurr; }
+        static bool EigAnTimeExactlyNow(doublereal dTimeEigAn, doublereal dTimeCurr) { return dTimeEigAn == dTimeCurr; }
+        static bool EigAnTimeAllRemaining(doublereal dTimeEigAn, doublereal dTimeCurr) { return true; }
+        bool EigNext(bool (*pfnConditionTime)(doublereal, doublereal) = EigAnTimeUntilNow, bool bNewLine = false);
+        int EigAll(bool (*pfnConditionTime)(doublereal, doublereal) = EigAnTimeUntilNow, bool bNewLine = false);
 	void Eig(bool bNewLine = false);
 
 	RTSolverBase *pRTSolver;
@@ -492,7 +499,12 @@ public:
 	virtual void PrintSolution(const VectorHandler& Sol, integer iIterCnt) const;
 	virtual void CheckTimeStepLimit(doublereal dErr, doublereal dErrDiff) const /*throw(NonlinearSolver::TimeStepLimitExceeded, NonlinearSolver::MaxResidualExceeded)*/;
         std::ostream& PrintSolverTime(std::ostream& os) const {
-	     return pNLS->PrintSolverTime(os);
+             if (pNLS) {
+                  // If we are using "abort after: assembly;", then pNLS will be NULL!
+                  pNLS->PrintSolverTime(os);
+             }
+
+             return os;
         }
 };
 

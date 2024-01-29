@@ -41,7 +41,7 @@
 PrivDriveCaller::PrivDriveCaller(const DriveHandler* pDH, 
 		const DriveCaller* pDC,
 		const SimulationEntity *p, unsigned int i, const std::string& s)
-: DriveCaller(pDH), DriveOwner(pDC), pSE(p), iIndex(i), sIndexName(s)
+: DriveCaller(pDH), DriveOwner(pDC), pSE(p), iIndex(i), sIndexName(s), bWarnMsg(true)
 {
 	NO_OP;
 };     	
@@ -49,6 +49,18 @@ PrivDriveCaller::PrivDriveCaller(const DriveHandler* pDH,
 PrivDriveCaller::~PrivDriveCaller(void)
 {
 	NO_OP;
+}
+
+void PrivDriveCaller::PrintWarningMsgOnce() const
+{
+     const WithLabel* pWL = dynamic_cast<const WithLabel*>(pSE);
+     const unsigned uLabel = pWL ? pWL->GetLabel() : -1;
+     const char* pszSimEntityType = dynamic_cast<const Elem*>(pSE) ? "element" : "node";
+     // should this be "pedantic"?
+     silent_cerr("warning, possible improper call of "
+                 << pszSimEntityType << " drive with real argument; \"dVar\" is ignored and private data \""
+                 << sIndexName << "\" of " << pszSimEntityType << "(" << uLabel << ") is returned instead\n");
+     bWarnMsg = false; // Let us assume that it is sufficient to print this annoying warning only once for each drive caller!
 }
 
 /* Copia */
