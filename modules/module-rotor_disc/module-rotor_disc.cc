@@ -406,7 +406,7 @@ RotorDisc::~RotorDisc()
 
 void RotorDisc::Output(OutputHandler& OH) const
 {
-    if (bToBeOutput())
+    if (bToBeOutput() && OH.UseText(OutputHandler::LOADABLE))
     {
         std::ostream& out = OH.Loadable();
         out << std::setw(8) 
@@ -440,6 +440,8 @@ void RotorDisc::Output(OutputHandler& OH) const
             << " " << FOM                   // 34:      FOM                 [-]
             << std::endl;
     }
+
+    // TODO: NetCDF output
 }
 
 

@@ -12,11 +12,10 @@ via La Masa, 34 - 20156 Milano, Italy
 
 [www.aero.polimi.it](https://www.aero.polimi.it)
 
+[Wiki](https://public.gitlab.polimi.it/DAER/mbdyn/-/wikis/Home)
 
 ### developers:
   - see CONTRIBUTING.md in the root directory of the source tree
-
-
 
 ### distribution:
   - set `build/version` to the right number
