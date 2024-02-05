@@ -48,14 +48,18 @@ variables:
 
   ## Local installation directory for MBDyn:
   MBD_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/mbdyn
-
+  MBD_INSTALL_PREFIX_GCOV: $TESTSUITE_PREFIX_CACHE/mbdyn-gcov
+  MBD_PROFILE_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-profile
+  MBD_TEST_COVERAGE_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-coverage
+  
   ## Local installation directory for Gmsh:
   GMSH_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/gmsh
 
   ## Local installation directory for fem_pre_mesh_size
   ## This program is needed to calculate the mesh size for Gmsh only for a very specific test case.
   OCT_PKG_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/share/octave
-
+  OCT_PKG_INSTALL_PREFIX_GCOV: $TESTSUITE_PREFIX_CACHE/share/octave-gcov
+  
   ## Local installation directory for Intel oneMKL
   ## FIXME: MKL cannot be used as an artifact because it is too big!
   ## FIMXE: So, $MKL_INSTALL_PREFIX is relative to $HOME instead of CI_PROJECT_DIR
@@ -77,6 +81,7 @@ variables:
   ## "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines"
   ## and select "Clear runner caches"!
   MBD_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/mbdyn
+  MBD_BUILD_DIR_GCOV: $TESTSUITE_PREFIX_BUILD/mbdyn-gcov
   MBD_BUILD_DIR_MANUALS: $TESTSUITE_PREFIX_BUILD/mbdyn-manuals
 
   NC_C_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/netcdf-c
@@ -104,6 +109,9 @@ variables:
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
 
+  ## NOTE: We should compile without any optimization in order to get accurate profile information
+  MBD_COMPILER_FLAGS_GCOV: "-Og -Wall -march=native -mtune=native -Wno-unused-variable"
+
   ## Octave packages to be installed from github.com or octave-forge
   ## List of package names separated by space: <OCTAVE_PKG_NAME>:<REBUILD_FLAG>:<BRANCH_TAG>:<TEST_FLAG>:<TEST_TIMEOUT>
   ## <OCTAVE_PKG_NAME> Name of the package which will be passed to Octave's pkg load function (e.g. pkg("load","<OCTAVE_PKG_NAME>"))
@@ -129,14 +137,15 @@ variables:
   OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob/
   MBD_MODULE_TESTS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob/
   MBD_TESTS_PUBLIC_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob/
+  MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob-gcov/
   MBD_TESTS_PRIVATE_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob/
-
+  MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob-gcov/  
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
   ## In order to enable verbose output for MBDyn use: MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
-  MBD_SIMPLE_TESTSUITE_FLAGS: ""
+  MBD_SIMPLE_TESTSUITE_FLAGS: "--keep-output failed"
 stages:          # List of stages for jobs, and their order of execution
   - .pre
   - build
