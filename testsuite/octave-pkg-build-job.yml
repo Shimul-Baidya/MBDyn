@@ -166,6 +166,10 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
                          exit 1
                       fi
 
+                      if ! git fetch --all; then
+                          exit 1
+                      fi                      
+
                       if ! git checkout "${pkg_branch}" --force; then
                           exit 1
                       fi
