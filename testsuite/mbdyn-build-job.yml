@@ -34,17 +34,18 @@
 # for use in the software MBDyn as described
 # in the GNU Public License version 2.1
 
+variables:
+  ## Clean up the build directory of MBDyn
+  MBD_CLEAN_BUILD: "no"
+
+  ## Force no rebuild of MBDyn; The default must be "no", but it could be overridden manually when the pipeline is started!
+  MBD_SKIP_BUILD: "no"
+
+  ## Run MBDyn's configure with the following modules enabled.
+  ## In order to enable additional modules, it would be necessary also to install their dependencies.
+  MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
+
 mbdyn-build-job:       # This job runs in the build stage, which runs first.
-  variables:
-    ## Clean up the build directory of MBDyn
-    MBD_CLEAN_BUILD: "no"
-
-    ## Force no rebuild of MBDyn; The default must be "no", but it could be overridden manually when the pipeline is started!
-    MBD_SKIP_BUILD: "no"
-
-    ## Run MBDyn's configure with the following modules enabled.
-    ## In order to enable additional modules, it would be necessary also to install their dependencies.
-    MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
   stage: build
   needs:
     - job: netcdf-c-build-job
@@ -55,152 +56,15 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
       artifacts: true
     - job: mbdyn-checkout-job
   script:
-    - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
-    - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
-    - NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
-    - NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
-    - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
-    - MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR}
-    - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
-    - mkdir -p ${OCT_PKG_INSTALL_PREFIX}
-    - |
-      if ${MBD_INSTALL_PREFIX}/bin/mbdyn --version >& /dev/null && test "${MBD_SKIP_BUILD}" = "yes"; then
-        echo "Do not build MBDyn because it was already installed and MBD_SKIP_BUILD=yes"
-        exit 0
-      fi
-
-    ## Let's try to speed up the build process a bit
-    ## Execute bootstrap.sh and configure only if needed
-    ## This conditional execution may be removed as soon as the testsuite is finished
-    - |
-      if ! test -x ./configure ; then
-        chmod u+x ./bootstrap.sh
-        ./bootstrap.sh
-      fi
-    - test -x ./configure
-    - MBD_SOURCE_DIR=${CI_PROJECT_DIR}
-    - echo "Create build directory ..."
-    - |
-      if test ${MBD_CLEAN_BUILD} = "yes" -o ${MBD_CLEAN_ALL} = "yes"; then
-        echo "cleanup build directory ..."
-        rm -rf ${MBD_BUILD_DIR}
-      fi
-    - echo "create build directory ..."
-    - mkdir -p ${MBD_BUILD_DIR}
-    - test -d ${MBD_BUILD_DIR}
-    - mkdir -p ${MBD_INSTALL_PREFIX}
-    - test -d ${MBD_INSTALL_PREFIX}
-    - cd ${MBD_BUILD_DIR}
-    - echo "Build directory"
-    - pwd
-    - ls -lhF .
-    - export PATH="${NC_INSTALL_PREFIX}/bin:${NC_CXX4_INSTALL_PREFIX}/bin:${PATH}"
-    - LDFLAGS=""
-    - CPPFLAGS="-I/usr/include/suitesparse -I/usr/include/trilinos -I/usr/lib64/python3.11/site-packages/numpy/core/include -I/usr/include/python3.11/ -I/usr/include/octave-8.4.0"
-    - echo "Detecting NetCDF ..."
-    - |
-      if nc-config --help >& /dev/null; then
-        NC_INCDIR=`nc-config --includedir`
-        NC_LIBDIR=`nc-config --libdir`
-        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
-        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
-      else
-        echo "Warning: nc-config was not found in ${NC_INSTALL_PREFIX}!"
-      fi
-      if ncxx4-config --help >& /dev/null; then
-        NC_INCDIR=`ncxx4-config --includedir`
-        NC_LIBDIR=`ncxx4-config --libdir`
-        CPPFLAGS="${CPPFLAGS} -I${NC_INCDIR}"
-        LDFLAGS="${LDFLAGS} -L${NC_LIBDIR} -Wl,-rpath=${NC_LIBDIR}"
-      else
-        echo "Warning: ncxx4-config was not found in ${NC_CXX4_INSTALL_PREFIX}!"
-      fi
-    - echo "Detecting MKL ..."
-    - |
-          if test -d "${MKL_INSTALL_PREFIX}"; then
-              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
-              echo "Search for ${MKL_PKG_CONFIG}.pc ..."
-              MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
-              if test -f "${MKL_PKG_CONFIG_FILE}"; then
-                  MKL_PKG_CONFIG_PATH=`dirname "${MKL_PKG_CONFIG_FILE}"`
-                  echo "MKL_PKG_CONFIG_PATH=${MKL_PKG_CONFIG_PATH}"
-              else
-                  echo "File ${MKL_PKG_CONFIG}.pc not found"
-              fi
-          else
-              echo "Warning: MKL was not found in ${MKL_INSTALL_PREFIX}!"
-          fi
-    - PARDISO_FLAGS="--without-pardiso"
-    - |
-        if test -d "${MKL_PKG_CONFIG_PATH}"; then
-            export PKG_CONFIG_PATH="${MKL_PKG_CONFIG_PATH}:${PKG_CONFIG_PATH}"
-            if pkg-config --validate "${MKL_PKG_CONFIG}"; then
-                PARDISO_FLAGS="--with-pardiso"
-                CPPFLAGS="${CPPFLAGS} `pkg-config --cflags-only-I ${MKL_PKG_CONFIG}`"
-                LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG}`"
-                LDFLAGS="${LDFLAGS} `pkg-config --libs-only-L ${MKL_PKG_CONFIG} | sed  's/^-L\//-Wl,-rpath=\//g'`"
-            else
-                echo "pkg-config ${MKL_PKG_CONFIG} is not valid"
-            fi
-        else
-            echo "Warning: MKL_PKG_CONFIG_PATH could not be detected"
-        fi
-    ## FIXME: We cannot use "${MBD_WITH_MODULE}" or "$MBD_WITH_MODULE" because this will prevent substitution of variables.
-    ## FIXME: On the other hand --with-module=$MBD_WITH_MODULE would be invalid as well.
-    - MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS} -rdynamic" ## Needed for --enable-runtime-loading
-    - echo CXXFLAGS="${MBD_COMPILER_FLAGS}"
-    - echo CPPFLAGS="${CPPFLAGS}"
-    - echo LDFLAGS="${LDFLAGS}"
-    - mbd_with_module=$MBD_WITH_MODULE
-    - printf "configure ...\n"
-    - |
-      if ! test -f Makefile; then
-        echo "${MBD_BUILD_DIR}/Makefile does not exist!"
-        echo "Run configure step ..."
-        if ! ${MBD_SOURCE_DIR}/configure \
-                    PYTHON_VERSION=3 \
-                    CPPFLAGS="${CPPFLAGS}" \
-                    LDFLAGS="${LDFLAGS}" \
-                    CXXFLAGS="${MBD_COMPILER_FLAGS} -Wno-unknown-pragmas" \
-                    CFLAGS="${MBD_COMPILER_FLAGS}" \
-                    FFLAGS="${MBD_COMPILER_FLAGS}" \
-                    FCFLAGS="${MBD_COMPILER_FLAGS}" \
-                    --enable-python \
-                    --enable-octave \
-                    --enable-install_test_progs \
-                    --enable-netcdf \
-                    --prefix="${MBD_INSTALL_PREFIX}" \
-                    --with-octave-pkg-prefix="${OCT_PKG_INSTALL_PREFIX}" \
-                    --with-umfpack \
-                    --with-klu \
-                    ${PARDISO_FLAGS} \
-                    --with-suitesparseqr \
-                    --with-static-modules \
-                    --with-module="${mbd_with_module}" \
-                    --enable-runtime-loading \
-                    --disable-Werror \
-                    --with-trilinos ; then
-                    ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
-          echo "Failed to run  ${MBD_SOURCE_DIR}/configure"
-          exit 1
-        fi
-      else
-          echo "${MBD_BUILD_DIR}/Makefile exist"
-          echo "configure step will be skipped ..."
-      fi
-    - test -f Makefile
-    - printf "Compiling the code using %s jobs ...\n" ${MBD_NUM_BUILD_JOBS}
-    - make -j${MBD_NUM_BUILD_JOBS}
-    - echo "Clean up local installation directory"
-    - rm -rf ${MBD_INSTALL_PREFIX}
-    - printf "Install the code in \"%s\"\n" "${MBD_INSTALL_PREFIX}"
-    - make install
-    - echo "MBDyn version:"
-    - ${MBD_INSTALL_PREFIX}/bin/mbdyn --version
-    - echo "Shared libraries used by MBDyn:"
-    - ldd ${MBD_INSTALL_PREFIX}/bin/mbdyn
-    - echo "Run built-in unit tests"
-    - make test
+    - export MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
+    - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+    - export NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
+    - export NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+    - export MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+    - export MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR}
+    - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
+    - export MBD_COMPILER_FLAGS=${MBD_COMPILER_FLAGS}
+    - testsuite/mbdyn_build_job.sh
   artifacts:
    expire_in: 24h
    name: mbdyn-install-prefix
@@ -211,6 +75,101 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    key: mbdyn-build-job
    paths:
     - $MBD_BUILD_DIR
+    - Makefile.in
+    - aclocal.m4
+    - autom4te.cache/
+    - build/Makefile.in
+    - build/compile
+    - build/config.guess
+    - build/config.sub
+    - build/depcomp
+    - build/install-sh
+    - build/ltmain.sh
+    - build/missing
+    - configure
+    - contrib/n2m/Makefile.in
+    - contrib/n2m/aclocal.m4
+    - contrib/n2m/autom4te.cache/
+    - contrib/n2m/compile
+    - contrib/n2m/config.guess
+    - contrib/n2m/config.h.in
+    - contrib/n2m/config.sub
+    - contrib/n2m/configure
+    - contrib/n2m/depcomp
+    - contrib/n2m/install-sh
+    - contrib/n2m/ltmain.sh
+    - contrib/n2m/missing
+    - etc/Makefile.in
+    - etc/modal.d/Makefile.in
+    - etc/pam.d/Makefile.in
+    - include/Makefile.in
+    - include/ac/Makefile.in
+    - include/mbconfig.h.in
+    - libraries/Makefile.in
+    - libraries/libann/Makefile.in
+    - libraries/libcolamd/Makefile.in
+    - libraries/libmbc/Makefile.in
+    - libraries/libmbmath/Makefile.in
+    - libraries/libmbutil/Makefile.in
+    - libraries/libmbwrap/Makefile.in
+    - libraries/libnaive/Makefile.in
+    - libraries/libobjs/Makefile.in
+    - libraries/liby12/Makefile.in
+    - manual/Makefile.in
+    - mbdyn/Makefile.in
+    - mbdyn/aero/Makefile.in
+    - mbdyn/base/Makefile.in
+    - mbdyn/elec/Makefile.in
+    - mbdyn/hydr/Makefile.in
+    - mbdyn/struct/Makefile.in
+    - mbdyn/thermo/Makefile.in
+    - modules/Makefile.in
+    - testsuite/var/
+    - utils/Makefile.in
+    - var/Makefile.in
+
+mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+    - job: mbdyn-checkout-job
+  script:
+    - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+    - export NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
+    - export NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+    - export MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+    - export MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX_GCOV}
+    - export MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR_GCOV}
+    - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
+    - export MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS_GCOV} --coverage"
+    - export LDFLAGS="--coverage"
+    - testsuite/mbdyn_build_job.sh
+  artifacts:
+   expire_in: 24h
+   name: mbdyn-install-prefix-gcov
+   paths:
+    - $MBD_BUILD_DIR_GCOV/**/*.cc ## Source files of modules are needed for gcovr
+    - $MBD_BUILD_DIR_GCOV/**/*.h
+    - $MBD_BUILD_DIR_GCOV/**/*.hc
+    - $MBD_BUILD_DIR_GCOV/**/*.f
+    - $MBD_BUILD_DIR_GCOV/**/*.f90
+    - $MBD_BUILD_DIR_GCOV/**/*.f95
+    - $MBD_BUILD_DIR_GCOV/**/*.gcda ## Needed for gcovr
+    - $MBD_BUILD_DIR_GCOV/**/*.gcno ## Needed for gcovr
+    - $MBD_INSTALL_PREFIX_GCOV
+    - $OCT_PKG_INSTALL_PREFIX_GCOV ## Because mbdyn_util_oct will be installed there!
+   exclude:
+    - $MBD_BUILD_DIR_GCOV/**/*conftest.gcda
+    - $MBD_BUILD_DIR_GCOV/**/*conftest.gcno
+  cache:
+   key: mbdyn-build-job-gcov
+   paths:
+    - $MBD_BUILD_DIR_GCOV
     - Makefile.in
     - aclocal.m4
     - autom4te.cache/

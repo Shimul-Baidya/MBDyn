@@ -66,7 +66,7 @@ function list_process()
 {
     pid=$1
 
-    ps -p ${pid} -o "${OUTPUT_FORMAT}" | tail -n+2
+    ps -h -p ${pid} -o "${OUTPUT_FORMAT}"
 }
 
 success="yes"
