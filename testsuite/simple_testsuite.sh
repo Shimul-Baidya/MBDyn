@@ -140,7 +140,24 @@ while ! test -z "$1"; do
             shift
             ;;
         --help)
-            printf "%s\n  --prefix-output <output-dir>\n  --prefix-input <input-dir>\n  --timeout <timeout-seconds>\n  --help\n" "${program_name}"
+            printf "%s\n  --prefix-output <output_dir>\n" "${program_name}"
+            printf "  --prefix-input <input_dir>\n"
+            printf "  --timeout <timeout_seconds>\n"
+            printf "  --regex-filter <input_file_path_filter>\n"
+            printf "  --exclude-inverse-dynamics {0|1}\n"
+            printf "  --exclude-initial-value {0|1}\n"
+            printf "  --threads <number_of_threads_per_task>\n"
+            printf "  --tasks <number_of_tasks>\n"
+            printf "  --verbose {yes|no}\n"
+            printf "  --keep-output {all|failed|unexpected}\n"
+            printf "  --patch-input {yes|no}\n"
+            printf "  --mbdyn-args-add \"<arg1> <arg2> ... <argN>\"\n"
+            printf "  --exec-gen {yes|no}\n"
+            printf "  --exec-solver {yes|no}\n"
+            printf "  --exec-status-mask <mask_errors_to_be_ignored>\n"
+            printf "  --print-resources {no|all|time}\n"
+            printf "  --suppressed-errors {syntax|element|feature|module|loadable|socked|interrupted}\n"
+            printf "  --help\n"
             exit 1;
             ;;
         --exit-status-mask)
@@ -226,6 +243,12 @@ function simple_testsuite_run_test()
     mbd_exec_gen_script="yes"
     mbd_exec_run_script="yes"
     mbd_exec_solver="yes"
+
+    case "${mbdyn_patch_input}" in
+        yes)
+            mbd_exec_run_script="no"
+            ;;
+    esac
 
     while ! test -z "$1"; do
         case "$1" in
