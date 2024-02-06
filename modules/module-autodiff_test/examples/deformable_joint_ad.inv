@@ -44,7 +44,6 @@
         time step: (final_time-initial_time)/number_of_time_steps;
         max iterations: 10;
         tolerance: 1e-8, 1e-8;
-        method: ms, 0.6;
     derivatives tolerance: 1e-6, 1e-6;
     derivatives max iterations: 10;
     derivatives coefficient: auto;
