@@ -58,7 +58,7 @@ s/^[[:space:]]*\<tolerance\>[[:space:]]*:.*;.*//g
 s/^[[:space:]]*\<derivatives[[:space:]]*tolerance\>[[:space:]]*:.*;.*//g
 
 ## Remove "linear solver: <solver_data>;"
-s/^[[:space:]]*(\<linear|\<nonlinear)[[:space:]]*solver[[:space:]]*:([[:space:]]|[[:alnum:]]|[,]|[\.]|[\n])*;[[:space:]]*$//g
+s/^[[:space:]]*(\<linear|\<nonlinear)[[:space:]]*solver[[:space:]]*:([[:space:]]|[[:alnum:]]|[,]|[\.]|[+]|[-])*;[[:space:]]*$//g
 
 ## Remove "threads: assembly;" and "threads: solver;"
 s/^[[:space:]]*threads[[:space:]]*:[[:space:]]*(assembly|solver)[[:space:]]*,([[:space:]]|[[:alnum:]]|[,]|[\.]|[\n])*;[[:space:]]*$//g
