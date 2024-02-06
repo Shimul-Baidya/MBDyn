@@ -55,7 +55,7 @@ mbdyn_linear_solvers="naive umfpack klu pardiso pardiso_64 y12 spqr qr lapack"
 mbdyn_matrix_handlers="map cc dir grad"
 mbdyn_matrix_scale_methods="rowmaxcolumnmax iterative lapack rowmax columnmax rowsum columnsum"
 mbdyn_matrix_scale_when="never always once"
-mbdyn_nonlinear_solvers="newtonraphson linesearch nox nox-newton-krylov nox-direct nox-broyden-linesearch nox-broyden-trust-region nox-broyden-inexact-trust-region mcpnewtonminfb mcpnewtonfb bfgs"
+mbdyn_nonlinear_solvers="newtonraphson linesearch linesearch-modified nox nox-newton-krylov nox-direct nox-broyden-linesearch nox-broyden-trust-region nox-broyden-inexact-trust-region mcpnewtonminfb mcpnewtonfb bfgs"
 mbdyn_autodiff_options="autodiff noautodiff"
 mbdyn_method="impliciteuler cranknicolson ms2,0.6 ms3,0.6 ms4,0.6 ss2,0.6 ss3,0.6 ss4,0.6 hope,0.6 Bathe,0.6 msstc3,0.6 msstc4,0.6 msstc5,0.6 mssth3,0.6 mssth4,0.6 mssth5,0.6 DIRK33 DIRK43 DIRK54 hybrid,ms,0.6"
 mbdyn_output="netcdf-text"
@@ -116,6 +116,33 @@ while ! test -z "$1"; do
         --exit-status-mask)
             ((mbd_exit_status_mask=$2))
             shift
+            ;;
+        --help)
+            printf "%s\n  --prefix-output <output_dir>\n" "${program_name}"
+            printf "  --prefix-input <input_dir>\n"
+            printf "  --linear-solvers \"{naive|umfpack|klu|pardiso|pardiso_64|y12|spqr|qr|lapack} {...}\"\n"
+            printf "  --matrix-handlers \"{map|cc|dir|grad} {...}\"\n"
+            printf "  --scale-methods \"{rowmaxcolumnmax|iterative|lapack|rowmax|columnmax|rowsum|columnsum} {...}\"\n"
+            printf "  --scale-when \"{never|always|once} {...}\"\n"
+            printf "  --nonlinear-solvers \"{newtonraphson|linesearch|linesearch-modified|nox|nox-newton-krylov|nox-direct|nox-broyden-linesearch|nox-broyden-trust-region|nox-broyden-inexact-trust-region|mcpnewtonminfb|mcpnewtonfb|bfgs} {...}\"\n"
+            printf "  --autodiff {autodiff|noautodiff}\n"
+            printf "  --method \"{impliciteuler|cranknicolson|ms2,0.6|ms3,0.6|ms4,0.6|ss2,0.6|ss3,0.6|ss4,0.6|hope,0.6|Bathe,0.6|msstc3,0.6|msstc4,0.6|msstc5,0.6|mssth3,0.6|mssth4,0.6|mssth5,0.6|DIRK33|DIRK43|DIRK54|hybrid,ms,0.6} {...}\"\n"
+            printf "  --timeout <timeout_seconds>\n"
+            printf "  --regex-filter <input_file_path_filter>\n"
+            printf "  --exclude-inverse-dynamics {0|1}\n"
+            printf "  --exclude-initial-value {0|1}\n"
+            printf "  --threads <number_of_threads_per_task>\n"
+            printf "  --tasks <number_of_tasks>\n"
+            printf "  --verbose {yes|no}\n"
+            printf "  --keep-output {all|failed|unexpected}\n"
+            printf "  --mbdyn-args-add \"<arg1> <arg2> ... <argN>\"\n"
+            printf "  --exec-gen {yes|no}\n"
+            printf "  --exec-solver {yes|no}\n"
+            printf "  --exec-status-mask <mask_errors_to_be_ignored>\n"
+            printf "  --print-resources {no|all|time}\n"
+            printf "  --suppressed-errors {syntax|element|feature|module|loadable|socked|interrupted}\n"
+            printf "  --help\n"
+            exit 1;
             ;;
         *)
             other_arguments="${other_arguments} $1 $2"
@@ -282,7 +309,10 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                 mbd_nonlin_solver_flags="nox, modified, 10, solver, tensor based, direction, broyden, minimum step, 1e-12, recovery step, 1e-12"
                                 ;;
                             linesearch)
-                                mbd_nonlin_solver_flags="linesearch, modified, 0, default solver options, heavy nonlinear, divergence check, no, lambda min, 1,print convergence info, yes, verbose, yes"
+                                mbd_nonlin_solver_flags="linesearch, default solver options, heavy nonlinear, divergence check, no, lambda min, 1, print convergence info, yes, verbose, yes"
+                                ;;
+                            linesearch-modified)
+                                mbd_nonlin_solver_flags="linesearch, modified, 0, default solver options, heavy nonlinear, divergence check, no, lambda min, 1, print convergence info, yes, verbose, yes"
                                 ;;
                             *)
                                 mbd_nonlin_solver_flags="${mbd_nonlin_solver}"
