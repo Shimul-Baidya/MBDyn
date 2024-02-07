@@ -280,6 +280,10 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                 mbd_linear_solver_flags_pre=""
                                 mbd_linear_solver_flags_post=", tolerance, 1e-8, max iterations, 100, preconditioner, klu,verbose,3"
                                 ;;
+                            umfpack|pardiso|pardiso_64)
+                                mbd_linear_solver_flags_pre=""
+                                mbd_linear_solver_flags_post=",max iterations, 10"
+                                ;;
                             *)
                                 mbd_linear_solver_flags_pre=""
                                 mbd_linear_solver_flags_post=""
@@ -288,10 +292,10 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
 
                         case "${mbd_nonlin_solver}" in
                             nox)
-                                mbd_nonlin_solver_flags="nox, minimum step, 1e-12, recovery step, 1e-12"
+                                mbd_nonlin_solver_flags="nox, minimum step, 1e-12, recovery step, 1e-4"
                                 ;;
                             nox-newton-krylov)
-                                mbd_nonlin_solver_flags="nox, modified, 10, jacobian operator, newton krylov, use preconditioner as solver, no, minimum step, 1e-12, recovery step, 1e-12"
+                                mbd_nonlin_solver_flags="nox, modified, 10, jacobian operator, newton krylov, use preconditioner as solver, no, minimum step, 1e-12, recovery step, 1e-4"
                                 ;;
                             nox-direct)
                                 mbd_nonlin_solver_flags="nox, use preconditioner as solver, yes, minimum step, 1e-12, recovery step, 1e-12"
@@ -311,8 +315,14 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                             linesearch)
                                 mbd_nonlin_solver_flags="linesearch, default solver options, heavy nonlinear, divergence check, no, lambda min, 1, print convergence info, yes, verbose, yes"
                                 ;;
+                            linesearch-heavy-nonlinear)
+                                mbd_nonlin_solver_flags="linesearch, default solver options, heavy nonlinear, divergence check, no, lambda min, 1e-12, print convergence info, yes, verbose, yes"
+                                ;;
                             linesearch-modified)
                                 mbd_nonlin_solver_flags="linesearch, modified, 0, default solver options, heavy nonlinear, divergence check, no, lambda min, 1, print convergence info, yes, verbose, yes"
+                                ;;
+                            linesearch-modified-heavy-nonlinear)
+                                mbd_nonlin_solver_flags="linesearch, modified, 0, default solver options, heavy nonlinear, divergence check, no, lambda min, 1e-12, print convergence info, yes, verbose, yes"
                                 ;;
                             *)
                                 mbd_nonlin_solver_flags="${mbd_nonlin_solver}"
@@ -452,7 +462,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
 
                                     printf '    threads: disable;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                                     printf '    nonlinear solver: %s;\n' "${mbd_nonlin_solver_flags}" >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
-                                    printf '    output: iterations;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
+                                    printf '    output: iterations, cpu time, solver condition number, stat, yes;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                                     printf '    tolerance: 1e-4;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                                     printf '    derivatives tolerance: 1e-4;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
                                     printf '    derivatives max iterations: 10;\n' >> "${MBD_TESTSUITE_INITIAL_VALUE_END}"
