@@ -93,11 +93,16 @@ mbdyn-testsuite-report-job-coverage:
     - cobertura_xml_split_by_package.py "${xml_file}" "${MBD_TEST_COVERAGE_DIR}"
   coverage: /^\s*lines:\s*\d+.\d+\%/
   artifacts:
-    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    name: mbdyn-test-coverage-report
     expire_in: 24h
     expose_as: 'test coverage report'
     paths:
+      - $MBD_TEST_COVERAGE_DIR/mbdyn-test-coverage.html    
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 24h
+    paths:
       - $MBD_TEST_COVERAGE_DIR/*.html
+      - $MBD_TEST_COVERAGE_DIR/*.xml      
     reports:
       coverage_report:
         coverage_format: cobertura
