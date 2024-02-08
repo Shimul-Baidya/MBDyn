@@ -51,7 +51,7 @@ variables:
   MBD_INSTALL_PREFIX_GCOV: $TESTSUITE_PREFIX_CACHE/mbdyn-gcov
   MBD_PROFILE_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-profile
   MBD_TEST_COVERAGE_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-coverage
-  
+
   ## Local installation directory for Gmsh:
   GMSH_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/gmsh
 
@@ -59,7 +59,7 @@ variables:
   ## This program is needed to calculate the mesh size for Gmsh only for a very specific test case.
   OCT_PKG_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/share/octave
   OCT_PKG_INSTALL_PREFIX_GCOV: $TESTSUITE_PREFIX_CACHE/share/octave-gcov
-  
+
   ## Local installation directory for Intel oneMKL
   ## FIXME: MKL cannot be used as an artifact because it is too big!
   ## FIMXE: So, $MKL_INSTALL_PREFIX is relative to $HOME instead of CI_PROJECT_DIR
@@ -136,10 +136,11 @@ variables:
   TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests/
   OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob/
   MBD_MODULE_TESTS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob/
+  MBD_MODULE_TESTS_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob-gcov/
   MBD_TESTS_PUBLIC_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob/
   MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob-gcov/
   MBD_TESTS_PRIVATE_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob/
-  MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob-gcov/  
+  MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob-gcov/
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
 
   ## Additional arguments to be passed to simple_testsuite.sh
