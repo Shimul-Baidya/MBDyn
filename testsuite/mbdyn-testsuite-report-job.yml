@@ -109,6 +109,8 @@ mbdyn-testsuite-report-job-coverage-exposed:
   needs:
     - job: mbdyn-testsuite-report-job-coverage
       artifacts: true
+  script:
+    - ## script is not needed
   artifacts:
     name: ${CI_JOB_NAME}
     expose_as: 'test coverage report'
