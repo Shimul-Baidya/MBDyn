@@ -34,6 +34,10 @@
 # for use in the software MBDyn as described
 # in the GNU Public License version 2.1
 
+variables:
+  MBD_TEST_COVERAGE_XML: "mbdyn-test-coverage.xml"
+  MBD_TEST_COVERAGE_HTML: "mbdyn-test-coverage.html"
+
 mbdyn-testsuite-report-job:
   stage: test
   needs:
@@ -63,9 +67,6 @@ mbdyn-testsuite-report-job-gcov:
     - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 3 || passed < tests || failed > 0) { exit 1; }}' ${status_files}
 
 mbdyn-testsuite-report-job-coverage:
-  variables:
-    MBD_TEST_COVERAGE_XML: "mbdyn-test-coverage.xml"
-    MBD_TEST_COVERAGE_HTML: "mbdyn-test-coverage.html"
   stage: test
   needs:
     - job: netcdf-c-build-job
@@ -93,18 +94,24 @@ mbdyn-testsuite-report-job-coverage:
     - cobertura_xml_split_by_package.py "${xml_file}" "${MBD_TEST_COVERAGE_DIR}"
   coverage: /^\s*lines:\s*\d+.\d+\%/
   artifacts:
-    name: mbdyn-test-coverage-report
-    expire_in: 24h
-    expose_as: 'test coverage report'
-    paths:
-      - $MBD_TEST_COVERAGE_DIR/mbdyn-test-coverage.html
-  artifacts:      
     name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
     expire_in: 24h
     paths:
       - $MBD_TEST_COVERAGE_DIR/*.html
-      - $MBD_TEST_COVERAGE_DIR/*.xml      
+      - $MBD_TEST_COVERAGE_DIR/*.xml
     reports:
       coverage_report:
         coverage_format: cobertura
         path: $MBD_TEST_COVERAGE_DIR/cobertura-*.xml
+
+mbdyn-testsuite-report-job-coverage-exposed:
+  stage: test
+  needs:
+    - job: mbdyn-testsuite-report-job-coverage
+      artifacts: true
+  artifacts:
+    name: ${CI_JOB_NAME}
+    expose_as: 'test coverage report'
+    expire_in: 24h
+    paths:
+      - $MBD_TEST_COVERAGE_DIR/$MBD_TEST_COVERAGE_HTML
