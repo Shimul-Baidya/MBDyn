@@ -145,3 +145,5 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
      paths:
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/$MBD_MODULE_TESTS_LOG_FILE
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/$MBD_MODULE_TESTS_STATUS_FILE
+       - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/*.stdout
+       - $MBD_BUILD_DIR_GCOV
