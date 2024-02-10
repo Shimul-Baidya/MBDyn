@@ -62,6 +62,8 @@ mbdyn-testsuite-report-job-gcov:
       artifacts: true
     - job: mbdyn-modules-test-job-gcov
       artifacts: true
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"      
   script:
     - status_files=`find "${TESTSUITE_PREFIX_TESTS}" -name '*-test-job.status'`
     - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 3 || passed < tests || failed > 0) { exit 1; }}' ${status_files}
@@ -79,6 +81,8 @@ mbdyn-testsuite-report-job-coverage:
       artifacts: true
     - job: mbdyn-build-job-gcov
       artifacts: true
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"      
   script:
     - MBD_TEST_COVERAGE_DIR="${CI_PROJECT_DIR}/${MBD_TEST_COVERAGE_DIR}"
     - MBD_BUILD_DIR_GCOV="${CI_PROJECT_DIR}/${MBD_BUILD_DIR_GCOV}"

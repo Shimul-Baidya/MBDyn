@@ -117,6 +117,8 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
         artifacts: true
       - job: mbdyn-tests-private-test-job-gcov ## Fetch all *.gcda and *.gcno
         artifacts: true
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"        
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX_GCOV}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}

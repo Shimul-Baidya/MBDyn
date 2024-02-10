@@ -139,7 +139,7 @@ mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first
       artifacts: true
     - job: mbdyn-checkout-job
   rules:
-    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"      
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
   script:
     - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
     - export NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
