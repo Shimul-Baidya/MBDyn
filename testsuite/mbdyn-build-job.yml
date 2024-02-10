@@ -229,8 +229,6 @@ mbdyn-build-job-manuals:       # This job runs in the build stage, which runs fi
   stage: build
   needs:
     - job: mbdyn-checkout-job
-  rules:
-    - if: $MBD_BUILD_MANUALS == "yes"      
   script:
     - MBD_BUILD_DIR_MANUALS=${CI_PROJECT_DIR}/${MBD_BUILD_DIR_MANUALS}
     - echo "checkout branch $CI_COMMIT_BRANCH"
