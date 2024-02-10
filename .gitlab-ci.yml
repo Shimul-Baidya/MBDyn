@@ -133,14 +133,14 @@ variables:
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
   ## This makes it easier to clean up temporary files and ther is no need to use /tmp
   ## Paths must be relative to CI_PROJECT_PATH
-  TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests/
-  OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob/
-  MBD_MODULE_TESTS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob/
-  MBD_MODULE_TESTS_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob-gcov/
-  MBD_TESTS_PUBLIC_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob/
-  MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob-gcov/
-  MBD_TESTS_PRIVATE_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob/
-  MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob-gcov/
+  TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests
+  OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob
+  MBD_MODULE_TESTS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob
+  MBD_MODULE_TESTS_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob-gcov
+  MBD_TESTS_PUBLIC_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob
+  MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob-gcov
+  MBD_TESTS_PRIVATE_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob
+  MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob-gcov
   MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
 
   ## Additional arguments to be passed to simple_testsuite.sh
