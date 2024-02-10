@@ -103,17 +103,3 @@ mbdyn-testsuite-report-job-coverage:
       coverage_report:
         coverage_format: cobertura
         path: $MBD_TEST_COVERAGE_DIR/cobertura-*.xml
-
-mbdyn-testsuite-report-job-coverage-exposed:
-  stage: test
-  needs:
-    - job: mbdyn-testsuite-report-job-coverage
-      artifacts: true
-  script:
-    - echo "dummy script" > /dev/null
-  artifacts:
-    name: ${CI_JOB_NAME}
-    expose_as: 'test coverage report'
-    expire_in: 24h
-    paths:
-      - $MBD_TEST_COVERAGE_DIR/$MBD_TEST_COVERAGE_HTML

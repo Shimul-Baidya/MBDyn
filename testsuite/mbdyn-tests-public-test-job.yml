@@ -98,6 +98,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
     paths:
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_LOG_FILE
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_STATUS_FILE
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/**/*.stdout
 
 mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
   variables:
@@ -148,5 +149,5 @@ mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
     paths:
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/$MBD_TESTS_PUBLIC_LOG_FILE
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/$MBD_TESTS_PUBLIC_STATUS_FILE
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/**/*.stdout
       - $MBD_BUILD_DIR_GCOV
-      

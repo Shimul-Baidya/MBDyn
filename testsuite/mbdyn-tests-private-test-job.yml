@@ -117,6 +117,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
     paths:
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR/$MBD_TESTS_PRIVATE_LOG_FILE
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR/$MBD_TESTS_PRIVATE_STATUS_FILE
+      - $MBD_TESTS_PRIVATE_OUTPUT_DIR/**/*.stdout
 
 mbdyn-tests-private-test-job-gcov:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
