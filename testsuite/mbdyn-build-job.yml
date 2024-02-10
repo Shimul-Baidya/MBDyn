@@ -138,6 +138,8 @@ mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first
     - job: mkl-build-job
       artifacts: true
     - job: mbdyn-checkout-job
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"      
   script:
     - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
     - export NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
@@ -227,6 +229,8 @@ mbdyn-build-job-manuals:       # This job runs in the build stage, which runs fi
   stage: build
   needs:
     - job: mbdyn-checkout-job
+  rules:
+    - if: $MBD_BUILD_MANUALS == "yes"      
   script:
     - MBD_BUILD_DIR_MANUALS=${CI_PROJECT_DIR}/${MBD_BUILD_DIR_MANUALS}
     - echo "checkout branch $CI_COMMIT_BRANCH"
