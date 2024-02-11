@@ -1,29 +1,38 @@
-# This file is a template, and might need editing before it works on your project.
-# This is a sample GitLab CI/CD configuration file that should run without any modifications.
-# It demonstrates a basic 3 stage CI/CD pipeline. Instead of real tests or scripts,
-# it uses echo commands to simulate the pipeline execution.
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
 #
-# A pipeline is composed of independent jobs that run scripts, grouped into stages.
-# Stages run in sequential order, but jobs within stages run in parallel.
+# Copyright (C) 1996-2023
 #
-# For more information, see: https://docs.gitlab.com/ee/ci/yaml/index.html#stages
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
 #
-# You can copy and paste this template into a new `.gitlab-ci.yml` file.
-# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
 #
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-## FIXME: workflow rules are causing troubles with git pull
-# workflow:
-#   rules:
-#     - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
-#       when: always
-#     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-#       when: always
-#     - when: never
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
 
 variables:
   ## Directories for binaries and temporary storage:
@@ -31,11 +40,11 @@ variables:
   ## So, we can use them with "artifacts:" and "cache:".
   ## Regarding artifacts, every build stage should have one directory of it's own!
   ## By default, the content of those directories will be lost after each job ends.
-  ## The only exception is MKL, because it is too big for "artifacts:" and "cache:"
+  ## The only exception is MKL, because it takes too much disk space for "artifacts:" and "cache:"
   TESTSUITE_PREFIX: testsuite/var
 
   ## All the job artefacts are stored inside $TESTSUITE_PREFIX_CACHE.
-  ## They will be cleaned up after each job, but the can be restored by indiviual jobs using "needs:"
+  ## By default they will be cleaned up after each job, but can be restored by indiviual jobs using "needs:"
   TESTSUITE_PREFIX_CACHE: $TESTSUITE_PREFIX/cache
 
   ## Temporary files are store inside $TESTSUITE_PREFIX_TMP and will be cleaned up after each job,
@@ -126,12 +135,13 @@ variables:
   ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.
   ## The value of <TEST_TIMEOUT> will be applied to each function.
   ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
-  ## The value <TEST_TIMEOUT> will be applied to the whole package.
+  ## The value of <TEST_TIMEOUT> will be applied to the whole package.
+  ## "single" should be the default because it can run multiple tests in parallel whereas "pkg" will execute the tests sequential.
   OCT_PKG_TEST_MODE: "single"
   OCTAVE_EXEC: "octave"
 
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
-  ## This makes it easier to clean up temporary files and ther is no need to use /tmp
+  ## This makes it easier to clean up temporary files and ther is no need to use /tmp which may reside in memory on some systems.
   ## Paths must be relative to CI_PROJECT_PATH
   TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests
   OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob
@@ -141,7 +151,10 @@ variables:
   MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob-gcov
   MBD_TESTS_PRIVATE_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob
   MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob-gcov
-  MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp" ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
+
+  ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
+  ## Needed by several jobs which link against MKL
+  MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp"
 
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
@@ -152,7 +165,6 @@ stages:          # List of stages for jobs, and their order of execution
   - build
   - test
   - deploy
-  - .post
 
 include:
     - local: '/testsuite/mbdyn-cleanup-job.yml'
