@@ -204,6 +204,10 @@ BEGINFILE {
     set_error("feature", "PAM");
 }
 
+/^solid\([[:digit:]]+\): initial assembly with incompressible constitutive laws is not yet implemented!$/ {
+    set_error("feature", "solid-upc-assembly");
+}
+
 /^ModuleLoad_int: unable to open module\>/ {
 
     if (split($0, modules, /[\<\>]/) > 2) {
@@ -278,7 +282,12 @@ ENDFILE {
     } else {
         ignore = "failed";
         status = 1;
-        printf("%s:%s:%s\n", global::error_found, global::message, ignore);
+
+        if (print_filename) {
+            printf("%s:%s:%s:%s\n", FILENAME, global::error_found, global::message, ignore);
+        } else {
+            printf("%s:%s:%s\n", global::error_found, global::message, ignore);
+        }
     }
 }
 
