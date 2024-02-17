@@ -49,7 +49,7 @@ OCT_PKG_TESTS_VERBOSE="${OCT_PKG_TESTS_VERBOSE:-no}"
 OCT_PKG_PRINT_RES="${OCT_PKG_PRINT_RES:-no}"
 OCT_PKG_TEST_MODE="${OCT_PKG_TEST_MODE:-pkg}"
 OCT_PKG_INSTALL_PREFIX="${OCT_PKG_INSTALL_PREFIX:-}"
-OCTAVE_CMD_ARGS="-qfHW"
+OCTAVE_CMD_ARGS="-qfH"
 OCT_PKG_FUNCTION_FILTER='/.+\.(tst|m)\>/'
 ## Do not print any output from Octave which does not pass through this filter, even if "--verbose yes" is used!
 ## This is strictly required because the amount of output is limited to 4194304 bytes by GitLab
