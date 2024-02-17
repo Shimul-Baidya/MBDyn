@@ -66,3 +66,38 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
     key: octave-pkg-build-job
     paths:
      - $OCT_PKG_BUILD_DIR
+
+octave-pkg-build-job-gcov:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+      - job: mkl-build-job
+      - job: netcdf-c-build-job
+        artifacts: true
+      - job: netcdf-cxx4-build-job
+        artifacts: true
+      - job: nlopt-build-job
+        artifacts: true
+      - job: mbdyn-build-job-gcov
+        artifacts: true
+  script:
+        - export MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+        - export MKL_PKG_CONFIG
+        - export NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+        - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+        - export OCT_PKG_BUILD_DIR=${CI_PROJECT_DIR}/${OCT_PKG_BUILD_DIR_GCOV}
+        - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
+        - export OCTAVE_EXEC
+        - export OCT_PKG_LIST
+        - export MBD_COMPILER_FLAGS=MBD_COMPILER_FLAGS_GCOV
+        - /usr/bin/time --verbose testsuite/octave_pkg_build_job.sh
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"        
+  artifacts:
+   name: octave-pkg-install-prefix
+   expire_in: 24h
+   paths:
+     - $OCT_PKG_INSTALL_PREFIX_GCOV
+  cache:
+    key: octave-pkg-build-job-gcov
+    paths:
+     - $OCT_PKG_BUILD_DIR_GCOV

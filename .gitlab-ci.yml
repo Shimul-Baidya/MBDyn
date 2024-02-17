@@ -101,6 +101,7 @@ variables:
   GMSH_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/gmsh
 
   OCT_PKG_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/octave-pkg
+  OCT_PKG_BUILD_DIR_GCOV: $TESTSUITE_PREFIX_BUILD/octave-pkg-gcov
 
   ## FIXME: MKL cannot be used as cache because it is too big!
   ## FIXME: So, $MKL_BUILD_DIR is relative to $HOME instead of $CI_PROJECT_DIR
@@ -145,6 +146,7 @@ variables:
   ## Paths must be relative to CI_PROJECT_PATH
   TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests
   OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob
+  OCT_PKG_TEST_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob-gcov
   MBD_MODULE_TESTS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob
   MBD_MODULE_TESTS_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob-gcov
   MBD_TESTS_PUBLIC_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob

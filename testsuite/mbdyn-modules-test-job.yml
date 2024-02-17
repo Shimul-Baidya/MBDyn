@@ -100,6 +100,11 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
        - $MBD_MODULE_TESTS_OUTPUT_DIR/**/*.stdout
 
 mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
+  variables:
+      OCT_PKG_TEST_JOB_LOG: "octave-pkg-test-job.log"
+      OCT_PKG_TEST_JOB_STATUS: "octave-pkg-test-job.status"
+      OCT_PKG_TEST_JOB_NUM_TASKS: 6
+      OCT_PKG_FUNCTION_FILTER: ""
   stage: test    # It only starts when the job in the build stage completes successfully.
   needs:
       - job: mkl-build-job
@@ -113,15 +118,16 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
         artifacts: true
       - job: gmsh-build-job ## module-triangular_contact is using Gmsh
         artifacts: true
-      - job: octave-pkg-build-job ## module-triangular_contact is using Octave
+      - job: octave-pkg-build-job-gcov ## module-triangular_contact is using Octave
         artifacts: true
       - job: mbdyn-tests-private-test-job-gcov ## Fetch all *.gcda and *.gcno
         artifacts: true
   rules:
-    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"        
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
   script:
+      - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
+      - OCT_PKG_TEST_OUTPUT_DIR=${CI_PROJECT_DIR}/${OCT_PKG_TEST_OUTPUT_DIR_GCOV}
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX_GCOV}
-      - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
       - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
       - MBD_MODULE_TESTS_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_MODULE_TESTS_OUTPUT_DIR_GCOV}
       - echo "MBDyn modules test job"
@@ -142,6 +148,9 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
       - test_status="failed"
       - (/usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --keep-output failed --abort-after "${MBD_MODULE_TESTS_ABORT_AFTER}" --linear-solvers "${MBD_MODULE_TESTS_LINEAR_SOLVERS}" --nonlinear-solvers "${MBD_MODULE_TESTS_NONLINEAR_SOLVERS}" --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
       - echo "${test_status}" >> "${status_file}"
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" > "${status_file}"
   artifacts:
      expire_in: 2 days
      name: mbdyn-modules-test-job-gcov
@@ -149,4 +158,6 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/$MBD_MODULE_TESTS_LOG_FILE
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/$MBD_MODULE_TESTS_STATUS_FILE
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/*.stdout
+       - $OCT_PKG_TEST_OUTPUT_DIR_GCOV/$OCT_PKG_TEST_JOB_LOG
+       - $OCT_PKG_TEST_OUTPUT_DIR_GCOV/$OCT_PKG_TEST_JOB_STATUS
        - $MBD_BUILD_DIR_GCOV
