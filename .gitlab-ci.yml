@@ -194,7 +194,7 @@ variables:
   ## Additional arguments to be passed to simple_testsuite.sh
   ## See simple_testsuite.sh --help
   ## In order to enable verbose output for MBDyn use: MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
-  MBD_SIMPLE_TESTSUITE_FLAGS: "--keep-output ${MBD_SIMPLE_TESTSUITE_OUTPUT} --verbose ${MBD_SIMPLE_TESTSUITE_FLAGS_VERBOSE}"
+  MBD_SIMPLE_TESTSUITE_FLAGS: "--keep-output ${MBD_SIMPLE_TESTSUITE_FLAGS_OUTPUT} --verbose ${MBD_SIMPLE_TESTSUITE_FLAGS_VERBOSE}"
 stages:          # List of stages for jobs, and their order of execution
   - .pre
   - build
