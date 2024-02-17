@@ -119,6 +119,7 @@ variables:
     options:
       - "yes"
       - "no"
+    description: "Do not use any caches and build everything from scratch"
 
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
@@ -136,7 +137,7 @@ variables:
   ##                   There should be no need to enable a timeout here.
   OCT_PKG_LIST: "nurbs:yes:master:yes:unlimited netcdf:yes:master:yes:unlimited mboct-octave-pkg:no:master:yes:unlimited mboct-numerical-pkg:no:master:yes:unlimited mboct-mbdyn-pkg:no:master:yes:unlimited mboct-fem-pkg:no:master:no:unlimited"
 
-  ## Execution mode for all Octave package tests:
+  ## Mode of execution for all Octave package tests:
   ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.
   ## The value of <TEST_TIMEOUT> will be applied to each function.
   ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
@@ -147,6 +148,7 @@ variables:
     options:
       - "pkg"
       - "single"
+    description: "Mode of execution for all Octave package tests (e.g. single may be executed in parallel)"
 
   OCTAVE_EXEC: "octave"
 
