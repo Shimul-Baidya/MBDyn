@@ -150,7 +150,7 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
       - echo "${test_status}" >> "${status_file}"
       - test_status="failed"
       - (/usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}") && test_status="passed"
-      - echo "${test_status}" > "${status_file}"
+      - echo "${test_status}" >> "${status_file}"
   artifacts:
      expire_in: 2 days
      name: mbdyn-modules-test-job-gcov
@@ -158,6 +158,4 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/$MBD_MODULE_TESTS_LOG_FILE
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/$MBD_MODULE_TESTS_STATUS_FILE
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/*.stdout
-       - $OCT_PKG_TEST_OUTPUT_DIR_GCOV/$OCT_PKG_TEST_JOB_LOG
-       - $OCT_PKG_TEST_OUTPUT_DIR_GCOV/$OCT_PKG_TEST_JOB_STATUS
        - $MBD_BUILD_DIR_GCOV
