@@ -114,7 +114,11 @@ variables:
   MBD_NUM_BUILD_JOBS: "12"
 
   ## Remove and reinstall all the software which was installed by previous pipeline executions.
-  MBD_CLEAN_ALL: "no"
+  MBD_CLEAN_ALL:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
 
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
@@ -138,7 +142,12 @@ variables:
   ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
   ## The value of <TEST_TIMEOUT> will be applied to the whole package.
   ## "single" should be the default because it can run multiple tests in parallel whereas "pkg" will execute the tests sequential.
-  OCT_PKG_TEST_MODE: "single"
+  OCT_PKG_TEST_MODE:
+    value: "single"
+    options:
+      - "pkg"
+      - "single"
+
   OCTAVE_EXEC: "octave"
 
   ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
