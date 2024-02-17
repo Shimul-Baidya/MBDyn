@@ -378,7 +378,8 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
         *)
             case "${pkgname}" in
                 netcdf)
-                    export LDFLAGS="-Wl,-rpath=`${NC_INSTALL_PREFIX}/bin/nc-config --libdir`"
+                    LDFLAGS_SAVE="${LDFLAGS}"
+                    export LDFLAGS="-Wl,-rpath=`${NC_INSTALL_PREFIX}/bin/nc-config --libdir` ${LDFLAGS}"
                     ;;
             esac
 
@@ -392,7 +393,7 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
                 exit 1
             fi
 
-            export LDFLAGS=
+            export LDFLAGS="${LDFLAGS_SAVE}"
             ;;
     esac
 
