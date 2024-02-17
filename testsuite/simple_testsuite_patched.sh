@@ -40,7 +40,7 @@ program_name="$0"
 program_dir=$(realpath $(dirname "${program_name}"))
 
 if ! test -f "${program_dir}/simple_testsuite.sh"; then
-    program_dir=$(realpath $(which "${program_name}"))
+    program_dir=$(dirname $(realpath $(which "${program_name}")))
 fi
 
 if test -f "${program_dir}/mbdyn_input_file_format.awk"; then
