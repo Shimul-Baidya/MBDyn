@@ -121,6 +121,13 @@ variables:
       - "no"
     description: "Do not use any caches and build everything from scratch"
 
+  MBD_TEST_COVERAGE_ENABLED:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Generate a test coverage report"
+
   ## Compiler flags for MBDyn and mboct-*-pkg
   MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
 
