@@ -200,6 +200,18 @@ if ! cd "${OCT_PKG_BUILD_DIR}"; then
     exit 1
 fi
 
+if ! test -z "${OCT_PKG_INSTALL_PREFIX}"; then
+    OCTAVE_LOCAL_LIST=`printf 'pkg("local_list","%s");' "${OCT_PKG_INSTALL_PREFIX}/octave_packages"`
+else
+    OCTAVE_LOCAL_LIST=""
+fi
+
+if ! test -z "${OCT_PKG_INSTALL_PREFIX}"; then
+    OCTAVE_PREFIX_CMD=`printf 'pkg("prefix","%s","%s");%s' "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}" "${OCTAVE_LOCAL_LIST}"`
+else
+    OCTAVE_PREFIX_CMD=""
+fi
+
 for pkgname_and_flags in ${OCT_PKG_LIST}; do
     pkgname=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$1}")
     pkg_rebuild_flag=$(echo ${pkgname_and_flags} | awk -F ":" "{print \$2}")
@@ -216,12 +228,6 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
 
     if test -z "${pkg_branch}"; then
         pkg_branch="master"
-    fi
-
-    if ! test -z "${OCT_PKG_INSTALL_PREFIX}"; then
-        OCTAVE_LOCAL_LIST=`printf 'pkg("local_list","%s");' "${OCT_PKG_INSTALL_PREFIX}/octave_packages"`
-    else
-        OCTAVE_LOCAL_LIST=""
     fi
 
     OCTAVE_CMD=`printf '%spkg("load","%s");' "${OCTAVE_LOCAL_LIST}" "${pkgname}"`
@@ -297,12 +303,6 @@ for pkgname_and_flags in ${OCT_PKG_LIST}; do
                 if ! test -f "${pkg_tar_file}"; then
                     printf "failed to create the package file \"%s\"\n" "${pkgname}"
                     exit 1
-                fi
-
-                if ! test -z "${OCT_PKG_INSTALL_PREFIX}"; then
-                    OCTAVE_PREFIX_CMD=`printf 'pkg("prefix","%s","%s");%s' "${OCT_PKG_INSTALL_PREFIX}" "${OCT_PKG_INSTALL_PREFIX}" "${OCTAVE_LOCAL_LIST}"`
-                else
-                    OCTAVE_PREFIX_CMD=""
                 fi
 
                 OCTAVE_CMD=`printf '%spkg("build","-nodeps","-verbose","%s","%s");' "${OCTAVE_PREFIX_CMD}" "${OCT_PKG_BINARY_DIR}" "${pkg_tar_file}"`
