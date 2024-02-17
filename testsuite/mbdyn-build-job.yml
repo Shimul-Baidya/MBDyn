@@ -70,7 +70,9 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    name: mbdyn-install-prefix
    paths:
     - $MBD_INSTALL_PREFIX
+    - $MBD_BUILD_DIR/**/config.log
     - $OCT_PKG_INSTALL_PREFIX ## Because mbdyn_util_oct will be installed there!
+   when: always
   cache:
    key: mbdyn-build-job
    paths:
@@ -160,6 +162,7 @@ mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first
    expire_in: 24h
    name: mbdyn-install-prefix-gcov
    paths:
+    - $MBD_BUILD_DIR_GCOV/**/config.log
     - $MBD_BUILD_DIR_GCOV/**/*.cc ## Source files of modules are needed for gcovr
     - $MBD_BUILD_DIR_GCOV/**/*.h
     - $MBD_BUILD_DIR_GCOV/**/*.hc
@@ -173,6 +176,7 @@ mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first
    exclude:
     - $MBD_BUILD_DIR_GCOV/**/*conftest.gcda
     - $MBD_BUILD_DIR_GCOV/**/*conftest.gcno
+   when: always
   cache:
    key: mbdyn-build-job-gcov
    paths:

@@ -76,6 +76,14 @@ while ! test -z "$1"; do
             NL_INSTALL_PREFIX="$2"
             shift
             ;;
+        --compiler-flags)
+            MBD_COMPILER_FLAGS="$2"
+            shift
+            ;;
+        --linker-flags)
+            export LDFLAGS="$2"
+            shift
+            ;;
         --octave-pkg-list)
             OCT_PKG_LIST="$2"
             shift

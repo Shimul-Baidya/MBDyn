@@ -189,7 +189,7 @@ variables:
     description: "Timeout to run tests for Octave's netcdf package"
 
   OCT_PKG_LIST_MBOCT_OCTAVE_PKG_REBUILD:
-    value: "yes"
+    value: "no"
     options:
       - "yes"
       - "no"
@@ -220,7 +220,7 @@ variables:
     description: "Timeout to run tests for Octave's mboct-octave-pkg package"
 
   OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_REBUILD:
-    value: "yes"
+    value: "no"
     options:
       - "yes"
       - "no"
@@ -251,7 +251,7 @@ variables:
     description: "Timeout to run tests for Octave's mboct-numerical-pkg package"
 
   OCT_PKG_LIST_MBOCT_MBDYN_PKG_REBUILD:
-    value: "yes"
+    value: "no"
     options:
       - "yes"
       - "no"
@@ -282,7 +282,7 @@ variables:
     description: "Timeout to run tests for Octave's mboct-mbdyn-pkg package"
 
   OCT_PKG_LIST_MBOCT_FEM_PKG_REBUILD:
-    value: "yes"
+    value: "no"
     options:
       - "yes"
       - "no"
