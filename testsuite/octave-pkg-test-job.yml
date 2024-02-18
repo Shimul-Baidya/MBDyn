@@ -84,3 +84,4 @@ octave-pkg-test-job:   # This job runs in the test stage.
     paths:
       - $OCT_PKG_TEST_OUTPUT_DIR/$OCT_PKG_TEST_JOB_LOG
       - $OCT_PKG_TEST_OUTPUT_DIR/$OCT_PKG_TEST_JOB_STATUS
+    when: always

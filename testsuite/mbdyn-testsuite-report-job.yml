@@ -116,3 +116,4 @@ mbdyn-testsuite-report-job-coverage:
       coverage_report:
         coverage_format: cobertura
         path: $MBD_TEST_COVERAGE_DIR/cobertura-*.xml
+    when: always
