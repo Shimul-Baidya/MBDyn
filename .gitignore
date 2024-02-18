@@ -40,6 +40,11 @@ manual/tecman/mbdyn-tecman-*.pdf
 *.o
 *.obj
 
+# GCC's test coverage data (e.g. g++ --coverage ...)
+*.gcov
+*.gcno
+*.gcda
+
 # Precompiled Headers
 *.gch
 *.pch
