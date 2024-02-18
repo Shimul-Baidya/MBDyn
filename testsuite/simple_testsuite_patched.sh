@@ -568,7 +568,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                                     ;;
                                             esac
 
-                                            printf '    # mbd_control_data_begin.set currently not used!\n' > "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}"
+                                            printf '    print: all, to file;\n' > "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}"
                                             printf '    %s\n' "${mbd_use_autodiff_cmd}" > "${MBD_TESTSUITE_CONTROL_DATA_END}"
 
                                             case "${mbd_initial_assembly_of_deformable_and_force_elements}" in
