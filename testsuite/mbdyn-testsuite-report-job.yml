@@ -72,7 +72,9 @@ mbdyn-testsuite-report-job-coverage:
   variables:
     MBD_TESTSUITE_REPORT_JOB_NUM_TASKS: 12
     ## Needed for autoconf
-    MBD_GCOVR_EXCLUDE: "--gcov-exclude '.*conftest\.gcda' --gcov-exclude '.*conftest\.gcno'"
+    MBD_GCOVR_EXCLUDE:
+      value: "--gcov-exclude '.*conftest\.gcda' --gcov-exclude '.*conftest\.gcno'"
+      expand: false
     ## See also https://stackoverflow.com/questions/68345811/no-colours-in-gcovr-5-0-html-details-report
     MBD_GCOVR_SUPPRESS_ERRORS: "--gcov-ignore-parse-errors --gcov-ignore-errors=no_working_dir_found --exclude-unreachable-branches"
     MBD_GCOVR_EXTRA_ARGS: "-j ${MBD_TESTSUITE_REPORT_JOB_NUM_TASKS} ${MBD_GCOVR_EXCLUDE} ${MBD_GCOVR_SUPPRESS_ERRORS} --print-summary"
