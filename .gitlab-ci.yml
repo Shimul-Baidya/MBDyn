@@ -293,7 +293,7 @@ variables:
     description: "Branch to use for Octave's mboct-fem-pkg package"
 
   OCT_PKG_LIST_MBOCT_FEM_PKG_TEST:
-    value: "yes"
+    value: "no"
     options:
       - "yes"
       - "no"
