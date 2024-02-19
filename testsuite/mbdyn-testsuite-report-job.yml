@@ -69,6 +69,15 @@ mbdyn-testsuite-report-job-gcov:
     - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 3 || passed < tests || failed > 0) { exit 1; }}' ${status_files}
 
 mbdyn-testsuite-report-job-coverage:
+  variables:
+    MBD_TESTSUITE_REPORT_JOB_NUM_TASKS: 12
+    ## Needed for autoconf
+    MBD_GCOVR_EXCLUDE: '--gcov-exclude .*conftest\.gcda --gcov-exclude .*conftest\.gcno'
+    ## See also https://stackoverflow.com/questions/68345811/no-colours-in-gcovr-5-0-html-details-report
+    MBD_GCOVR_SUPPRESS_ERRORS: "--gcov-ignore-parse-errors --gcov-ignore-errors=no_working_dir_found --exclude-unreachable-branches"
+    MBD_GCOVR_EXTRA_ARGS: "-j ${MBD_TESTSUITE_REPORT_JOB_NUM_TASKS} ${MBD_GCOVR_EXCLUDE} ${MBD_GCOVR_SUPPRESS_ERRORS} --print-summary"
+    MBD_GCOVR_EXTRA_ARGS_HTML: "${MBD_GCOVR_EXTRA_ARGS} --html-details --html-medium-threshold 60 --html-high-threshold 80"
+    MBD_GCOVR_EXTRA_ARGS_XML: "${MBD_GCOVR_EXTRA_ARGS} --xml-pretty"
   stage: test
   needs:
     - job: netcdf-c-build-job
@@ -89,8 +98,8 @@ mbdyn-testsuite-report-job-coverage:
     - mkdir -p "${MBD_TEST_COVERAGE_DIR}"
     - xml_file="${MBD_TEST_COVERAGE_DIR}/${MBD_TEST_COVERAGE_XML}"
     - html_file="${MBD_TEST_COVERAGE_DIR}/${MBD_TEST_COVERAGE_HTML}"
-    - gcovr --gcov-exclude '.*conftest\.gcda' --gcov-exclude '.*conftest\.gcno' --gcov-ignore-parse-errors --gcov-ignore-errors=no_working_dir_found --html-details --exclude-unreachable-branches --print-summary --root "${CI_PROJECT_DIR}" --object-directory "${MBD_BUILD_DIR_GCOV}" --output "${html_file}"
-    - gcovr --gcov-exclude '.*conftest\.gcda' --gcov-exclude '.*conftest\.gcno' --gcov-ignore-parse-errors --gcov-ignore-errors=no_working_dir_found --xml-pretty --exclude-unreachable-branches --print-summary --root "${CI_PROJECT_DIR}" --object-directory "${MBD_BUILD_DIR_GCOV}" --output "${xml_file}"
+    - gcovr --root "${CI_PROJECT_DIR}" --object-directory "${MBD_BUILD_DIR_GCOV}" --output "${html_file}" ${MBD_GCOVR_EXTRA_ARGS_HTML}
+    - gcovr --root "${CI_PROJECT_DIR}" --object-directory "${MBD_BUILD_DIR_GCOV}" --output "${xml_file}" ${MBD_GCOVR_EXTRA_ARGS_XML}
     - export PATH="${CI_PROJECT_DIR}/testsuite:${PATH}"
     ## Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/328772. Pipeline artifacts are limited to
     # 10M. So split the single cobertura xml (which is often >100M) into one file per package, since there
@@ -107,3 +116,4 @@ mbdyn-testsuite-report-job-coverage:
       coverage_report:
         coverage_format: cobertura
         path: $MBD_TEST_COVERAGE_DIR/cobertura-*.xml
+    when: always
