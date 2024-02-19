@@ -118,6 +118,7 @@ mbdyn-tests-private-test-job:   # This job runs in the test stage.
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR/$MBD_TESTS_PRIVATE_LOG_FILE
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR/$MBD_TESTS_PRIVATE_STATUS_FILE
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR/**/*.stdout
+    when: always
 
 mbdyn-tests-private-test-job-gcov:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
@@ -133,7 +134,7 @@ mbdyn-tests-private-test-job-gcov:   # This job runs in the test stage.
      - job: mbdyn-tests-public-test-job-gcov ## Need to fetch all *.gcda and *.gcno files
        artifacts: true
   rules:
-    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"       
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
   script:
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX_GCOV}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
@@ -178,3 +179,4 @@ mbdyn-tests-private-test-job-gcov:   # This job runs in the test stage.
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV/$MBD_TESTS_PRIVATE_STATUS_FILE
       - $MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV/**/*.stdout
       - $MBD_BUILD_DIR_GCOV
+    when: always

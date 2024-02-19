@@ -40,7 +40,7 @@ program_name="$0"
 program_dir=$(realpath $(dirname "${program_name}"))
 
 if ! test -f "${program_dir}/simple_testsuite.sh"; then
-    program_dir=$(realpath $(which "${program_name}"))
+    program_dir=$(dirname $(realpath $(which "${program_name}")))
 fi
 
 if test -f "${program_dir}/mbdyn_input_file_format.awk"; then
@@ -568,7 +568,7 @@ for mbd_linear_solver in ${mbdyn_linear_solvers}; do
                                                     ;;
                                             esac
 
-                                            printf '    # mbd_control_data_begin.set currently not used!\n' > "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}"
+                                            printf '    print: all, to file;\n' > "${MBD_TESTSUITE_CONTROL_DATA_BEGIN}"
                                             printf '    %s\n' "${mbd_use_autodiff_cmd}" > "${MBD_TESTSUITE_CONTROL_DATA_END}"
 
                                             case "${mbd_initial_assembly_of_deformable_and_force_elements}" in

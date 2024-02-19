@@ -56,7 +56,6 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - job: octave-pkg-build-job
         artifacts: true
   script:
-      - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
       - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
       - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
       - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
@@ -85,3 +84,4 @@ octave-pkg-test-job:   # This job runs in the test stage.
     paths:
       - $OCT_PKG_TEST_OUTPUT_DIR/$OCT_PKG_TEST_JOB_LOG
       - $OCT_PKG_TEST_OUTPUT_DIR/$OCT_PKG_TEST_JOB_STATUS
+    when: always
