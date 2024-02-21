@@ -46,16 +46,17 @@ fi
 
 MBD_SOURCE_DIR=${MBD_SOURCE_DIR:-`dirname ${program_dir}`}
 MBD_SKIP_BUILD="${MBD_SKIP_BUILD:-no}"
-MBD_INSTALL_PREFIX="${MBD_INSTALL_PREFIX:-testsuite/var/cache/mbdyn}"
-MBD_BUILD_DIR="${MBD_BUILD_DIR:-testsuite/var/tmp/build/mbdyn}"
+MBD_INSTALL_PREFIX="${MBD_INSTALL_PREFIX:-${program_dir}/var/cache/mbdyn}"
+MBD_BUILD_DIR="${MBD_BUILD_DIR:-${program_dir}/var/tmp/build/mbdyn}"
 MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS:--Ofast -Wall -march=native -mtune=native -Wno-unused-variable}"
-NC_INSTALL_PREFIX="${NC_INSTALL_PREFIX:-testsuite/var/cache/netcdf}"
-NC_CXX4_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX:-testsuite/var/cache/netcdf-cxx4}"
-MKL_INSTALL_PREFIX="${MKL_INSTALL_PREFIX:-testsuite/var/cache/mkl}"
+NC_INSTALL_PREFIX="${NC_INSTALL_PREFIX:-${program_dir}/var/cache/netcdf}"
+NC_CXX4_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX:-${program_dir}/var/cache/netcdf-cxx4}"
+MKL_INSTALL_PREFIX="${MKL_INSTALL_PREFIX:-/usr/lib}"
 MKL_PKG_CONFIG="${MKL_PKG_CONFIG:-mkl-dynamic-lp64-gomp}"
-OCT_PKG_INSTALL_PREFIX="${OCT_PKG_INSTALL_PREFIX:-testsuite/var/cache/share/octave}"
+OCT_PKG_INSTALL_PREFIX="${OCT_PKG_INSTALL_PREFIX:-${program_dir}/var/cache/share/octave}"
 MBD_WITH_MODULE="${MBD_WITH_MODULE:-fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall}"
 MBD_NUM_BUILD_JOBS="${MBD_NUM_BUILD_JOBS:-$(($(lscpu | awk '/^Socket\(s\)/{ print $2 }') * $(lscpu | awk '/^Core\(s\) per socket/{ print $4 }')))}"
+MBD_CONFIGURE_FLAGS="${MBD_CONFIGURE_FLAGS:---enable-python --enable-octave --enable-install_test_progs --enable-netcdf --with-umfpack --with-klu --with-suitesparseqr --with-static-modules --without-mpi --enable-runtime-loading --disable-Werror --with-trilinos}"
 OCTAVE_MKOCTFILE="${MKOCTFILE:-mkoctfile}"
 OCTAVE_CLI="${OCTAVE_CLI:-octave-cli}"
 TRILINOS_INSTALL_PREFIX="${TRILINOS_INSTALL_PREFIX:-/usr}"
@@ -63,6 +64,9 @@ TRILINOS_INC_DIR="${TRILINOS_INC_DIR:-${TRILINOS_INSTALL_PREFIX}/include/trilino
 SUITESPARSE_INC_DIR="${SUITESPARSE_INC_DIR:-/usr/include/suitesparse}"
 NUMPY_INC_DIR="${NUMPY_INC_DIR:-/usr/lib64/python3.11/site-packages/numpy/core/include}"
 PYTHON_INC_DIR="${PYTHON_INC_DIR:-/usr/include/python3.11}"
+CXXFLAGS="${CXXFLAGS:--Wno-unknown-pragmas}"
+MBD_CLEAN_BUILD="${MBD_CLEAN_BUILD:-no}"
+MBD_CLEAN_ALL="${MBD_CLEAN_ALL:-no}"
 
 while ! test -z "$1"; do
     case "$1" in
@@ -104,6 +108,10 @@ while ! test -z "$1"; do
             MKL_INSTALL_PREFIX="$2"
             shift
             ;;
+        --mkl-pkg-config)
+            MKL_PKG_CONFIG="$2"
+            shift
+            ;;
         --octave-pkg-install-prefix)
             OCT_PKG_INSTALL_PREFIX="$2"
             shift
@@ -116,6 +124,10 @@ while ! test -z "$1"; do
             OCTAVE_CLI="$2"
             shift
             ;;
+        --configure-flags)
+            MBD_CONFIGURE_FLAGS="$2"
+            shift
+            ;;
         --help)
             echo "${program_name} --mbdyn-install-prefix <MBD_INSTALL_PREFIX>"
             echo "                --mbdyn-build-dir <MBD_BUILD_DIR>"
@@ -124,6 +136,7 @@ while ! test -z "$1"; do
             echo "                --netcdf-cxx4-install-prefix <NC_CXX4_INSTALL_PREFIX>"
             echo "                --mkl-install-prefix <MKL_INSTALL_PREFIX>"
             echo "                --octave-pkg-install-prefix <OCT_PKG_INSTALL_PREFIX>"
+            echo "                --trilinos-install-prefix <TRILINOS_INSTALL_PREFIX>"
             exit 1
             ;;
         *)
@@ -301,27 +314,17 @@ if ! test -f Makefile; then
          PYTHON_VERSION=3 \
          CPPFLAGS="${CPPFLAGS}" \
          LDFLAGS="${LDFLAGS}" \
-         CXXFLAGS="${MBD_COMPILER_FLAGS} -Wno-unknown-pragmas" \
-         CFLAGS="${MBD_COMPILER_FLAGS}" \
-         FFLAGS="${MBD_COMPILER_FLAGS}" \
-         FCFLAGS="${MBD_COMPILER_FLAGS}" \
-         --enable-python \
-         --enable-octave \
-         --enable-install_test_progs \
-         --enable-netcdf \
+         CXXFLAGS="${MBD_COMPILER_FLAGS} ${CXXFLAGS}" \
+         CFLAGS="${MBD_COMPILER_FLAGS} ${CFLAGS}" \
+         FFLAGS="${MBD_COMPILER_FLAGS} ${FFLAGS}" \
+         FCFLAGS="${MBD_COMPILER_FLAGS} ${FCFLAGS}" \
          --prefix="${MBD_INSTALL_PREFIX}" \
          --with-octave-pkg-prefix="${OCT_PKG_INSTALL_PREFIX}" \
          --with-octave-cli="${OCTAVE_CLI}" \
          --with-mkoctfile="${OCTAVE_MKOCTFILE}" \
-         --with-umfpack \
-         --with-klu \
          ${PARDISO_FLAGS} \
-         --with-suitesparseqr \
-         --with-static-modules \
          --with-module="${MBD_WITH_MODULE}" \
-         --enable-runtime-loading \
-         --disable-Werror \
-         --with-trilinos ; then
+         ${MBD_CONFIGURE_FLAGS}  ; then
         ## FIXME: We should not use --disable-Werror, but need to fix a few warnings caused by Octave's headers instead
         echo "Failed to run  ${MBD_SOURCE_DIR}/configure"
         exit 1
