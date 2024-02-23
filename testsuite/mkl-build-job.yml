@@ -1,0 +1,108 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+mkl-build-job:       # This job runs in the build stage, which runs first.
+  variables:
+    ## Intel oneMKL - Non free software, but we are allowed to redistribute it, even inside a public docker container!
+    ## See https://www.intel.com/content/www/us/en/developer/articles/tool/onemkl-license-faq.html
+    MKL_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/86d6a4c1-c998-4c6b-9fff-ca004e9f7455/"
+    MKL_PACKAGE: "l_onemkl_p_2024.0.0.49673.sh"
+  stage: build
+  needs:
+       - job: mbdyn-cleanup-job
+  script:
+       - MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+       - MKL_BUILD_DIR=${CI_PROJECT_DIR}/${MKL_BUILD_DIR}
+       - echo "MKL installation job"
+       - |
+          if test -d "${MKL_INSTALL_PREFIX}"; then
+              echo "Find all pkg-config files in ${MKL_INSTALL_PREFIX} ..."
+              find "${MKL_INSTALL_PREFIX}" '(' -name pkgconfig -or -name '*.pc' ')'
+              echo "Search for ${MKL_PKG_CONFIG}.pc ..."
+              MKL_PKG_CONFIG_FILE=`find "${MKL_INSTALL_PREFIX}" '(' -type f -and -name "${MKL_PKG_CONFIG}.pc" ')'`
+              if test -f "${MKL_PKG_CONFIG_FILE}"; then
+                  MKL_PKG_CONFIG_PATH=`dirname "${MKL_PKG_CONFIG_FILE}"`
+              else
+                  echo "File ${MKL_PKG_CONFIG}.pc not found"
+              fi
+          fi
+       - |
+        if test -d "${MKL_PKG_CONFIG_PATH}" -a "${MBD_CLEAN_ALL}" = "no"; then
+          echo "MKL was already installed in ${MKL_PKG_CONFIG_PATH}"
+          exit 0
+        fi
+       - mkdir -p ${MKL_BUILD_DIR}
+       - cd ${MKL_BUILD_DIR}
+       - |
+          if test -z "${MKL_URL}"; then
+            echo "MKL_URL was not defined"
+            exit 0
+          fi
+       - |
+          if test -z "${MKL_PACKAGE}"; then
+            echo "MKL_PACKAGE was not defined"
+            exit 0
+          fi
+       - |
+          if ! test -f "${MKL_PACKAGE}"; then
+            if ! wget "${MKL_URL}${MKL_PACKAGE}"; then
+              echo "Failed to download ${MKL_URL}${MKL_PACKAGE}"
+              exit 1
+            fi
+          fi
+       - test -f "${MKL_PACKAGE}"
+       - chmod u+x "${MKL_PACKAGE}"
+       - MKL_STATUS="failed"
+       - |
+          # FIXME: Need to remove MKL before we are able to install it again
+          if ! sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action remove --install-dir "${MKL_INSTALL_PREFIX}"; then
+              echo "Failed to remove MKL ..."
+          fi
+       - echo "removing ${MKL_INSTALL_PREFIX} ..."
+       - rm -rf ${MKL_INSTALL_PREFIX}
+       - |
+          if sh "./${MKL_PACKAGE}" -r yes -a -s --eula accept --ignore-errors --action install --install-dir "${MKL_INSTALL_PREFIX}"; then
+              MKL_STATUS="succeeded"
+          fi
+       - |
+          if test "${MKL_STATUS}" != "succeeded"; then
+              echo "Failed to install MKL"
+              exit 1
+          fi
+  # artifacts:
+  #  paths:
+      ## FIXME: MKL_INSTALL_PREFIX cannot be used as an artifact because it is really huge!!
+      ## - $MKL_INSTALL_PREFIX

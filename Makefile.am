@@ -22,7 +22,7 @@ $(Pythonpre_srcdit)/MBDynLib.py \
 $(Pythonpre_srcdit)/examples/CrankPanel_v2.mbd \
 $(Pythonpre_srcdit)/examples/include1.dat \
 $(Pythonpre_srcdit)/examples/include2.dat \
-$(Pythonpre_srcdit)/examples/LateralBuckling2_v2.mbd 
+$(Pythonpre_srcdit)/examples/LateralBuckling2_v2.mbd
 
 Post_srcdir = $(top_srcdir)/contrib/Post
 Post_files = \
@@ -112,3 +112,41 @@ SUBDIRS = include build etc libraries manual mbdyn modules utils var
 
 include $(top_srcdir)/build/bot.mk
 
+test: all
+	for cmd in "libraries/libmbmath/sp_gradient_test" \
+		"libraries/libmbmath/dgeequtest" \
+		"libraries/libmbmath/itertest" \
+		"libraries/libmbmath/matmultest" \
+		"libraries/libmbmath/subtest" \
+		"libraries/libmbwrap/arptest" \
+		"libraries/libmbwrap/cctest -m umfpack" \
+		"libraries/libmbwrap/cctest -m y12" \
+		"libraries/libmbwrap/wraptest -m umfpack" \
+		"libraries/libmbwrap/wraptest -m naive" \
+		"libraries/libmbwrap/wraptest -m lapack" \
+		"libraries/libmbwrap/wraptest -m qr" \
+		"libraries/liby12/y12test" \
+		"mbdyn/struct/solidshapetest" ; do \
+		printf "running command: \"%s\"\n" "$${cmd}" ; \
+		$${cmd} ; \
+		rc=$$? ; \
+		printf "status: %d\n" $${rc} ; \
+		if test $${rc} -ne 0; then exit 1; fi ; \
+	done
+## tests for optional features
+if USE_SUITESPARSE_QR
+	libraries/libmbwrap/wraptest -m spqr
+endif
+
+if USE_PARDISO
+	libraries/libmbwrap/wraptest -m pardiso
+	libraries/libmbwrap/wraptest -m pardiso_64
+endif
+
+if USE_PASTIX
+	libraries/libmbwrap/wraptest -m pastix
+endif
+
+if USE_MULTITHREAD
+	mbdyn/base/inusetest -n 100 -t 4
+endif

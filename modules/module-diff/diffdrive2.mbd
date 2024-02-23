@@ -116,7 +116,7 @@ begin: nodes;
 		reference, PENDULUM, null;
 end: nodes;
 
-module load: "libmodule-diff";
+module load: "libmodule-diff.la";
 
 begin: elements;
 	body: PENDULUM,

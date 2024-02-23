@@ -126,9 +126,8 @@ begin: elements;
       null, # relative center of mass
       diag, 0.01, 0.01, 0.01;  # inertia matrix
 
-	#module load: "../mbdyn_teste/modules/module-fabricate/.libs/libmodule-fabricate.so";
-	module load: "libmodule-fabricate";
-	user defined: 1, SimpleGearJoint, 1, 2, 0, r1, r2, output, yes;
+	module load: "libmodule-fabricate.la";
+	user defined: 1, GearJoint, 1, 2, 0, r1, r2, output, yes;
 
 end: elements;
 

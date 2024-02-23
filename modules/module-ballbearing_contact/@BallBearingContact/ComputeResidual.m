@@ -1,4 +1,4 @@
-% MBDyn (C) is a multibody analysis code. 
+% MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
 % Copyright (C) 1996-2023
@@ -15,7 +15,7 @@
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation (version 2 of the License).
-% 
+%
 %
 % This program is distributed in the hope that it will be useful,
 % but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -89,12 +89,12 @@ function f = ComputeResidual(elem, dCoef, XCurr, XPrimeCurr)
     kappa = 0;
   else
     g = norm(elem.Mk^2 * uP) / norm(elem.Mk * uP) + (norm(elem.Ms^2 * uP) / norm(elem.Ms * uP) - norm(elem.Mk^2 * uP) / norm(elem.Mk * uP)) * exp(-(norm(uP)/elem.vs)^elem.gamma);
-    
+
     kappa = norm(elem.Mk^2 * uP) / g;
   endif
 
   Phi = uP - kappa * elem.Mk^-2 * elem.sigma0 * z - zP;
-  
+
   F1 = R2 * elem.Rt2 * [-tau; norm_Fn];
   M1 = -cross(R2 * elem.Rt2(:, 3) * n, F1);
   F2 = -F1;

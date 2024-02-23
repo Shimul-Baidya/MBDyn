@@ -493,6 +493,7 @@ LineSearchSolver::Jacobian()
           try {
                TRACE("Assemble Jacobian\n");
                pNLP->Jacobian(pSM->pMatHdl());
+               pSM->pMatHdl()->PacMat(); // Required for Trilinos Epetra matrix handlers
           } catch (const MatrixHandler::ErrRebuildMatrix&) {
                if (bInitMat) {
                     throw;

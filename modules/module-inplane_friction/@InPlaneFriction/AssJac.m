@@ -34,7 +34,7 @@
 %        for use in the software MBDyn as described
 %        in the GNU Public License version 2.1
 
-function [Jac, ridx, cidx, bSparse] = AssJac(elem, dCoef, XCurr, XPrimeCurr)
+function [Jac, ridx, cidx, bSparse, elem] = AssJac(elem, dCoef, XCurr, XPrimeCurr)
     iFirstIndex = elem.pMbElem.iGetFirstIndex();
 
     bSparse = false;

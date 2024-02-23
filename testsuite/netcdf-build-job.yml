@@ -1,0 +1,125 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+netcdf-c-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+      - job: mbdyn-cleanup-job
+  script:
+      - echo "netcdf-c installation job"
+      - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+      - NC_C_BUILD_DIR=${CI_PROJECT_DIR}/${NC_C_BUILD_DIR}
+      - |
+        if "${NC_INSTALL_PREFIX}/bin/nc-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
+          echo "netcdf-c was already installed"
+          exit 0
+        fi
+      - |
+        if ! test -d ${NC_C_BUILD_DIR}; then
+          git clone -b main https://github.com/Unidata/netcdf-c.git ${NC_C_BUILD_DIR}
+        fi
+      - cd ${NC_C_BUILD_DIR}
+      - git pull --force
+      - |
+        if ! test -d build_dir; then
+          mkdir build_dir
+        fi
+      - cd build_dir
+      - |
+        if ! test -f Makefile; then
+          cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_INSTALL_PREFIX}"
+        fi
+      - make -j${MBD_NUM_BUILD_JOBS}
+      - rm -rf "${NC_INSTALL_PREFIX}"
+      - make install
+  artifacts:
+    name: netcdf-binaries
+    expire_in: 24h
+    paths:
+      - $NC_INSTALL_PREFIX
+  cache:
+   key: libraries-build-job
+   paths:
+      - $NC_C_BUILD_DIR
+      - $NC_CXX4_BUILD_DIR
+      - $NL_BUILD_DIR
+      - $GMSH_BUILD_DIR
+
+netcdf-cxx4-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+  script:
+      - echo "netcdf-cxx4 installation job"
+      - NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+      - NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
+      - NC_CXX4_BUILD_DIR=${CI_PROJECT_DIR}/${NC_CXX4_BUILD_DIR}
+      - |
+        if "${NC_CXX4_INSTALL_PREFIX}/bin/ncxx4-config" --version >& /dev/null && test "${MBD_CLEAN_ALL}" = "no"; then
+          echo "netcdf-cxx4 was already installed"
+          exit 0
+        fi
+      - |
+        if ! test -d ${NC_CXX4_BUILD_DIR}; then
+          git clone -b master https://github.com/Unidata/netcdf-cxx4.git ${NC_CXX4_BUILD_DIR}
+        fi
+      - cd ${NC_CXX4_BUILD_DIR}
+      - git pull --force
+      - |
+        if ! test -d build_dir; then
+          mkdir build_dir
+        fi
+      - cd build_dir
+      - |
+        if ! test -f Makefile; then
+          cmake .. -DENABLE_NETCDF_4=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX}" -DnetCDF_DIR="${NC_INSTALL_PREFIX}/lib/cmake/netCDF"
+        fi
+      - make -j${MBD_NUM_BUILD_JOBS}
+      - rm -rf "${NC_CXX4_INSTALL_PREFIX}"
+      - make install
+  artifacts:
+    name: netcdf-cxx4-binaries
+    expire_in: 24h
+    paths:
+      - $NC_CXX4_INSTALL_PREFIX
+  cache:
+   key: libraries-build-job
+   paths:
+      - $NC_C_BUILD_DIR
+      - $NC_CXX4_BUILD_DIR
+      - $NL_BUILD_DIR
+      - $GMSH_BUILD_DIR

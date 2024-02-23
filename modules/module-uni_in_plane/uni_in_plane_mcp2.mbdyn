@@ -58,19 +58,22 @@ end: data;
 begin: initial value;
      initial time: 0.;
      final time: 10;
-     time step: 1e-3;
+     time step: 5e-2;
 
-     max iterations: 100;
-     tolerance: 1e-6;
+     max iterations: 10;
+     tolerance: 1e-6, test, norm, 1e-6, test, norm;
      method: implicit euler;
 
-     linear solver: siconos dense;
-     nonlinear solver: siconos mcp newton min fb, lambda min, 1e-16;
+     linear solver: umfpack, grad, scale, row max column max, always, max iterations, 3;
+     nonlinear solver: mcp newton min fb, lambda min, 0., tolerance x, 1e-6;
 
-     output: iterations;
-     derivatives tolerance: 1e-2;
+     ## linear solver: siconos dense;
+     ## nonlinear solver: siconos mcp newton min fb, lambda min, 1e-16;
+
+     output: iterations, solver condition number, stat, yes;
+     derivatives tolerance: 1e-6, 1e-6;
      derivatives max iterations: 10;
-     derivatives coefficient: 1e-6;
+     derivatives coefficient: auto;
 
      threads: assembly, 1;
      threads: solver, 1;
@@ -85,7 +88,7 @@ begin: control data;
     loadable elements: 6;
     joints: 1;
      max iterations: 10;
-    tolerance: 1e-15;
+    tolerance: 1e-10;
     gravity;
     print: dof description;
     use: loadable elements, in assembly;
@@ -174,7 +177,7 @@ reference: 14,
     orientation, reference, 8, eye,
     velocity, reference, 8, null,
     angular velocity, reference, 8, null;
-    
+
 begin: nodes;
 
 structural: 1, static,
@@ -205,30 +208,30 @@ begin: elements;
                 inertial, reference, node, eye;
 
 
-	joint: 1, total pin joint,
-		1, 
-		position, reference, 3, null,
-		position orientation, reference, 3, eye,
-		rotation orientation, reference, 3, eye,
-		position, reference, 2, null,
-		position orientation, reference, 2, eye,
-		rotation orientation, reference, 2, eye,
-		position constraint,
-			active,
-			active,
-			active,
-			component,
-				null,
-				null,
-				null,
-		orientation constraint,
-			active,
-			angular velocity,
-			active,
-			component,
-				null,
-				const, omega,
-				null;
+        joint: 1, total pin joint,
+                1,
+                position, reference, 3, null,
+                position orientation, reference, 3, eye,
+                rotation orientation, reference, 3, eye,
+                position, reference, 2, null,
+                position orientation, reference, 2, eye,
+                rotation orientation, reference, 2, eye,
+                position constraint,
+                        active,
+                        active,
+                        active,
+                        component,
+                                null,
+                                null,
+                                null,
+                orientation constraint,
+                        active,
+                        angular velocity,
+                        active,
+                        component,
+                                null,
+                                const, omega,
+                                null;
 
     user defined: 1, unilateral in plane,
         node1, 2,
@@ -240,7 +243,7 @@ begin: elements;
                 reference, 1,  0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
-                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,                
+                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
             enable mcp, yes,
         node2, 1,
             offset, reference, 9, null,
@@ -256,7 +259,7 @@ begin: elements;
                 reference, 1,  0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
-                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,                
+                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
             enable mcp, yes,
         node2, 1,
             offset, reference, 10, null,
@@ -272,7 +275,7 @@ begin: elements;
                 reference, 1,  0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
-                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,                
+                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
             enable mcp, yes,
         node2, 1,
             offset, reference, 11, null,
@@ -288,7 +291,7 @@ begin: elements;
                 reference, 1,  0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
-                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,                
+                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
             enable mcp, yes,
         node2, 1,
             offset, reference, 12, null,
@@ -304,7 +307,7 @@ begin: elements;
                 reference, 1,  0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
-                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,                
+                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
             enable mcp, yes,
         node2, 1,
             offset, reference, 13, null,
@@ -320,7 +323,7 @@ begin: elements;
                 reference, 1,  0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l,  0.5 * l,  0.5 * l, stiffness, sn,
                 reference, 1, -0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
-                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,                
+                reference, 1,  0.5 * l, -0.5 * l,  0.5 * l, stiffness, sn,
             enable mcp, yes,
         node2, 1,
             offset, reference, 14, null,

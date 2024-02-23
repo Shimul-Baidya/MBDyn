@@ -57,7 +57,7 @@
 
 #include <Epetra_config.h>
 #include <Epetra_Operator.h>
-#ifdef HAVE_MPI
+#ifdef USE_MPI
 #include <Epetra_MpiComm.h>
 #else
 #include <Epetra_SerialComm.h>
@@ -352,7 +352,7 @@ namespace {
           NOX::Epetra::Interface::Preconditioner* pPrecInt;
           mutable bool bUseTranspose;
           bool bUpdateJacobian;
-#ifdef HAVE_MPI
+#ifdef USE_MPI
           Epetra_MpiComm oComm;
 #else
           Epetra_SerialComm oComm;
@@ -756,7 +756,7 @@ namespace {
            pPrecInt(nullptr),
            bUseTranspose(false),
            bUpdateJacobian(true),
-#ifdef HAVE_MPI
+#ifdef USE_MPI
            oComm(MBDynComm),
 #endif
            oMap(Size, 1, oComm),

@@ -1,5 +1,5 @@
-/* 
- * MBDyn (C) is a multibody analysis code. 
+/*
+ * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
  * Copyright (C) 1996-2023
@@ -16,7 +16,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation (version 2 of the License).
- * 
+ *
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -89,54 +89,54 @@ set: integer ref_id_slider1 = 4002;
 set: integer ref_id_slider2 = 4003;
 
 begin: data;
-	problem: initial value;	# the default
+        problem: initial value;	# the default
 end: data;
 
 begin: initial value;
-	initial time: 0.;
-	final time: 10;
-	time step: 1e-3;
+        initial time: 0.;
+        final time: 10;
+        time step: 1e-3;
 
-	max iterations: 1000;
-	tolerance: 1e-8;
+        max iterations: 20;
+        tolerance: 1e-8, 1e-4;
+        nonlinear solver: nox, modified, 10, keep jacobian matrix, jacobian operator, newton krylov, forcing term, type 2;
     method: ms, 0.6;
-    derivatives tolerance: 2e-5;
-    derivatives max iterations: 100;
-	derivatives coefficient: 2e-6;
-    linear solver: naive, colamd, pivot factor, 0.1;
+    derivatives tolerance: 1e-6, 1e-6;
+    derivatives max iterations: 10;
+    derivatives coefficient: auto;
+    linear solver: naive, colamd;
     nonlinear solver: newton raphson;
-	eigenanalysis: list, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        eigenanalysis: list, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         suffix width, 2,
-    output matrices, 
-	parameter, 0.01,
-	output eigenvectors, output geometry,	
+    output matrices,
+        parameter, 0.01,
+        output eigenvectors, output geometry,
     use lapack, balance, permute;
     threads: assembly, 1;
-    output: iterations;
+    output: messages;
 end: initial value;
 
-include: "inline_joint_ad_2_parameters.set";
-
 begin: control data;
-	output meter: closest next, 0, forever, const, 0.1;
+    include: "inline_joint_ad_2_parameters.set";
+    output meter: closest next, 0, forever, const, 0.1;
     default output: all;
-	structural nodes: 2;
+        structural nodes: 2;
     rigid bodies: 1;
     loadable elements: 2-2*traditional;
     joints: 1+2*traditional;
-	max iterations: 10;
-	tolerance: 1e-6;
-	gravity;
-	print: dof description;
+        max iterations: 10;
+        tolerance: 1e-6;
+        gravity;
+        print: dof description;
 
 use: loadable elements, in assembly;
 end: control data;
 
 reference: ref_id_slider,
     position, reference, global, X0, Y0, Z0,
-    orientation, reference, global, matr, 	cos(theta_y) * cos(theta_z),	-sin(theta_z),	sin(theta_y) * cos(theta_z),
-								            cos(theta_y) * sin(theta_z),	 cos(theta_z),	sin(theta_y) * sin(theta_z),
-								            -sin(theta_y),		 	 			 	   0.,					cos(theta_y),
+    orientation, reference, global, matr,       cos(theta_y) * cos(theta_z),	-sin(theta_z),	sin(theta_y) * cos(theta_z),
+                                                                            cos(theta_y) * sin(theta_z),	 cos(theta_z),	sin(theta_y) * sin(theta_z),
+                                                                            -sin(theta_y),		                                           0.,					cos(theta_y),
     velocity,         reference, global, null,
     angular velocity, reference, global, null;
 
@@ -156,36 +156,35 @@ begin: nodes;
 
 structural: node_id_slider, dynamic,
     position, reference, ref_id_slider, null,
-	orientation, reference, global, eye,
-	velocity, reference, ref_id_slider, dXP, dYP, dZP,
-	angular velocity, reference, ref_id_slider, dWX, dWY, dWZ;
+        orientation, reference, global, eye,
+        velocity, reference, ref_id_slider, dXP, dYP, dZP,
+        angular velocity, reference, ref_id_slider, dWX, dWY, dWZ;
 
 structural: node_id_ground, static,
     position, reference, global, 0., 0., 0.,
-	orientation, reference, global, eye,
-	velocity, reference, global, null,
-	angular velocity, reference, global, null;
+        orientation, reference, global, eye,
+        velocity, reference, global, null,
+        angular velocity, reference, global, null;
 
 end: nodes;
 
 begin: elements;
     module load: "libmodule-autodiff_test.la";
-	body: body_id_slider,
-		# node
-		node_id_slider,
-		# mass
-		m,
-		# relative center of mass
-		reference, node, null,
-		# inertia matrix
-		diag, J11, J22, J33,
-		inertial, reference, node, eye;
+        body: body_id_slider,
+                # node
+                node_id_slider,
+                # mass
+                m,
+                # relative center of mass
+                reference, node, null,
+                # inertia matrix
+                diag, J11, J22, J33,
+                inertial, reference, node, eye;
 
     joint: joint_id_ground, clamp, node_id_ground, node, node;
 
     include: "inline_joint_ad_2_elements.elm";
 
-	gravity: 0., 0., -1.,
-	const, g;		
+        gravity: 0., 0., -1.,
+        const, g;
 end: elements;
-

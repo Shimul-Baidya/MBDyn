@@ -1,4 +1,4 @@
-% MBDyn (C) is a multibody analysis code. 
+% MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
 % Copyright (C) 1996-2023
@@ -15,7 +15,7 @@
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation (version 2 of the License).
-% 
+%
 %
 % This program is distributed in the hope that it will be useful,
 % but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,18 +35,18 @@
 %        in the GNU Public License version 2.1
 
 function iPrivDataIdx = iGetPrivDataIdx(elem, name)
-    switch (name)
+  switch (name)
     case "Fn"
-        iPrivDataIdx = int32(1);
+      iPrivDataIdx = int32(1);
     case "z1"
-        iPrivDataIdx = int32(2);
+      iPrivDataIdx = int32(2);
     case "z2"
-        iPrivDataIdx = int32(3);
+      iPrivDataIdx = int32(3);
     case "zP1"
-        iPrivDataIdx = int32(4);
+      iPrivDataIdx = int32(4);
     case "zP2"
-        iPrivDataIdx = int32(5);
+      iPrivDataIdx = int32(5);
     otherwise
-        error("ball bearing(%d): unknown private data name \"%s\"", elem.pMbElem.GetLabel(), name);
-    endswitch
+      error("ball bearing(%d): unknown private data name \"%s\"", elem.pMbElem.GetLabel(), name);
+  endswitch
 endfunction

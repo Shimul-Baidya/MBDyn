@@ -615,7 +615,11 @@ unsigned streamOutputInitFunctionCalls = 0;
 StreamContent* ReadStreamContent(DataManager *pDM, MBDynParser& HP, StreamContent::Type type) {
 	//searches in the bag the content type found in MBDyn input file
 	const char *s = HP.IsWord(streamOutputContentTypeWordSet);
-
+        
+        if (!s) {
+             s = "";
+        }
+        
 	StreamOutputContentTypeMap::iterator it = streamOutputContentTypeMap.find(std::string(s));
 	if (it == streamOutputContentTypeMap.end()) {
 		silent_cerr("[streamoutelem.cc] ReadStreamContent:unknown stream output content type "

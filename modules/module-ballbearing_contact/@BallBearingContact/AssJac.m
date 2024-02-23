@@ -1,4 +1,4 @@
-% MBDyn (C) is a multibody analysis code. 
+% MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
 % Copyright (C) 1996-2023
@@ -15,7 +15,7 @@
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation (version 2 of the License).
-% 
+%
 %
 % This program is distributed in the hope that it will be useful,
 % but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,23 +34,23 @@
 %        for use in the software MBDyn as described
 %        in the GNU Public License version 2.1
 
-function [Jac, ridx, cidx, bSparse] = AssJac(elem, dCoef, XCurr, XPrimeCurr)
-    iFirstIndex = elem.pMbElem.iGetFirstIndex();
+function [Jac, ridx, cidx, bSparse, elem] = AssJac(elem, dCoef, XCurr, XPrimeCurr)
+  iFirstIndex = elem.pMbElem.iGetFirstIndex();
 
-    bSparse = false;
+  bSparse = false;
 
-    ridx = [ elem.pNode1.iGetFirstMomentumIndex() + int32(1:6).';
-             elem.pNode2.iGetFirstMomentumIndex() + int32(1:6).';
-             iFirstIndex + int32(1:2).' ];
+  ridx = [ elem.pNode1.iGetFirstMomentumIndex() + int32(1:6).';
+           elem.pNode2.iGetFirstMomentumIndex() + int32(1:6).';
+           iFirstIndex + int32(1:2).' ];
 
-    cidx = [ elem.pNode1.iGetFirstPositionIndex() + int32(1:6).';
-             elem.pNode2.iGetFirstPositionIndex() + int32(1:6).';
-             iFirstIndex + int32(1:2).' ];
+  cidx = [ elem.pNode1.iGetFirstPositionIndex() + int32(1:6).';
+           elem.pNode2.iGetFirstPositionIndex() + int32(1:6).';
+           iFirstIndex + int32(1:2).' ];
 
-    [X, XP] = GetStateVector(elem, XCurr, XPrimeCurr);
+  [X, XP] = GetStateVector(elem, XCurr, XPrimeCurr);
 
-    [f, df_dX] = mbdyn_derivative(@(X) ComputeResidual(elem, dCoef, X, XP), X);
-    [f, df_dXP] = mbdyn_derivative(@(XP) ComputeResidual(elem, dCoef, X, XP), XP);
+  [f, df_dX] = mbdyn_derivative(@(X) ComputeResidual(elem, dCoef, X, XP), X);
+  [f, df_dXP] = mbdyn_derivative(@(XP) ComputeResidual(elem, dCoef, X, XP), XP);
 
-    Jac = -df_dXP - dCoef * df_dX;
+  Jac = -df_dXP - dCoef * df_dX;
 endfunction

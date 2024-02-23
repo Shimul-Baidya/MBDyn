@@ -45,6 +45,11 @@
 #include <fenv.h>
 #endif // HAVE_FENV_H
 
+#ifdef _POSIX_C_SOURCE
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -4548,6 +4553,79 @@ namespace sp_grad_test {
                check_PrincipalAxes(J_princ2, R_princ2_v, Jp, J2, dTol);
           }
      }
+
+     template <typename T>
+     T constexpr sqrtint(T x) {
+          T sqx = 2;
+
+          while (4 * sqx * sqx < x) {
+               sqx *= 2;
+          }
+
+          return sqx;
+     }
+
+     void test22()
+     {
+          bool bCaughtBadAlloc = false;
+
+          try {
+               // FIXME: Divide by two in order to avoid errors incorrectly reported by valgrind:
+               constexpr size_t uSizeAlloc = std::numeric_limits<size_t>::max() / 2;
+               constexpr size_t uNumDeriv = std::numeric_limits<index_type>::max();
+               constexpr size_t uNumItems = (uSizeAlloc - sizeof(SpMatrix<SpGradient>)) / (uNumDeriv * sizeof(SpDerivRec) + sizeof(SpGradient));
+               constexpr index_type iNumRows = sqrtint(uNumItems);
+               constexpr index_type iNumCols = iNumRows;
+
+               SpMatrix<SpGradient> A(iNumRows, iNumCols, uNumDeriv);
+          } catch (const std::bad_alloc& err) {
+               bCaughtBadAlloc = true;
+          }
+
+          assert(bCaughtBadAlloc);
+     }
+
+     void test23() {
+#ifdef _POSIX_C_SOURCE
+          constexpr index_type iNumDeriv = std::numeric_limits<index_type>::max();
+
+          rlimit rlimprev;
+
+          if (0 != getrlimit(RLIMIT_DATA, &rlimprev)) {
+               DEBUGCERR("getrlimit failed\n");
+               ASSERT(0);
+               return;
+          }
+
+          rlimit rlimnew = rlimprev;
+
+          rlimnew.rlim_cur = std::min(rlimnew.rlim_cur, iNumDeriv * sizeof(SpDerivRec) / 8);
+
+          if (0 != setrlimit(RLIMIT_DATA, &rlimnew)) {
+               DEBUGCERR("setrlimit failed\n");
+               ASSERT(0);
+               return;
+          }
+
+          bool bCaughtBadAlloc = false;
+
+          try {
+               SpGradient g;
+               g.ResizeReset(1., iNumDeriv);
+          } catch (const std::bad_alloc&) {
+               bCaughtBadAlloc = true;
+          }
+
+          if (0 != setrlimit(RLIMIT_DATA, &rlimprev)) {
+               DEBUGCERR("setrlimit failed\n");
+               ASSERT(0);
+          }
+
+          assert(bCaughtBadAlloc);
+#else
+          DEBUGCERR("test23 will be skipped because setrlimit is not available\n");
+#endif
+     }
 }
 
 int main(int argc, char* argv[])
@@ -4687,6 +4765,8 @@ int main(int argc, char* argv[])
           if (SP_GRAD_RUN_TEST(20.1)) test20();
           if (SP_GRAD_RUN_TEST(20.2)) test20a();
           if (SP_GRAD_RUN_TEST(21.1)) test21(inumloops);
+          if (SP_GRAD_RUN_TEST(22.1)) test22();
+          if (SP_GRAD_RUN_TEST(23.1)) test23();
 
           cerr << "All tests passed\n"
                << "\n\tloops performed: " << inumloops

@@ -43,6 +43,7 @@
 
 #ifdef USE_PARDISO
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <limits>
@@ -53,7 +54,7 @@
 #include "solman.h"
 #include "spmapmh.h"
 #include "sp_gradient_spmh.h"
-#include <mkl/mkl_pardiso.h>
+#include <mkl_pardiso.h>
 
 template <typename MKL_INT_TYPE>
 struct PardisoSolverTraits;

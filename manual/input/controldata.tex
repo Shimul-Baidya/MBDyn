@@ -211,6 +211,7 @@ for backwards compatibility.
             | [ \{ \kw{element} | \kw{node} \} ] \kw{connection}
             | \kw{all}
             | \kw{none} \}
+            [ , \kw{to file} ]
 \end{Verbatim}
 %\end{verbatim}
 \begin{itemize}
@@ -230,6 +231,8 @@ for backwards compatibility.
 \item the keyword \kw{all} enables all dof statistics printing;
 \item the keyword \kw{none} disables all dof statistics printing
 	(the default).
+\item If the keyword \kw{to file} is used, then the output is written to
+  the \texttt{.dof} file. Otherwise it is written to the standard output.
 \end{itemize}
 Note that, apart from \kw{none}, the other values are additive,
 i.e.\ the statement

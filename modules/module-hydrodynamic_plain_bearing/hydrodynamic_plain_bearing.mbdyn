@@ -29,7 +29,7 @@
 # Author: Reinhard Resch <mbdyn-user@a1.net>
 
 ## Loading the module is not required if MBDyn was built with --with-static-modules
-## module load: "libmodule-hydrodynamic_plain_bearing";
+## module load: "libmodule-hydrodynamic_plain_bearing.la";
 
 #######################################################
 # NODE NUMBERS
@@ -177,9 +177,10 @@ set: real gravity_tau = 1e-8;
 # INITIAL TIME AND FINAL TIME
 #########################################################
 
+set: real number_of_revolutions = 3;
 set: real initial_time = 0;
-set: real final_time = 10 * 2 * pi / abs(shaft_omega0);
-set: integer number_of_time_steps = 10000;
+set: real final_time = 2 * pi * number_of_revolutions / abs(shaft_omega0);
+set: integer number_of_time_steps = 360. * number_of_revolutions;
 
 begin: data;
         problem: initial value; # the default
@@ -192,25 +193,20 @@ begin: initial value;
         final time: final_time;
 
         time step: (final_time-initial_time)/number_of_time_steps;
-
+        output: iterations;
         max iterations: 30;
-        tolerance: 1.e-8, 1e-6;
+        tolerance: 1.e-8, test, norm, 1e-6, test, norm;
         derivatives tolerance: 1e-6, 1e-6;
-        derivatives max iterations: 1000;
+        derivatives max iterations: 10;
         derivatives coefficient: auto;
         threads: assembly, 1;
+        method: ms, 0.6;
         linear solver: umfpack, scale, row max column max, always;
         nonlinear solver: nox,
               modified, 1000,
               keep jacobian matrix,
               jacobian operator, newton krylov,
-              linear solver tolerance, 1e-10,
-              linear solver max iterations, 100,
-              forcing term, type 2,
-              minimum step, 1e-12,
-              weighted rms absolute tolerance, 1e-3,
-              weighted rms relative tolerance, 1e-1,
-              krylov subspace size, 100;
+              forcing term, type 2;
 end: initial value;
 
 begin: control data;

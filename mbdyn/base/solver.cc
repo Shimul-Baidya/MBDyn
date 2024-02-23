@@ -599,6 +599,11 @@ Solver::Prepare(void)
 	/* Si fa dare l'std::ostream al file di output per il log */
 	std::ostream& Out = pDM->GetOutFile();
 
+	/*
+	 * Need to call OutputPrepare before calling Output!
+	 */
+	pDM->OutputPrepare();
+        
 	if (eAbortAfter == AFTER_INPUT) {
 		/* Esce */
 		pDM->Output(0, dTime, 0., true);
@@ -819,12 +824,6 @@ Solver::Prepare(void)
 	 */
 
 	pDM->SetValue(*pX, *pXPrime);
-
-
-	/*
-	 * Prepare output
-	 */
-	pDM->OutputPrepare();
 
 	/*
 	 * If eigenanalysis is requested, prepare output for it
@@ -1561,15 +1560,16 @@ Solver::Start(void)
 	ASSERT(pFirstRegularStep!= 0);
 	SetupSolmans(pFirstRegularStep->GetIntegratorNumUnknownStates(), true);
 	pCurrStepIntegrator = pFirstRegularStep;
-
+        int retries = -1;
 IfFirstStepIsToBeRepeated:
 	try {
+                retries++;
 		pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, 1);
 		if (outputStep()) {
 			if (outputCounter()) {
 				silent_cout(std::endl);
 			}
- 			silent_cout("Step(" << 1 << ':' << 0 << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+ 			silent_cout("Step(" << lStep << ':' << retries << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
 		}
 		dTest = pFirstRegularStep->Advance(this, dRefTimeStep,
 				dCurrTimeStep/dRefTimeStep, CurrStep,
@@ -2192,6 +2192,11 @@ Solver::Advance(void)
 
 	CurrStep = StepIntegrator::NEWSTEP;
 
+        if (eAbortAfter >= AFTER_REGULAR_STEP_0 && lStep >= eAbortAfter - AFTER_REGULAR_STEP_0) {
+                silent_cout("End of step " << lStep << "; no simulation is required.\n");
+                dFinalTime = dTime;
+        }
+        
 	if (pDM->EndOfSimulation() || dTime >= dFinalTime) {
                 // Make sure to execute all eigenanalyses after the end of the simulation
                 DEBUGCERR("Executing all remaining eigenanalyses\n");
@@ -2425,7 +2430,7 @@ IfStepIsToBeRepeated:
 	/* Calcola il nuovo timestep */
 	dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
 	DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
-
+       
 	return true;
 }
 
@@ -2779,7 +2784,7 @@ Solver::ReadData(MBDynParser& HP)
 
 			/* DEPRECATED */ "fictitious" "steps" /* END OF DEPRECATED */ ,
 			"dummy" "steps",
-
+                        "regular" "step",
 		"output",
 			"none",
 			"iterations",
@@ -2906,12 +2911,12 @@ Solver::ReadData(MBDynParser& HP)
 		DUMMYSTEPSMAXITERATIONS,
 
 		ABORTAFTER,
-		INPUT,
-		ASSEMBLY,
-		DERIVATIVES,
-		FICTITIOUSSTEPS,
-		DUMMYSTEPS,
-
+			INPUT,
+			ASSEMBLY,
+			DERIVATIVES,
+			FICTITIOUSSTEPS,
+			DUMMYSTEPS,
+                        REGULARSTEP,
 		OUTPUT,
 			NONE,
 			ITERATIONS,
@@ -3240,7 +3245,17 @@ Solver::ReadData(MBDynParser& HP)
 					"Simulation will abort after"
 					" dummy steps solution" << std::endl);
 				break;
-
+                        case REGULARSTEP: {
+                                const long lAbortAfterStep = HP.GetInt();
+                                if (lAbortAfterStep < 0) {
+                                        silent_cerr("Step must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
+                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                }
+                                eAbortAfter = static_cast<AbortAfter>(lAbortAfterStep + AFTER_REGULAR_STEP_0);
+				DEBUGLCOUT(MYDEBUG_INPUT,
+					"Simulation will abort after"
+                                           " step " << lAbortAfterStep << "\n");
+                        } break;
 			default:
 				silent_cerr("Don't know when to abort,"
 					" so I'm going to abort now" << std::endl);
@@ -5689,6 +5704,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						dSolutionTol,
 						iMaxIterations,
 						bModResTest));
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 1);
+                        }
 				break;		
 
 		case INT_MS3:
@@ -5706,6 +5724,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pSecondRhoRegular,
 						pSecondRhoAlgebraicRegular,
 						bModResTest));
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 2);
+                        }                        
 				break;
 
 		case INT_MS4:
@@ -5731,6 +5752,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pThirdRhoRegular,
 						pThirdRhoAlgebraicRegular,
 						bModResTest));
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 3);
+                        }                        
 				break;
 	
 	default:
@@ -7340,13 +7364,18 @@ Solver::AllocateNonlinearSolver()
                                        MCPNewtonMinFB(pDM, *this, oLineSearchParam));
                 break;
 #ifdef USE_TRILINOS
-        case NonlinearSolver::NOX:
+        case NonlinearSolver::NOX: {
                 // FIXME: Since access to the Jacobian matrix through the Trilinos library is not under our control,
                 // FIXME: we have to ensure that the content of the matrix is not destroyed by the linear solver.
+                constexpr unsigned uMaskCCDir = LinSol::SOLVER_FLAGS_ALLOWS_CC | LinSol::SOLVER_FLAGS_ALLOWS_DIR;
+                unsigned uSolFlags = CurrLinearSolver.GetSolverFlags();
+                const bool bCompactSpmh = (uSolFlags & uMaskCCDir) != 0u;
+                const bool bJacOpNewton = (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON) != 0u;
+                bool bAllowCompactSpmh = true;
+
                 switch (CurrLinearSolver.GetSolver()) {
                 case LinSol::UMFPACK_SOLVER:
                 case LinSol::KLU_SOLVER:
-                case LinSol::Y12_SOLVER:
                 case LinSol::PARDISO_SOLVER:
                 case LinSol::PARDISO_64_SOLVER:
                 case LinSol::PASTIX_SOLVER:
@@ -7355,10 +7384,16 @@ Solver::AllocateNonlinearSolver()
                 case LinSol::AZTECOO_SOLVER:
                 case LinSol::AMESOS_SOLVER:
                 case LinSol::SICONOS_SPARSE_SOLVER:
-                        // All solvers which do not destroy the Jacobian during factorization can be added here.
+                        // All linear solvers which do not destroy the Jacobian during factorization should be added here.
+                        break;
+                case LinSol::Y12_SOLVER:
+                        // Y12 will destroy the Jacobian only if a "dir" or "cc" matrix handler is used.
+                        if (bJacOpNewton) {
+                                bAllowCompactSpmh = false;
+                        }
                         break;
                 default:
-                        if (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON) {
+                        if (bJacOpNewton) {
                                 silent_cerr("Nonlinear solver \"nox\" cannot "
                                             "be used with linear solver \""
                                             << CurrLinearSolver.GetSolverName()
@@ -7366,24 +7401,32 @@ Solver::AllocateNonlinearSolver()
                                 throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                         }
                 }
-                {
-                        const SolutionManager::ScaleOpt& oScale = CurrLinearSolver.GetScale();
-                        const bool bScaleEnabled = oScale.when != SolutionManager::SCALEW_NEVER && oScale.algorithm != SolutionManager::SCALEA_NONE;
-                        const unsigned uSolFlags = CurrLinearSolver.GetSolverFlags();
-                        const unsigned uMaskCCDir = LinSol::SOLVER_FLAGS_ALLOWS_CC | LinSol::SOLVER_FLAGS_ALLOWS_DIR;
-                        const bool bCompactSpmh = (uSolFlags & uMaskCCDir) != 0;
 
-                        if (bScaleEnabled && bCompactSpmh) {
+                const SolutionManager::ScaleOpt& oScale = CurrLinearSolver.GetScale();
+                const bool bScaleEnabled = oScale.when != SolutionManager::SCALEW_NEVER && oScale.algorithm != SolutionManager::SCALEA_NONE;
+
+                if (bScaleEnabled) {
+                        if (bCompactSpmh) {
                                 silent_cerr("Warning: Nonlinear solver \"nox\" cannot "
                                             "be used with compact sparse matrix handlers "
                                             "\"cc\" or \"dir\" and matrix scaling enabled at the same time!\n"
                                             "Warning: using matrix handler \"map\" instead\n");
-                                CurrLinearSolver.SetSolverFlags((uSolFlags & ~uMaskCCDir) | LinSol::SOLVER_FLAGS_ALLOWS_MAP);
                         }
+                        bAllowCompactSpmh = false;
                 }
-                
+
+                if (!bAllowCompactSpmh && bCompactSpmh) {
+                        silent_cerr("Warning: Nonlinear solver \"nox\" cannot "
+                                    "be used with linear solver \""
+                                    << CurrLinearSolver.GetSolverName()
+                                    << "\" and \"cc\" or \"dir\" matrix handlers enabled, "
+                                    << "unless the \"newton krylov\" option is used!\n");
+                        uSolFlags = (uSolFlags & ~uMaskCCDir) | LinSol::SOLVER_FLAGS_ALLOWS_MAP;
+                }
+
+                CurrLinearSolver.SetSolverFlags(uSolFlags);
                 pNLS = pAllocateNoxNonlinearSolver(*this, oNoxSolverParam);
-                break;
+        } break;
 #endif
 #ifdef USE_SICONOS
         case NonlinearSolver::SICONOS_MCP_NEWTON_FB:

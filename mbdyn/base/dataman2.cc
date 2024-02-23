@@ -1182,14 +1182,16 @@ DataManager::InitialJointAssembly(void)
 
 		/* Elementi (con iteratore): */
 		pEl = IAIter.GetFirst();
-		while (pEl != NULL && !(bNotDeformableInitial && pEl->bIsDeformable())) {
-			try {
-				*pResHdl += pEl->InitialAssRes(WorkVec, X);
-			}
-			catch (Elem::ChangedEquationStructure& e) {
-				// do nothing: Jacobian matrix
-				// is always recomputed anyway...
-			}
+		while (pEl != NULL) {
+                        if (!(bNotDeformableInitial && pEl->bIsDeformable())) {
+                                try {
+                                        *pResHdl += pEl->InitialAssRes(WorkVec, X);
+                                }
+                                catch (Elem::ChangedEquationStructure& e) {
+                                        // do nothing: Jacobian matrix
+                                        // is always recomputed anyway...
+                                }
+                        }
 			pEl = IAIter.GetNext();
 		}
 
@@ -1307,8 +1309,10 @@ DataManager::InitialJointAssembly(void)
 
 		/* Contributo degli elementi */
 		pEl = IAIter.GetFirst();
-		while (pEl != NULL && !(bNotDeformableInitial && pEl->bIsDeformable())) {
-			*pMatHdl += pEl->InitialAssJac(WorkMat, X);
+		while (pEl != NULL) {
+                        if (!(bNotDeformableInitial && pEl->bIsDeformable())) {
+                                *pMatHdl += pEl->InitialAssJac(WorkMat, X);
+                        }
 			pEl = IAIter.GetNext();
 		}
 
@@ -1326,7 +1330,7 @@ DataManager::InitialJointAssembly(void)
 		}
 
                 pMatHdl->PacMat();
-
+                
 		/* Fattorizza e risolve con jacobiano e residuo appena calcolati */
 		try {
 			pSM->Solve();
@@ -1373,6 +1377,8 @@ DataManager::InitialJointAssembly(void)
 		}
 		X += *pSolHdl;
 
+                DEBUGCERR("X=" << X << "\n");
+                
 		/* Correggo i nodi */
 		for (NodeContainerType::iterator i = NodeData[Node::STRUCTURAL].NodeContainer.begin();
 			i != NodeData[Node::STRUCTURAL].NodeContainer.end(); ++i)

@@ -438,7 +438,6 @@ diffdrive_set(void)
 	return true;
 }
 
-#ifndef STATIC_MODULES
 extern "C" int
 module_init(const char *module_name, void *pdm, void *php)
 {
@@ -456,4 +455,3 @@ module_init(const char *module_name, void *pdm, void *php)
 
 	return 0;
 }
-#endif // ! STATIC_MODULES

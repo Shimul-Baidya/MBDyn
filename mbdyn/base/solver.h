@@ -278,12 +278,13 @@ protected:
    	doublereal dDummyStepsRatio;
 
    	/* Flags vari */
-	enum AbortAfter {
+        enum AbortAfter: long {
 		AFTER_UNKNOWN,
 		AFTER_INPUT,
 		AFTER_ASSEMBLY,
 		AFTER_DERIVATIVES,
-		AFTER_DUMMY_STEPS
+		AFTER_DUMMY_STEPS,
+                AFTER_REGULAR_STEP_0,
 	};
 	AbortAfter eAbortAfter;
 
@@ -444,7 +445,6 @@ protected:
 	bool bSolConv;
 	bool bOut;
 	long lStep;
-
 public:
    	/* costruttore */
    	Solver(MBDynParser& HP,

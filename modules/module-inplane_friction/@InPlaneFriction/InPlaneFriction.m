@@ -34,7 +34,7 @@
 %        for use in the software MBDyn as described
 %        in the GNU Public License version 2.1
 
-function elem = InPlaneFriction(pMbElem, pDM, HP)
+function elem = InPlaneFriction(pMbElem, pDM, HP, OH)
     elem.pMbElem = pMbElem;
     elem.pDM = pDM;
 

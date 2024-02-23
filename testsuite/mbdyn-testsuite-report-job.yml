@@ -1,0 +1,119 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+variables:
+  MBD_TEST_COVERAGE_XML: "mbdyn-test-coverage.xml"
+  MBD_TEST_COVERAGE_HTML: "mbdyn-test-coverage.html"
+
+mbdyn-testsuite-report-job:
+  stage: test
+  needs:
+    - job: mbdyn-modules-test-job
+      artifacts: true
+    - job: mbdyn-tests-private-test-job
+      artifacts: true
+    - job: mbdyn-tests-public-test-job
+      artifacts: true
+    - job: octave-pkg-test-job
+      artifacts: true
+  script:
+    - status_files=`find "${TESTSUITE_PREFIX_TESTS}" -name '*-test-job.status'`
+    - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 4 || passed < tests || failed > 0) { exit 1; }}' ${status_files}
+
+mbdyn-testsuite-report-job-gcov:
+  stage: test
+  needs:
+    - job: mbdyn-tests-public-test-job-gcov
+      artifacts: true
+    - job: mbdyn-tests-private-test-job-gcov
+      artifacts: true
+    - job: mbdyn-modules-test-job-gcov
+      artifacts: true
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
+  script:
+    - status_files=`find "${TESTSUITE_PREFIX_TESTS}" -name '*-test-job.status'`
+    - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 3 || passed < tests || failed > 0) { exit 1; }}' ${status_files}
+
+mbdyn-testsuite-report-job-coverage:
+  variables:
+    MBD_TESTSUITE_REPORT_JOB_NUM_TASKS: 12
+    ## Needed for autoconf
+    MBD_GCOVR_EXCLUDE: '--gcov-exclude .*conftest\.gcda --gcov-exclude .*conftest\.gcno'
+    ## See also https://stackoverflow.com/questions/68345811/no-colours-in-gcovr-5-0-html-details-report
+    MBD_GCOVR_SUPPRESS_ERRORS: "--gcov-ignore-parse-errors --gcov-ignore-errors=no_working_dir_found --exclude-unreachable-branches"
+    MBD_GCOVR_EXTRA_ARGS: "-j ${MBD_TESTSUITE_REPORT_JOB_NUM_TASKS} ${MBD_GCOVR_EXCLUDE} ${MBD_GCOVR_SUPPRESS_ERRORS} --print-summary"
+    MBD_GCOVR_EXTRA_ARGS_HTML: "${MBD_GCOVR_EXTRA_ARGS} --html-details --html-medium-threshold 60 --html-high-threshold 80"
+    MBD_GCOVR_EXTRA_ARGS_XML: "${MBD_GCOVR_EXTRA_ARGS} --xml-pretty"
+  stage: test
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+    - job: mbdyn-modules-test-job-gcov ## Fetch all *.gcda and *.gcno
+      artifacts: true
+    - job: mbdyn-build-job-gcov
+      artifacts: true
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
+  script:
+    - MBD_TEST_COVERAGE_DIR="${CI_PROJECT_DIR}/${MBD_TEST_COVERAGE_DIR}"
+    - MBD_BUILD_DIR_GCOV="${CI_PROJECT_DIR}/${MBD_BUILD_DIR_GCOV}"
+    - mkdir -p "${MBD_TEST_COVERAGE_DIR}"
+    - xml_file="${MBD_TEST_COVERAGE_DIR}/${MBD_TEST_COVERAGE_XML}"
+    - html_file="${MBD_TEST_COVERAGE_DIR}/${MBD_TEST_COVERAGE_HTML}"
+    - gcovr --root "${CI_PROJECT_DIR}" --object-directory "${MBD_BUILD_DIR_GCOV}" --output "${html_file}" ${MBD_GCOVR_EXTRA_ARGS_HTML}
+    - gcovr --root "${CI_PROJECT_DIR}" --object-directory "${MBD_BUILD_DIR_GCOV}" --output "${xml_file}" ${MBD_GCOVR_EXTRA_ARGS_XML}
+    - export PATH="${CI_PROJECT_DIR}/testsuite:${PATH}"
+    ## Workaround for https://gitlab.com/gitlab-org/gitlab/-/issues/328772. Pipeline artifacts are limited to
+    # 10M. So split the single cobertura xml (which is often >100M) into one file per package, since there
+    # seems to be no limit on the _number_ of files, jut their size.
+    - cobertura_xml_split_by_package.py "${xml_file}" "${MBD_TEST_COVERAGE_DIR}"
+  coverage: /^\s*lines:\s*\d+.\d+\%/
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 24h
+    paths:
+      - $MBD_TEST_COVERAGE_DIR/mbdyn-test-coverage*.html
+      - $MBD_TEST_COVERAGE_DIR/cobertura-*.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: $MBD_TEST_COVERAGE_DIR/cobertura-*.xml
+    when: always
