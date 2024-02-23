@@ -36,7 +36,7 @@
 
 ## Usage:
 ## MBDyn installation:
-##   configure --enable-octave --enable-autodiff --with-static-modules --with-trilinos
+##   configure --enable-octave --with-static-modules --with-trilinos
 ##
 ## Octave package installation:
 ##   octave --eval 'pkg install -forge nurbs'
@@ -120,11 +120,11 @@ unwind_protect
   end_unwind_protect
 
   options.mbdyn_command = getenv("MBDYN_EXEC");
-  
+
   if (isempty(options.mbdyn_command))
     options.mbdyn_command = "mbdyn";
   endif
-  
+
   mbdyn_solver_run("triangular_contact.mbd", options);
 
   log_dat = mbdyn_post_load_log(options.output_file);
@@ -146,7 +146,7 @@ unwind_protect
     for i=1:numel(ext)
       err = symlink([options.output_file, ext{i}], [output_file, ext{i}]);
       if (err ~= 0)
-	error("failed to create symbolic link");
+        error("failed to create symbolic link");
       endif
     endfor
     mbdyn_post_abs_to_rel(log_dat.vars.node_id_cone, options.output_file, output_file, false);
@@ -169,7 +169,7 @@ unwind_protect
 
   figure("visible", "off");
   hold on;
-  plot(traj{log_dat.vars.node_idx_sphere_center}(:, 1), traj{log_dat.vars.node_idx_sphere_center}(:, 3), "-;trajectory;1");
+  plot(traj{log_dat.vars.node_idx_sphere_center}(:, 1), traj{log_dat.vars.node_idx_sphere_center}(:, 3), "-;trajectory;r");
   plot([-r2, 0, r2], [h2, 0, h2], "-;surface;0");
   xlabel("x [m]");
   ylabel("z [m]");
@@ -181,7 +181,7 @@ unwind_protect
   hold on;
   plot(t, drive_data{1}, "-;Wkin;1");
   plot(t, drive_data{2}, "-;Wpot;2");
-  plot(t, drive_data{1} + drive_data{2}, "-;Wkin+Wpot;0");
+  plot(t, drive_data{1} + drive_data{2}, "-;Wkin+Wpot;k");
   grid on;
   grid minor on;
   xlabel("t [s]");
@@ -192,21 +192,25 @@ unwind_protect
 
   figure("visible", "off");
   hold on;
-  plot(t, vel{log_dat.vars.node_idx_sphere_center}(:, 5) * r1, "-;omega * r1;1");
-  plot(t, vel{log_dat.vars.node_idx_sphere_center}(:, 1:3) * R(:, 1), "-;v;2");
-  plot(t, m1 * g * cos(Phi) / (J1 / r1^2 + m1) * t, "-;v1;0");
+  plot(t, vel{log_dat.vars.node_idx_sphere_center}(:, 5) * r1, "-;omega * r1;r");
+  plot(t, vel{log_dat.vars.node_idx_sphere_center}(:, 1:3) * R(:, 1), "-;v;g");
+  plot(t, m1 * g * cos(Phi) / (J1 / r1^2 + m1) * t, "-;v1;k");
   xlabel("t [s]");
   ylabel("v [m/s]");
   grid on;
   grid minor on;
   title("velocity");
   figure_list();
+
+  Wtot = drive_data{1} + drive_data{2};
+  tol = 1e-3;
+  assert(max(abs(Wtot - Wtot(1))) < tol * abs(Wtot(1)));
 unwind_protect_cleanup
   if (~isempty(options.output_file))
     fn = dir([options.output_file, "*"]);
 
     for i=1:numel(fn)
-      unlink(fullfile(fn(i).folder, fn(i).name));
+      [~] = unlink(fullfile(fn(i).folder, fn(i).name));
     endfor
   endif
 end_unwind_protect

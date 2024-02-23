@@ -225,6 +225,10 @@ KLUSolver::Factor(void)
 		ASSERT(Symbolic == 0);
 		ASSERT(Numeric == 0);
 
+                if (Control.status == KLU_SINGULAR) {
+                     throw ErrNoPivot(-1, MBDYN_EXCEPT_ARGS);
+                }
+                
 		throw ErrGeneric(MBDYN_EXCEPT_ARGS);
 	}
 }

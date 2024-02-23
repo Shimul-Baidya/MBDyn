@@ -375,9 +375,17 @@ $(PKG_FILE): $(top_srcdir)/utils/PKG_ADD mbdyn_util_oct.oct
 	@printf "Octave package file \"%s\" created\n" $(PKG_FILE)
 
 install-exec-local-oct: $(PKG_FILE)
-	@$(OCTAVE_CLI) -qfHW --eval "pkg install -global $<"
-	@printf "package \"%s\" installed\n" $(PKG_NAME)
+if USE_OCTAVE_UTILS_LOCAL
+	@$(OCTAVE_CLI) -qfHW --eval "$(OCTAVE_PKG_PREFIX)pkg install -local $<"
 else
+if USE_OCTAVE_UTILS_GLOBAL
+	@$(OCTAVE_CLI) -qfHW --eval "$(OCTAVE_PKG_PREFIX)pkg install -global $<"
+else
+	@$(OCTAVE_CLI) -qfHW --eval "$(OCTAVE_PKG_PREFIX)pkg install $<"
+endif
+endif
+	@printf "package \"%s\" installed\n" $(PKG_NAME)
+
 install-exec-local-oct:
 endif
 

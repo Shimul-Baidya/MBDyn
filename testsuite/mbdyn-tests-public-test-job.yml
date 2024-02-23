@@ -1,0 +1,157 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+variables:
+  ## Error codes which should not cause the pipeline to fail:
+  ## - timeout                    (0x2)
+  ## - module not found           (0x4)
+  ## - suppressed errors          (0x8)
+  MBD_TESTS_PUBLIC_EXIT_STATUS_MASK: "0x0"
+  ## Timeout per model (by default in minutes, "s" for seconds, "m" for minutes "h" for hours)
+  ## Timeout value should not be "unlimited" if we are testing models which are using sockets, because this might block our pipeline forever!
+  MBD_TESTS_PUBLIC_TIMEOUT: "unlimited"
+  MBD_TESTS_PUBLIC_NUM_TASKS: 12
+
+mbdyn-tests-public-test-job:   # This job runs in the test stage.
+  variables:
+    MBD_TESTS_PUBLIC_LOG_FILE: "mbdyn-tests-public-test-job.log"
+    MBD_TESTS_PUBLIC_STATUS_FILE: "mbdyn-tests-public-test-job.status"
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+    - job: mbdyn-build-job
+      artifacts: true
+  script:
+      - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
+      - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
+      - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
+      - MBD_TESTS_PUBLIC_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_TESTS_PUBLIC_OUTPUT_DIR}
+      - MBD_TESTS_PUBLIC_INPUT_DIR=${CI_PROJECT_DIR}/${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - echo "mbdyn-tests-public test job"
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - |
+        if ! test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
+          if ! git clone -b ${MBD_TESTS_PUBLIC_GITLAB_BRANCH} ${MBD_TESTS_PUBLIC_GITLAB} ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
+            echo "Failed to clone ${MBD_TESTS_PUBLIC_GITLAB}"
+            exit 1
+          fi
+        fi
+      - test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - cd ${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - git pull --force
+      - cd ${CI_PROJECT_DIR}
+      - chmod +x testsuite/simple_testsuite.sh
+      - mkdir -p ${MBD_TESTS_PUBLIC_OUTPUT_DIR} ## needed for realpath
+      - log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_LOG_FILE}"
+      - status_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_STATUS_FILE}"
+      - echo "unexpected" > "${status_file}"
+      - echo "-------------- ORIGINAL TESTS --------------------" | tee -a "${log_file}"
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/simple_testsuite.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" > "${status_file}"
+      - echo "-------------- PATCHED TESTS --------------------" | tee -a "${log_file}"
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" >> "${status_file}"
+  artifacts:
+    name: mbdyn-tests-public-test-job
+    expire_in: 24h
+    paths:
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_LOG_FILE
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_STATUS_FILE
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/**/*.stdout
+    when: always
+
+mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
+  variables:
+    MBD_TESTS_PUBLIC_LOG_FILE: "mbdyn-tests-public-test-job.log"
+    MBD_TESTS_PUBLIC_STATUS_FILE: "mbdyn-tests-public-test-job.status"
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+    - job: mbdyn-build-job-gcov
+      artifacts: true
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
+  script:
+      - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX_GCOV}
+      - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
+      - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
+      - MBD_TESTS_PUBLIC_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV}
+      - MBD_TESTS_PUBLIC_INPUT_DIR=${CI_PROJECT_DIR}/${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - echo "mbdyn-tests-public-test-job-gcov"
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - |
+        if ! test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
+          if ! git clone -b ${MBD_TESTS_PUBLIC_GITLAB_BRANCH} ${MBD_TESTS_PUBLIC_GITLAB} ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
+            echo "Failed to clone ${MBD_TESTS_PUBLIC_GITLAB}"
+            exit 1
+          fi
+        fi
+      - test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - cd ${MBD_TESTS_PUBLIC_INPUT_DIR}
+      - git pull --force
+      - cd ${CI_PROJECT_DIR}
+      - chmod +x testsuite/simple_testsuite.sh
+      - mkdir -p ${MBD_TESTS_PUBLIC_OUTPUT_DIR} ## needed for realpath
+      - log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_LOG_FILE}"
+      - status_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_STATUS_FILE}"
+      - echo "unexpected" > "${status_file}"
+      - echo "-------------- PATCHED TESTS --------------------" | tee "${log_file}"
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --scale-when "always" --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" > "${status_file}"
+  artifacts:
+    name: mbdyn-tests-public-test-job-gcov
+    expire_in: 24h
+    paths:
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/$MBD_TESTS_PUBLIC_LOG_FILE
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/$MBD_TESTS_PUBLIC_STATUS_FILE
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/**/*.stdout
+      - $MBD_BUILD_DIR_GCOV
+    when: always

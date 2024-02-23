@@ -39,45 +39,45 @@ include: "${TRIANGULAR_CONTACT_SET}";
 set: real omega2 = 0;
 
 begin: data;
-	problem: initial value; # the default
+        problem: initial value; # the default
 end: data;
 
 begin: initial value;
-	initial time: 0;
-	final time: t1;
-
-	time step: t1 / 2000;
-	min time step: t1 / 200000;
-	max time step: t1 / 2000;
-	strategy: factor, 0.75, 1, 1.25, 3, 2, 4;
-	max iterations: 100;
-	tolerance: 1e-6;
-	method: implicit euler;
-	derivatives tolerance: 1e-3;
-	derivatives max iterations: 100;
-	derivatives coefficient: 1e-10;
-	linear solver: umfpack, colamd, scale, row max column max, always, max iterations, 100;
-	nonlinear solver: line search, modified, 0, default solver options, heavy nonlinear, divergence check, no;
-	threads: assembly, 1;
-	output: iterations, solver condition number, stat, yes;
+        initial time: 0;
+        final time: t1;
+        
+        time step: t1 / num_steps;
+        min time step: t1 / num_steps;
+        max time step: t1 / num_steps;
+        strategy: factor, 0.75, 1, 1.25, 3, 2, 4;
+        max iterations: 100;
+        tolerance: 1e-4, test, norm, 1e-4, test, norm;
+        method: implicit euler;
+        derivatives tolerance: 1e-6, 1e-6;
+        derivatives max iterations: 30;
+        derivatives coefficient: auto;
+        linear solver: umfpack, colamd, scale, row max column max, always, max iterations, 10;
+        nonlinear solver: line search, modified, 0, default solver options, heavy nonlinear, divergence check, no;
+        threads: disable;
+        output: iterations, solver condition number, stat, yes;
 end: initial value;
 
 begin: control data;
        use automatic differentiation;
        max iterations: 10;
        #use: loadable elements, in assembly;
-	output meter: closest next, 0, forever, const, 1e-2;
-	joints: 1;
-	structural nodes: 4;
-	rigid bodies: 1;
-	loadable elements: 1;
-	gravity;
-	output precision: 16;
-	default output: reference frames;
-	print: dof stats;
-	print: dof description;
-	print: element connection;
-	print: node connection;
+        output meter: closest next, 0, forever, const, 1e-2;
+        joints: 1;
+        structural nodes: 4;
+        rigid bodies: 1;
+        loadable elements: 1;
+        gravity;
+        output precision: 16;
+        default output: reference frames;
+        print: dof stats;
+        print: dof description;
+        print: element connection;
+        print: node connection;
 end: control data;
 
 set: integer ref_id_contact = 901;
@@ -92,71 +92,71 @@ set: integer drive_id_Wkin = 5001;
 set: integer drive_id_Wpot = 5002;
 
 reference: ref_id_contact,
-	   reference, global, (r2 - r1) * cos(Phi0), 0., -(r2 - r1) * sin(Phi0),
-	   reference, global, eye,
-	   reference, global, null,
-	   reference, global, null;
+           reference, global, (r2 - r1) * cos(Phi0), 0., -(r2 - r1) * sin(Phi0),
+           reference, global, eye,
+           reference, global, null,
+           reference, global, null;
 
 begin: nodes;
-	structural: node_id_contact, dynamic,
-		    reference, ref_id_contact, null,
-		    reference, ref_id_contact, eye,
-		    reference, ref_id_contact, null,
-		    reference, ref_id_contact, null;
+        structural: node_id_contact, dynamic,
+                    reference, ref_id_contact, null,
+                    reference, ref_id_contact, eye,
+                    reference, ref_id_contact, null,
+                    reference, ref_id_contact, null;
 
-	structural: node_id_target, static,
-			reference, global, null,
-			reference, global, eye,
-			reference, global, null,
-			reference, global, 0., 0., omega2;
+        structural: node_id_target, static,
+                        reference, global, null,
+                        reference, global, eye,
+                        reference, global, null,
+                        reference, global, 0., 0., omega2;
 
-	structural: node_id_contact_1, dummy,
-		    node_id_contact, offset,
-		    reference, ref_id_contact, r1, 0., 0.,
-		    reference, ref_id_contact, eye;
+        structural: node_id_contact_1, dummy,
+                    node_id_contact, offset,
+                    reference, ref_id_contact, r1, 0., 0.,
+                    reference, ref_id_contact, eye;
 
-	structural: node_id_contact_2, dummy,
-		    node_id_contact, offset,
-		    reference, ref_id_contact, -r1, 0., 0.,
-		    reference, ref_id_contact, eye;
+        structural: node_id_contact_2, dummy,
+                    node_id_contact, offset,
+                    reference, ref_id_contact, -r1, 0., 0.,
+                    reference, ref_id_contact, eye;
 end: nodes;
 
 begin: elements;
-	joint: joint_id_clamp, total pin joint, node_id_target,
-	       position, reference, global, null,
-	       position orientation, reference, global, eye,
-	       rotation orientation, reference, global, eye,
-	       position, reference, global, null,
-	       position orientation, reference, global, eye,
-	       rotation orientation, reference, global, eye,
-	       position constraint,
-		       active,
-		       active,
-		       active,
-		       null,
-	       orientation constraint,
-		       active,
-		       active,
-		       angular velocity,
-		       component,
-		       null, null, omega2;
+        joint: joint_id_clamp, total pin joint, node_id_target,
+               position, reference, global, null,
+               position orientation, reference, global, eye,
+               rotation orientation, reference, global, eye,
+               position, reference, global, null,
+               position orientation, reference, global, eye,
+               rotation orientation, reference, global, eye,
+               position constraint,
+                       active,
+                       active,
+                       active,
+                       null,
+               orientation constraint,
+                       active,
+                       active,
+                       angular velocity,
+                       component,
+                       null, null, omega2;
 
-	body: body_id_contact,
-	      node_id_contact,
-	      m1,
-	      reference, ref_id_contact, null,
-	      diag, J1, J1, J1,
-	      inertial, reference, ref_id_contact, eye;
+        body: body_id_contact,
+              node_id_contact,
+              m1,
+              reference, ref_id_contact, null,
+              diag, J1, J1, J1,
+              inertial, reference, ref_id_contact, eye;
 
-	scalar function: "penalty", multilinear,
-	      -1., -s1,
-	       0.,  0.,
-	       1.,  0.;
+        scalar function: "penalty", multilinear,
+              -1., -s1,
+               0.,  0.,
+               1.,  0.;
 
-	include: "${TRIANGULAR_CONTACT_ELEM}";
+        include: "${TRIANGULAR_CONTACT_ELEM}";
 
-	gravity: uniform, 0., 0., -1., g;
+        gravity: uniform, 0., 0., -1., g;
 
-	drive caller: drive_id_Wkin, element, body_id_contact, body, string, "E", direct, output, yes;
-	drive caller: drive_id_Wpot, element, body_id_contact, body, string, "V", direct, output, yes;
+        drive caller: drive_id_Wkin, element, body_id_contact, body, string, "E", direct, output, yes;
+        drive caller: drive_id_Wpot, element, body_id_contact, body, string, "V", direct, output, yes;
 end: elements;

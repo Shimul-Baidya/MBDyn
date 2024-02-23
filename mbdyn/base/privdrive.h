@@ -53,7 +53,8 @@ protected:
 	const SimulationEntity *pSE;
 	unsigned int iIndex;
 	std::string sIndexName;
-   
+        mutable bool bWarnMsg;
+        void PrintWarningMsgOnce() const;
 public:
 	PrivDriveCaller(const DriveHandler* pDH, const DriveCaller* pDC,
 			const SimulationEntity *p, unsigned int i, const std::string& s);
@@ -73,9 +74,9 @@ public:
 inline doublereal
 PrivDriveCaller::dGet(const doublereal& dVar) const
 {
-	// should this be "pedantic"?
-	silent_cerr("warning, possible improper call of " << (dynamic_cast<const Elem *>(pSE) == 0 ? "node" : "element") << " drive with real argument; \"dVar\" is ignored and private data is returned instead"
-		<< std::endl);
+	if (bWarnMsg) {
+           PrintWarningMsgOnce();
+	}
 
 	// ignore dVar; return private data
 	return dGet();

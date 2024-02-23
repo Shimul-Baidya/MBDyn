@@ -41,7 +41,7 @@
 PrivDriveCaller::PrivDriveCaller(const DriveHandler* pDH, 
 		const DriveCaller* pDC,
 		const SimulationEntity *p, unsigned int i, const std::string& s)
-: DriveCaller(pDH), DriveOwner(pDC), pSE(p), iIndex(i), sIndexName(s)
+: DriveCaller(pDH), DriveOwner(pDC), pSE(p), iIndex(i), sIndexName(s), bWarnMsg(true)
 {
 	NO_OP;
 };     	
@@ -49,6 +49,30 @@ PrivDriveCaller::PrivDriveCaller(const DriveHandler* pDH,
 PrivDriveCaller::~PrivDriveCaller(void)
 {
 	NO_OP;
+}
+
+void PrivDriveCaller::PrintWarningMsgOnce() const
+{
+	const char* pszSimEntityType = dynamic_cast<const Elem*>(pSE) ? "element" : "node";
+
+	char buf[BUFSIZ] = "";
+	const WithLabel* pWL = dynamic_cast<const WithLabel*>(pSE);
+	if (pWL) {
+		snprintf(buf, sizeof(buf), "(%u)", pWL->GetLabel());
+	}
+
+	const char *type = 0;
+	if (dynamic_cast<const Elem*>(pSE)) {
+		type = psElemNames[dynamic_cast<const Elem*>(pSE)->GetElemType()];
+	} else {
+		type = psNodeNames[dynamic_cast<const Node*>(pSE)->GetNodeType()];
+	}
+
+	// should this be "pedantic"?
+	pedantic_cerr("warning, possible improper call of "
+		<< pszSimEntityType << " drive with real argument; \"dVar\" is ignored and private data \""
+		<< sIndexName << "\" of " << type << buf << " is returned instead\n");
+	bWarnMsg = false; // Let us assume that it is sufficient to print this annoying warning only once for each drive caller!
 }
 
 /* Copia */

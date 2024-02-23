@@ -38,7 +38,6 @@
 #include <cfloat>
 #include <vector>
 
-#include "solver.h"
 #include "dataman.h"
 #include "userelem.h"
 #include "driven.h"
@@ -274,7 +273,9 @@ LoadIncNorm::AfterConvergence(const VectorHandler& X,
 	const VectorHandler& XP)
 {
 	if (m_dP >= m_dPMax) {
-		mbdyn_set_stop_at_end_of_time_step();
+             // If we would call mbdyn_set_stop_at_end_of_time_step(), the exit status of MBDyn would be nonzero.
+             // But since this case is not indicating an error, the exit status should be zero.
+             throw NoErr(MBDYN_EXCEPT_ARGS);
 	}
 
 	// std::cerr << "### " << __PRETTY_FUNCTION__ << " m_FirstSteps=" << m_FirstSteps << std::endl;

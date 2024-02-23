@@ -100,7 +100,7 @@ begin: elements;
 		# linear elastic  isotropic, 1000.;
 		reference, 99;
 
-	module load: "./libmodule-loadinc.so";
+	module load: "libmodule-loadinc.la";
 
 	user defined: 0, load increment normalization,
 		help,

@@ -1,0 +1,110 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+octave-pkg-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+      - job: mkl-build-job
+      - job: netcdf-c-build-job
+        artifacts: true
+      - job: netcdf-cxx4-build-job
+        artifacts: true
+      - job: nlopt-build-job
+        artifacts: true
+      - job: mbdyn-build-job
+        artifacts: true
+  script:
+        - export MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+        - export MKL_PKG_CONFIG
+        - export NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+        - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+        - export OCT_PKG_BUILD_DIR=${CI_PROJECT_DIR}/${OCT_PKG_BUILD_DIR}
+        - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
+        - export OCTAVE_EXEC
+        - export OCT_PKG_LIST
+        - export MBD_COMPILER_FLAGS
+        - /usr/bin/time --verbose testsuite/octave_pkg_build_job.sh
+  artifacts:
+   name: octave-pkg-install-prefix
+   expire_in: 24h
+   paths:
+     - $OCT_PKG_INSTALL_PREFIX
+     - $OCT_PKG_BUILD_DIR/**/config.log
+   when: always
+  cache:
+    key: octave-pkg-build-job
+    paths:
+     - $OCT_PKG_BUILD_DIR
+
+octave-pkg-build-job-gcov:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+      - job: mkl-build-job
+      - job: netcdf-c-build-job
+        artifacts: true
+      - job: netcdf-cxx4-build-job
+        artifacts: true
+      - job: nlopt-build-job
+        artifacts: true
+      - job: mbdyn-build-job-gcov
+        artifacts: true
+  script:
+        - export MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+        - export MKL_PKG_CONFIG
+        - export NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+        - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+        - export OCT_PKG_BUILD_DIR=${CI_PROJECT_DIR}/${OCT_PKG_BUILD_DIR_GCOV}
+        - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
+        - export OCTAVE_EXEC
+        - export OCT_PKG_LIST
+        - export MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS_GCOV}"
+        - export LDFLAGS="--coverage"
+        - /usr/bin/time --verbose testsuite/octave_pkg_build_job.sh
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
+  artifacts:
+   name: octave-pkg-install-prefix
+   expire_in: 24h
+   paths:
+     - $OCT_PKG_INSTALL_PREFIX_GCOV
+     - $OCT_PKG_BUILD_DIR_GCOV/**/config.log
+     - $OCT_PKG_BUILD_DIR_GCOV/**/*.gcda
+     - $OCT_PKG_BUILD_DIR_GCOV/**/*.gcno
+   when: always
+  cache:
+    key: octave-pkg-build-job-gcov
+    paths:
+     - $OCT_PKG_BUILD_DIR_GCOV

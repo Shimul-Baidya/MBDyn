@@ -59,11 +59,11 @@ mbdyn_METIS_PartGraph(int iTotVertices,
 		// silence "set but not used warning if METIS_PartGraphVKway is not used
 		(void)numflag; 
 	/* if options[0] == 0, the rest is ignored */
-	int	options[5] = { 0 };
+	metis_idx_type	options[5] = { 0 };
 	/* total communication volume */
-	int	volume = 0;
+	metis_idx_type	volume = 0;
 	/* weiht flags */
-	int	wgtflag;
+	metis_idx_type	wgtflag;
 
 	metis_idx_type	*xadj = 0,
 		*adjncy = 0,
@@ -72,11 +72,11 @@ mbdyn_METIS_PartGraph(int iTotVertices,
 		*part = 0;
 
 	if (sizeof(metis_idx_type) == sizeof(int)) {
-		xadj = pXadj;
-		adjncy = pAdjncy;
-		vwgt = pVertexWgts;
-		adjwgt = pCommWgts;
-		part = pParAmgProcs;
+		xadj = (metis_idx_type*)pXadj;
+		adjncy = (metis_idx_type*)pAdjncy;
+		vwgt = (metis_idx_type*)pVertexWgts;
+		adjwgt = (metis_idx_type*)pCommWgts;
+		part = (metis_idx_type*)pParAmgProcs;
 
 	} else {
 		SAFENEWARR(xadj, metis_idx_type, iTotVertices);
@@ -126,19 +126,23 @@ mbdyn_METIS_PartGraph(int iTotVertices,
 	}
 
 #ifdef NEW_METIS_INTERFACE
-	METIS_PartGraphKway(&iTotVertices,
+	metis_idx_type iTotVert_tmp = iTotVertices;
+	metis_idx_type iDataComm_tmp = DataCommSize;
+	METIS_PartGraphKway(&iTotVert_tmp,
 			&wgtflag,
                         xadj,
 			adjncy,
 			vwgt,
                         NULL,
 			adjwgt,
-			&DataCommSize,
+			&iDataComm_tmp,
                         NULL,
                         NULL,
 			options,
 			&volume,
 			part);
+	iTotVertices = iTotVert_tmp;
+	DataCommSize = iDataComm_tmp;
 #else
 	METIS_PartGraphKway(&iTotVertices,
                         xadj,

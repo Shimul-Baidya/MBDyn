@@ -34,7 +34,7 @@
 %        for use in the software MBDyn as described
 %        in the GNU Public License version 2.1
 
-function [f, ridx] = AssRes(elem, dCoef, XCurr, XPrimeCurr)
+function [f, ridx, elem] = AssRes(elem, dCoef, XCurr, XPrimeCurr)
     iFirstIndex = elem.pMbElem.iGetFirstIndex();
 
     ridx = [ elem.pNode1.iGetFirstMomentumIndex() + int32(1:6).';

@@ -1787,7 +1787,7 @@ SolidElemStatic<ElementType, CollocationType, SolidCSLType, StructNodeType>::Col
 
      h0d = hd * Transpose(invJ);
 
-     F = Eye3;
+     F = ::Eye3; // Avoid singular matrix if "abort after: input;" is used
 }
 
 template <typename ElementType, typename CollocationType, typename SolidCSLType, typename StructNodeType>

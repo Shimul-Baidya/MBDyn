@@ -599,6 +599,11 @@ Solver::Prepare(void)
 	/* Si fa dare l'std::ostream al file di output per il log */
 	std::ostream& Out = pDM->GetOutFile();
 
+	/*
+	 * Need to call OutputPrepare before calling Output!
+	 */
+	pDM->OutputPrepare();
+        
 	if (eAbortAfter == AFTER_INPUT) {
 		/* Esce */
 		pDM->Output(0, dTime, 0., true);
@@ -820,17 +825,11 @@ Solver::Prepare(void)
 
 	pDM->SetValue(*pX, *pXPrime);
 
-
-	/*
-	 * Prepare output
-	 */
-	pDM->OutputPrepare();
-
 	/*
 	 * If eigenanalysis is requested, prepare output for it
 	 */
 	if (EigAn.bAnalysis) {
-		pDM->OutputEigPrepare(EigAn.Analyses.size(), iNumDofs);
+                pDM->OutputEigPrepare(EigAn.Analyses.size(), iNumDofs, EigAn.uFlags);
 		if (EigAn.iFNameWidth == EigenAnalysis::EIGAN_WIDTH_COMPUTE) {
 			EigAn.iFNameWidth = int(std::log10(double(EigAn.Analyses.size()))) + 1;
 		}
@@ -856,16 +855,7 @@ Solver::Prepare(void)
 	 *     o         # if t < t_i, analysis at t = t_i *before derivatives*
 	 *         o     # if t == t_i, analysis at t = t_i *after derivatives*
 	 */
-	if (EigAn.bAnalysis) {
-		EigAn.currAnalysis = EigAn.Analyses.begin();
-		while (*EigAn.currAnalysis < dTime) {
-			Eig();
-			++EigAn.currAnalysis;
-			if (EigAn.currAnalysis == EigAn.Analyses.end()) {
-				break;
-			}
-		}
-	}
+        EigAll(Solver::EigAnTimeBeforeNow);
 
 	/* calcolo delle derivate */
 	DEBUGLCOUT(MYDEBUG_DERIVATIVES, "derivatives solution step"
@@ -1040,14 +1030,7 @@ Solver::Prepare(void)
 
 	// if eigenanalysis is requested at initial time,
 	// perform *after* derivatives
-	if (EigAn.bAnalysis) {
-		if (EigAn.currAnalysis != EigAn.Analyses.end() && *EigAn.currAnalysis == dTime) {
-			Eig();
-			if (EigAn.currAnalysis != EigAn.Analyses.end()) {
-				++EigAn.currAnalysis;
-			}
-		}
-	}
+        EigAll(Solver::EigAnTimeExactlyNow);
 
 	/* Dati comuni a passi fittizi e normali */
 	lStep = 1;
@@ -1577,15 +1560,16 @@ Solver::Start(void)
 	ASSERT(pFirstRegularStep!= 0);
 	SetupSolmans(pFirstRegularStep->GetIntegratorNumUnknownStates(), true);
 	pCurrStepIntegrator = pFirstRegularStep;
-
+        int retries = -1;
 IfFirstStepIsToBeRepeated:
 	try {
+                retries++;
 		pDM->SetTime(dTime + dCurrTimeStep, dCurrTimeStep, 1);
 		if (outputStep()) {
 			if (outputCounter()) {
 				silent_cout(std::endl);
 			}
- 			silent_cout("Step(" << 1 << ':' << 0 << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
+ 			silent_cout("Step(" << lStep << ':' << retries << ") t=" << dTime + dCurrTimeStep << " dt=" << dCurrTimeStep << std::endl);
 		}
 		dTest = pFirstRegularStep->Advance(this, dRefTimeStep,
 				dCurrTimeStep/dRefTimeStep, CurrStep,
@@ -1687,18 +1671,7 @@ IfFirstStepIsToBeRepeated:
 	dTotErr += dTest;
 	iTotIter += iStIter;
 
-	if (EigAn.bAnalysis
-		&& EigAn.currAnalysis != EigAn.Analyses.end()
-		&& *EigAn.currAnalysis <= dTime)
-	{
-		std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-                        EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-		if (i != EigAn.Analyses.end()) {
-			EigAn.currAnalysis = --i;
-		}
-		Eig();
-		++EigAn.currAnalysis;
-	}
+        EigAll(Solver::EigAnTimeUntilNow);
 
 	if (pRTSolver) {
 		pRTSolver->Init();
@@ -1937,18 +1910,7 @@ IfFirstStepIsToBeRepeated:
 
 		bSolConv = false;
 
-		if (EigAn.bAnalysis
-			&& EigAn.currAnalysis != EigAn.Analyses.end()
-			&& *EigAn.currAnalysis <= dTime)
-		{
-			std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-				EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-			if (i != EigAn.Analyses.end()) {
-				EigAn.currAnalysis = --i;
-			}
-			Eig(bOutputCounter);
-			++EigAn.currAnalysis;
-		}
+                EigAll(Solver::EigAnTimeUntilNow, bOutputCounter);
 
 		/* Calcola il nuovo timestep */
 		dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
@@ -2191,18 +2153,7 @@ IfFirstStepIsToBeRepeated:
 
 		bSolConv = false;
 
-		if (EigAn.bAnalysis
-			&& EigAn.currAnalysis != EigAn.Analyses.end()
-			&& *EigAn.currAnalysis <= dTime)
-		{
-			std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-				EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-			if (i != EigAn.Analyses.end()) {
-				EigAn.currAnalysis = --i;
-			}
-			Eig(bOutputCounter);
-			++EigAn.currAnalysis;
-		}
+                EigAll(Solver::EigAnTimeUntilNow, bOutputCounter);
 
 		/* Calcola il nuovo timestep */
 		dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
@@ -2241,7 +2192,16 @@ Solver::Advance(void)
 
 	CurrStep = StepIntegrator::NEWSTEP;
 
+        if (eAbortAfter >= AFTER_REGULAR_STEP_0 && lStep >= eAbortAfter - AFTER_REGULAR_STEP_0) {
+                silent_cout("End of step " << lStep << "; no simulation is required.\n");
+                dFinalTime = dTime;
+        }
+        
 	if (pDM->EndOfSimulation() || dTime >= dFinalTime) {
+                // Make sure to execute all eigenanalyses after the end of the simulation
+                DEBUGCERR("Executing all remaining eigenanalyses\n");
+                EigAll(Solver::EigAnTimeAllRemaining, bOutputCounter);
+
 		if (pRTSolver) {
 			pRTSolver->StopCommanded();
 		}
@@ -2465,23 +2425,12 @@ IfStepIsToBeRepeated:
 
 	bSolConv = false;
 
-	if (EigAn.bAnalysis
-		&& EigAn.currAnalysis != EigAn.Analyses.end()
-		&& *EigAn.currAnalysis <= dTime)
-	{
-		std::vector<doublereal>::iterator i = std::find_if(EigAn.Analyses.begin(),
-                        EigAn.Analyses.end(), std::bind(std::greater<doublereal>(), std::placeholders::_1, dTime));
-		if (i != EigAn.Analyses.end()) {
-			EigAn.currAnalysis = --i;
-		}
-		Eig(bOutputCounter);
-		++EigAn.currAnalysis;
-	}
+        EigAll(Solver::EigAnTimeUntilNow, bOutputCounter);
 
 	/* Calcola il nuovo timestep */
 	dCurrTimeStep = pTSC->dGetNewStepTime(CurrStep, iStIter);
 	DEBUGCOUT("Current time step: " << dCurrTimeStep << std::endl);
-
+       
 	return true;
 }
 
@@ -2835,7 +2784,7 @@ Solver::ReadData(MBDynParser& HP)
 
 			/* DEPRECATED */ "fictitious" "steps" /* END OF DEPRECATED */ ,
 			"dummy" "steps",
-
+                        "regular" "step",
 		"output",
 			"none",
 			"iterations",
@@ -2962,12 +2911,12 @@ Solver::ReadData(MBDynParser& HP)
 		DUMMYSTEPSMAXITERATIONS,
 
 		ABORTAFTER,
-		INPUT,
-		ASSEMBLY,
-		DERIVATIVES,
-		FICTITIOUSSTEPS,
-		DUMMYSTEPS,
-
+			INPUT,
+			ASSEMBLY,
+			DERIVATIVES,
+			FICTITIOUSSTEPS,
+			DUMMYSTEPS,
+                        REGULARSTEP,
 		OUTPUT,
 			NONE,
 			ITERATIONS,
@@ -3296,7 +3245,17 @@ Solver::ReadData(MBDynParser& HP)
 					"Simulation will abort after"
 					" dummy steps solution" << std::endl);
 				break;
-
+                        case REGULARSTEP: {
+                                const long lAbortAfterStep = HP.GetInt();
+                                if (lAbortAfterStep < 0) {
+                                        silent_cerr("Step must be greater than or equal to zero at line " << HP.GetLineData() << "\n");
+                                        throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                                }
+                                eAbortAfter = static_cast<AbortAfter>(lAbortAfterStep + AFTER_REGULAR_STEP_0);
+				DEBUGLCOUT(MYDEBUG_INPUT,
+					"Simulation will abort after"
+                                           " step " << lAbortAfterStep << "\n");
+                        } break;
 			default:
 				silent_cerr("Don't know when to abort,"
 					" so I'm going to abort now" << std::endl);
@@ -4123,43 +4082,42 @@ Solver::ReadData(MBDynParser& HP)
 			}
 			break;
 
-		case EIGENANALYSIS:
-			// initialize output precision: 0 means use default precision
-			EigAn.iMatrixPrecision = 0;
-			EigAn.iResultsPrecision = 0;
+		case EIGENANALYSIS: {
+                        // initialize output precision: 0 means use default precision
+                        EigAn.iMatrixPrecision = 0;
+                        EigAn.iResultsPrecision = 0;
 
-			// read eigenanalysis time (to be changed)
-			if (HP.IsKeyWord("list")) {
-				int iNumTimes = HP.GetInt();
-				if (iNumTimes <= 0) {
-					silent_cerr("invalid number of eigenanalysis times "
-						"at line " << HP.GetLineData()
-						<< std::endl);
-					throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-				}
+                        // read eigenanalysis time (to be changed)
 
-				EigAn.Analyses.resize(iNumTimes);
-				for (std::vector<doublereal>::iterator i = EigAn.Analyses.begin();
-					i != EigAn.Analyses.end(); ++i)
-				{
-					*i = HP.GetReal();
-					if (i > EigAn.Analyses.begin() && *i <= *(i-1)) {
-						silent_cerr("eigenanalysis times must be in strict ascending order "
-							"at line " << HP.GetLineData()
-							<< std::endl);
-						throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-					}
-				}
+                        const integer iNumTimes = HP.IsKeyWord("list") ? HP.GetInt() : 1;
 
-			} else {
-				EigAn.Analyses.resize(1);
-				EigAn.Analyses[0] = HP.GetReal();
-			}
+                        if (iNumTimes <= 0) {
+                             silent_cerr("invalid number of eigenanalysis times "
+                                         "at line " << HP.GetLineData() << "\n");
+                             throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                        }
 
-			ASSERT(EigAn.Analyses.size() > 0);
-			// initialize EigAn
-			EigAn.currAnalysis = EigAn.Analyses.begin();
-			EigAn.bAnalysis = true;
+                        EigAn.Analyses.clear();
+                        EigAn.Analyses.reserve(iNumTimes);
+
+                        for (integer i = 0; i < iNumTimes; ++i)
+                        {
+                             const doublereal dTimeEig = HP.GetReal();
+
+                             if (i > 0 && dTimeEig <= EigAn.Analyses.back()) {
+                                  silent_cerr("eigenanalysis times must be in strict ascending order "
+                                              "at line " << HP.GetLineData() << "\n");
+                                  throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+                             }
+
+                             EigAn.Analyses.push_back(dTimeEig); // If dTimeEig is after the end of the simulation it will be executed as well.
+                        }
+
+                        ASSERT(EigAn.Analyses.size() > 0);
+                        // initialize EigAn
+                        EigAn.currAnalysis = EigAn.Analyses.begin();
+                        EigAn.currAnalysisIndex = 0u;
+                        EigAn.bAnalysis = true;
 
                         // permute is the default; use "balance, no" to disable
                         EigAn.uFlags = EigenAnalysis::EIG_PERMUTE;
@@ -4559,7 +4517,7 @@ Solver::ReadData(MBDynParser& HP)
 			}
 			silent_cerr("warning: \"eigenanalysis\" not supported; ignored" << std::endl);
 #endif // !USE_EIG
-			break;
+                } break;
 
 		case SOLVER:
 			silent_cerr("\"solver\" keyword at line "
@@ -5746,6 +5704,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						dSolutionTol,
 						iMaxIterations,
 						bModResTest));
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 1);
+                        }
 				break;		
 
 		case INT_MS3:
@@ -5763,6 +5724,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pSecondRhoRegular,
 						pSecondRhoAlgebraicRegular,
 						bModResTest));
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 2);
+                        }                        
 				break;
 
 		case INT_MS4:
@@ -5788,6 +5752,9 @@ EndOfCycle: /* esce dal ciclo di lettura */
 						pThirdRhoRegular,
 						pThirdRhoAlgebraicRegular,
 						bModResTest));
+                        if (eAbortAfter >= AFTER_REGULAR_STEP_0) {
+                                eAbortAfter = static_cast<AbortAfter>(eAbortAfter + 3);
+                        }                        
 				break;
 	
 	default:
@@ -6975,6 +6942,46 @@ lwork       Size of workspace, >= 4+m+5jmax+3kmax if GMRESm
 }
 #endif // USE_JDQZ
 
+bool Solver::EigNext(bool (*pfnConditionTime)(doublereal, doublereal), bool bNewLine)
+{
+     ASSERT(!EigAn.bAnalysis || (EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis <= EigAn.Analyses.end()));
+     ASSERT(EigAn.currAnalysisIndex <= EigAn.Analyses.size());
+     
+     if (!(EigAn.bAnalysis &&
+           EigAn.currAnalysis != EigAn.Analyses.end() &&
+           (*pfnConditionTime)(*EigAn.currAnalysis, dTime))) {
+          return false;
+     }
+
+     ASSERT(EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis < EigAn.Analyses.end());
+
+     Eig(bNewLine);
+     
+     do {
+          ++EigAn.currAnalysis;
+          // Because it would be pointless to execute exactly the same eigenanalysis several times,
+          // all the the remaining eigenanalyses will be ignored.
+     } while (EigAn.currAnalysis != EigAn.Analyses.end() && (*pfnConditionTime)(*EigAn.currAnalysis, dTime));
+     
+     ++EigAn.currAnalysisIndex;
+     
+     ASSERT(EigAn.currAnalysis >= EigAn.Analyses.begin() && EigAn.currAnalysis <= EigAn.Analyses.end());
+     ASSERT(EigAn.currAnalysisIndex <= EigAn.Analyses.size());
+     
+     return true;
+}
+
+int Solver::EigAll(bool (*pfnConditionTime)(doublereal, doublereal), bool bNewLine)
+{
+     int iCnt = 0;
+
+     while (EigNext(pfnConditionTime, bNewLine)) {
+          ++iCnt;
+     }
+
+     return iCnt;
+}
+
 // Driver for eigenanalysis
 void
 Solver::Eig(bool bNewLine)
@@ -7075,7 +7082,7 @@ Solver::Eig(bool bNewLine)
 		<< "Matrix B:" << std::endl << *pMatB << std::endl);
 #endif /* DEBUG */
 
-	unsigned uCurr = EigAn.currAnalysis - EigAn.Analyses.begin();
+	unsigned uCurr = EigAn.currAnalysisIndex;
 	if (EigAn.uFlags & EigenAnalysis::EIG_OUTPUT) {
 		unsigned uSize = EigAn.Analyses.size();
 		if (uSize >= 1) {
@@ -7357,13 +7364,18 @@ Solver::AllocateNonlinearSolver()
                                        MCPNewtonMinFB(pDM, *this, oLineSearchParam));
                 break;
 #ifdef USE_TRILINOS
-        case NonlinearSolver::NOX:
+        case NonlinearSolver::NOX: {
                 // FIXME: Since access to the Jacobian matrix through the Trilinos library is not under our control,
                 // FIXME: we have to ensure that the content of the matrix is not destroyed by the linear solver.
+                constexpr unsigned uMaskCCDir = LinSol::SOLVER_FLAGS_ALLOWS_CC | LinSol::SOLVER_FLAGS_ALLOWS_DIR;
+                unsigned uSolFlags = CurrLinearSolver.GetSolverFlags();
+                const bool bCompactSpmh = (uSolFlags & uMaskCCDir) != 0u;
+                const bool bJacOpNewton = (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON) != 0u;
+                bool bAllowCompactSpmh = true;
+
                 switch (CurrLinearSolver.GetSolver()) {
                 case LinSol::UMFPACK_SOLVER:
                 case LinSol::KLU_SOLVER:
-                case LinSol::Y12_SOLVER:
                 case LinSol::PARDISO_SOLVER:
                 case LinSol::PARDISO_64_SOLVER:
                 case LinSol::PASTIX_SOLVER:
@@ -7372,10 +7384,16 @@ Solver::AllocateNonlinearSolver()
                 case LinSol::AZTECOO_SOLVER:
                 case LinSol::AMESOS_SOLVER:
                 case LinSol::SICONOS_SPARSE_SOLVER:
-                        // All solvers which do not destroy the Jacobian during factorization can be added here.
+                        // All linear solvers which do not destroy the Jacobian during factorization should be added here.
+                        break;
+                case LinSol::Y12_SOLVER:
+                        // Y12 will destroy the Jacobian only if a "dir" or "cc" matrix handler is used.
+                        if (bJacOpNewton) {
+                                bAllowCompactSpmh = false;
+                        }
                         break;
                 default:
-                        if (oNoxSolverParam.uFlags & NoxSolverParameters::JACOBIAN_NEWTON) {
+                        if (bJacOpNewton) {
                                 silent_cerr("Nonlinear solver \"nox\" cannot "
                                             "be used with linear solver \""
                                             << CurrLinearSolver.GetSolverName()
@@ -7383,24 +7401,32 @@ Solver::AllocateNonlinearSolver()
                                 throw ErrGeneric(MBDYN_EXCEPT_ARGS);
                         }
                 }
-                {
-                        const SolutionManager::ScaleOpt& oScale = CurrLinearSolver.GetScale();
-                        const bool bScaleEnabled = oScale.when != SolutionManager::SCALEW_NEVER && oScale.algorithm != SolutionManager::SCALEA_NONE;
-                        const unsigned uSolFlags = CurrLinearSolver.GetSolverFlags();
-                        const unsigned uMaskCCDir = LinSol::SOLVER_FLAGS_ALLOWS_CC | LinSol::SOLVER_FLAGS_ALLOWS_DIR;
-                        const bool bCompactSpmh = (uSolFlags & uMaskCCDir) != 0;
 
-                        if (bScaleEnabled && bCompactSpmh) {
+                const SolutionManager::ScaleOpt& oScale = CurrLinearSolver.GetScale();
+                const bool bScaleEnabled = oScale.when != SolutionManager::SCALEW_NEVER && oScale.algorithm != SolutionManager::SCALEA_NONE;
+
+                if (bScaleEnabled) {
+                        if (bCompactSpmh) {
                                 silent_cerr("Warning: Nonlinear solver \"nox\" cannot "
                                             "be used with compact sparse matrix handlers "
                                             "\"cc\" or \"dir\" and matrix scaling enabled at the same time!\n"
                                             "Warning: using matrix handler \"map\" instead\n");
-                                CurrLinearSolver.SetSolverFlags((uSolFlags & ~uMaskCCDir) | LinSol::SOLVER_FLAGS_ALLOWS_MAP);
                         }
+                        bAllowCompactSpmh = false;
                 }
-                
+
+                if (!bAllowCompactSpmh && bCompactSpmh) {
+                        silent_cerr("Warning: Nonlinear solver \"nox\" cannot "
+                                    "be used with linear solver \""
+                                    << CurrLinearSolver.GetSolverName()
+                                    << "\" and \"cc\" or \"dir\" matrix handlers enabled, "
+                                    << "unless the \"newton krylov\" option is used!\n");
+                        uSolFlags = (uSolFlags & ~uMaskCCDir) | LinSol::SOLVER_FLAGS_ALLOWS_MAP;
+                }
+
+                CurrLinearSolver.SetSolverFlags(uSolFlags);
                 pNLS = pAllocateNoxNonlinearSolver(*this, oNoxSolverParam);
-                break;
+        } break;
 #endif
 #ifdef USE_SICONOS
         case NonlinearSolver::SICONOS_MCP_NEWTON_FB:

@@ -1,5 +1,5 @@
-/* 
- * MBDyn (C) is a multibody analysis code. 
+/*
+ * MBDyn (C) is a multibody analysis code.
  * http://www.mbdyn.org
  *
  * Copyright (C) 1996-2023
@@ -16,7 +16,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation (version 2 of the License).
- * 
+ *
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +30,7 @@
 
 /*
  AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
-        Copyright (C) 2011(-2019) all rights reserved.
+        Copyright (C) 2011(-2023) all rights reserved.
 
         The copyright of this code is transferred
         to Pierangelo Masarati and Paolo Mantegazza
@@ -63,8 +63,8 @@ namespace oct {
 
     octave_object::octave_method::octave_method()
         :pfunc(nullptr) {
-    }        
-        
+    }
+
     octave_object::octave_method::octave_method(const std::string& method, method_function* pfn, octave_object* pobject)
         :method(method),
          pfunc(pfn),
@@ -73,33 +73,33 @@ namespace oct {
 
     void octave_object::octave_method::print(std::ostream& os, bool pr_as_read_syntax)
     {
-        os << "@" << method;        
+        os << "@" << method;
     }
-    
+
     octave_value_list octave_object::octave_method::subsref(const std::string& type,
                                                             const std::list<octave_value_list>& idx,
                                                             int nargout)
     {
 #if TRACE_SUBSREF == 1
-	{
+        {
 
             int i = 0;
 
             octave_stdout << "method: \"" << method << "\"\n";
-        
+
             for (auto it = idx.begin(); it != idx.end(); ++it)
-            {            
+            {
                 for (octave_idx_type j = 0; j < it->length(); ++j) {
                     octave_stdout << "idx(" << ++i << ")=";
                     (*it)(j).print_raw(octave_stdout);
                     octave_stdout << endl;
-                }            
+                }
             }
         }
 #endif
         return (*pfunc)(&object.get_rep(), idx.size() ? idx.front() : octave_value_list(), nargout);
     }
-    
+
     octave_value octave_object::octave_method::subsref(const std::string& type,
                                                        const std::list<octave_value_list>& idx)
     {
@@ -114,22 +114,22 @@ namespace oct {
 
     DEFINE_OCTAVE_ALLOCATOR(octave_object::octave_method)
     DEFINE_OV_TYPEID_FUNCTIONS_AND_DATA(octave_object::octave_method, "method", "method");
-    
+
     octave_object::method_function* octave_object::class_object::lookup_method(const std::string& method_name)const
     {
-	typedef method_table_t::const_iterator iter_t;
+        typedef method_table_t::const_iterator iter_t;
 
-	iter_t p = method_table.find(method_name);
+        iter_t p = method_table.find(method_name);
 
-	if ( p != method_table.end() )
+        if ( p != method_table.end() )
             return p->second;
 
-	if ( parent_object != NULL )
-	{
+        if ( parent_object != NULL )
+        {
             return parent_object->lookup_method(method_name);
-	}
-	else
-	{
+        }
+        else
+        {
 #if TRACE_SUBSREF == 1
             cerr << "octave_object::class_object::lookup_method(\"" << method_name << "\") failed!" << endl;
             const class_object* class_obj = this;
@@ -143,9 +143,9 @@ namespace oct {
                 class_obj = class_obj->parent_object;
             }
 #endif
-	}
+        }
 
-	return NULL;
+        return NULL;
     }
 
     octave_object::class_object octave_object::dispatch_class_object(NULL,NULL);
@@ -172,7 +172,7 @@ namespace oct {
         return false;
     }
 #endif
-        
+
 #if TRACE_SUBSREF == 1
     static void print_args(const octave_value_list& args)
     {
@@ -190,7 +190,7 @@ namespace oct {
 
     octave_object::method_function* octave_object::lookup_method(const std::string& method_name)
     {
-	return get_class_object()->lookup_method(method_name);
+        return get_class_object()->lookup_method(method_name);
     }
 
     octave_value_list octave_object::subsref (const std::string& type,
@@ -198,7 +198,7 @@ namespace oct {
                                               int nargout)
     {
 #if TRACE_SUBSREF == 1
-	{
+        {
             octave_stdout << endl;
             octave_stdout << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << endl;
             octave_stdout << "type=" << type << endl;
@@ -213,23 +213,23 @@ namespace oct {
                 print_args(*it);
                 octave_stdout << endl;
             }
-	}
+        }
 #endif
 
-	octave_value_list retval;
-	size_t skip = 1;
+        octave_value_list retval;
+        size_t skip = 1;
 
-	if ( type.length() < 1 )
-	{
+        if ( type.length() < 1 )
+        {
             panic_impossible();
-	}
+        }
 
-	const char operator_char = type[0];
+        const char operator_char = type[0];
 
-	switch( operator_char )
-	{
-	case '.':
-	{
+        switch( operator_char )
+        {
+        case '.':
+        {
             octave_value_list method_name_list = idx.front();
 
             if ( method_name_list.length () != 1 || !method_name_list(0).is_string() )
@@ -268,11 +268,11 @@ namespace oct {
                     retval = (*method_pfn)(this,*pidx,nargout);
                 }
             }
-#endif                
-	}
-	break;
-	case '(':
-	{
+#endif
+        }
+        break;
+        case '(':
+        {
             if (idx.size() < 1)
             {
                 error("octave object: invalid number of indices");
@@ -280,59 +280,59 @@ namespace oct {
             }
 
             retval = (*this)(idx.front());
-	}
-	break;
-	case '{':
-	{
+        }
+        break;
+        case '{':
+        {
             std::string nm = type_name();
             error("%s cannot be indexed with %c", nm.c_str(), operator_char);
             return retval;
 
-	}
-	break;
+        }
+        break;
 
-	default:
+        default:
             panic_impossible();
-	}
-        
+        }
+
 #if OCTAVE_MAJOR_VERSION < 6
-	if ( !error_state && idx.size() > skip )
-	{
+        if ( !error_state && idx.size() > skip )
+        {
             retval = retval(0).next_subsref(type, idx, skip);
-	}
+        }
 #else
         if ( idx.size() > skip )
-	{
+        {
             retval = retval(0).next_subsref(type, idx, skip);
-	}
+        }
 #endif
-	return retval;
+        return retval;
     }
 
     octave_value octave_object::operator()(const octave_value_list& idx) const
     {
-	std::string nm = type_name();
-	error("%s cannot be indexed with %c", nm.c_str(), '(');
-	return octave_value();
+        std::string nm = type_name();
+        error("%s cannot be indexed with %c", nm.c_str(), '(');
+        return octave_value();
     }
 
     octave_value octave_object::subsref(const std::string& type,
                                         const std::list<octave_value_list>& idx)
     {
-	octave_value_list ret_val = subsref(type,idx,1);
+        octave_value_list ret_val = subsref(type,idx,1);
 
-	if ( ret_val.length() < 1 )
+        if ( ret_val.length() < 1 )
             return octave_value();
 
-	return ret_val(0);
+        return ret_val(0);
     }
 
     void error(const char* fmt, ...)
     {
-	va_list va;
-	va_start(va, fmt);
-	::verror(fmt, va);
-	va_end(va);
+        va_list va;
+        va_start(va, fmt);
+        ::verror(fmt, va);
+        va_end(va);
     }
 
 } // namespace

@@ -72,7 +72,26 @@ tecman/tecman-aero-rotor.tex \
 tecman/tecman-hydr.tex \
 tecman/tecman.tex
 
+if BUILD_MANUALS
+MANUALS=input-manual-pdf tecman-manual-pdf install-manual-pdf
 
+pdf-local: $(MANUALS)
+dvi-local: $(MANUALS)
+ps-local: $(MANUALS)
 
+input-manual-pdf:
+	@echo making input manual
+	cd $(top_srcdir)/manual; ./make.sh --tgt input
+
+tecman-manual-pdf:
+	@echo making tecman
+	cd $(top_srcdir)/manual; ./make.sh --tgt tecman
+
+install-manual-pdf:
+	@echo making install manual
+	cd $(top_srcdir)/manual; ./make.sh --tgt install
+
+.PHONY: $(MANUALS)
+endif
 
 include $(top_srcdir)/build/bot.mk

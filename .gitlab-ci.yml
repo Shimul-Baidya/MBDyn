@@ -1,0 +1,397 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+variables:
+  ## Directories for binaries and temporary storage:
+  ## All paths must be relative to $CI_PROJECT_DIR!
+  ## So, we can use them with "artifacts:" and "cache:".
+  ## Regarding artifacts, every build stage should have one directory of it's own!
+  ## By default, the content of those directories will be lost after each job ends.
+  ## The only exception is MKL, because it takes too much disk space for "artifacts:" and "cache:"
+  TESTSUITE_PREFIX: testsuite/var
+
+  ## All the job artefacts are stored inside $TESTSUITE_PREFIX_CACHE.
+  ## By default they will be cleaned up after each job, but can be restored by indiviual jobs using "needs:"
+  TESTSUITE_PREFIX_CACHE: $TESTSUITE_PREFIX/cache
+
+  ## Temporary files are store inside $TESTSUITE_PREFIX_TMP and will be cleaned up after each job,
+  ## unless they are cached by individual jobs.
+  TESTSUITE_PREFIX_TMP: $TESTSUITE_PREFIX/tmp
+
+  ## Compiled object files are stored inside $TESTSUITE_PREFIX_BUILD
+  ## Those directories may be cached by individual jobs in order to speed up compilation.
+  TESTSUITE_PREFIX_BUILD: $TESTSUITE_PREFIX_TMP/build
+
+  ## Local installation directory for MBDyn:
+  MBD_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/mbdyn
+  MBD_INSTALL_PREFIX_GCOV: $TESTSUITE_PREFIX_CACHE/mbdyn-gcov
+  MBD_PROFILE_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-profile
+  MBD_TEST_COVERAGE_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-coverage
+
+  ## Local installation directory for Gmsh:
+  GMSH_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/gmsh
+
+  ## Local installation directory for fem_pre_mesh_size
+  ## This program is needed to calculate the mesh size for Gmsh only for a very specific test case.
+  OCT_PKG_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/share/octave
+  OCT_PKG_INSTALL_PREFIX_GCOV: $TESTSUITE_PREFIX_CACHE/share/octave-gcov
+
+  ## Local installation directory for Intel oneMKL
+  ## FIXME: MKL cannot be used as an artifact because it is too big!
+  ## FIMXE: So, $MKL_INSTALL_PREFIX is relative to $HOME instead of CI_PROJECT_DIR
+  MKL_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/mkl
+
+  ## Local installation directory for NetCDF
+  NC_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/netcdf
+
+  ## Local installation directory for NetCDF
+  NC_CXX4_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/netcdf-cxx4
+
+  ## Local installation directory for nlopt
+  NL_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/nlopt
+
+  ## Local build directories
+  ## They must be relative to $CI_PROJECT_DIR, so we can use them with "cache:"
+
+  ## If you want to free disk space at the runner, go to
+  ## "https://public.gitlab.polimi.it/DAER/mbdyn/-/pipelines"
+  ## and select "Clear runner caches"!
+  MBD_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/mbdyn
+  MBD_BUILD_DIR_GCOV: $TESTSUITE_PREFIX_BUILD/mbdyn-gcov
+  MBD_BUILD_DIR_MANUALS: $TESTSUITE_PREFIX_BUILD/mbdyn-manuals
+
+  NC_C_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/netcdf-c
+  NC_CXX4_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/netcdf-cxx4
+
+  NL_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/nlopt
+
+  GMSH_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/gmsh
+
+  OCT_PKG_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/octave-pkg
+  OCT_PKG_BUILD_DIR_GCOV: $TESTSUITE_PREFIX_BUILD/octave-pkg-gcov
+
+  ## FIXME: MKL cannot be used as cache because it is too big!
+  ## FIXME: So, $MKL_BUILD_DIR is relative to $HOME instead of $CI_PROJECT_DIR
+  MKL_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/mkl
+
+  MBD_TESTS_PUBLIC_INPUT_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-tests-public
+  MBD_TESTS_PRIVATE_INPUT_DIR: $TESTSUITE_PREFIX_CACHE/mbdyn-tests-private
+
+  # Number of processes to build MBDyn (e.g. make -j$MBD_NUM_BUILD_JOBS)
+  MBD_NUM_BUILD_JOBS: "12"
+
+  ## Remove and reinstall all the software which was installed by previous pipeline executions.
+  MBD_CLEAN_ALL:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Do not use any caches and build everything from scratch"
+
+  MBD_TEST_COVERAGE_ENABLED:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Generate a test coverage report"
+
+  ## Compiler flags for MBDyn and mboct-*-pkg
+  MBD_COMPILER_FLAGS: "-Ofast -Wall -march=native -mtune=native -Wno-unused-variable"
+
+  ## NOTE: We should compile without any optimization in order to get accurate profile information
+  MBD_COMPILER_FLAGS_GCOV: "-Og -Wall -march=native -mtune=native -Wno-unused-variable"
+
+  OCT_PKG_LIST_NURBS_REBUILD:
+    value: "yes"
+    options:
+      - "yes"
+      - "no"
+    description: "Recompile Octave's nurbs package"
+
+  OCT_PKG_LIST_NURBS_TEST:
+    value: "yes"
+    options:
+      - "yes"
+      - "no"
+    description: "Run testsuite for Octave's nurbs package"
+
+  OCT_PKG_LIST_NURBS_TIMEOUT:
+    value: "unlimited"
+    options:
+      - "unlimited"
+      - "10s"
+      - "30s"
+      - "1m"
+      - "30m"
+      - "1h"
+      - "2h"
+      - "6h"
+    description: "Timeout to run tests for Octave's nurbs package"
+
+  OCT_PKG_LIST_NETCDF_REBUILD:
+    value: "yes"
+    options:
+      - "yes"
+      - "no"
+    description: "Recompile Octave's netcdf package"
+
+  OCT_PKG_LIST_NETCDF_TEST:
+    value: "yes"
+    options:
+      - "yes"
+      - "no"
+    description: "Run testsuite for Octave's netcdf package"
+
+  OCT_PKG_LIST_NETCDF_TIMEOUT:
+    value: "unlimited"
+    options:
+      - "unlimited"
+      - "10s"
+      - "30s"
+      - "1m"
+      - "30m"
+      - "1h"
+      - "2h"
+      - "6h"
+    description: "Timeout to run tests for Octave's netcdf package"
+
+  OCT_PKG_LIST_MBOCT_OCTAVE_PKG_REBUILD:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Recompile Octave's mboct-octave-pkg package"
+
+  OCT_PKG_LIST_MBOCT_OCTAVE_PKG_BRANCH:
+    value: "master"
+    description: "Branch to use for Octave's mboct-octave-pkg package"
+
+  OCT_PKG_LIST_MBOCT_OCTAVE_PKG_TEST:
+    value: "yes"
+    options:
+      - "yes"
+      - "no"
+    description: "Run testsuite for Octave's mboct-octave-pkg package"
+
+  OCT_PKG_LIST_MBOCT_OCTAVE_PKG_TIMEOUT:
+    value: "unlimited"
+    options:
+      - "unlimited"
+      - "10s"
+      - "30s"
+      - "1m"
+      - "30m"
+      - "1h"
+      - "2h"
+      - "6h"
+    description: "Timeout to run tests for Octave's mboct-octave-pkg package"
+
+  OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_REBUILD:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Recompile Octave's mboct-numerical-pkg package"
+
+  OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_BRANCH:
+    value: "master"
+    description: "Branch to use for Octave's mboct-numerical-pkg package"
+
+  OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_TEST:
+    value: "yes"
+    options:
+      - "yes"
+      - "no"
+    description: "Run testsuite for Octave's mboct-numerical-pkg package"
+
+  OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_TIMEOUT:
+    value: "unlimited"
+    options:
+      - "unlimited"
+      - "10s"
+      - "30s"
+      - "1m"
+      - "30m"
+      - "1h"
+      - "2h"
+      - "6h"
+    description: "Timeout to run tests for Octave's mboct-numerical-pkg package"
+
+  OCT_PKG_LIST_MBOCT_MBDYN_PKG_REBUILD:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Recompile Octave's mboct-mbdyn-pkg package"
+
+  OCT_PKG_LIST_MBOCT_MBDYN_PKG_BRANCH:
+    value: "master"
+    description: "Branch to use for Octave's mboct-mbdyn-pkg package"
+
+  OCT_PKG_LIST_MBOCT_MBDYN_PKG_TEST:
+    value: "yes"
+    options:
+      - "yes"
+      - "no"
+    description: "Run testsuite for Octave's mboct-mbdyn-pkg package"
+
+  OCT_PKG_LIST_MBOCT_MBDYN_PKG_TIMEOUT:
+    value: "unlimited"
+    options:
+      - "unlimited"
+      - "10s"
+      - "30s"
+      - "1m"
+      - "30m"
+      - "1h"
+      - "2h"
+      - "6h"
+    description: "Timeout to run tests for Octave's mboct-mbdyn-pkg package"
+
+  OCT_PKG_LIST_MBOCT_FEM_PKG_REBUILD:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Recompile Octave's mboct-fem-pkg package"
+
+  OCT_PKG_LIST_MBOCT_FEM_PKG_BRANCH:
+    value: "master"
+    description: "Branch to use for Octave's mboct-fem-pkg package"
+
+  OCT_PKG_LIST_MBOCT_FEM_PKG_TEST:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Run testsuite for Octave's mboct-fem-pkg package"
+
+  OCT_PKG_LIST_MBOCT_FEM_PKG_TIMEOUT:
+    value: "unlimited"
+    options:
+      - "unlimited"
+      - "10s"
+      - "30s"
+      - "1m"
+      - "30m"
+      - "1h"
+      - "2h"
+      - "6h"
+    description: "Timeout to run tests for Octave's mboct-fem-pkg package"
+
+  ## Octave packages to be installed from github.com or octave-forge
+  ## List of package names separated by space: <OCTAVE_PKG_NAME>:<REBUILD_FLAG>:<BRANCH_TAG>:<TEST_FLAG>:<TEST_TIMEOUT>
+  ## <OCTAVE_PKG_NAME> Name of the package which will be passed to Octave's pkg load function (e.g. pkg("load","<OCTAVE_PKG_NAME>"))
+  ## <REBUILD_FLAG>    If this value is set to "yes", the package will be reinstalled. Otherwise the package may be reused from the cache.
+  ## <BRANCH_TAG>      Name of the branch (e.g. git clone -b <BRANCH_TAG>). In case of packages from octave-forge, this value will be ignored.
+  ## <TEST_FLAG>       If this value is set to "yes", Octave's __run_test_suite__ or test function will be executed in octave-pkg-test-job.
+  ## <TEST_TIMEOUT>    Timeout for test execution in seconds, minutes or hours (e.g. "3600s", "60m", "1h" or "unlimited")
+  ##                   There should be no need to enable a timeout here.
+  OCT_PKG_LIST: "nurbs:${OCT_PKG_LIST_NURBS_REBUILD}:forge:${OCT_PKG_LIST_NURBS_TEST}:${OCT_PKG_LIST_NURBS_TIMEOUT} netcdf:${OCT_PKG_LIST_NETCDF_REBUILD}:forge:${OCT_PKG_LIST_NETCDF_TEST}:${OCT_PKG_LIST_NETCDF_TIMEOUT} mboct-octave-pkg:${OCT_PKG_LIST_MBOCT_OCTAVE_PKG_REBUILD}:${OCT_PKG_LIST_MBOCT_OCTAVE_PKG_BRANCH}:${OCT_PKG_LIST_MBOCT_OCTAVE_PKG_TEST}:${OCT_PKG_LIST_MBOCT_OCTAVE_PKG_TIMEOUT} mboct-numerical-pkg:${OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_REBUILD}:${OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_BRANCH}:${OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_TEST}:${OCT_PKG_LIST_MBOCT_NUMERICAL_PKG_TIMEOUT} mboct-mbdyn-pkg:${OCT_PKG_LIST_MBOCT_MBDYN_PKG_REBUILD}:${OCT_PKG_LIST_MBOCT_MBDYN_PKG_BRANCH}:${OCT_PKG_LIST_MBOCT_MBDYN_PKG_TEST}:${OCT_PKG_LIST_MBOCT_MBDYN_PKG_TIMEOUT} mboct-fem-pkg:${OCT_PKG_LIST_MBOCT_FEM_PKG_REBUILD}:${OCT_PKG_LIST_MBOCT_FEM_PKG_BRANCH}:${OCT_PKG_LIST_MBOCT_FEM_PKG_TEST}:${OCT_PKG_LIST_MBOCT_FEM_PKG_TIMEOUT}"
+
+  ## Mode of execution for all Octave package tests:
+  ## In "single" mode, Octave will be launched for each function and Octave's "test" function will be executed.
+  ## The value of <TEST_TIMEOUT> will be applied to each function.
+  ## In "pkg" mode, Octave will be launched only once for each package and Octave's "__run_test_suite__" function will be executed.
+  ## The value of <TEST_TIMEOUT> will be applied to the whole package.
+  ## "single" should be the default because it can run multiple tests in parallel whereas "pkg" will execute the tests sequential.
+  OCT_PKG_TEST_MODE:
+    value: "single"
+    options:
+      - "pkg"
+      - "single"
+    description: "Mode of execution for all Octave package tests (e.g. single may be executed in parallel)"
+
+  OCTAVE_EXEC: "octave"
+
+  ## Temorary directory for all Octave package tests (e.g. TMPDIR will be redirected)
+  ## This makes it easier to clean up temporary files and ther is no need to use /tmp which may reside in memory on some systems.
+  ## Paths must be relative to CI_PROJECT_PATH
+  TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests
+  OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob
+  OCT_PKG_TEST_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob-gcov
+  MBD_MODULE_TESTS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob
+  MBD_MODULE_TESTS_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob-gcov
+  MBD_TESTS_PUBLIC_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob
+  MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-public-testjob-gcov
+  MBD_TESTS_PRIVATE_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob
+  MBD_TESTS_PRIVATE_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/mbdyn-tests-private-testjob-gcov
+
+  ## MKL pkg-config file without extension (e.g. use "${MKL_PKG_CONFIG}.pc")
+  ## Needed by several jobs which link against MKL
+  MKL_PKG_CONFIG: "mkl-dynamic-lp64-gomp"
+
+  MBD_SIMPLE_TESTSUITE_FLAGS_OUTPUT:
+    value: "failed"
+    options:
+      - "unexpected"
+      - "failed"
+      - "all"
+    description: "Keep output generated by MBDyn depending on the exit status"
+
+  MBD_SIMPLE_TESTSUITE_FLAGS_VERBOSE:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Enable verbose output from MBDyn"
+
+  ## Additional arguments to be passed to simple_testsuite.sh
+  ## See simple_testsuite.sh --help
+  ## In order to enable verbose output for MBDyn use: MBD_SIMPLE_TESTSUITE_FLAGS: "--verbose yes"
+  MBD_SIMPLE_TESTSUITE_FLAGS: "--keep-output ${MBD_SIMPLE_TESTSUITE_FLAGS_OUTPUT} --verbose ${MBD_SIMPLE_TESTSUITE_FLAGS_VERBOSE}"
+stages:          # List of stages for jobs, and their order of execution
+  - .pre
+  - build
+  - test
+  - deploy
+
+include:
+    - local: '/testsuite/mbdyn-cleanup-job.yml'
+    - local: '/testsuite/mbdyn-bootloader-job.yml'
+    - local: '/testsuite/mbdyn-checkout-job.yml'
+    - local: '/testsuite/mkl-build-job.yml'
+    - local: '/testsuite/netcdf-build-job.yml'
+    - local: '/testsuite/nlopt-build-job.yml'
+    - local: '/testsuite/mbdyn-build-job.yml'
+    - local: '/testsuite/octave-pkg-build-job.yml'
+    - local: '/testsuite/gmsh-build-job.yml'
+    - local: '/testsuite/octave-pkg-test-job.yml'
+    - local: '/testsuite/mbdyn-tests-private-test-job.yml'
+    - local: '/testsuite/mbdyn-tests-public-test-job.yml'
+    - local: '/testsuite/mbdyn-modules-test-job.yml'
+    - local: '/testsuite/mbdyn-deploy-job.yml'
+    - local: '/testsuite/mbdyn-testsuite-report-job.yml'

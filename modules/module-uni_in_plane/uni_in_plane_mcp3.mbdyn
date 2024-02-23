@@ -63,18 +63,20 @@ end: data;
 begin: initial value;
     initial time: 0.;
     final time: 1;
-    time step: 1e-4;
+    time step: 1e-2;
 
     max iterations: 100;
-    tolerance: 1e-6;
-    method: bdf;
+    tolerance: 1e-6, test, norm, 1e-6, test, norm;
+    method: implicit euler;
 
-    linear solver: siconos dense;
-    nonlinear solver: siconos mcp newton min fb, lambda min, 1e-16;
+    ## linear solver: siconos dense;
+    ## nonlinear solver: siconos mcp newton min fb, lambda min, 1e-16;
+    linear solver: umfpack, grad, scale, row max column max, always, max iterations, 3;
+    nonlinear solver: mcp newton min fb, lambda min, 0., tolerance x, 1e-6;
 
-    derivatives tolerance: 1e-2;
+    derivatives tolerance: 1e-6, 1e-6;
     derivatives max iterations: 10;
-    derivatives coefficient: 1e-2;
+    derivatives coefficient: auto;
     output: iterations;
     threads: assembly, 1;
     threads: solver, 1;

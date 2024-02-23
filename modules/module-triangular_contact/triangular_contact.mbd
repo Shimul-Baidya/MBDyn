@@ -48,58 +48,46 @@ set: real u0 = F0 / s1;
 set: real t1 = 2 * pi * n / abs(omega);
 
 begin: data;
-	problem: initial value; # the default
+        problem: initial value; # the default
 end: data;
 
 begin: initial value;
-	initial time: 0;
-	final time:  t1;
+        initial time: 0;
+        final time:  t1;
 
-	time step: 2 * pi / abs(omega) / 10000;
+        time step: 2 * pi / abs(omega) / 10000;
 
-	min time step: 2 * pi / abs(omega) / 100000;
-	max time step: 2 * pi / abs(omega) / 10000;
-	strategy: factor, 0.75, 1, 1.25, 3, 2, 4;
+        min time step: 2 * pi / abs(omega) / 100000;
+        max time step: 2 * pi / abs(omega) / 10000;
+        strategy: factor, 0.75, 1, 1.25, 3, 2, 4;
 
-	max iterations: 100;
-	tolerance: 1e-6, test, sepnorm, 1e-6;
-	method: bdf;
-	derivatives tolerance: 1e-4;
-	derivatives max iterations: 10;
-	derivatives coefficient: 1e-10;
-	linear solver: naive, colamd, scale, row max column max, always, max iterations, 100;
-        
-	## nonlinear solver: line search, default solver options, heavy nonlinear, divergence check, no;
-        
-        nonlinear solver: nox, modified, 20, keep jacobian,
-        verbose, yes,
-        print convergence info, no,
-        jacobian operator, newton krylov,
-        algorithm, line search based,
-        weighted rms absolute tolerance, 1e-3,
-        weighted rms relative tolerance, 1e-2,
-        linear solver tolerance, 1e-10,
-        linear solver max iterations, 10,
-        minimum step, 1e-10;
-	threads: assembly, 1;
+        max iterations: 100;
+        tolerance: 1e-6, test, sepnorm, 1e-6;
+        method: bdf;
+        derivatives tolerance: 1e-4, 1e-4;
+        derivatives max iterations: 10;
+        derivatives coefficient: auto;
+        linear solver: naive, colamd, scale, iterative, always;
+        nonlinear solver: line search, default solver options, heavy nonlinear, divergence check, no;
+        threads: disable;
 end: initial value;
 
 begin: control data;
        use automatic differentiation;
        rigid body kinematics: const, angular velocity, 0., 0., omega0;
        skip initial joint assembly;
-	output meter: closest next, 0, forever, const, 1e-2;
-	joints: 1;
-	structural nodes: 3;
-	rigid bodies: 1;
-	loadable elements: 1;
-	gravity;
-	output precision: 16;
-	default output: reference frames;
-	print: dof stats;
-	print: dof description;
-	print: element connection;
-	print: node connection;
+        output meter: closest next, 0, forever, const, 1e-2;
+        joints: 1;
+        structural nodes: 3;
+        rigid bodies: 1;
+        loadable elements: 1;
+        gravity;
+        output precision: 16;
+        default output: reference frames;
+        print: dof stats;
+        print: dof description;
+        print: element connection;
+        print: node connection;
 end: control data;
 
 set: integer ref_id_sphere = 901;
@@ -113,68 +101,68 @@ set: integer drive_id_Wkin = 5001;
 set: integer drive_id_Wpot = 5002;
 
 reference: ref_id_sphere,
-	   reference, global, r, 0, z,
-	   reference, global, eye,
-	   reference, global, 0., (omega - omega0) * r, 0.,
-	   reference, global, 0., 0., -omega1 / cos(Phi) - omega0;
+           reference, global, r, 0, z,
+           reference, global, eye,
+           reference, global, 0., (omega - omega0) * r, 0.,
+           reference, global, 0., 0., -omega1 / cos(Phi) - omega0;
 
 begin: nodes;
-	structural: node_id_cone, static,
-			reference,global, null,
-			reference,global, eye,
-			reference,global, null,
-			reference,global, 0., 0., -omega0;
+        structural: node_id_cone, static,
+                        reference,global, null,
+                        reference,global, eye,
+                        reference,global, null,
+                        reference,global, 0., 0., -omega0;
 
-	structural: node_id_sphere, dynamic,
-		    reference, ref_id_sphere, null,
-		    reference, ref_id_sphere, eye,
-		    reference, ref_id_sphere, null,
-		    reference, ref_id_sphere, null;
+        structural: node_id_sphere, dynamic,
+                    reference, ref_id_sphere, null,
+                    reference, ref_id_sphere, eye,
+                    reference, ref_id_sphere, null,
+                    reference, ref_id_sphere, null;
 
-	structural: node_id_sphere_center, dummy,
-		   node_id_sphere, offset,
-		   reference, ref_id_sphere, null,
-		   reference, ref_id_sphere, eye;
+        structural: node_id_sphere_center, dummy,
+                   node_id_sphere, offset,
+                   reference, ref_id_sphere, null,
+                   reference, ref_id_sphere, eye;
 end: nodes;
 
 begin: elements;
-	joint: joint_id_clamp, total pin joint, node_id_cone,
-	       position, reference, global, null,
-	       position orientation, reference, global, eye,
-	       rotation orientation, reference, global, eye,
-	       position, reference, global, null,
-	       position orientation, reference, global, eye,
-	       rotation orientation, reference, global, eye,
-	       position constraint,
-		       active,
-		       active,
-		       active,
-		       null,
-	       orientation constraint,
-		       active,
-		       active,
-		       angular velocity,
-		       component,
-		       null,
-		       null,
-		       -omega0;
+        joint: joint_id_clamp, total pin joint, node_id_cone,
+               position, reference, global, null,
+               position orientation, reference, global, eye,
+               rotation orientation, reference, global, eye,
+               position, reference, global, null,
+               position orientation, reference, global, eye,
+               rotation orientation, reference, global, eye,
+               position constraint,
+                       active,
+                       active,
+                       active,
+                       null,
+               orientation constraint,
+                       active,
+                       active,
+                       angular velocity,
+                       component,
+                       null,
+                       null,
+                       -omega0;
 
-	body: body_id_sphere,
-	      node_id_sphere,
-	      m1,
-	      reference, ref_id_sphere, null,
-	      diag, J1, J1, J1,
-	      inertial, reference, ref_id_sphere, eye;
+        body: body_id_sphere,
+              node_id_sphere,
+              m1,
+              reference, ref_id_sphere, null,
+              diag, J1, J1, J1,
+              inertial, reference, ref_id_sphere, eye;
 
 scalar function: "penalty", multilinear,
-	  -1., -s1,
-	  0., 0.,
-	  1., 0.;
+          -1., -s1,
+          0., 0.,
+          1., 0.;
 
-	include: "${TRIANGULAR_CONTACT_ELEM}";
+        include: "${TRIANGULAR_CONTACT_ELEM}";
 
-	gravity: uniform, 0., 0., -1., g;
+        gravity: uniform, 0., 0., -1., g;
 
-	drive caller: drive_id_Wkin, element, body_id_sphere, body, string, "E", direct, output, yes;
-	drive caller: drive_id_Wpot, element, body_id_sphere, body, string, "V", direct, output, yes;
+        drive caller: drive_id_Wkin, element, body_id_sphere, body, string, "E", direct, output, yes;
+        drive caller: drive_id_Wpot, element, body_id_sphere, body, string, "V", direct, output, yes;
 end: elements;

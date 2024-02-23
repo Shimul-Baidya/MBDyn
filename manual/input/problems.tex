@@ -1097,12 +1097,16 @@ the corresponding continuous time domain eigenvalue $\lambda_k$ is
 \end{align}
 where $\texttt{dCoef}$ is defined in the \texttt{.m} file;
 
-\item \texttt{VR}: the right eigenvectors, solution of the problem
-$\plbr{\TT{J}_{(+c)} + \Lambda \TT{J_{(-c)}}}\T{V_R}=\T{0}$;
+\item \texttt{VR}: the matrix of the right eigenvectors, $\TT{V}_R$, solution of the problem
+\begin{align*}
+	\plbr{\TT{J}_{(+c)} - \Lambda(\mathtt{k}) \TT{J}_{(-c)}} \TT{V}_R(:,\mathtt{k}) = \T{0}
+\end{align*}
 only the eigenvectors corresponding to the selected eigenvalues are output;
 
-\item \texttt{VL}: the left eigenvectors, solution of the problem
-$\plbr{\TT{J}_{(+c)} + \Lambda \TT{J_{(-c)}}}^T\T{V_L}=\T{0}$;
+\item \texttt{VL}: the matrix of the left eigenvectors, $\TT{V}_L$, solution of the problem
+\begin{align*}
+	\plbr{\TT{J}_{(+c)}^T - \mathrm{conj}(\Lambda(\mathtt{k})) \TT{J}_{(-c)}^T} \TT{V}_L(:, \mathtt{k}) = \T{0}
+\end{align*}
 only the eigenvectors corresponding to the selected eigenvalues are output;
 
 \item \texttt{X0}: a vector containing the reference position
@@ -1113,7 +1117,9 @@ corresponding to the reference orientation; all data are referred
 to the absolute reference frame;
 
 \item \texttt{idx}: a vector containing the reference row index
-of each structural node in the eigenvectors;
+  of each structural node in the eigenvectors;
+
+\item \texttt{labels}: a vector containing the labels of each structural node, if any (excluding any dummy node);
 \end{itemize}
 
 \emph{Caveat: the contents of this file may change across versions.}
@@ -1164,7 +1170,8 @@ with
         \{ \kw{input} 
             | \kw{assembly}
             | \kw{derivatives}
-            | \kw{dummy steps} \} ;
+            | \kw{dummy steps}
+            | \kw{regular step} , (\ty{integer}) \bnt{step_number} \} ;
 \end{Verbatim}
 %\end{verbatim}
 mainly used to cleanly check models and simulations at various phases.
@@ -1177,6 +1184,12 @@ time to compute initial momentum and momenta moment derivatives and
 reaction forces;
 when set to \kw{dummy steps}, the simulation ends after the dummy steps
 execution, if required.
+When set to \kw{regular step} and a single step method is used,
+then the simulation ends after \bnt{step\_number} steps.
+However, if a multistep method is used, then the simulation ends after
+\bnt{step\_number} plus the number of startup steps (e.g. \bnt{step\_number}
++ 1 for \kw{ms2}, \bnt{step\_number} + 2 for \kw{ms3}, \bnt{step\_number}
++ 3 for \kw{ms4}).
 In any case, the output is generated with the system configured 
 as resulting from the last computation phase, so this mode can be useful 
 to check how the system is actually configured after phases that are not 

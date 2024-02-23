@@ -1,4 +1,4 @@
-% MBDyn (C) is a multibody analysis code. 
+% MBDyn (C) is a multibody analysis code.
 % http://www.mbdyn.org
 %
 % Copyright (C) 1996-2023
@@ -15,7 +15,7 @@
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation (version 2 of the License).
-% 
+%
 %
 % This program is distributed in the hope that it will be useful,
 % but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,14 +34,14 @@
 %        for use in the software MBDyn as described
 %        in the GNU Public License version 2.1
 
-function [f, ridx] = AssRes(elem, dCoef, XCurr, XPrimeCurr)
-    iFirstIndex = elem.pMbElem.iGetFirstIndex();
+function [f, ridx, elem] = AssRes(elem, dCoef, XCurr, XPrimeCurr)
+  iFirstIndex = elem.pMbElem.iGetFirstIndex();
 
-    ridx = [ elem.pNode1.iGetFirstMomentumIndex() + int32(1:6).';
-             elem.pNode2.iGetFirstMomentumIndex() + int32(1:6).';
-             iFirstIndex + int32(1:2).' ];
+  ridx = [ elem.pNode1.iGetFirstMomentumIndex() + int32(1:6).';
+           elem.pNode2.iGetFirstMomentumIndex() + int32(1:6).';
+           iFirstIndex + int32(1:2).' ];
 
-    [X, XP] = GetStateVector(elem, XCurr, XPrimeCurr);
+  [X, XP] = GetStateVector(elem, XCurr, XPrimeCurr);
 
-    f = ComputeResidual(elem, dCoef, X, XP);
+  f = ComputeResidual(elem, dCoef, X, XP);
 endfunction

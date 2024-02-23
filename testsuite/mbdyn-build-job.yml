@@ -1,0 +1,346 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+variables:
+  ## Clean up the build directory of MBDyn
+  MBD_CLEAN_BUILD: "no"
+
+  ## Force no rebuild of MBDyn; The default must be "no", but it could be overridden manually when the pipeline is started!
+  MBD_SKIP_BUILD: "no"
+
+  ## Run MBDyn's configure with the following modules enabled.
+  ## In order to enable additional modules, it would be necessary also to install their dependencies.
+  MBD_WITH_MODULE: "fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall"
+
+mbdyn-build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+    - job: mbdyn-checkout-job
+  script:
+    - export MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
+    - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+    - export NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
+    - export NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+    - export MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+    - export MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR}
+    - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
+    - export MBD_COMPILER_FLAGS=${MBD_COMPILER_FLAGS}
+    - testsuite/mbdyn_build_job.sh
+  artifacts:
+   expire_in: 24h
+   name: mbdyn-install-prefix
+   paths:
+    - $MBD_INSTALL_PREFIX
+    - $MBD_BUILD_DIR/**/config.log
+    - $OCT_PKG_INSTALL_PREFIX ## Because mbdyn_util_oct will be installed there!
+   when: always
+  cache:
+   key: mbdyn-build-job
+   paths:
+    - $MBD_BUILD_DIR
+    - Makefile.in
+    - aclocal.m4
+    - autom4te.cache/
+    - build/Makefile.in
+    - build/compile
+    - build/config.guess
+    - build/config.sub
+    - build/depcomp
+    - build/install-sh
+    - build/ltmain.sh
+    - build/missing
+    - configure
+    - contrib/n2m/Makefile.in
+    - contrib/n2m/aclocal.m4
+    - contrib/n2m/autom4te.cache/
+    - contrib/n2m/compile
+    - contrib/n2m/config.guess
+    - contrib/n2m/config.h.in
+    - contrib/n2m/config.sub
+    - contrib/n2m/configure
+    - contrib/n2m/depcomp
+    - contrib/n2m/install-sh
+    - contrib/n2m/ltmain.sh
+    - contrib/n2m/missing
+    - etc/Makefile.in
+    - etc/modal.d/Makefile.in
+    - etc/pam.d/Makefile.in
+    - include/Makefile.in
+    - include/ac/Makefile.in
+    - include/mbconfig.h.in
+    - libraries/Makefile.in
+    - libraries/libann/Makefile.in
+    - libraries/libcolamd/Makefile.in
+    - libraries/libmbc/Makefile.in
+    - libraries/libmbmath/Makefile.in
+    - libraries/libmbutil/Makefile.in
+    - libraries/libmbwrap/Makefile.in
+    - libraries/libnaive/Makefile.in
+    - libraries/libobjs/Makefile.in
+    - libraries/liby12/Makefile.in
+    - manual/Makefile.in
+    - mbdyn/Makefile.in
+    - mbdyn/aero/Makefile.in
+    - mbdyn/base/Makefile.in
+    - mbdyn/elec/Makefile.in
+    - mbdyn/hydr/Makefile.in
+    - mbdyn/struct/Makefile.in
+    - mbdyn/thermo/Makefile.in
+    - modules/Makefile.in
+    - testsuite/var/
+    - utils/Makefile.in
+    - var/Makefile.in
+
+mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+    - job: netcdf-c-build-job
+      artifacts: true
+    - job: netcdf-cxx4-build-job
+      artifacts: true
+    - job: mkl-build-job
+      artifacts: true
+    - job: mbdyn-checkout-job
+  rules:
+    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
+  script:
+    - export NC_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_INSTALL_PREFIX}
+    - export NC_CXX4_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NC_CXX4_INSTALL_PREFIX}
+    - export NL_INSTALL_PREFIX=${CI_PROJECT_DIR}/${NL_INSTALL_PREFIX}
+    - export MKL_INSTALL_PREFIX=${HOME}/${MKL_INSTALL_PREFIX}
+    - export MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX_GCOV}
+    - export MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR_GCOV}
+    - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
+    - export MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS_GCOV} --coverage"
+    - export LDFLAGS="--coverage"
+    ## Cleanup any profile data from previous builds in order to get a correct coverage report.
+    - |
+      if test -d "${MBD_BUILD_DIR}"; then
+        find "${MBD_BUILD_DIR}" -name '*.gcda' -delete
+      fi
+    - testsuite/mbdyn_build_job.sh
+  artifacts:
+   expire_in: 24h
+   name: mbdyn-install-prefix-gcov
+   paths:
+    - $MBD_BUILD_DIR_GCOV/**/config.log
+    - $MBD_BUILD_DIR_GCOV/**/*.cc ## Source files of modules are needed for gcovr
+    - $MBD_BUILD_DIR_GCOV/**/*.h
+    - $MBD_BUILD_DIR_GCOV/**/*.hc
+    - $MBD_BUILD_DIR_GCOV/**/*.f
+    - $MBD_BUILD_DIR_GCOV/**/*.f90
+    - $MBD_BUILD_DIR_GCOV/**/*.f95
+    - $MBD_BUILD_DIR_GCOV/**/*.gcda ## Needed for gcovr
+    - $MBD_BUILD_DIR_GCOV/**/*.gcno ## Needed for gcovr
+    - $MBD_INSTALL_PREFIX_GCOV
+    - $OCT_PKG_INSTALL_PREFIX_GCOV ## Because mbdyn_util_oct will be installed there!
+   exclude:
+    - $MBD_BUILD_DIR_GCOV/**/*conftest.gcda
+    - $MBD_BUILD_DIR_GCOV/**/*conftest.gcno
+   when: always
+  cache:
+   key: mbdyn-build-job-gcov
+   paths:
+    - $MBD_BUILD_DIR_GCOV
+    - Makefile.in
+    - aclocal.m4
+    - autom4te.cache/
+    - build/Makefile.in
+    - build/compile
+    - build/config.guess
+    - build/config.sub
+    - build/depcomp
+    - build/install-sh
+    - build/ltmain.sh
+    - build/missing
+    - configure
+    - contrib/n2m/Makefile.in
+    - contrib/n2m/aclocal.m4
+    - contrib/n2m/autom4te.cache/
+    - contrib/n2m/compile
+    - contrib/n2m/config.guess
+    - contrib/n2m/config.h.in
+    - contrib/n2m/config.sub
+    - contrib/n2m/configure
+    - contrib/n2m/depcomp
+    - contrib/n2m/install-sh
+    - contrib/n2m/ltmain.sh
+    - contrib/n2m/missing
+    - etc/Makefile.in
+    - etc/modal.d/Makefile.in
+    - etc/pam.d/Makefile.in
+    - include/Makefile.in
+    - include/ac/Makefile.in
+    - include/mbconfig.h.in
+    - libraries/Makefile.in
+    - libraries/libann/Makefile.in
+    - libraries/libcolamd/Makefile.in
+    - libraries/libmbc/Makefile.in
+    - libraries/libmbmath/Makefile.in
+    - libraries/libmbutil/Makefile.in
+    - libraries/libmbwrap/Makefile.in
+    - libraries/libnaive/Makefile.in
+    - libraries/libobjs/Makefile.in
+    - libraries/liby12/Makefile.in
+    - manual/Makefile.in
+    - mbdyn/Makefile.in
+    - mbdyn/aero/Makefile.in
+    - mbdyn/base/Makefile.in
+    - mbdyn/elec/Makefile.in
+    - mbdyn/hydr/Makefile.in
+    - mbdyn/struct/Makefile.in
+    - mbdyn/thermo/Makefile.in
+    - modules/Makefile.in
+    - testsuite/var/
+    - utils/Makefile.in
+    - var/Makefile.in
+
+mbdyn-build-job-manuals:       # This job runs in the build stage, which runs first.
+  stage: build
+  needs:
+    - job: mbdyn-checkout-job
+  script:
+    - MBD_BUILD_DIR_MANUALS=${CI_PROJECT_DIR}/${MBD_BUILD_DIR_MANUALS}
+    - echo "checkout branch $CI_COMMIT_BRANCH"
+    - git checkout $CI_COMMIT_BRANCH --force
+    - printf "pulling\n"
+    - git pull --force
+    ## Let's try to speed up the build process a bit
+    ## Execute bootstrap.sh and configure only if needed
+    ## This conditional execution may be removed as soon as the testsuite is finished
+    - |
+      if ! test -x ./configure ; then
+        chmod u+x ./bootstrap.sh
+        ./bootstrap.sh
+      fi
+    - test -x ./configure
+    - MBD_SOURCE_DIR=${CI_PROJECT_DIR}
+    - echo "Create build directory ..."
+    - |
+      if test ${MBD_CLEAN_BUILD} = "yes" -o ${MBD_CLEAN_ALL} = "yes"; then
+        echo "cleanup build directory ..."
+        rm -rf ${MBD_BUILD_DIR_MANUALS}
+      fi
+    - echo "create build directory ..."
+    - mkdir -p ${MBD_BUILD_DIR_MANUALS}
+    - test -d ${MBD_BUILD_DIR_MANUALS}
+    - cd ${MBD_BUILD_DIR_MANUALS}
+    - echo "Build directory"
+    - pwd
+    - ls -lhF .
+    - printf "configure ...\n"
+    - |
+      if ! test -f Makefile; then
+        echo "${MBD_BUILD_DIR_MANUALS}/Makefile does not exist!"
+        echo "Run configure step ..."
+        if ! ${MBD_SOURCE_DIR}/configure --enable-manuals ; then
+          echo "Failed to run  ${MBD_SOURCE_DIR}/configure"
+          exit 1
+        fi
+      else
+          echo "${MBD_BUILD_DIR_MANUALS}/Makefile exist"
+          echo "configure step will be skipped ..."
+      fi
+    - test -f Makefile
+    - make pdf
+  artifacts:
+   expire_in: 24h
+   name: mbdyn-manuals
+   paths:
+    - manual/input/mbdyn-input-*.pdf
+    - manual/tecman/mbdyn-tecman-*.pdf
+    - manual/install/mbdyn-install-*.pdf
+  cache:
+   key: mbdyn-build-job-manuals
+   paths:
+    - Makefile.in
+    - aclocal.m4
+    - autom4te.cache/
+    - build/Makefile.in
+    - build/compile
+    - build/config.guess
+    - build/config.sub
+    - build/depcomp
+    - build/install-sh
+    - build/ltmain.sh
+    - build/missing
+    - configure
+    - contrib/n2m/Makefile.in
+    - contrib/n2m/aclocal.m4
+    - contrib/n2m/autom4te.cache/
+    - contrib/n2m/compile
+    - contrib/n2m/config.guess
+    - contrib/n2m/config.h.in
+    - contrib/n2m/config.sub
+    - contrib/n2m/configure
+    - contrib/n2m/depcomp
+    - contrib/n2m/install-sh
+    - contrib/n2m/ltmain.sh
+    - contrib/n2m/missing
+    - etc/Makefile.in
+    - etc/modal.d/Makefile.in
+    - etc/pam.d/Makefile.in
+    - include/Makefile.in
+    - include/ac/Makefile.in
+    - include/mbconfig.h.in
+    - libraries/Makefile.in
+    - libraries/libann/Makefile.in
+    - libraries/libcolamd/Makefile.in
+    - libraries/libmbc/Makefile.in
+    - libraries/libmbmath/Makefile.in
+    - libraries/libmbutil/Makefile.in
+    - libraries/libmbwrap/Makefile.in
+    - libraries/libnaive/Makefile.in
+    - libraries/libobjs/Makefile.in
+    - libraries/liby12/Makefile.in
+    - manual/Makefile.in
+    - mbdyn/Makefile.in
+    - mbdyn/aero/Makefile.in
+    - mbdyn/base/Makefile.in
+    - mbdyn/elec/Makefile.in
+    - mbdyn/hydr/Makefile.in
+    - mbdyn/struct/Makefile.in
+    - mbdyn/thermo/Makefile.in
+    - modules/Makefile.in
+    - testsuite/var/
+    - utils/Makefile.in
+    - var/Makefile.in

@@ -1,0 +1,87 @@
+# MBDyn (C) is a multibody analysis code.
+# http://www.mbdyn.org
+#
+# Copyright (C) 1996-2023
+#
+# Pierangelo Masarati	<pierangelo.masarati@polimi.it>
+# Paolo Mantegazza	<paolo.mantegazza@polimi.it>
+#
+# Dipartimento di Ingegneria Aerospaziale - Politecnico di Milano
+# via La Masa, 34 - 20156 Milano, Italy
+# http://www.aero.polimi.it
+#
+# Changing this copyright notice is forbidden.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation (version 2 of the License).
+#
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# AUTHOR: Reinhard Resch <mbdyn-user@a1.net>
+# Copyright (C) 2023(-2023) all rights reserved.
+
+# The copyright of this code is transferred
+# to Pierangelo Masarati and Paolo Mantegazza
+# for use in the software MBDyn as described
+# in the GNU Public License version 2.1
+
+octave-pkg-test-job:   # This job runs in the test stage.
+  variables:
+      OCT_PKG_TEST_JOB_LOG: "octave-pkg-test-job.log"
+      OCT_PKG_TEST_JOB_STATUS: "octave-pkg-test-job.status"
+      OCT_PKG_TEST_JOB_NUM_TASKS: 6
+      OCT_PKG_FUNCTION_FILTER: ""
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  needs:
+      - job: mkl-build-job
+      - job: netcdf-c-build-job
+        artifacts: true
+      - job: netcdf-cxx4-build-job
+        artifacts: true
+      - job: nlopt-build-job
+        artifacts: true
+      - job: mbdyn-build-job
+        artifacts: true
+      - job: gmsh-build-job
+        artifacts: true
+      - job: octave-pkg-build-job
+        artifacts: true
+  script:
+      - MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX}
+      - OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
+      - GMSH_INSTALL_PREFIX=${CI_PROJECT_DIR}/${GMSH_INSTALL_PREFIX}
+      - OCT_PKG_TEST_OUTPUT_DIR=${CI_PROJECT_DIR}/${OCT_PKG_TEST_OUTPUT_DIR}
+      - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
+      - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
+      - mkdir -p "${OCT_PKG_TEST_OUTPUT_DIR}"
+      - log_file="${OCT_PKG_TEST_OUTPUT_DIR}/${OCT_PKG_TEST_JOB_LOG}"
+      - status_file="${OCT_PKG_TEST_OUTPUT_DIR}/${OCT_PKG_TEST_JOB_STATUS}"
+      - echo "octave packages test job" | tee "${log_file}"
+      - echo "unexpected" > "${status_file}"
+      - which mbdyn | tee -a "${log_file}"
+      - mbdyn --version | tee -a "${log_file}"
+      - which mbdyn2easyanim.sh | tee -a "${log_file}"
+      - which gmsh | tee -a "${log_file}"
+      - gmsh --version | tee -a "${log_file}"
+      - which octave | tee -a "${log_file}"
+      - ${OCTAVE_EXEC} -qfH --version | tee -a "${log_file}"
+      - chmod +x testsuite/octave_pkg_testsuite.sh
+      - test_status="failed"
+      - (/usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}") && test_status="passed"
+      - echo "${test_status}" > "${status_file}"
+  artifacts:
+    name: octave-pkg-test-output-dir
+    expire_in: 2 days
+    paths:
+      - $OCT_PKG_TEST_OUTPUT_DIR/$OCT_PKG_TEST_JOB_LOG
+      - $OCT_PKG_TEST_OUTPUT_DIR/$OCT_PKG_TEST_JOB_STATUS
+    when: always

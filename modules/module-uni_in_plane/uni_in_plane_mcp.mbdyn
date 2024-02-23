@@ -105,7 +105,7 @@ begin: initial value;
 
     linear solver: umfpack, grad, scale, row max column max, always, max iterations, 3;
     nonlinear solver: mcp newton min fb, lambda min, 0., tolerance x, 1e-7;
-    
+
     derivatives tolerance: 1e-2, 1e-3;
     derivatives max iterations: 10;
     derivatives coefficient: 1e-2;
@@ -208,7 +208,7 @@ begin: elements;
                 # inertia matrix
                 diag, J11, J22, J33,
                 inertial, reference, node, eye;
-                
+
     joint: joint_id_ground, clamp, node_id_ground, node, node;
 
     user defined: joint_id_slider, unilateral in plane,
@@ -260,7 +260,7 @@ begin: elements;
     bind: joint_id_slider, user defined, prm_node_id_M2x, string, "M2x[1]";
     bind: joint_id_slider, user defined, prm_node_id_M2y, string, "M2y[1]";
     bind: joint_id_slider, user defined, prm_node_id_M2z, string, "M2z[1]";
-            
+
     gravity: 0., 0., -1.,
     const, g;
 end: elements;
