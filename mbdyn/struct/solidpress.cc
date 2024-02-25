@@ -1190,18 +1190,20 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitialWor
 }
 
 struct UnilateralContactParam {
-     UnilateralContactParam(doublereal epsilon, doublereal dContactScale, doublereal gref, doublereal pref, doublereal dSearchRadius)
+     UnilateralContactParam(doublereal epsilon, doublereal dContactScale, doublereal gref, doublereal pref, doublereal dSearchRadius, doublereal dCosPhiThreshold)
           :epsilon(epsilon),
            dContactScale(dContactScale),
            gref(gref),
            pref(pref),
-           dSearchRadius(dSearchRadius) {
+           dSearchRadius(dSearchRadius),
+           dCosPhiThreshold(dCosPhiThreshold) {
      }
      const doublereal epsilon;
      const doublereal dContactScale;
      doublereal gref;
      const doublereal pref;
      doublereal dSearchRadius;
+     const doublereal dCosPhiThreshold;
 };
 
 struct ContactTraitsEquality {
@@ -1383,8 +1385,8 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Unilatera
      gavgproj /= iNumNodes;
      cosPhiavg /= iNumNodes;
 
-     if (cosPhiavg == 0.) {
-          cosPhiavg += std::numeric_limits<doublereal>::epsilon();
+     if (fabs(cosPhiavg) < dCosPhiThreshold) {
+          cosPhiavg += (cosPhiavg > 0. ? 1. : -1.) * dCosPhiThreshold;
      }
 
      const bool bFrontSide = gavgproj / cosPhiavg >= 0.;
@@ -1444,42 +1446,41 @@ void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Dist
 
      const SpColVector<T, 3> n3 = Cross(n1, n2, oDofMap);
 
-     const SpColVector<T, 3> e3(n3 / Norm(n3, oDofMap), oDofMap);
-     giproj = Dot(Rn0.GetCol(3), Transpose(R0) * (X0 - SubMatrix<3, 1>(x, 3 * (iNode - 1) + 1, 1, 1, 1)) + o0, oDofMap);
+     const T norm_n3 = Norm(n3, oDofMap);
+
+     if (norm_n3 <= 0.) {
+          throw NonlinearSolver::ErrSimulationDiverged(MBDYN_EXCEPT_ARGS);
+     }
+
+     const SpColVector<T, 3> e3(n3 / norm_n3, oDofMap);
+
+     giproj = Dot(Rn0.GetCol(3), Transpose(R0) * (SubMatrix<3, 1>(x, 3 * (iNode - 1) + 1, 1, 1, 1) - X0) - o0, oDofMap);
      cosPhii = Dot(e3, n0, oDofMap);
+
+     if constexpr (std::is_same<T, doublereal>::value) {
+               DEBUGCERR("e3=" << e3 << "\n");
+               DEBUGCERR("giproj=" << giproj << "\n");
+               DEBUGCERR("cosPhii=" << cosPhii << "\n");
+          }
 
      DEBUGCERR("UnilateralInPlaneContact(" << this->GetLabel() << "): StructNode(" << this->rgNodes[iNode - 1]->GetLabel() << "): e3 = [" << e3 << "]\n");
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
-void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::UpdateContactState(const doublereal gproj, const doublereal gcosPhi)
+void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::UpdateContactState(const doublereal g, const doublereal cosPhi)
 {
-     const bool bOutside = fabs(gproj) > dSearchRadius;
-     const bool bFrontSide = gcosPhi >= 0.;
+#ifdef DEBUG
+     const bool bOutside = g > dSearchRadius;
+#endif
+     const bool bFrontSide = cosPhi < -dCosPhiThreshold;
 
+     DEBUGCERR("g=" << g << "\n");
+     DEBUGCERR("cosPhi=" << cosPhi << "\n");
+     DEBUGCERR("bOutside=" << bOutside << "\n");
+     DEBUGCERR("bFrontSide=" << bFrontSide << "\n");
      DEBUGCERR("eContactStatePrev=" << static_cast<unsigned>(eContactStatePrev) << "\n");
 
-     switch (eContactStatePrev) {
-     case ContactState::ACTIVE:
-          if (bOutside) {
-               if (bFrontSide) {
-                    eContactStateCurr = ContactState::IN_FRONT;
-               }
-          }
-          break;
-     case ContactState::IN_FRONT:
-          if (bOutside) {
-               eContactStateCurr = bFrontSide ? ContactState::IN_FRONT : ContactState::BEHIND;
-          } else {
-               eContactStateCurr = ContactState::ACTIVE;
-          }
-          break;
-     case ContactState::BEHIND:
-          if (bOutside) {
-               eContactStateCurr = bFrontSide ? ContactState::IN_FRONT : ContactState::BEHIND;
-          }
-          break;
-     }
+     eContactStateCurr = bFrontSide ? ContactState::ACTIVE : ContactState::BEHIND;
 
      DEBUGCERR("eContactStateCurr=" << static_cast<unsigned>(eContactStateCurr) << "\n");
 }
@@ -1537,46 +1538,40 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssContac
      doublereal dOffset = 0.;
 
      if constexpr(std::is_same<T, doublereal>::value) {
-          doublereal gavg = 0., cosPhiavg = 0., gmin = std::numeric_limits<doublereal>::max();
+          doublereal cosPhiavg = 0., gmin = std::numeric_limits<doublereal>::max();
 
           for (index_type i = 1; i <= iNumNodes; ++i) {
-               gavg += g(i);
                cosPhiavg += cosPhi(i);
-               gmin = std::min(gmin, fabs(g(i)));
+               gmin = std::min(gmin, g(i));
           }
 
-          gavg /= iNumNodes;
           cosPhiavg /= iNumNodes;
 
-          if (cosPhiavg == 0.) {
-               cosPhiavg += std::numeric_limits<doublereal>::epsilon();
-          }
-
-          UpdateContactState(gmin, gavg / cosPhiavg);
+          UpdateContactState(gmin, cosPhiavg);
      }
 
      if (eContactStateCurr == ContactState::BEHIND) {
-          doublereal gcosPhiminabs = std::numeric_limits<doublereal>::max();
+          doublereal gcosPhimin = std::numeric_limits<doublereal>::max();
 
           for (index_type i = 1; i <= iNumNodes; ++i) {
                doublereal cosPhii = SpGradientTraits<T>::dGetValue(cosPhi(i));
 
-               if (cosPhii == 0.) {
-                    cosPhii += std::numeric_limits<doublereal>::epsilon();
+               if (fabs(cosPhii) < dCosPhiThreshold) {
+                    cosPhii += (cosPhii > 0. ? 1. : -1.) * dCosPhiThreshold;
                }
 
-               gcosPhiminabs = std::min(gcosPhiminabs, SpGradientTraits<T>::dGetValue(g(i)) / cosPhii);
+               gcosPhimin = std::min(gcosPhimin, -SpGradientTraits<T>::dGetValue(g(i)) / cosPhii);
           }
 
-          dOffset = gref / std::numeric_limits<doublereal>::epsilon() - gcosPhiminabs;
+          dOffset = gref / std::numeric_limits<doublereal>::epsilon() - gcosPhimin;
      }
 
      for (index_type i = 1; i <= iNumNodes; ++i) {
-          if (cosPhi(i) == 0.) {
-               cosPhi(i) += std::numeric_limits<doublereal>::epsilon(); // FIXME: avoid division by zero if n0 is normal to e3
+          if (fabs(cosPhi(i)) < dCosPhiThreshold) {
+               cosPhi(i) += (cosPhi(i) > 0. ? 1. : -1) * dCosPhiThreshold; // FIXME: avoid division by zero if n0 is normal to e3
           }
 
-          g(i) = oDofMap.MapEval(g(i) / cosPhi(i) + dOffset);
+          g(i) = oDofMap.MapEval(dOffset - g(i) / cosPhi(i) );
      }
 
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
@@ -1982,6 +1977,8 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
 
      const doublereal dSearchRadius = HP.IsKeyWord("search" "radius") ? HP.GetReal() : -1.;
 
+     const doublereal dCosPhiThreshold = HP.IsKeyWord("angle" "threshold") ? HP.GetReal() : 0.01;
+
      const flag fOut = pDM->fReadOutput(HP, Elem::SURFACE_LOAD);
 
      if (HP.IsArg()) {
@@ -2004,7 +2001,7 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
 
      SurfaceLoadElem* pElem = nullptr;
 
-     UnilateralContactParam oParam(epsilon, dContactScale, gref, pref, dSearchRadius);
+     UnilateralContactParam oParam(epsilon, dContactScale, gref, pref, dSearchRadius, dCosPhiThreshold);
 
      switch (eEqualityType) {
      case DofOrder::EQUALITY:
