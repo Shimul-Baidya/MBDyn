@@ -1327,7 +1327,9 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Unilatera
  Rn0(Rn0),
  o0(o0),
  F0tot(3, 0),
- M0tot(3, 0)
+ M0tot(3, 0),
+ eContactStateCurr(ContactState::BEHIND),
+ eContactStatePrev(ContactState::BEHIND)
 {
      using namespace sp_grad;
 
@@ -1366,32 +1368,32 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Unilatera
           }
      }
 
-     pNode0->GetXCurr(X0, dCoef, func);
-     pNode0->GetRCurr(R0, dCoef, func);
+     // pNode0->GetXCurr(X0, dCoef, func);
+     // pNode0->GetRCurr(R0, dCoef, func);
 
-     constexpr SpGradExpDofMapHelper<doublereal> oDofMap;
+     // constexpr SpGradExpDofMapHelper<doublereal> oDofMap;
 
-     const SpColVector<doublereal, 3> n0(R0 * Rn0.GetCol(3));
+     // const SpColVector<doublereal, 3> n0(R0 * Rn0.GetCol(3));
 
-     doublereal gavgproj = 0., cosPhiavg = 0.;
+     // doublereal gavgproj = 0., cosPhiavg = 0.;
 
-     for (index_type i = 1; i <= iNumNodes; ++i) {
-          doublereal giproj, cosPhii;
-          DistanceNormalToPlane(i, X0, R0, n0, x, giproj, cosPhii, oDofMap);
-          gavgproj += giproj;
-          cosPhiavg += cosPhii;
-     }
+     // for (index_type i = 1; i <= iNumNodes; ++i) {
+     //      doublereal giproj, cosPhii;
+     //      DistanceNormalToPlane(i, X0, R0, n0, x, giproj, cosPhii, oDofMap);
+     //      gavgproj += giproj;
+     //      cosPhiavg += cosPhii;
+     // }
 
-     gavgproj /= iNumNodes;
-     cosPhiavg /= iNumNodes;
+     // gavgproj /= iNumNodes;
+     // cosPhiavg /= iNumNodes;
 
-     if (fabs(cosPhiavg) < dCosPhiThreshold) {
-          cosPhiavg += (cosPhiavg > 0. ? 1. : -1.) * dCosPhiThreshold;
-     }
+     // if (fabs(cosPhiavg) < dCosPhiThreshold) {
+     //      cosPhiavg += (cosPhiavg > 0. ? 1. : -1.) * dCosPhiThreshold;
+     // }
 
-     const bool bFrontSide = gavgproj / cosPhiavg >= 0.;
+     // const bool bFrontSide = gavgproj / cosPhiavg >= 0.;
 
-     eContactStatePrev = eContactStateCurr = (bFrontSide ? ContactState::IN_FRONT : ContactState::BEHIND);
+     // eContactStatePrev = eContactStateCurr = (bFrontSide ? ContactState::IN_FRONT : ContactState::BEHIND);
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1472,7 +1474,7 @@ void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Upda
 #ifdef DEBUG
      const bool bOutside = g > dSearchRadius;
 #endif
-     const bool bFrontSide = cosPhi < -dCosPhiThreshold;
+     const bool bFrontSide = cosPhi < dCosPhiThreshold;
 
      DEBUGCERR("g=" << g << "\n");
      DEBUGCERR("cosPhi=" << cosPhi << "\n");
@@ -1551,27 +1553,28 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssContac
      }
 
      if (eContactStateCurr == ContactState::BEHIND) {
-          doublereal gcosPhimin = std::numeric_limits<doublereal>::max();
+          // doublereal gcosPhimin = std::numeric_limits<doublereal>::max();
 
-          for (index_type i = 1; i <= iNumNodes; ++i) {
-               doublereal cosPhii = SpGradientTraits<T>::dGetValue(cosPhi(i));
+          // for (index_type i = 1; i <= iNumNodes; ++i) {
+          //      doublereal cosPhii = SpGradientTraits<T>::dGetValue(cosPhi(i));
 
-               if (fabs(cosPhii) < dCosPhiThreshold) {
-                    cosPhii += (cosPhii > 0. ? 1. : -1.) * dCosPhiThreshold;
-               }
+          //      if (fabs(cosPhii) < dCosPhiThreshold) {
+          //           cosPhii += (cosPhii > 0. ? 1. : -1.) * dCosPhiThreshold;
+          //      }
 
-               gcosPhimin = std::min(gcosPhimin, -SpGradientTraits<T>::dGetValue(g(i)) / cosPhii);
-          }
+          //      gcosPhimin = std::min(gcosPhimin, -SpGradientTraits<T>::dGetValue(g(i)) / cosPhii);
+          // }
 
-          dOffset = gref / std::numeric_limits<doublereal>::epsilon() - gcosPhimin;
+          // dOffset = gref / std::numeric_limits<doublereal>::epsilon() - gcosPhimin;
+          dOffset = gref / std::numeric_limits<doublereal>::epsilon();
      }
 
      for (index_type i = 1; i <= iNumNodes; ++i) {
-          if (fabs(cosPhi(i)) < dCosPhiThreshold) {
-               cosPhi(i) += (cosPhi(i) > 0. ? 1. : -1) * dCosPhiThreshold; // FIXME: avoid division by zero if n0 is normal to e3
+          if (fabs(cosPhi(i)) < fabs(dCosPhiThreshold)) {
+               cosPhi(i) += (cosPhi(i) > 0. ? 1. : -1) * fabs(dCosPhiThreshold); // FIXME: avoid division by zero if n0 is normal to e3
           }
 
-          g(i) = oDofMap.MapEval(dOffset - g(i) / cosPhi(i) );
+          g(i) = oDofMap.MapEval(dOffset - g(i) / cosPhi(i));
      }
 
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
@@ -1977,7 +1980,7 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
 
      const doublereal dSearchRadius = HP.IsKeyWord("search" "radius") ? HP.GetReal() : -1.;
 
-     const doublereal dCosPhiThreshold = HP.IsKeyWord("angle" "threshold") ? HP.GetReal() : 0.01;
+     const doublereal dCosPhiThreshold = HP.IsKeyWord("angle" "threshold") ? HP.GetReal() : -0.01;
 
      const flag fOut = pDM->fReadOutput(HP, Elem::SURFACE_LOAD);
 
