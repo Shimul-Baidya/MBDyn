@@ -1860,3 +1860,8 @@ template SurfaceLoadElem* ReadUnilateralInPlaneContact<Quadrangle8, Gauss3x3>(Da
 template SurfaceLoadElem* ReadUnilateralInPlaneContact<Quadrangle9, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
 template SurfaceLoadElem* ReadUnilateralInPlaneContact<Quadrangle8r, Gauss3x3>(DataManager*, MBDynParser&, unsigned int);
 template SurfaceLoadElem* ReadUnilateralInPlaneContact<Triangle6h, CollocTria6h>(DataManager*, MBDynParser&, unsigned int);
+
+template SurfaceLoadElem* ReadUnilateralInPlaneContact<Quadrangle4, Gauss2x2Lumped>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadUnilateralInPlaneContact<Quadrangle8, Gauss3x3Lumped>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadUnilateralInPlaneContact<Quadrangle9, Gauss3x3Lumped>(DataManager*, MBDynParser&, unsigned int);
+template SurfaceLoadElem* ReadUnilateralInPlaneContact<Quadrangle8r, Gauss3x3Lumped>(DataManager*, MBDynParser&, unsigned int);

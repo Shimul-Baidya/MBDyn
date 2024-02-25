@@ -52,7 +52,9 @@ class Triangle6h;
 
 // 2D collocation rules
 class Gauss2x2;
+class Gauss2x2Lumped;
 class Gauss3x3;
+class Gauss3x3Lumped;
 class CollocTria6h;
 
 // 2D base class

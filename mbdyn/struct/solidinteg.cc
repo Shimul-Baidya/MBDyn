@@ -110,25 +110,31 @@ namespace {
           return fabs_ce(dCollocationTest3DRec(r, s, t, alpha, N) / dCollocationFunction3DRes() - 1.) <= dTol3D;
      }
      
-     static_assert(bCollocationTest1D(Gauss2::ri, Gauss2::alphai, 2), "unit test for collocation rule failed");
-     static_assert(bCollocationTest1D(Gauss3::ri, Gauss3::alphai, 3), "unit test for collocation rule failed");
+     static_assert(bCollocationTest1D(Gauss2_1D::ri, Gauss2_1D::alphai, 2), "unit test for collocation rule failed");
+     static_assert(bCollocationTest1D(Gauss3_1D::ri, Gauss3_1D::alphai, 3), "unit test for collocation rule failed");
      static_assert(bCollocationTest2D(CollocTria6h::zeta, CollocTria6h::eta, CollocTria6h::w, 7), "unit test for collocation rule failed");
      static_assert(bCollocationTest3D(CollocTet10h::r1, CollocTet10h::s1, CollocTet10h::t1, CollocTet10h::w1, 5), "unit test for collocation rule failed");
 }
 
-constexpr sp_grad::index_type Gauss2::iGaussOrder;
-constexpr doublereal Gauss2::ri[];
-constexpr doublereal Gauss2::alphai[];
-constexpr doublereal Gauss2::ri_lumped[];
-constexpr doublereal Gauss2::alphai_lumped[];
+constexpr sp_grad::index_type Gauss2_1D::iGaussOrder;
+constexpr doublereal Gauss2_1D::ri[];
+constexpr doublereal Gauss2_1D::alphai[];
+constexpr doublereal Gauss2Lumped_1D::ri[];
+constexpr doublereal Gauss2Lumped_1D::alphai[];
 
-constexpr sp_grad::index_type Gauss2x2::iNumEvalPoints;
-constexpr sp_grad::index_type Gauss2x2::ridx[];
-constexpr sp_grad::index_type Gauss2x2::sidx[];
+constexpr sp_grad::index_type IntegLayout2_2D::ridx[];
+constexpr sp_grad::index_type IntegLayout2_2D::sidx[];
 
-constexpr sp_grad::index_type Gauss3x3::iNumEvalPoints;
-constexpr sp_grad::index_type Gauss3x3::ridx[];
-constexpr sp_grad::index_type Gauss3x3::sidx[];
+constexpr sp_grad::index_type IntegLayout3_2D::ridx[];
+constexpr sp_grad::index_type IntegLayout3_2D::sidx[];
+
+constexpr sp_grad::index_type IntegLayout2_3D::ridx[];
+constexpr sp_grad::index_type IntegLayout2_3D::sidx[];
+constexpr sp_grad::index_type IntegLayout2_3D::tidx[];
+
+constexpr sp_grad::index_type IntegLayout3_3D::ridx[];
+constexpr sp_grad::index_type IntegLayout3_3D::sidx[];
+constexpr sp_grad::index_type IntegLayout3_3D::tidx[];
 
 constexpr sp_grad::index_type CollocTria6h::iNumEvalPoints;
 constexpr doublereal CollocTria6h::A;
@@ -139,25 +145,10 @@ constexpr doublereal CollocTria6h::zeta[7];
 constexpr doublereal CollocTria6h::eta[7];
 constexpr doublereal CollocTria6h::w[7];
 
-constexpr sp_grad::index_type Gauss2x2x2::iNumEvalPointsStiffness;
-constexpr sp_grad::index_type Gauss2x2x2::iNumEvalPointsMass;
-constexpr sp_grad::index_type Gauss2x2x2::iNumEvalPointsMassLumped;
-constexpr sp_grad::index_type Gauss2x2x2::ridx[];
-constexpr sp_grad::index_type Gauss2x2x2::sidx[];
-constexpr sp_grad::index_type Gauss2x2x2::tidx[];
-
-constexpr sp_grad::index_type Gauss3::iGaussOrder;
-constexpr sp_grad::index_type Gauss3x3x3::iNumEvalPointsStiffness;
-constexpr sp_grad::index_type Gauss3x3x3::iNumEvalPointsMass;
-constexpr sp_grad::index_type Gauss3x3x3::iNumEvalPointsMassLumped;
-constexpr sp_grad::index_type Gauss3x3x3::ridx[];
-constexpr sp_grad::index_type Gauss3x3x3::sidx[];
-constexpr sp_grad::index_type Gauss3x3x3::tidx[];
-
-constexpr doublereal Gauss3::ri[];
-constexpr doublereal Gauss3::alphai[];
-constexpr doublereal Gauss3::ri_lumped[];
-constexpr doublereal Gauss3::alphai_lumped[];
+constexpr doublereal Gauss3_1D::ri[];
+constexpr doublereal Gauss3_1D::alphai[];
+constexpr doublereal Gauss3Lumped_1D::ri[];
+constexpr doublereal Gauss3Lumped_1D::alphai[];
 
 constexpr sp_grad::index_type CollocPenta15::M;
 constexpr sp_grad::index_type CollocPenta15::N;

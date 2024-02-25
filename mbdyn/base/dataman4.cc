@@ -139,6 +139,12 @@ enum KeyWords {
         UNILATERALINPLANECONTACTQ9,
         UNILATERALINPLANECONTACTQ8R,
         UNILATERALINPLANECONTACTT6,
+        UNILATERALINPLANECONTACTQ4L,
+        UNILATERALINPLANECONTACTQ8L,
+        UNILATERALINPLANECONTACTQ9L,
+        UNILATERALINPLANECONTACTQ8RL,
+        UNILATERALINPLANECONTACTT6L,
+
         
 	AIRPROPERTIES,
 	GUST,
@@ -233,6 +239,12 @@ DataManager::ReadElems(MBDynParser& HP)
                 "unilateral" "in" "plane" "contact" "q9",
                 "unilateral" "in" "plane" "contact" "q8r",
                 "unilateral" "in" "plane" "contact" "t6",
+
+                "unilateral" "in" "plane" "contact" "q4l",
+                "unilateral" "in" "plane" "contact" "q8l",
+                "unilateral" "in" "plane" "contact" "q9l",
+                "unilateral" "in" "plane" "contact" "q8rl",
+                "unilateral" "in" "plane" "contact" "t6l",                
                 
 		"air" "properties",
 		"gust",
@@ -445,7 +457,13 @@ DataManager::ReadElems(MBDynParser& HP)
                         case UNILATERALINPLANECONTACTQ8:
                         case UNILATERALINPLANECONTACTQ9:
                         case UNILATERALINPLANECONTACTQ8R:
-                        case UNILATERALINPLANECONTACTT6: {
+                        case UNILATERALINPLANECONTACTT6:
+                        case UNILATERALINPLANECONTACTQ4L:
+                        case UNILATERALINPLANECONTACTQ8L:
+                        case UNILATERALINPLANECONTACTQ9L:
+                        case UNILATERALINPLANECONTACTQ8RL:
+                        case UNILATERALINPLANECONTACTT6L:                             
+                        {
                              DEBUGLCOUT(MYDEBUG_INPUT, "surface loads\n");
                              Typ = Elem::SURFACE_LOAD;
                              break;
@@ -667,7 +685,12 @@ DataManager::ReadElems(MBDynParser& HP)
                                 case UNILATERALINPLANECONTACTQ8:
                                 case UNILATERALINPLANECONTACTQ9:
                                 case UNILATERALINPLANECONTACTQ8R:
-                                case UNILATERALINPLANECONTACTT6:                                     
+                                case UNILATERALINPLANECONTACTT6:
+                                case UNILATERALINPLANECONTACTQ4L:
+                                case UNILATERALINPLANECONTACTQ8L:
+                                case UNILATERALINPLANECONTACTQ9L:
+                                case UNILATERALINPLANECONTACTQ8RL:
+                                case UNILATERALINPLANECONTACTT6L:                                     
                                         t = Elem::SURFACE_LOAD;
                                         break;
 
@@ -1013,7 +1036,12 @@ DataManager::ReadElems(MBDynParser& HP)
                                         case UNILATERALINPLANECONTACTQ8:
                                         case UNILATERALINPLANECONTACTQ9:
                                         case UNILATERALINPLANECONTACTQ8R:
-                                        case UNILATERALINPLANECONTACTT6:                                             
+                                        case UNILATERALINPLANECONTACTT6:
+                                        case UNILATERALINPLANECONTACTQ4L:
+                                        case UNILATERALINPLANECONTACTQ8L:
+                                        case UNILATERALINPLANECONTACTQ9L:
+                                        case UNILATERALINPLANECONTACTQ8RL:
+                                        case UNILATERALINPLANECONTACTT6L:                                                                                          
 					case INDUCEDVELOCITY:
 					case ROTOR:
 					case AERODYNAMICBODY:
@@ -1129,7 +1157,12 @@ DataManager::ReadElems(MBDynParser& HP)
                                                 case UNILATERALINPLANECONTACTQ8:
                                                 case UNILATERALINPLANECONTACTQ9:
                                                 case UNILATERALINPLANECONTACTQ8R:
-                                                case UNILATERALINPLANECONTACTT6:                                                     
+                                                case UNILATERALINPLANECONTACTT6:
+                                                case UNILATERALINPLANECONTACTQ4L:
+                                                case UNILATERALINPLANECONTACTQ8L:
+                                                case UNILATERALINPLANECONTACTQ9L:
+                                                case UNILATERALINPLANECONTACTQ8RL:
+                                                case UNILATERALINPLANECONTACTT6L:                                                     
                                                         ppE = ppFindElem(Elem::SURFACE_LOAD, uLabel);
                                                         break;
 
@@ -1301,6 +1334,11 @@ DataManager::ReadElems(MBDynParser& HP)
                                 case UNILATERALINPLANECONTACTQ9:
                                 case UNILATERALINPLANECONTACTQ8R:
                                 case UNILATERALINPLANECONTACTT6:
+                                case UNILATERALINPLANECONTACTQ4L:
+                                case UNILATERALINPLANECONTACTQ8L:
+                                case UNILATERALINPLANECONTACTQ9L:
+                                case UNILATERALINPLANECONTACTQ8RL:
+                                case UNILATERALINPLANECONTACTT6L:
                                      
 				case GUST:
 				case INDUCEDVELOCITY:
@@ -1928,8 +1966,13 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
         case UNILATERALINPLANECONTACTQ8:
         case UNILATERALINPLANECONTACTQ9:
         case UNILATERALINPLANECONTACTQ8R:
-        case UNILATERALINPLANECONTACTT6: {
-                static constexpr char sType[][28] = {
+        case UNILATERALINPLANECONTACTT6:
+        case UNILATERALINPLANECONTACTQ4L:
+        case UNILATERALINPLANECONTACTQ8L:
+        case UNILATERALINPLANECONTACTQ9L:
+        case UNILATERALINPLANECONTACTQ8RL:
+        case UNILATERALINPLANECONTACTT6L: {
+                static constexpr char sType[][29] = {
                         "Pressureq4",
                         "Pressureq8",
                         "Pressureq9",
@@ -1944,7 +1987,12 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                         "Unilateralinplanecontactq8",
                         "Unilateralinplanecontactq9",
                         "Unilateralinplanecontactq8r",
-                        "Unilateralinplanecontactt6"                        
+                        "Unilateralinplanecontactt6",
+                        "Unilateralinplanecontactq4l",
+                        "Unilateralinplanecontactq8l",
+                        "Unilateralinplanecontactq9l",
+                        "Unilateralinplanecontactq8rl",
+                        "Unilateralinplanecontactt6l"                                                
                 };
 
 #ifdef DEBUG
@@ -2024,7 +2072,22 @@ DataManager::ReadOneElem(MBDynParser& HP, unsigned int uLabel, const std::string
                      break;
                 case UNILATERALINPLANECONTACTT6:
                      pE = ReadUnilateralInPlaneContact<Triangle6h, CollocTria6h>(this, HP, uLabel);
-                     break;                     
+                     break;
+                case UNILATERALINPLANECONTACTQ4L:
+                     pE = ReadUnilateralInPlaneContact<Quadrangle4, Gauss2x2Lumped>(this, HP, uLabel);
+                     break;
+                case UNILATERALINPLANECONTACTQ8L:
+                     pE = ReadUnilateralInPlaneContact<Quadrangle8, Gauss3x3Lumped>(this, HP, uLabel);
+                     break;
+                case UNILATERALINPLANECONTACTQ9L:
+                     pE = ReadUnilateralInPlaneContact<Quadrangle9, Gauss3x3Lumped>(this, HP, uLabel);
+                     break;
+                case UNILATERALINPLANECONTACTQ8RL:
+                     pE = ReadUnilateralInPlaneContact<Quadrangle8r, Gauss3x3Lumped>(this, HP, uLabel);
+                     break;
+                case UNILATERALINPLANECONTACTT6L:
+                     throw ErrNotImplementedYet(MBDYN_EXCEPT_ARGS);
+                     break;                                          
                 default:
                      ASSERT(0);
                 }

@@ -47,42 +47,60 @@
 #include "sp_matrix_base.h"
 #include "solid.h"
 
-
-class Gauss2 {
-public:
+struct Gauss2_1D {
      static constexpr sp_grad::index_type iGaussOrder = 2;
      static constexpr doublereal ri[] = {constexpr_math::sqrt(1./3.), -constexpr_math::sqrt(1./3.)};
      static constexpr doublereal alphai[] = {1.0, 1.0};
-     static constexpr doublereal ri_lumped[] = {1., -1.};
-     static constexpr doublereal alphai_lumped[] = {1.0, 1.0};
 };
 
-class Gauss3 {
-public:
+struct Gauss3_1D {
      static constexpr sp_grad::index_type iGaussOrder = 3;
-
      static constexpr doublereal ri[] = {constexpr_math::sqrt(3./5.), 0., -constexpr_math::sqrt(3./5.)};
      static constexpr doublereal alphai[] = {5./9., 8./9., 5./9.};
-     static constexpr doublereal ri_lumped[] = {1., 0., -1.};
-     static constexpr doublereal alphai_lumped[] = {2./3., 2./3., 2./3.};
 };
 
-class Gauss2x2: private Gauss2 {
-public:
-     static constexpr sp_grad::index_type iNumEvalPoints = iGaussOrder * iGaussOrder;
+struct Gauss2Lumped_1D {
+     static constexpr sp_grad::index_type iGaussOrder = 2;
+     static constexpr doublereal ri[] = {1., -1.};
+     static constexpr doublereal alphai[] = {1.0, 1.0};
+};
 
-     static inline void
-     GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r);
+struct Gauss3Lumped_1D {
+     static constexpr sp_grad::index_type iGaussOrder = 3;
+     static constexpr doublereal ri[] = {1., 0., -1.};
+     static constexpr doublereal alphai[] = {2./3., 2./3., 2./3.};
+};
 
-     static inline doublereal
-     dGetWeight(sp_grad::index_type i);
-
-private:
+struct IntegLayout2_2D {
      static constexpr sp_grad::index_type ridx[] = {0, 0, 1, 1};
      static constexpr sp_grad::index_type sidx[] = {0, 1, 0, 1};
 };
 
-class Gauss3x3: private Gauss3 {
+struct IntegLayout3_2D {
+     static constexpr sp_grad::index_type ridx[] = {0, 0, 0, 1, 1, 1, 2, 2, 2};
+     static constexpr sp_grad::index_type sidx[] = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+};
+
+struct IntegLayout2_3D {
+     static constexpr sp_grad::index_type ridx[] = {0, 0, 0, 0, 1, 1, 1, 1};
+     static constexpr sp_grad::index_type sidx[] = {0, 0, 1, 1, 0, 0, 1, 1};
+     static constexpr sp_grad::index_type tidx[] = {0, 1, 0, 1, 0, 1, 0, 1};
+};
+
+struct IntegLayout3_3D {
+     static constexpr sp_grad::index_type ridx[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+     static constexpr sp_grad::index_type sidx[] = {0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2};
+     static constexpr sp_grad::index_type tidx[] = {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2};
+};
+
+template <typename GaussType_1D, typename IntegLayout_2D>
+class Gauss_2D: private GaussType_1D, private IntegLayout_2D {
+private:
+     using GaussType_1D::iGaussOrder;
+     using GaussType_1D::ri;
+     using GaussType_1D::alphai;
+     using IntegLayout_2D::ridx;
+     using IntegLayout_2D::sidx;
 public:
      static constexpr sp_grad::index_type iNumEvalPoints = iGaussOrder * iGaussOrder;
 
@@ -91,11 +109,13 @@ public:
 
      static inline doublereal
      dGetWeight(sp_grad::index_type i);
-
-private:
-     static constexpr sp_grad::index_type ridx[] = {0, 0, 0, 1, 1, 1, 2, 2, 2};
-     static constexpr sp_grad::index_type sidx[] = {0, 1, 2, 0, 1, 2, 0, 1, 2};
 };
+
+class Gauss2x2: public Gauss_2D<Gauss2_1D, IntegLayout2_2D> {};
+class Gauss3x3: public Gauss_2D<Gauss3_1D, IntegLayout3_2D> {};
+
+class Gauss2x2Lumped: public Gauss_2D<Gauss2Lumped_1D, IntegLayout2_2D> {};
+class Gauss3x3Lumped: public Gauss_2D<Gauss3Lumped_1D, IntegLayout3_2D> {};
 
 class CollocTria6h {
 public:
@@ -118,89 +138,68 @@ public:
      static constexpr doublereal w[7] = {9./80., P1, P1, P1, P2, P2, P2};
 };
 
-class Gauss2x2x2: private Gauss2 {
+template <typename GaussType_1D, typename IntegLayout_3D>
+class Gauss_3D: private GaussType_1D, private IntegLayout_3D {
+     using GaussType_1D::iGaussOrder;
+     using GaussType_1D::ri;
+     using GaussType_1D::alphai;
+     using IntegLayout_3D::ridx;
+     using IntegLayout_3D::sidx;
+     using IntegLayout_3D::tidx;
 public:
-     static constexpr sp_grad::index_type iNumEvalPointsStiffness = iGaussOrder*iGaussOrder*iGaussOrder;//std::pow(iGaussOrder, 3);
-     static constexpr sp_grad::index_type iNumEvalPointsMass = iNumEvalPointsStiffness;
-     static constexpr sp_grad::index_type iNumEvalPointsMassLumped = iNumEvalPointsStiffness;
+     static constexpr sp_grad::index_type iNumEvalPoints = iGaussOrder*iGaussOrder*iGaussOrder;
 
      static inline void
-     GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r);
+     GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r);
 
      static inline doublereal
-     dGetWeightStiffness(sp_grad::index_type i);
+     dGetWeight(sp_grad::index_type i);
+};
+
+template <typename GaussTypeStiffness_1D, typename GaussTypeMass_1D, typename GaussTypeMassLumped_1D, typename IntegLayoutStiffness_3D, typename IntegLayoutMass_3D, typename IntegLayoutMassLumped_3D>
+class GaussSolidStruct_3D {
+     typedef Gauss_3D<GaussTypeStiffness_1D, IntegLayoutStiffness_3D> Stiffness;
+     typedef Gauss_3D<GaussTypeMass_1D, IntegLayoutMass_3D> Mass;
+     typedef Gauss_3D<GaussTypeMassLumped_1D, IntegLayoutMassLumped_3D> MassLumped;
+public:
+     static constexpr sp_grad::index_type iNumEvalPointsStiffness = Stiffness::iNumEvalPoints;
+     static constexpr sp_grad::index_type iNumEvalPointsMass = Mass::iNumEvalPoints;
+     static constexpr sp_grad::index_type iNumEvalPointsMassLumped = MassLumped::iNumEvalPoints;
+
+     static inline void
+     GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r) {
+          Stiffness::GetPosition(i, r);
+     }
+
+     static inline doublereal
+     dGetWeightStiffness(sp_grad::index_type i) {
+          return Stiffness::dGetWeight(i);
+     }
 
      static inline void
      GetPositionMass(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r) {
-          GetPositionStiffness(i, r);
+          Mass::GetPosition(i, r);
      }
 
      static inline doublereal
      dGetWeightMass(sp_grad::index_type i) {
-          return dGetWeightStiffness(i);
+          return Mass::dGetWeight(i);
      }
 
      static inline void
-     GetPositionMassLumped(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r);
-
-     static inline doublereal
-     dGetWeightMassLumped(sp_grad::index_type i);
-
-private:
-     static constexpr sp_grad::index_type ridx[] = {0, 0, 0, 0, 1, 1, 1, 1};
-     static constexpr sp_grad::index_type sidx[] = {0, 0, 1, 1, 0, 0, 1, 1};
-     static constexpr sp_grad::index_type tidx[] = {0, 1, 0, 1, 0, 1, 0, 1};
-};
-
-class Gauss3x3x3: private Gauss3 {
-public:
-     static constexpr sp_grad::index_type iNumEvalPointsStiffness = iGaussOrder*iGaussOrder*iGaussOrder;//std::pow(iGaussOrder, 3);
-     static constexpr sp_grad::index_type iNumEvalPointsMass = iNumEvalPointsStiffness;
-     static constexpr sp_grad::index_type iNumEvalPointsMassLumped = iNumEvalPointsStiffness;
-
-     static inline void
-     GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r);
-
-     static inline doublereal
-     dGetWeightStiffness(sp_grad::index_type i);
-
-     static inline void
-     GetPositionMass(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r) {
-          GetPositionStiffness(i, r);
+     GetPositionMassLumped(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r) {
+          return MassLumped::GetPosition(i, r);
      }
 
      static inline doublereal
-     dGetWeightMass(sp_grad::index_type i) {
-          return dGetWeightStiffness(i);
+     dGetWeightMassLumped(sp_grad::index_type i) {
+          return MassLumped::dGetWeight(i);
      }
-
-     static inline void
-     GetPositionMassLumped(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r);
-
-     static inline doublereal
-     dGetWeightMassLumped(sp_grad::index_type i);
-
-private:
-     static constexpr sp_grad::index_type ridx[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
-     static constexpr sp_grad::index_type sidx[] = {0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2};
-     static constexpr sp_grad::index_type tidx[] = {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2};
 };
 
-class GaussH20r: public Gauss2x2x2, public Gauss3x3x3 {
-public:
-     using Gauss2x2x2::iNumEvalPointsStiffness;
-     using Gauss3x3x3::iNumEvalPointsMass;
-     using Gauss3x3x3::iNumEvalPointsMassLumped;
-
-     using Gauss2x2x2::GetPositionStiffness;
-     using Gauss2x2x2::dGetWeightStiffness;
-
-     using Gauss3x3x3::GetPositionMass;
-     using Gauss3x3x3::dGetWeightMass;
-
-     using Gauss3x3x3::GetPositionMassLumped;
-     using Gauss3x3x3::dGetWeightMassLumped;
-};
+class Gauss2x2x2: public GaussSolidStruct_3D<Gauss2_1D, Gauss2_1D, Gauss2Lumped_1D, IntegLayout2_3D, IntegLayout2_3D, IntegLayout2_3D> {};
+class Gauss3x3x3: public GaussSolidStruct_3D<Gauss3_1D, Gauss3_1D, Gauss3Lumped_1D, IntegLayout3_3D, IntegLayout3_3D, IntegLayout3_3D> {};
+class GaussH20r: public GaussSolidStruct_3D<Gauss2_1D, Gauss3_1D, Gauss3Lumped_1D, IntegLayout2_3D, IntegLayout3_3D, IntegLayout3_3D> {};
 
 class CollocPenta15 {
      static constexpr sp_grad::index_type M = 7;
@@ -332,8 +331,9 @@ public:
      static constexpr doublereal w3[] = {c3, c3, c3, c3};
 };
 
+template <typename GaussType_1D, typename IntegLayout_2D>
 void
-Gauss2x2::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r)
+Gauss_2D<GaussType_1D, IntegLayout_2D>::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r)
 {
      ASSERT(i >= 0);
      ASSERT(i < iNumEvalPoints);
@@ -350,43 +350,9 @@ Gauss2x2::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>
      r(2) = ri[sidx[i]];
 }
 
+template <typename GaussType_1D, typename IntegLayout_2D>
 doublereal
-Gauss2x2::dGetWeight(sp_grad::index_type i)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPoints);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-
-     static_assert(sizeof(alphai) / sizeof(alphai[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPoints, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPoints, "invalid array size");
-
-     return alphai[ridx[i]] * alphai[sidx[i]];
-}
-
-void
-Gauss3x3::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 2>& r)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPoints);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-
-     static_assert(sizeof(ri) / sizeof(ri[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPoints, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPoints, "invalid array size");
-
-     r(1) = ri[ridx[i]];
-     r(2) = ri[sidx[i]];
-}
-
-doublereal
-Gauss3x3::dGetWeight(sp_grad::index_type i)
+Gauss_2D<GaussType_1D, IntegLayout_2D>::dGetWeight(sp_grad::index_type i)
 {
      ASSERT(i >= 0);
      ASSERT(i < iNumEvalPoints);
@@ -426,11 +392,12 @@ CollocTria6h::dGetWeight(sp_grad::index_type i)
      return w[i];
 }
 
+template <typename GaussType_1D, typename IntegLayout_3D>
 void
-Gauss2x2x2::GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
+Gauss_3D<GaussType_1D, IntegLayout_3D>::GetPosition(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
 {
      ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsStiffness);
+     ASSERT(i < iNumEvalPoints);
      ASSERT(ridx[i] >= 0);
      ASSERT(ridx[i] < iGaussOrder);
      ASSERT(sidx[i] >= 0);
@@ -439,20 +406,21 @@ Gauss2x2x2::GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<dou
      ASSERT(tidx[i] < iGaussOrder);
 
      static_assert(sizeof(ri) / sizeof(ri[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsStiffness, "invalid arrray size");
+     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPoints, "invalid array size");
+     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPoints, "invalid array size");
+     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPoints, "invalid arrray size");
 
      r(1) = ri[ridx[i]];
      r(2) = ri[sidx[i]];
      r(3) = ri[tidx[i]];
 }
 
+template <typename GaussType_1D, typename IntegLayout_3D>
 doublereal
-Gauss2x2x2::dGetWeightStiffness(sp_grad::index_type i)
+Gauss_3D<GaussType_1D, IntegLayout_3D>::dGetWeight(sp_grad::index_type i)
 {
      ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsStiffness);
+     ASSERT(i < iNumEvalPoints);
      ASSERT(ridx[i] >= 0);
      ASSERT(ridx[i] < iGaussOrder);
      ASSERT(sidx[i] >= 0);
@@ -461,137 +429,11 @@ Gauss2x2x2::dGetWeightStiffness(sp_grad::index_type i)
      ASSERT(tidx[i] < iGaussOrder);
 
      static_assert(sizeof(alphai) / sizeof(alphai[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsStiffness, "invalid array size");
+     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPoints, "invalid array size");
+     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPoints, "invalid array size");
+     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPoints, "invalid array size");
 
      return alphai[ridx[i]] * alphai[sidx[i]] * alphai[tidx[i]];
-}
-
-void
-Gauss2x2x2::GetPositionMassLumped(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsMassLumped);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-     ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < iGaussOrder);
-
-     static_assert(sizeof(ri_lumped) / sizeof(ri_lumped[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-
-     r(1) = ri_lumped[ridx[i]];
-     r(2) = ri_lumped[sidx[i]];
-     r(3) = ri_lumped[tidx[i]];
-}
-
-doublereal
-Gauss2x2x2::dGetWeightMassLumped(sp_grad::index_type i)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsMassLumped);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-     ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < iGaussOrder);
-
-     static_assert(sizeof(alphai_lumped) / sizeof(alphai_lumped[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-
-     return alphai_lumped[ridx[i]] * alphai_lumped[sidx[i]] * alphai_lumped[tidx[i]];
-}
-
-void
-Gauss3x3x3::GetPositionStiffness(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsStiffness);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-     ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < iGaussOrder);
-
-     static_assert(sizeof(ri) / sizeof(ri[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsStiffness, "invalid array size");
-
-     r(1) = ri[ridx[i]];
-     r(2) = ri[sidx[i]];
-     r(3) = ri[tidx[i]];
-}
-
-doublereal
-Gauss3x3x3::dGetWeightStiffness(sp_grad::index_type i)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsStiffness);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-     ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < iGaussOrder);
-
-     static_assert(sizeof(alphai) / sizeof(alphai[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsStiffness, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsStiffness, "invalid array size");
-
-     return alphai[ridx[i]] * alphai[sidx[i]] * alphai[tidx[i]];
-}
-
-void
-Gauss3x3x3::GetPositionMassLumped(sp_grad::index_type i, sp_grad::SpColVector<doublereal, 3>& r)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsMassLumped);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-     ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < iGaussOrder);
-
-     static_assert(sizeof(ri_lumped) / sizeof(ri_lumped[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-
-     r(1) = ri_lumped[ridx[i]];
-     r(2) = ri_lumped[sidx[i]];
-     r(3) = ri_lumped[tidx[i]];
-}
-
-doublereal
-Gauss3x3x3::dGetWeightMassLumped(sp_grad::index_type i)
-{
-     ASSERT(i >= 0);
-     ASSERT(i < iNumEvalPointsMassLumped);
-     ASSERT(ridx[i] >= 0);
-     ASSERT(ridx[i] < iGaussOrder);
-     ASSERT(sidx[i] >= 0);
-     ASSERT(sidx[i] < iGaussOrder);
-     ASSERT(tidx[i] >= 0);
-     ASSERT(tidx[i] < iGaussOrder);
-
-     static_assert(sizeof(alphai_lumped) / sizeof(alphai_lumped[0]) == iGaussOrder, "invalid array size");
-     static_assert(sizeof(ridx) / sizeof(ridx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(sidx) / sizeof(sidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-     static_assert(sizeof(tidx) / sizeof(tidx[0]) == iNumEvalPointsMassLumped, "invalid array size");
-
-     return alphai_lumped[ridx[i]] * alphai_lumped[sidx[i]] * alphai_lumped[tidx[i]];
 }
 
 void
