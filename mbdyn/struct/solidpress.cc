@@ -1190,20 +1190,16 @@ SurfaceTraction<ElementType, CollocationType, PressureSource, eType>::InitialWor
 }
 
 struct UnilateralContactParam {
-     UnilateralContactParam(doublereal epsilon, doublereal dContactScale, doublereal gref, doublereal pref, doublereal dSearchRadius, doublereal dCosPhiThreshold)
+     UnilateralContactParam(doublereal epsilon, doublereal dContactScale, doublereal gref, doublereal pref)
           :epsilon(epsilon),
            dContactScale(dContactScale),
            gref(gref),
-           pref(pref),
-           dSearchRadius(dSearchRadius),
-           dCosPhiThreshold(dCosPhiThreshold) {
+           pref(pref) {
      }
      const doublereal epsilon;
      const doublereal dContactScale;
      doublereal gref;
      const doublereal pref;
-     doublereal dSearchRadius;
-     const doublereal dCosPhiThreshold;
 };
 
 struct ContactTraitsEquality {
@@ -1281,11 +1277,8 @@ public:
      virtual void Output(OutputHandler& OH) const override;
 
 protected:
-     enum class ContactState {IN_FRONT, ACTIVE, BEHIND};
-
      template <typename T>
-     void DistanceNormalToPlane(sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3>& n0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, T& g, T& cosPhi, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
-     void UpdateContactState(const doublereal gminproj, const doublereal gcosPhiavg);
+     void DistanceNormalToPlane(sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, T& g, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const;
 
      template <typename T>
      inline void
@@ -1308,7 +1301,6 @@ protected:
      const Mat3x3 Rn0;
      const Vec3 o0;
      sp_grad::SpColVector<doublereal, 3> F0tot, M0tot;
-     ContactState eContactStateCurr, eContactStatePrev;
 };
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1327,73 +1319,11 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::Unilatera
  Rn0(Rn0),
  o0(o0),
  F0tot(3, 0),
- M0tot(3, 0),
- eContactStateCurr(ContactState::BEHIND),
- eContactStatePrev(ContactState::BEHIND)
+ M0tot(3, 0)
 {
      using namespace sp_grad;
 
      BaseType::InitCollocData(rgCollocData);
-
-     gref *= sqrt(this->A0);
-
-     SpColVector<doublereal, 3 * iNumNodes> x(3 * iNumNodes, 0);
-     SpColVector<doublereal, 3> X0(3, 0);
-     SpMatrix<doublereal, 3, 3> R0(3, 3, 0);
-
-     constexpr SpFunctionCall func = sp_grad::SpFunctionCall::REGULAR_RES;
-     constexpr doublereal dCoef = 1.;
-
-     this->GetNodalPosition(x, dCoef, func);
-
-     if (dSearchRadius < 0.) {
-          dSearchRadius = std::numeric_limits<doublereal>::max();
-
-          for (index_type i = 1; i <= iNumNodes; ++i) {
-               for (index_type j = 1; j <= iNumNodes; ++j) {
-                    if (i == j) {
-                         continue;
-                    }
-
-                    const SpColVector<doublereal, 3> xi = SubMatrix<3, 1>(x, 3 * (i - 1) + 1, 1, 1, 1);
-                    const SpColVector<doublereal, 3> xj = SubMatrix<3, 1>(x, 3 * (j - 1) + 1, 1, 1, 1);
-
-                    dSearchRadius = std::min(dSearchRadius, Norm(xi - xj) / 3.);
-               }
-          }
-
-          if (dSearchRadius <= 0.) {
-               ASSERT(0);
-               throw ErrGeneric(MBDYN_EXCEPT_ARGS);
-          }
-     }
-
-     // pNode0->GetXCurr(X0, dCoef, func);
-     // pNode0->GetRCurr(R0, dCoef, func);
-
-     // constexpr SpGradExpDofMapHelper<doublereal> oDofMap;
-
-     // const SpColVector<doublereal, 3> n0(R0 * Rn0.GetCol(3));
-
-     // doublereal gavgproj = 0., cosPhiavg = 0.;
-
-     // for (index_type i = 1; i <= iNumNodes; ++i) {
-     //      doublereal giproj, cosPhii;
-     //      DistanceNormalToPlane(i, X0, R0, n0, x, giproj, cosPhii, oDofMap);
-     //      gavgproj += giproj;
-     //      cosPhiavg += cosPhii;
-     // }
-
-     // gavgproj /= iNumNodes;
-     // cosPhiavg /= iNumNodes;
-
-     // if (fabs(cosPhiavg) < dCosPhiThreshold) {
-     //      cosPhiavg += (cosPhiavg > 0. ? 1. : -1.) * dCosPhiThreshold;
-     // }
-
-     // const bool bFrontSide = gavgproj / cosPhiavg >= 0.;
-
-     // eContactStatePrev = eContactStateCurr = (bFrontSide ? ContactState::IN_FRONT : ContactState::BEHIND);
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1422,69 +1352,14 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssRes(sp
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
 template <typename T>
-void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::DistanceNormalToPlane(const sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3>& n0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, T& giproj, T& cosPhii, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const
+void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::DistanceNormalToPlane(const sp_grad::index_type iNode, const sp_grad::SpColVector<T, 3>& X0, const sp_grad::SpMatrix<T, 3, 3>& R0, const sp_grad::SpColVector<T, 3 * iNumNodes>& x, T& gi, const sp_grad::SpGradExpDofMapHelper<T>& oDofMap) const
 {
      ASSERT(iNode >= 1);
      ASSERT(iNode <= iNumNodes);
 
      using namespace sp_grad;
 
-     SpColVector<doublereal, 2> r(2, 0);
-     SpMatrix<doublereal, iNumNodes, 2> hd(iNumNodes, 2, 0);
-     SpMatrix<doublereal, 3, iNumDof> dHf_dr(3, iNumDof, 0), dHf_ds(3, iNumDof, 0);
-
-     ElementType::NodalPosition(iNode, r);
-     ElementType::ShapeFunctionDeriv(r, hd);
-
-     for (index_type k = 1; k <= iNumNodes; ++k) {
-          for (index_type j = 1; j <= 3; ++j) {
-               dHf_dr(j, (k - 1) * 3 + j) = hd(k, 1);
-               dHf_ds(j, (k - 1) * 3 + j) = hd(k, 2);
-          }
-     }
-
-     const SpColVector<T, 3> n1(dHf_dr * x, oDofMap);
-     const SpColVector<T, 3> n2(dHf_ds * x, oDofMap);
-
-     const SpColVector<T, 3> n3 = Cross(n1, n2, oDofMap);
-
-     const T norm_n3 = Norm(n3, oDofMap);
-
-     if (norm_n3 <= 0.) {
-          throw NonlinearSolver::ErrSimulationDiverged(MBDYN_EXCEPT_ARGS);
-     }
-
-     const SpColVector<T, 3> e3(n3 / norm_n3, oDofMap);
-
-     giproj = Dot(Rn0.GetCol(3), Transpose(R0) * (SubMatrix<3, 1>(x, 3 * (iNode - 1) + 1, 1, 1, 1) - X0) - o0, oDofMap);
-     cosPhii = Dot(e3, n0, oDofMap);
-
-     if constexpr (std::is_same<T, doublereal>::value) {
-               DEBUGCERR("e3=" << e3 << "\n");
-               DEBUGCERR("giproj=" << giproj << "\n");
-               DEBUGCERR("cosPhii=" << cosPhii << "\n");
-          }
-
-     DEBUGCERR("UnilateralInPlaneContact(" << this->GetLabel() << "): StructNode(" << this->rgNodes[iNode - 1]->GetLabel() << "): e3 = [" << e3 << "]\n");
-}
-
-template <typename ElementType, typename CollocationType, typename ContactTraits>
-void UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::UpdateContactState(const doublereal g, const doublereal cosPhi)
-{
-#ifdef DEBUG
-     const bool bOutside = g > dSearchRadius;
-#endif
-     const bool bFrontSide = cosPhi < dCosPhiThreshold;
-
-     DEBUGCERR("g=" << g << "\n");
-     DEBUGCERR("cosPhi=" << cosPhi << "\n");
-     DEBUGCERR("bOutside=" << bOutside << "\n");
-     DEBUGCERR("bFrontSide=" << bFrontSide << "\n");
-     DEBUGCERR("eContactStatePrev=" << static_cast<unsigned>(eContactStatePrev) << "\n");
-
-     eContactStateCurr = bFrontSide ? ContactState::ACTIVE : ContactState::BEHIND;
-
-     DEBUGCERR("eContactStateCurr=" << static_cast<unsigned>(eContactStateCurr) << "\n");
+     gi = Dot(Rn0.GetCol(3), Transpose(R0) * (SubMatrix<3, 1>(x, 3 * (iNode - 1) + 1, 1, 1, 1) - X0) - o0, oDofMap);
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1529,52 +1404,12 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssContac
      SpColVector<T, 3> F0(3, oDofMap);
      SpColVector<T, 3> M0(3, oDofMap);
      SpColVector<T, 3> xi(3, iNumNodes * 3);
-     SpColVector<T, iNumNodes> g(iNumNodes, 0), cosPhi(iNumNodes, 0);
+     SpColVector<T, iNumNodes> g(iNumNodes, 0);
 
      const SpColVector<T, 3> n0(R0 * Rn0.GetCol(3), oDofMap);
 
      for (index_type i = 1; i <= iNumNodes; ++i) {
-          DistanceNormalToPlane(i, X0, R0, n0, x, g(i), cosPhi(i), oDofMap);
-     }
-
-     doublereal dOffset = 0.;
-
-     if constexpr(std::is_same<T, doublereal>::value) {
-          doublereal cosPhiavg = 0., gmin = std::numeric_limits<doublereal>::max();
-
-          for (index_type i = 1; i <= iNumNodes; ++i) {
-               cosPhiavg += cosPhi(i);
-               gmin = std::min(gmin, g(i));
-          }
-
-          cosPhiavg /= iNumNodes;
-
-          UpdateContactState(gmin, cosPhiavg);
-     }
-
-     if (eContactStateCurr == ContactState::BEHIND) {
-          // doublereal gcosPhimin = std::numeric_limits<doublereal>::max();
-
-          // for (index_type i = 1; i <= iNumNodes; ++i) {
-          //      doublereal cosPhii = SpGradientTraits<T>::dGetValue(cosPhi(i));
-
-          //      if (fabs(cosPhii) < dCosPhiThreshold) {
-          //           cosPhii += (cosPhii > 0. ? 1. : -1.) * dCosPhiThreshold;
-          //      }
-
-          //      gcosPhimin = std::min(gcosPhimin, -SpGradientTraits<T>::dGetValue(g(i)) / cosPhii);
-          // }
-
-          // dOffset = gref / std::numeric_limits<doublereal>::epsilon() - gcosPhimin;
-          dOffset = gref / std::numeric_limits<doublereal>::epsilon();
-     }
-
-     for (index_type i = 1; i <= iNumNodes; ++i) {
-          if (fabs(cosPhi(i)) < fabs(dCosPhiThreshold)) {
-               cosPhi(i) += (cosPhi(i) > 0. ? 1. : -1) * fabs(dCosPhiThreshold); // FIXME: avoid division by zero if n0 is normal to e3
-          }
-
-          g(i) = oDofMap.MapEval(dOffset - g(i) / cosPhi(i));
+          DistanceNormalToPlane(i, X0, R0, x, g(i), oDofMap);
      }
 
      for (index_type i = 0; i < iNumEvalPoints; ++i) {
@@ -1597,7 +1432,7 @@ UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AssContac
                }
           }
 
-          dF.MapAssign(n3 * (-alpha * p_i), oDofMap);
+          dF.MapAssign(n0 * (alpha * p_i * detJA), oDofMap);
 
           for (index_type k = 1; k <= iNumDof; ++k) {
                for (index_type j = 1; j <= 3; ++j) {
@@ -1687,7 +1522,6 @@ void
 UnilateralInPlaneContact<ElementType, CollocationType, ContactTraits>::AfterConvergence(const VectorHandler& X,
                                                                                         const VectorHandler& XP)
 {
-     eContactStatePrev = eContactStateCurr;
 }
 
 template <typename ElementType, typename CollocationType, typename ContactTraits>
@@ -1978,10 +1812,6 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
 
      const doublereal pref = HP.IsKeyWord("reference" "pressure") ? HP.GetReal() : 1.;
 
-     const doublereal dSearchRadius = HP.IsKeyWord("search" "radius") ? HP.GetReal() : -1.;
-
-     const doublereal dCosPhiThreshold = HP.IsKeyWord("angle" "threshold") ? HP.GetReal() : -0.01;
-
      const flag fOut = pDM->fReadOutput(HP, Elem::SURFACE_LOAD);
 
      if (HP.IsArg()) {
@@ -2004,7 +1834,7 @@ ReadUnilateralInPlaneContact(DataManager* const pDM, MBDynParser& HP, const unsi
 
      SurfaceLoadElem* pElem = nullptr;
 
-     UnilateralContactParam oParam(epsilon, dContactScale, gref, pref, dSearchRadius, dCosPhiThreshold);
+     UnilateralContactParam oParam(epsilon, dContactScale, gref, pref);
 
      switch (eEqualityType) {
      case DofOrder::EQUALITY:
