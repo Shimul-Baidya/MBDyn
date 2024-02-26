@@ -262,7 +262,7 @@ AirProperties::GetVelocity(const Vec3& X, Vec3& V) const
 unsigned int
 AirProperties::iGetNumPrivData(void) const
 {
-	/* 3 components + module */
+	/* 3 components + norm */
 	return 4;
 }
 
