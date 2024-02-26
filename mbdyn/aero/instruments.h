@@ -72,6 +72,11 @@ public:
 		NODE_BODY_VY,		// node velocity components in body frame
 		NODE_BODY_VZ,		// node velocity components in body frame
 
+		DENSITY,
+		SOUND_CELERITY,
+		STATIC_PRESSURE,
+		TEMPERATURE,
+
 		LASTMEASURE
 	};
 
