@@ -68,6 +68,15 @@ public:
 		NODE_BODY_ACC_Q,	// Matteo Daniele edits - node angular rate variations (body accelerations)
 		NODE_BODY_ACC_R,	// Matteo Daniele edits - node angular rate variations (body accelerations)
 
+		NODE_BODY_VX,		// node velocity components in body frame
+		NODE_BODY_VY,		// node velocity components in body frame
+		NODE_BODY_VZ,		// node velocity components in body frame
+
+		DENSITY,
+		SOUND_CELERITY,
+		STATIC_PRESSURE,
+		TEMPERATURE,
+
 		LASTMEASURE
 	};
 

@@ -511,7 +511,7 @@ The following data are available:
 	in the ``world'' reference system, in m/s
 \item \kw{"angleofattack"}: the angle between the local $z$ and $x$ components
 	of the velocity (airstream plus node), expressed in the reference frame
-  of the aircraft, in radians
+  of the aircraft, in radians (also \kw{"aoa"})
 \item \kw{"heading"}: the angle between the $x$ axis of the aircraft
 	and the ``north'' (the global $x$ axis) about the global $z$ axis,
   in radians
@@ -529,6 +529,26 @@ The following data are available:
 	of the node representing the aircraft along the $z$ axis
 	of the node itself (positive when the right wing moves backward),
   in rad/s
+\end{itemize}
+Additional data, not available through usual aircraft instruments, are available:
+\begin{itemize}
+\item \kw{"init\_x1"}: $x$ component of initial position, in absolute frame
+\item \kw{"init\_x2"}: $y$ component of initial position, in absolute frame
+\item \kw{"init\_longitude"}: initial longitude
+\item \kw{"init\_latitude"}: initial latitude
+\item \kw{"body\_axb"}: $x$ component of linear acceleration, in body frame
+\item \kw{"body\_ayb"}: $y$ component of linear acceleration, in body frame
+\item \kw{"body\_azb"}: $z$ component of linear acceleration, in body frame
+\item \kw{"body\_pd"}: $x$ component of pitch angular acceleration, in body frame
+\item \kw{"body\_qd"}: $y$ component of pitch angular acceleration, in body frame
+\item \kw{"body\_rd"}: $z$ component of pitch angular acceleration, in body frame
+\item \kw{"body\_vx"}: $x$ component of air speed, in body frame
+\item \kw{"body\_vy"}: $y$ component of air speed, in body frame
+\item \kw{"body\_vz"}: $z$ component of air speed, in body frame
+\item \kw{"density"}: density at the body's altitude
+\item \kw{"soundcelerity"}: sound celerity at the body's altitude
+\item \kw{"staticpressure"}: static pressure at the body's altitude
+\item \kw{"temperature"}: temperature at the body's altitude
 \end{itemize}
 
 \paragraph{Example.} \

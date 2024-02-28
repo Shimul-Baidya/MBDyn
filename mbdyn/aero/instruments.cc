@@ -119,6 +119,14 @@ AircraftInstruments::Update(void)
 		VV -= VecTmp;
 	}
 
+	// physical parameters
+	doublereal rho, c, p, T;
+	GetAirProps(X, rho, c, p, T);
+	dMeasure[DENSITY] = rho;
+	dMeasure[SOUND_CELERITY] = c;
+	dMeasure[STATIC_PRESSURE] = p;
+	dMeasure[TEMPERATURE] = T;
+
 	// airspeed (norm of aircraft + wind velocity)
 	dMeasure[AIRSPEED] = VV.Norm(); //m/s
 
@@ -166,6 +174,7 @@ AircraftInstruments::Update(void)
 	dMeasure[TURN] = Omega(3)*60; /* turn rate in rad/min */
 
 	// slip
+	// TODO: should be in body frame, right?!?
 	/*Luca Conti edits-----------------*/
 	// velocity aligned with z body frame! aircraft sliding vertically... strange, but might occur
 	if (std::abs(VV(2)) <= toll && std::abs(VV(1)) <= toll) {		//Di Lallo Luigi edits
@@ -183,6 +192,11 @@ AircraftInstruments::Update(void)
 	// angle of attack
 	VecTmp = R.MulTV(VV);
 	dMeasure[AOA] = -std::atan2(VecTmp(3), VecTmp(1));
+
+	// node velocity components in body frame
+	dMeasure[NODE_BODY_VX] = VecTmp(1);
+	dMeasure[NODE_BODY_VY] = VecTmp(2);
+	dMeasure[NODE_BODY_VZ] = VecTmp(3);
 
 	// heading
 
@@ -363,12 +377,20 @@ AircraftInstruments::iGetPrivDataIdx(const char *s) const
 		{ "rollrate", ROLLRATE },
 		{ "pitchrate", PITCHRATE },
 		{ "yawrate", YAWRATE },
-		{ "body_axb", NODE_BODY_ACC_X},	// Matteo Daniele edits
-		{ "body_ayb", NODE_BODY_ACC_Y},	// Matteo Daniele edits
-		{ "body_azb", NODE_BODY_ACC_Z},	// Matteo Daniele edits
-		{ "body_pd", NODE_BODY_ACC_X},	// Matteo Daniele edits
-		{ "body_qd", NODE_BODY_ACC_Y},	// Matteo Daniele edits
-		{ "body_rd", NODE_BODY_ACC_Z},	// Matteo Daniele edits
+		{ "body_axb", NODE_BODY_ACC_X },	// Matteo Daniele edits
+		{ "body_ayb", NODE_BODY_ACC_Y },	// Matteo Daniele edits
+		{ "body_azb", NODE_BODY_ACC_Z },	// Matteo Daniele edits
+		{ "body_pd", NODE_BODY_ACC_X },		// Matteo Daniele edits
+		{ "body_qd", NODE_BODY_ACC_Y },		// Matteo Daniele edits
+		{ "body_rd", NODE_BODY_ACC_Z },		// Matteo Daniele edits
+		// PM Feb 2024
+		{ "body_vx", NODE_BODY_VX },
+		{ "body_vy", NODE_BODY_VY },
+		{ "body_vz", NODE_BODY_VZ },
+		{ "density", DENSITY },
+		{ "sound" "celerity", SOUND_CELERITY },
+		{ "static" "pressure", STATIC_PRESSURE},
+		{ "temperature", TEMPERATURE },
 
 		{ 0 }
 	};
