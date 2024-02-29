@@ -381,20 +381,22 @@ The \kw{dummy} structural node has been added to ease the visualization
 of the kinematics of arbitrary points of the system
 during the simulation. 
 It does not provide any degrees of freedom, and it must be attached
-to another node.
+to another node. 
 
-Two dummy structural node types are available.
+Elements cannot be directly connected to dummy nodes.
+They must be connected to the underlying node the dummy node is attached to.
+
+The syntax for \kw{dummy} nodes is:
 %\begin{verbatim}
 \begin{Verbatim}[commandchars=\\\{\}]
     \bnt{additional_args} ::= , \kw{dummy} , \bnt{base_node_label} , \bnt{type} , \bnt{dummy_node_data}
 \end{Verbatim}
 %\end{verbatim}
-
 Dummy nodes take the label \nt{base\_node\_label} of the node they are attached to, 
 followed by \nt{type}, the type of dummy node, possibly followed by specific data,
 \nt{dummy\_node\_data}.
-The following types are available:
 
+The following \kw{dummy} node types are available:
 \begin{itemize}
     \item \kw{offset}:
 %\begin{verbatim}
