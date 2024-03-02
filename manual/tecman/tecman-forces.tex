@@ -13,8 +13,127 @@
 \subsubsection{Follower}
 
 \subsubsection{Absolute Internal}
+A structural internal force is a pair of internal forces, of equal magnitude and opposite direction, applied to two nodes.
+Consider two nodes, 1 and 2, and an internal force $\T{f}$.
+The force is applied to node 1 with an offset, $\tilde{\T{o}}_1$, in the node's reference frame.
+
+The force and moment acting on the first node are
+\begin{subequations}
+\begin{align}
+	\T{f}_1 &= \T{f}
+	\\
+	\T{m}_1 &= \T{o}_1 \times \T{f}
+\end{align}
+\end{subequations}
+with $\T{o}_1 = \TT{R}_1 \tilde{\T{o}}_1$, where $\TT{R}_1$ is the orientation matrix of the first node.
+
+The force acting on the second node is
+\begin{align}
+	\T{f}_2 &= - \T{f}
+\end{align}
+
+Two options are available for the moment applied to the second node:
+\begin{itemize}
+\item Case 1: the opposite force is applied to node 2 with another offset, $\tilde{\T{o}}_2$, in the node's reference frame;
+\item Case 2: the opposite force is applied to node 2 in the same point where it is applied to node 1.  This case is not implemented yet.
+\end{itemize}
+
+In the first case, the moment acting on the second node is
+\begin{align}
+	\T{m}_2 &= - \T{o}_2 \times \T{f}
+\end{align}
+with $\T{o}_2 = \TT{R}_2 \tilde{\T{o}}_2$, where $\TT{R}_2$ is the orientation matrix of the second node.
+
+In the second case, the moment acting on the second node is
+\begin{align}
+	\T{m}_2 &= - \plbr{\T{p}_1 + \T{o}_1 - \T{p}_2} \times \T{f}
+\end{align}
+where $\T{p}_1$ and $\T{p}_2$ are the positions of the two nodes.
+
+When the force is \emph{absolute}, its direction is fixed in the global reference frame.  As such, $\T{f}$ does not depend on the orientation of any node.
+
+The linearization of the forces and moments is thus:
+\begin{subequations}
+\begin{align}
+	\Delta\T{f}_1
+	&=
+	\T{0}
+	\\
+	\Delta\T{m}_1
+	&=
+	\plbr{\T{\theta}_{1\Delta} \times \T{o}_1} \times \T{f}
+	=
+	\T{f} \times \T{o}_1 \times \T{\theta}_{1\Delta}
+	\\
+	\Delta\T{f}_2
+	&=
+	\T{0}
+	\\
+	&\text{Case 1:} \nonumber \\
+	\Delta\T{m}_2
+	&=
+	- \plbr{\T{\theta}_{2\Delta} \times \T{o}_2} \times \T{f}
+	=
+	- \T{f} \times \T{o}_2 \times \T{\theta}_{2\Delta}
+	\\
+	&\text{Case 2:} \nonumber \\
+	\Delta\T{m}_2
+	&=
+	- \plbr{\Delta\T{p}_1 + \T{\theta}_{1\Delta} \times \T{o}_1 - \Delta\T{p}_2} \times \T{f}
+	=
+	\T{f} \times \Delta\T{p}_1 - \T{f} \times \T{o}_1 \times \T{\theta}_{1\Delta} - \T{f} \times \Delta\T{p}_2
+\end{align}
+\end{subequations}
+
 
 \subsubsection{Follower Internal}
+When the force is \emph{follower}, it can be expressed as 
+\begin{align}
+	\T{f} &= \TT{R}_1 \tilde{\T{f}}
+\end{align}
+with $\tilde{\T{f}}$ expressed in the frame of the first node, i.e., it is assumed to follow the orientation of the first node.
+
+The linearization of the forces and moments is thus:
+\begin{subequations}
+\begin{align}
+	\Delta\T{f}_1
+	&=
+	\T{\theta}_{1\Delta} \times \T{f}
+	=
+	- \T{f} \times \T{\theta}_{1\Delta}
+	\\
+	\Delta\T{m}_1
+	&=
+	\plbr{\T{\theta}_{1\Delta} \times \T{o}_1} \times \T{f} + \T{o}_1 \times \T{\theta}_{1\Delta} \times \T{f}
+	% =
+	% \plbr{\T{f} \times \T{o}_1 \times - \T{o}_1 \times \T{f} \times} \T{\theta}_{1\Delta}
+	=
+	\plbr{\T{f} \times \T{o}_1} \times \T{\theta}_{1\Delta}
+	\\
+	\Delta\T{f}_2
+	&=
+	- \T{\theta}_{1\Delta} \times \T{f}
+	=
+	\T{f} \times \T{\theta}_{1\Delta}
+	\\
+	&\text{Case 1:} \nonumber \\
+	\Delta\T{m}_2
+	&=
+	- \plbr{\T{\theta}_{2\Delta} \times \T{o}_2} \times \T{f} - \T{o}_2 \times \T{\theta}_{1\Delta} \times \T{f}
+	=
+	\T{o}_2 \times \T{f} \times \T{\theta}_{1\Delta} - \T{f} \times \T{o}_2 \times \T{\theta}_{2\Delta}
+	\\
+	&\text{Case 2:} \nonumber \\
+	\Delta\T{m}_2
+	&=
+	- \plbr{\Delta\T{p}_1 + \T{\theta}_{1\Delta} \times \T{o}_1 - \Delta\T{p}_2} \times \T{f} - \T{o}_1 \times \T{\theta}_{1\Delta} \times \T{f}
+	% =
+	% - \plbr{\T{f} \times \T{o}_1 \times + \T{o}_1 \times \T{f} \times} \T{\theta}_{1\Delta}
+	\nonumber \\ &
+	=
+	\T{f} \times \Delta\T{p}_1 - \plbr{\T{f} \times \T{o}_1} \times \T{\theta}_{1\Delta} - \T{f} \times \Delta\T{p}_2
+\end{align}
+\end{subequations}
 
 \subsection{Couple}
 
