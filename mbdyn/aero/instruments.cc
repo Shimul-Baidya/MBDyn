@@ -175,6 +175,7 @@ AircraftInstruments::Update(void)
 
 	// slip
 	// TODO: should be in body frame, right?!?
+#if 0
 	/*Luca Conti edits-----------------*/
 	// velocity aligned with z body frame! aircraft sliding vertically... strange, but might occur
 	if (std::abs(VV(2)) <= toll && std::abs(VV(1)) <= toll) {		//Di Lallo Luigi edits
@@ -185,13 +186,29 @@ AircraftInstruments::Update(void)
 	}
 	/* SLIP is positive if the aircraft nose is tilted leftward wrt velocity vector, spans -PI;+PI */
 	/*---------------------------------*/
+#endif
 
-	// vertical speed
+	// vertical speed as z component of velocity vector in absolute frame
 	dMeasure[VERTICALSPEED] = VV(3);
 
-	// angle of attack
+	// velocity vector in body frame
 	VecTmp = R.MulTV(VV);
-	dMeasure[AOA] = -std::atan2(VecTmp(3), VecTmp(1));
+
+	// angle of attack
+	if (dMeasure[AIRSPEED] < toll) {
+		dMeasure[AOA] = 0.;
+
+	} else {
+		dMeasure[AOA] = -std::atan2(VecTmp(3), VecTmp(1));
+	}
+
+	// sideslip
+	if (dMeasure[AIRSPEED] < toll) {
+		dMeasure[SLIP] = 0.;
+
+	} else {
+		dMeasure[SLIP] = -std::atan2(VecTmp(2), VecTmp(1));
+	}
 
 	// node velocity components in body frame
 	dMeasure[NODE_BODY_VX] = VecTmp(1);
@@ -233,15 +250,18 @@ AircraftInstruments::Update(void)
 	dMeasure[PITCHRATE] = VecTmp(2);
 	dMeasure[YAWRATE] = VecTmp(3);
 
-	/* Matteo Daniele edits */
-	const Vec3& LINACC(pNode->GetXPPCurr());
-	const Vec3& ANGACC(pNode->GetWPCurr());
-	dMeasure[NODE_BODY_ACC_X] = LINACC(1);
-	dMeasure[NODE_BODY_ACC_Y] = LINACC(2);
-	dMeasure[NODE_BODY_ACC_Z] = LINACC(3);
-	dMeasure[NODE_BODY_ACC_P] = ANGACC(1);
-	dMeasure[NODE_BODY_ACC_Q] = ANGACC(2);
-	dMeasure[NODE_BODY_ACC_R] = ANGACC(3);
+	const DynamicStructNode* pDSN = dynamic_cast<const DynamicStructNode *>(pNode);
+	if (pDSN) {
+		/* Matteo Daniele edits */
+		const Vec3& LINACC(pNode->GetXPPCurr());
+		const Vec3& ANGACC(pNode->GetWPCurr());
+		dMeasure[NODE_BODY_ACC_X] = LINACC(1);
+		dMeasure[NODE_BODY_ACC_Y] = LINACC(2);
+		dMeasure[NODE_BODY_ACC_Z] = LINACC(3);
+		dMeasure[NODE_BODY_ACC_P] = ANGACC(1);
+		dMeasure[NODE_BODY_ACC_Q] = ANGACC(2);
+		dMeasure[NODE_BODY_ACC_R] = ANGACC(3);
+	}
 	/* ------------------------------------------------------------------ */
 
 }
@@ -356,47 +376,54 @@ AircraftInstruments::iGetPrivDataIdx(const char *s) const
 	struct {
 		const char *s;
 		int i;
+		bool bDynOnly;
 	} s2i[] = {
-		{ "airspeed", AIRSPEED },
-		{ "ground" "speed", GROUNDSPEED },
-		{ "altitude", ALTITUDE },
-		{ "attitude", ATTITUDE },
-		{ "bank", BANK },
-		{ "turn", TURN },
-		{ "slip", SLIP },
-		{ "vertical" "speed", VERTICALSPEED},
-		{ "angle" "of" "attack", AOA },
-		{ "aoa", AOA },
-		{ "heading", HEADING },
-		{ "init_x1", INIT_X1 },/*Luca Conti edits*/
-		{ "init_x2", INIT_X2 },/*Luca Conti edits*/
-		{ "init_longitude", INIT_LONGITUDE },/*Luca Conti edits: to be specified by the user in the element, optional*/
-		{ "longitude", LONGITUDE },
-		{ "init_latitude", INIT_LATITUDE },/*Luca Conti edits: to be specified by the user in the element, optional*/
-		{ "latitude", LATITUDE },
-		{ "rollrate", ROLLRATE },
-		{ "pitchrate", PITCHRATE },
-		{ "yawrate", YAWRATE },
-		{ "body_axb", NODE_BODY_ACC_X },	// Matteo Daniele edits
-		{ "body_ayb", NODE_BODY_ACC_Y },	// Matteo Daniele edits
-		{ "body_azb", NODE_BODY_ACC_Z },	// Matteo Daniele edits
-		{ "body_pd", NODE_BODY_ACC_X },		// Matteo Daniele edits
-		{ "body_qd", NODE_BODY_ACC_Y },		// Matteo Daniele edits
-		{ "body_rd", NODE_BODY_ACC_Z },		// Matteo Daniele edits
+		{ "airspeed", AIRSPEED, false },
+		{ "ground" "speed", GROUNDSPEED, false },
+		{ "altitude", ALTITUDE, false },
+		{ "attitude", ATTITUDE, false },
+		{ "bank", BANK, false },
+		{ "turn", TURN, false },
+		{ "slip", SLIP, false },
+		{ "sideslip", SLIP, false },
+		{ "vertical" "speed", VERTICALSPEED, false },
+		{ "angle" "of" "attack", AOA, false },
+		{ "aoa", AOA, false },
+		{ "heading", HEADING, false },
+		{ "init_x1", INIT_X1, false },/*Luca Conti edits*/
+		{ "init_x2", INIT_X2, false },/*Luca Conti edits*/
+		{ "init_longitude", INIT_LONGITUDE, false },/*Luca Conti edits: to be specified by the user in the element, optional*/
+		{ "longitude", LONGITUDE, false },
+		{ "init_latitude", INIT_LATITUDE, false },/*Luca Conti edits: to be specified by the user in the element, optional*/
+		{ "latitude", LATITUDE, false },
+		{ "rollrate", ROLLRATE, false },
+		{ "pitchrate", PITCHRATE, false },
+		{ "yawrate", YAWRATE, false },
+		{ "body_axb", NODE_BODY_ACC_X, true },	// Matteo Daniele edits
+		{ "body_ayb", NODE_BODY_ACC_Y, true },	// Matteo Daniele edits
+		{ "body_azb", NODE_BODY_ACC_Z, true },	// Matteo Daniele edits
+		{ "body_pd", NODE_BODY_ACC_P, true },		// Matteo Daniele edits
+		{ "body_qd", NODE_BODY_ACC_Q, true },		// Matteo Daniele edits
+		{ "body_rd", NODE_BODY_ACC_R, true },		// Matteo Daniele edits
 		// PM Feb 2024
-		{ "body_vx", NODE_BODY_VX },
-		{ "body_vy", NODE_BODY_VY },
-		{ "body_vz", NODE_BODY_VZ },
-		{ "density", DENSITY },
-		{ "sound" "celerity", SOUND_CELERITY },
-		{ "static" "pressure", STATIC_PRESSURE},
-		{ "temperature", TEMPERATURE },
+		{ "body_vx", NODE_BODY_VX, false },
+		{ "body_vy", NODE_BODY_VY, false },
+		{ "body_vz", NODE_BODY_VZ, false },
+		{ "density", DENSITY, false },
+		{ "sound" "celerity", SOUND_CELERITY, false },
+		{ "static" "pressure", STATIC_PRESSURE, false },
+		{ "temperature", TEMPERATURE, false },
 
 		{ 0 }
 	};
 
 	for (int i = 0; s2i[i].s != 0; i++) {
 		if (strcasecmp(s, s2i[i].s) == 0) {
+			if (s2i[i].bDynOnly && dynamic_cast<const DynamicStructNode *>(pNode) == 0) {
+				silent_cerr("AircraftInstruments(" << GetLabel() << "): "
+					"measure \"" << s2i[i].s << "\" only available when attached to a dynamic node, not with Node(" << pNode->GetLabel() << ")" << std::endl);
+				throw ErrGeneric(MBDYN_EXCEPT_ARGS);
+			}
 			return s2i[i].i;
 		}
 	}
