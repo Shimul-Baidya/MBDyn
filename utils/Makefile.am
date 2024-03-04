@@ -47,7 +47,7 @@ if USE_SOCKET
 
 bin_PROGRAMS += \
 socket2stream \
-stream2socket 
+stream2socket
 
 if HAVE_GETPASS
 bin_PROGRAMS += \
@@ -355,7 +355,7 @@ mbdyn_util_oct.oct: mbdyn_util_oct.o
 mbdyn_util_oct.oct.exe: mbdyn_util_oct.oct
 
 $(PKG_FILE): $(top_srcdir)/utils/PKG_ADD mbdyn_util_oct.oct
-	@rm -rf $(PKG_DIR) $(PKG_FILE) 
+	@rm -rf $(PKG_DIR) $(PKG_FILE)
 	@$(MKDIR_P) $(PKG_DIR)/package/inst
 	@echo "Copyright $(COPYRIGHT)" > $(PKG_DIR)/package/COPYING
 	@echo "Name: $(PKG_NAME)" > $(PKG_DIR)/package/DESCRIPTION
@@ -386,10 +386,7 @@ endif
 endif
 	@printf "package \"%s\" installed\n" $(PKG_NAME)
 
-install-exec-local-oct:
+install-exec-local: install-exec-local-oct
 endif
 
-install-exec-local: install-exec-local-oct
-
 include $(top_srcdir)/build/bot.mk
-
