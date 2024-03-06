@@ -425,7 +425,7 @@ GenelStateSpaceSISO::DescribeEq(std::ostream& out, const char *prefix, bool bIni
 
 	out
 		<< prefix << iIndex + 1 << "->" << iIndex + iNumDofs << ": " <<
-			"genel SISO state deivative" << std::endl;
+			"genel SISO state derivative" << std::endl;
 
 	return out;
 }
@@ -891,7 +891,7 @@ GenelStateSpaceMIMO::DescribeEq(std::ostream& out, const char *prefix, bool bIni
 
 	out
 		<< prefix << iIndex + 1 << "->" << iIndex + iNumDofs << ": " <<
-			"genel MIMO state deivative" << std::endl;
+			"genel MIMO state derivative" << std::endl;
 
 	return out;
 }
