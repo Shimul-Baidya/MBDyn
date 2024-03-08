@@ -192,7 +192,7 @@ BEGINFILE {
     set_error("element", "jointregularization");
 }
 
-/^RTPOSIXSolver: sched_setscheduler failed$/ {
+/^RTPOSIXSolver: sched_setscheduler failed/ {
     set_error("feature", "RTPOSIX");
 }
 
