@@ -1832,7 +1832,9 @@ but it can be different for other purposes;
 as a regular (non-root) user while performing hard real-time operations
 with the underlying OS (by default, only the superuser is allowed
 to execute in real-time, since this requires the process to acquire
-the highest priority; only honored by \kw{RTAI});
+the highest priority; only honored by \kw{RTAI};
+\kw{POSIX} real-time will simply ignore the scheduling and continue
+as a regular simulation);
 
 \item the keyword \kw{reserve stack} instructs the program 
 to statically reserve the desired stack size by means 
@@ -1843,7 +1845,8 @@ a minimal default value (1024 bytes) is set in any case;
 \item the keyword \kw{cpu map} allows the program to force its
 execution on a specific subset of CPUs on multiprocessor hardware;
 the syntax of the \nt{cpu\_map} field is a byte-sized integer 
-(between 0 and 255) whose active bits are the desired CPUs (up to 8);
+(between 0 and 255) whose active bits are the desired CPUs
+(up to the number of available CPUs or 4, whichever is lower);
 
 \item the keyword \kw{output} determines whether output is entirely disabled
 or not; this option is only available to \kw{POSIX} real-time,

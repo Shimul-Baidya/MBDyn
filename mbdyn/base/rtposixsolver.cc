@@ -86,8 +86,10 @@ RTPOSIXSolver::Setup(void)
 	}
 
         if (sched_setscheduler(0, policy, &sched) < 0) {
-		silent_cerr("RTPOSIXSolver: sched_setscheduler failed" << std::endl);
+		int save_errno = errno;
+		silent_cerr("RTPOSIXSolver: sched_setscheduler failed (" << save_errno << ": " << strerror(save_errno) << ")" << std::endl);
 		if (bRTAllowNonRoot) {
+			silent_cerr("RTPOSIXSolver: continuing without scheduling as instructed by \"allow nonroot\"" << std::endl);
 			// FIXME: hack (let it run without priority)
 			return;
 		}
