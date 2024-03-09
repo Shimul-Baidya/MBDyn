@@ -145,10 +145,6 @@ enum InputSource {
 };
 
 struct mbdyn_proc_t {
-#ifdef USE_GTEST
-        int argc;    // FIXME: Arguments for tests are not supported by GoogleTest
-        char** argv;
-#endif
 	int iSleepTime;
 	bool bShowSymbolTable;
 	std::ifstream FileStreamIn;
@@ -497,7 +493,7 @@ mbdyn_parse_arguments(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
                         if (mbp.bException) {
                                 silent_cerr("Warning: --exceptions will be ignored with --gtest\n");
                         }
-                        mbp.bException = false;                        
+                        mbp.bException = false;
 #else
                         silent_cerr("option -G " << optarg << " is valid only with --with-gtest");
 #endif
@@ -1076,29 +1072,35 @@ mbdyn_program(mbdyn_proc_t& mbp, int argc, char *argv[], int& currarg)
 	throw NoErr(MBDYN_EXCEPT_ARGS);
 }
 
-namespace {
-	mbdyn_proc_t mbp; // FIXME: Needed just for GoogleTest
-}
-
 #ifdef USE_GTEST
-TEST(MBDynTestSuiteGoogleTest, mbdyn_program)
-{
-        try {
-                int currarg = 0;
-
-                if (mbp.argc > 0) {
-                        currarg = 1;
-                }
-                
-                mbdyn_program(mbp, mbp.argc, mbp.argv, currarg);
-        } catch (const NoErr& e) {
-                silent_cout("MBDyn terminated normally\n");
-        } catch (const MBDynErrBase& e) {
-                silent_cerr("An error occurred during the execution of MBDyn (" << e.what() << ");"
-                            " aborting...\n");
-                ADD_FAILURE_AT(e.GetFile(), e.GetLine());
+class MBDynProgramGTest: public testing::Test {
+public:
+        MBDynProgramGTest(int argc, char* argv[], mbdyn_proc_t* mbp)
+                :argc(argc), argv(argv), mbp(mbp) {
         }
-}
+
+        virtual void TestBody() override {
+                try {
+                        int currarg = 0;
+
+                        if (argc > 0) {
+                                currarg = 1;
+                        }
+
+                        mbdyn_program(*mbp, argc, argv, currarg);
+                } catch (const NoErr& e) {
+                        silent_cout("MBDyn terminated normally\n");
+                } catch (const MBDynErrBase& e) {
+                        silent_cerr("An error occurred during the execution of MBDyn (" << e.what() << ");"
+                                    " aborting...\n");
+                        ADD_FAILURE_AT(e.GetFile(), e.GetLine());
+                }
+        }
+private:
+        int argc;
+        char** argv;
+        mbdyn_proc_t* mbp;
+};
 #endif
 
 int
@@ -1109,6 +1111,8 @@ main(int argc, char* argv[])
 #endif
 	int	rc = EXIT_SUCCESS;
 
+        mbdyn_proc_t mbp;
+        
        	mbp.bException = false;
        	mbp.bRedefine = false;
        	mbp.bTable = false;
@@ -1124,8 +1128,6 @@ main(int argc, char* argv[])
 	mbp.bNonlinCPUTime = false;
 #ifdef USE_GTEST
         mbp.bEnableGoogleTest = false;
-        mbp.argc = argc;
-        mbp.argv = argv;
 #endif
 #ifdef USE_MPI
         mbp.using_mpi = true;
@@ -1230,7 +1232,25 @@ main(int argc, char* argv[])
 	if (mbp.bException) {
 		mbdyn_program(mbp, argc, argv, currarg);
 #ifdef USE_GTEST
-	} else if (mbp.bEnableGoogleTest) {
+        } else if (mbp.bEnableGoogleTest) {
+                mbdyn_proc_t* pmbp = &mbp;
+                std::ostringstream os;
+
+                for (int i = 0; i < argc; ++i) {
+                        os << argv[i] << ' ';
+                }
+
+                os << std::ends;
+
+                std::string strTestSuiteName = os.str();
+
+                testing::RegisterTest(strTestSuiteName.c_str(),
+                                      mbp.sOutputFileName.c_str(),
+                                      nullptr,
+                                      mbp.sInputFileName.c_str(),
+                                      __FILE__,
+                                      __LINE__,
+                                      [=]() -> MBDynProgramGTest* { return new MBDynProgramGTest(argc, argv, pmbp); });
                 rc = RUN_ALL_TESTS();
 #endif
         } else {
