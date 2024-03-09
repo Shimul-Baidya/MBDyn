@@ -274,7 +274,7 @@ OL_ARG_WITH(pam,[
        misc security libraries:
   --with-pam              with PAM support],no,[auto yes no])
 OL_ARG_WITH(sasl2,[  --with-sasl2            with Cyrus SASL2 support],no,[auto yes no])
-
+OL_ARG_WITH(gtest,[  --with-gtest            enable GoogleTest],no,[auto yes no])
 dnl module with's
 AC_ARG_WITH(module,[
   --with-module=<list>    build listed modules (stripping 'module-' from the
@@ -430,6 +430,8 @@ OCTAVE_PKG_PREFIX=
 dnl GINACLIB_CONFIG=
 GINACLIB_LIBS=
 GINACLIB_CPPFLAGS=
+GTEST_INCLUDE=
+GTEST_LIBS=
 wl=
 EXPORT_DYNAMIC_FLAG_SPEC=
 
@@ -3176,6 +3178,65 @@ fi
 
 dnl ----------------------------------------------------------------
 dnl
+dnl Check for GoogleTest
+dnl
+ol_link_gtest=no
+if test $ol_with_gtest != no ; then
+        have_gtest=no
+
+        GTEST_INCLUDE="`${PKG_CONFIG} --cflags gtest`"
+        GTEST_LIBS="`${PKG_CONFIG} --libs gtest`"
+        GTEST_LIBS="${GTEST_LIBS:--lgtest}"
+        
+        AC_LANG([C++])
+        
+        save_CPPFLAGS="${CPPFLAGS}"
+        
+        CPPFLAGS="${GTEST_INCLUDE} ${save_CPPFLAGS}"
+        
+        AC_CHECK_HEADERS([gtest/gtest.h],[have_gtest_h=yes],[have_gtest_h=no])
+
+        AC_MSG_CHECKING([for GoogleTest library])
+        if test "$have_gtest_h" = "yes" ; then
+          have_gtest="no"
+          save_LIBS="${LIBS}"
+          LIBS="${GTEST_LIBS} ${save_LIBS}"
+          AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+            #include <gtest/gtest.h>
+            TEST(MBDynGoogleTest, MBDynGoogleTest1)
+            {
+              try {
+              } catch (...) {
+                ADD_FAILURE_AT(__FILE__, __LINE__);
+              }
+            }
+          ]], [[
+            int argc;
+            char** argv;
+            testing::InitGoogleTest(&argc, argv);
+            return RUN_ALL_TESTS();
+          ]])],[have_gtest="yes"],[])
+
+          LIBS="$save_LIBS"
+        fi
+
+        CPPFLAGS="${save_CPPFLAGS}"
+        
+        if test "$have_gtest" = "yes"; then
+           AC_MSG_RESULT([yes])
+           ol_link_gtest=yes
+           AC_DEFINE(USE_GTEST,1,[define if you want to use GoogleTest])
+        else
+           if test "$ol_with_gtest" = "yes" ; then
+               AC_MSG_ERROR([Could not locate GoogleTest])
+           fi
+           AC_MSG_RESULT([no])
+        fi
+        AC_LANG([C])
+fi
+
+dnl ----------------------------------------------------------------
+dnl
 dnl Check for PAM
 dnl
 ol_link_pam=no
@@ -3739,6 +3800,8 @@ AC_SUBST(wl)
 dnl AC_SUBST(GINACLIB_CONFIG)
 AC_SUBST(GINACLIB_CPPFLAGS)
 AC_SUBST(GINACLIB_LIBS)
+AC_SUBST(GTEST_INCLUDE)
+AC_SUBST(GTEST_LIBS)
 
 AC_SUBST(DATE)
 

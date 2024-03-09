@@ -71,6 +71,7 @@ $(GINACLIB_LIBS) \
 @TRILINOS_LIBS@ \
 @SICONOS_LIBS@ \
 @LIBS@ \
+@GTEST_LIBS@ \
 $(GINACLIB_LIBS)
 
 ### note: to avoid dynamic linking, in mbdyn_LDADD use
@@ -89,6 +90,7 @@ AM_CPPFLAGS = \
 -I$(srcdir)/../mbdyn/aero \
 -I$(srcdir)/../mbdyn/elec \
 -I$(srcdir)/../mbdyn/hydr \
-$(GINACLIB_CPPFLAGS)
+$(GINACLIB_CPPFLAGS) \
+@GTEST_INCLUDE@
 
 include $(top_srcdir)/build/bot.mk
