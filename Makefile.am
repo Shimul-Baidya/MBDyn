@@ -112,10 +112,11 @@ SUBDIRS = include build etc libraries manual mbdyn modules utils var
 
 include $(top_srcdir)/build/bot.mk
 
-MBD_TEST_PROGS_OUTPUT_DIR=$(top_srcdir)/testsuite/var/tmp/tests/mbdyn-test-progs/
+MBD_TEST_PROGS_OUTPUT_DIR=$(top_srcdir)/testsuite/var/tmp/tests/mbdyn-test-progs
 
 if USE_GTEST
-MBD_TEST_PROGS_GTEST_FLAGS=--gtest_output=xml:$(MBD_TEST_PROGS_OUTPUT_DIR)
+# Attention: Need a trailing "/" at the end of the path!
+MBD_TEST_PROGS_GTEST_FLAGS=--gtest_output=xml:$(MBD_TEST_PROGS_OUTPUT_DIR)/
 endif
 
 test: all
