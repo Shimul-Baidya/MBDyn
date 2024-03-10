@@ -1096,7 +1096,7 @@ public:
 
                         ADD_FAILURE_AT(e.GetFile(), e.GetLine()); // Record the location in the source code. So, it may be displayed in GitLab CI.
 
-                        throw; // Ensure that RUN_ALL_TESTS will return a nonzero exit status
+                        // RUN_ALL_TESTS will return a nonzero exit status if we call ADD_FAILURE_AT
                 }
         }
 private:

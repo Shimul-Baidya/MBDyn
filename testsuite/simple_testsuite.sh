@@ -305,6 +305,7 @@ function simple_testsuite_run_test()
 
         mbd_time_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output_time_$$.log"
         mbd_output_file="${mbdyn_testsuite_prefix_output}/${mbd_basename}_mbdyn_output_$$"
+        junit_xml_report_file="${mbdyn_testsuite_prefix_output}/junit_xml_report_${mbd_basename}_$$.xml"
         mbd_log_file="${mbd_output_file}.stdout"
 
         mbd_script_name=`basename ${mbd_filename}`
@@ -382,7 +383,7 @@ function simple_testsuite_run_test()
 
         if test -z "${mbd_command}"; then
             echo "No custom test script was found for input file ${mbd_filename}; The default command will be used to run the model"
-            mbd_command="mbdyn ${mbdyn_args_add} -f ${mbd_filename_patched} -o ${mbd_output_file} --gtest_output=xml:${mbd_output_file}.xml"
+            mbd_command="mbdyn ${mbdyn_args_add} -f ${mbd_filename_patched} -o ${mbd_output_file} --gtest_output=xml:${junit_xml_report_file}"
         fi
 
         case "${mbdyn_print_res}" in
@@ -709,6 +710,8 @@ function print_files()
     done
 }
 
+printf "@BEGIN_SIMPLE_TESTSUITE_REPORT@\n"
+
 if test -z "${passed_tests}"; then
     echo "No tests passed"
     ((exit_status|=0x1))
@@ -765,5 +768,7 @@ fi
 ((exit_status&=~mbd_exit_status_mask))
 
 printf "${program_name} exit status 0x%X\n" $((exit_status))
+
+printf "@END_SIMPLE_TESTSUITE_REPORT@\n"
 
 exit $((exit_status))

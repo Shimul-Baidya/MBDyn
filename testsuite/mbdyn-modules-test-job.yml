@@ -93,7 +93,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - test_status="failed"
       - (/usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --keep-output failed --abort-after "${MBD_MODULE_TESTS_ABORT_AFTER}" --linear-solvers "${MBD_MODULE_TESTS_LINEAR_SOLVERS}" --nonlinear-solvers "${MBD_MODULE_TESTS_NONLINEAR_SOLVERS}" --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
       - echo "${test_status}" >> "${status_file}"
-      - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 2 || passed < tests || failed > 0) { exit 1; }}' "${status_files}"
+      - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 2 || passed < tests || failed > 0) { exit 1; }}' "${status_file}"
   artifacts:
      expire_in: 2 days
      name: mbdyn-modules-test-job
@@ -104,7 +104,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
        - $MBD_MODULE_TESTS_OUTPUT_DIR/**/*.xml
      when: always
      reports:
-       junit: $MBD_MODULE_TESTS_OUTPUT_DIR/**/*.xml
+       junit: $MBD_MODULE_TESTS_OUTPUT_DIR/**/junit_xml_report_*.xml
 
 mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
   variables:
@@ -160,7 +160,7 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
       - test_status="failed"
       - (/usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}") && test_status="passed"
       - echo "${test_status}" >> "${status_file}"
-      - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 3 || passed < tests || failed > 0) { exit 1; }}' "${status_files}"
+      - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 3 || passed < tests || failed > 0) { exit 1; }}' "${status_file}"
   artifacts:
      expire_in: 2 days
      name: mbdyn-modules-test-job-gcov
@@ -172,4 +172,4 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
        - $MBD_BUILD_DIR_GCOV
      when: always
      reports:
-       junit: $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/*.xml
+       junit: $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/junit_xml_report_*.xml
