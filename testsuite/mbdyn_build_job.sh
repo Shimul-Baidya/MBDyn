@@ -367,7 +367,8 @@ if ! make -j${MBD_NUM_BUILD_JOBS}; then
 fi
 
 echo "Run built-in unit tests"
-if ! make MBD_TEST_PROGS_OUTPUT_DIR=${MBD_TEST_PROGS_OUTPUT_DIR} test; then
+mkdir -p "${MBD_TEST_PROGS_OUTPUT_DIR}"
+if ! make MBD_TEST_PROGS_OUTPUT_DIR="${MBD_TEST_PROGS_OUTPUT_DIR}" test; then
     echo "Built-in unit tests failed"
     exit 1
 fi
