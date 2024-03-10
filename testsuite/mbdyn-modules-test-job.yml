@@ -85,7 +85,7 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - mkdir -p "${MBD_MODULE_TESTS_OUTPUT_DIR}" ## needed for realpath
       - ls -lhF ${MBD_INSTALL_PREFIX}/libexec | tee ${log_file}
       - chmod +x testsuite/simple_testsuite.sh
-      - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
+      - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}" | awk -f simple_testsuite_output_filter.awk
       - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite_patched.sh --keep-output failed --abort-after "${MBD_MODULE_TESTS_ABORT_AFTER}" --linear-solvers "${MBD_MODULE_TESTS_LINEAR_SOLVERS}" --nonlinear-solvers "${MBD_MODULE_TESTS_NONLINEAR_SOLVERS}" --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
   artifacts:
      expire_in: 2 days
@@ -142,7 +142,7 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
       - mkdir -p "${MBD_MODULE_TESTS_OUTPUT_DIR}" ## needed for realpath
       - ls -lhF ${MBD_INSTALL_PREFIX}/libexec | tee ${log_file}
       - chmod +x testsuite/simple_testsuite.sh
-      - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
+      - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}" | awk -f simple_testsuite_output_filter.awk
       - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite_patched.sh --keep-output failed --abort-after "${MBD_MODULE_TESTS_ABORT_AFTER}" --linear-solvers "${MBD_MODULE_TESTS_LINEAR_SOLVERS}" --nonlinear-solvers "${MBD_MODULE_TESTS_NONLINEAR_SOLVERS}" --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
       - ${TESTSUITE_TIME_CMD} testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}"
   artifacts:
