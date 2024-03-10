@@ -1245,10 +1245,10 @@ main(int argc, char* argv[])
 
                 os << std::ends;
 
-                std::string strTestSuiteName = os.str();
-
-                testing::RegisterTest(strTestSuiteName.c_str(),
-                                      mbp.sOutputFileName.c_str(),
+                const std::string strTestName = os.str();
+                
+                testing::RegisterTest("mbdyn_program",
+                                      strTestName.c_str(),
                                       nullptr,
                                       mbp.sInputFileName.c_str(),
                                       __FILE__,
