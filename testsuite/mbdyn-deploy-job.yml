@@ -40,7 +40,7 @@ mbdyn-deploy-job:      # This job runs in the deploy stage.
   needs:
     - job: mbdyn-tests-private-test-job
     - job: mbdyn-tests-public-test-job
-    - job: mbdyn-module-test-job
+    - job: mbdyn-modules-test-job
     - job: octave-pkg-test-job
   script:
     - echo "Deployment not enabled yet!"
