@@ -228,6 +228,7 @@ AM_CPPFLAGS = \
 -I$(srcdir)/../../libraries/libnaive \
 -I$(srcdir)/../../libraries/libmbwrap \
 -I$(srcdir)/../../mbdyn \
--I$(srcdir)/../../mbdyn/base
+-I$(srcdir)/../../mbdyn/base \
+@GTEST_INCLUDE@
 
 include $(top_srcdir)/build/bot.mk
