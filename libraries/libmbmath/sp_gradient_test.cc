@@ -51,7 +51,9 @@
 #endif
 
 #include <algorithm>
+#ifndef USE_GTEST
 #include <cassert>
+#endif
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -79,6 +81,14 @@
 #include "epetravh.h"
 #include "epetraspmh.h"
 #include <Epetra_SerialComm.h>
+#endif
+
+
+#ifdef USE_GTEST
+#include <gtest/gtest.h>
+#define TESTSUITE_ASSERT(expr) EXPECT_TRUE(expr)
+#else
+#define TESTSUITE_ASSERT(expr) assert(expr)
 #endif
 
 #include "sp_gradient_test_func.h"
@@ -138,7 +148,7 @@ namespace sp_grad_test {
      }
 
      void sp_grad_assert_equal(doublereal u, doublereal v, doublereal dTol) {
-          assert(fabs(u - v) / std::max(1., fabs(u) + fabs(v)) <= dTol);
+          TESTSUITE_ASSERT(fabs(u - v) / std::max(1., fabs(u) + fabs(v)) <= dTol);
      }
 
      void sp_grad_assert_equal(const SpGradient& u, const SpGradient& v, doublereal dTol) {
@@ -1555,11 +1565,11 @@ namespace sp_grad_test {
 
                f2nz += f2.iGetSize();
 
-               assert(fabs(f.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(f.dGetValue() / fVal - 1.) < dTol);
 
-               assert(fabs(fc.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(fc.dGetValue() / fVal - 1.) < dTol);
 
-               assert(fabs(f2.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(f2.dGetValue() / fVal - 1.) < dTol);
 
                ud.clear();
                vd.clear();
@@ -1594,15 +1604,15 @@ namespace sp_grad_test {
 
                c_full_time += high_resolution_clock::now() - c_full_start;
 
-               assert(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
 
                SP_GRAD_TRACE("fref f\n");
                SP_GRAD_TRACE(fVal << " " << f.dGetValue() << endl);
 
                for (index_type i = 1; i <= s.iMaxDof; ++i) {
-                    assert(fabs(fd[i - 1] - f.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
-                    assert(fabs(fd[i - 1] - fc.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
-                    assert(fabs(fd[i - 1] - f2.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - f.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - fc.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - f2.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
                     SP_GRAD_TRACE(fd[i - 1] << " " << f.dGetDeriv(i) << endl);
                }
           }
@@ -1694,9 +1704,9 @@ namespace sp_grad_test {
 
                sp_grad2_time += high_resolution_clock::now() - sp_grad2_start;
 
-               assert(fabs(f.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(f.dGetValue() / fVal - 1.) < dTol);
 
-               assert(fabs(f2.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(f2.dGetValue() / fVal - 1.) < dTol);
 
                ud.clear();
                vd.clear();
@@ -1729,12 +1739,12 @@ namespace sp_grad_test {
 
                c_full_time += high_resolution_clock::now() - c_full_start;
 
-               assert(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
 
                SP_GRAD_TRACE("fref f\n");
                SP_GRAD_TRACE(fVal << " " << f.dGetValue() << endl);
-               assert(fabs(fd[0] - f.dGetDeriv()) < dTol * max(1.0, fabs(fd[0])));
-               assert(fabs(fd[0] - f2.dGetDeriv()) < dTol * max(1.0, fabs(fd[0])));
+               TESTSUITE_ASSERT(fabs(fd[0] - f.dGetDeriv()) < dTol * max(1.0, fabs(fd[0])));
+               TESTSUITE_ASSERT(fabs(fd[0] - f2.dGetDeriv()) < dTol * max(1.0, fabs(fd[0])));
                SP_GRAD_TRACE(fd[0] << " " << f.dGetDeriv() << endl);
           }
 
@@ -1801,13 +1811,13 @@ namespace sp_grad_test {
                     bool f7 = func(u.dGetValue(), v, w, e);             \
                     bool f8 = func(u, v.dGetValue(), w, e);             \
                                                                         \
-                    assert(f1 == f2);                                   \
-                    assert(f1 == f3);                                   \
-                    assert(f1 == f4);                                   \
-                    assert(f1 == f5);                                   \
-                    assert(f1 == f6);                                   \
-                    assert(f1 == f7);                                   \
-                    assert(f1 == f8);                                   \
+                    TESTSUITE_ASSERT(f1 == f2);                                   \
+                    TESTSUITE_ASSERT(f1 == f3);                                   \
+                    TESTSUITE_ASSERT(f1 == f4);                                   \
+                    TESTSUITE_ASSERT(f1 == f5);                                   \
+                    TESTSUITE_ASSERT(f1 == f6);                                   \
+                    TESTSUITE_ASSERT(f1 == f7);                                   \
+                    TESTSUITE_ASSERT(f1 == f8);                                   \
                }
 
                SP_GRAD_BOOL_TEST_FUNC(func_bool1);
@@ -1941,24 +1951,24 @@ namespace sp_grad_test {
 
                c_full_time += high_resolution_clock::now() - c_full_start;
 
-               assert(fabs(TypeTraits::dGetValue(f) - fVal) < dTol * max(1., fabs(fVal)));
-               assert(fabs(TypeTraits::dGetValue(f2) - fVal) < dTol * max(1., fabs(fVal)));
-               assert(fabs(TypeTraits::dGetValue(f3) - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(TypeTraits::dGetValue(f) - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(TypeTraits::dGetValue(f2) - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(TypeTraits::dGetValue(f3) - fVal) < dTol * max(1., fabs(fVal)));
 
                for (index_type i = 1; i <= s.iMaxDof; ++i) {
-                    assert(fabs(fd[i - 1] - TypeTraits::dGetDeriv(f, i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - TypeTraits::dGetDeriv(f, i)) < dTol * max(1.0, fabs(fd[i - 1])));
                }
 
-               assert(fabs(TypeTraits::dGetValue(f2) - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(TypeTraits::dGetValue(f2) - fVal) < dTol * max(1., fabs(fVal)));
 
                for (index_type i = 1; i <= s.iMaxDof; ++i) {
-                    assert(fabs(fd[i - 1] - TypeTraits::dGetDeriv(f2, i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - TypeTraits::dGetDeriv(f2, i)) < dTol * max(1.0, fabs(fd[i - 1])));
                }
 
-               assert(fabs(TypeTraits::dGetValue(f3) - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(TypeTraits::dGetValue(f3) - fVal) < dTol * max(1., fabs(fVal)));
 
                for (index_type i = 1; i <= s.iMaxDof; ++i) {
-                    assert(fabs(fd[i - 1] - TypeTraits::dGetDeriv(f3, i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - TypeTraits::dGetDeriv(f3, i)) < dTol * max(1.0, fabs(fd[i - 1])));
                }
           }
 
@@ -2140,18 +2150,18 @@ namespace sp_grad_test {
 
                for (index_type i = 0; i < imatrows; ++i) {
                     for (index_type j = 1; j <= nbdirs; ++j) {
-                         assert(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b4[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
-                         assert(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b5[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
-                         assert(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b6[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
-                         assert(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b7[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
+                         TESTSUITE_ASSERT(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b4[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
+                         TESTSUITE_ASSERT(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b5[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
+                         TESTSUITE_ASSERT(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b6[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
+                         TESTSUITE_ASSERT(fabs(bd[i + (j - 1) * imatrows] - SpGradientTraits<TB>::dGetDeriv(b7[i], j)) / max(1., fabs(bd[i + (j - 1) * imatrows])) < dTol);
                     }
                }
 
                for (index_type i = 0; i < imatrows; ++i) {
-                    assert(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b4[i])) / max(1., fabs(bv[i])) < dTol);
-                    assert(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b5[i])) / max(1., fabs(bv[i])) < dTol);
-                    assert(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b6[i])) / max(1., fabs(bv[i])) < dTol);
-                    assert(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b7[i])) / max(1., fabs(bv[i])) < dTol);
+                    TESTSUITE_ASSERT(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b4[i])) / max(1., fabs(bv[i])) < dTol);
+                    TESTSUITE_ASSERT(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b5[i])) / max(1., fabs(bv[i])) < dTol);
+                    TESTSUITE_ASSERT(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b6[i])) / max(1., fabs(bv[i])) < dTol);
+                    TESTSUITE_ASSERT(fabs(bv[i] - SpGradientTraits<TB>::dGetValue(b7[i])) / max(1., fabs(bv[i])) < dTol);
                }
           }
 
@@ -2272,17 +2282,17 @@ namespace sp_grad_test {
 
                A = std::move(E);
 
-               assert(A2.iGetNumRows() == A.iGetNumRows());
-               assert(A2.iGetNumCols() == A.iGetNumCols());
+               TESTSUITE_ASSERT(A2.iGetNumRows() == A.iGetNumRows());
+               TESTSUITE_ASSERT(A2.iGetNumCols() == A.iGetNumCols());
 
                for (index_type i = 0; i < A.iGetNumRows() * A.iGetNumCols(); ++i) {
                     const SpGradient& ai = *(A.begin() + i);
                     const SpGradient& a2i = *(A2.begin() + i);
 
-                    assert(ai.dGetValue() == a2i.dGetValue());
+                    TESTSUITE_ASSERT(ai.dGetValue() == a2i.dGetValue());
 
                     for (index_type j = 0; j < inumdof; ++j) {
-                         assert(ai.dGetDeriv(j) == a2i.dGetDeriv(j));
+                         TESTSUITE_ASSERT(ai.dGetDeriv(j) == a2i.dGetDeriv(j));
                     }
                }
 
@@ -2455,9 +2465,9 @@ namespace sp_grad_test {
                          const doublereal dijr3 = SpGradientTraits<TD>::dGetValue(DMap.GetElem(i, j));
                          const doublereal dij = -aij / 3. + (bij * 5. - cij / 4.) * 1.5;
 
-                         assert(fabs(dij - dijr1) / std::max(1., fabs(dij)) < dTol);
-                         assert(fabs(dij - dijr2) / std::max(1., fabs(dij)) < dTol);
-                         assert(fabs(dij - dijr3) / std::max(1., fabs(dij)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij - dijr1) / std::max(1., fabs(dij)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij - dijr2) / std::max(1., fabs(dij)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij - dijr3) / std::max(1., fabs(dij)) < dTol);
 
                          for (index_type k = s.iMinDof; k <= s.iMaxDof; ++k) {
                               const doublereal daij = SpGradientTraits<TA>::dGetDeriv(A.GetElem(i, j), k);
@@ -2470,10 +2480,10 @@ namespace sp_grad_test {
 
                               const doublereal ddij = -daij / 3. + (dbij * 5. - dcij / 4.) * 1.5;
 
-                              assert(fabs(ddij - ddijr1) / std::max(1., fabs(ddij)) < dTol);
-                              assert(fabs(ddij - ddijr2) / std::max(1., fabs(ddij)) < dTol);
-                              assert(fabs(ddij - ddijr3) / std::max(1., fabs(ddij)) < dTol);
-                              assert(fabs(ddij - ddijr4) / std::max(1., fabs(ddij)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij - ddijr1) / std::max(1., fabs(ddij)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij - ddijr2) / std::max(1., fabs(ddij)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij - ddijr3) / std::max(1., fabs(ddij)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij - ddijr4) / std::max(1., fabs(ddij)) < dTol);
                          }
                     }
                }
@@ -2644,10 +2654,10 @@ namespace sp_grad_test {
                          const doublereal dij4 = SpGradientTraits<TD>::dGetValue(Da.GetElem(i, j));
                          const doublereal dij5 = SpGradientTraits<TD>::dGetValue(Db.GetElem(i, j));
 
-                         assert(fabs(dij1 - dij2) / std::max(1., fabs(dij2)) < dTol);
-                         assert(fabs(dij3 - dij2) / std::max(1., fabs(dij2)) < dTol);
-                         assert(fabs(dij4 - dij2) / std::max(1., fabs(dij2)) < dTol);
-                         assert(fabs(dij5 - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij1 - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij3 - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij4 - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij5 - dij2) / std::max(1., fabs(dij2)) < dTol);
 
                          for (index_type k = 1; k <= nbdirs; ++k) {
                               const doublereal ddij1 = SpGradientTraits<TD>::dGetDeriv(D.GetElem(i, j), k);
@@ -2655,10 +2665,10 @@ namespace sp_grad_test {
                               const doublereal ddij3 = SpGradientTraits<TD>::dGetDeriv(D_T.GetElem(j, i), k);
                               const doublereal ddij4 = SpGradientTraits<TD>::dGetDeriv(Da.GetElem(i, j), k);
                               const doublereal ddij5 = SpGradientTraits<TD>::dGetDeriv(Db.GetElem(i, j), k);
-                              assert(fabs(ddij1 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
-                              assert(fabs(ddij3 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
-                              assert(fabs(ddij4 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
-                              assert(fabs(ddij5 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij1 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij3 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij4 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij5 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
                          }
                     }
                }
@@ -2809,9 +2819,9 @@ namespace sp_grad_test {
                          const doublereal cij3 = SpGradientTraits<TC>::dGetValue(C_T.GetElem(i, j));
                          const doublereal cij4 = SpGradientTraits<TC>::dGetValue(C_TA.GetElem(i, j));
 
-                         assert(fabs(cij1 - cij2) / std::max(1., fabs(cij2)) < dTol);
-                         assert(fabs(cij3 - cij2) / std::max(1., fabs(cij2)) < dTol);
-                         assert(fabs(cij4 - cij2) / std::max(1., fabs(cij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(cij1 - cij2) / std::max(1., fabs(cij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(cij3 - cij2) / std::max(1., fabs(cij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(cij4 - cij2) / std::max(1., fabs(cij2)) < dTol);
 
                          for (index_type k = 1; k <= nbdirs; ++k) {
                               const doublereal dcij1 = SpGradientTraits<TC>::dGetDeriv(C.GetElem(i, j), k);
@@ -2819,9 +2829,9 @@ namespace sp_grad_test {
                               const doublereal dcij3 = SpGradientTraits<TC>::dGetDeriv(C_T.GetElem(i, j), k);
                               const doublereal dcij4 = SpGradientTraits<TC>::dGetDeriv(C_TA.GetElem(i, j), k);
 
-                              assert(fabs(dcij1 - dcij2) / std::max(1., fabs(dcij2)) < dTol);
-                              assert(fabs(dcij3 - dcij2) / std::max(1., fabs(dcij2)) < dTol);
-                              assert(fabs(dcij4 - dcij2) / std::max(1., fabs(dcij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(dcij1 - dcij2) / std::max(1., fabs(dcij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(dcij3 - dcij2) / std::max(1., fabs(dcij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(dcij4 - dcij2) / std::max(1., fabs(dcij2)) < dTol);
                          }
                     }
                }
@@ -2990,15 +3000,15 @@ namespace sp_grad_test {
                          const doublereal dij2 = Dv[(j - 1) * imatrows + i - 1];
                          const doublereal dij3 = SpGradientTraits<TD>::dGetValue(D_T.GetElem(i, j));
 
-                         assert(fabs(dij1 - dij2) / std::max(1., fabs(dij2)) < dTol);
-                         assert(fabs(dij3 - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij1 - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dij3 - dij2) / std::max(1., fabs(dij2)) < dTol);
 
                          for (index_type k = 1; k <= nbdirs; ++k) {
                               const doublereal ddij1 = SpGradientTraits<TD>::dGetDeriv(D.GetElem(i, j), k);
                               const doublereal ddij2 = Dd[((j - 1) * imatrows + (i - 1) + (k - 1) * imatrows * imatcols)];
                               const doublereal ddij3 = SpGradientTraits<TD>::dGetDeriv(D_T.GetElem(i, j), k);
-                              assert(fabs(ddij1 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
-                              assert(fabs(ddij3 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij1 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddij3 - ddij2) / std::max(1., fabs(ddij2)) < dTol);
                          }
                     }
                }
@@ -3168,18 +3178,18 @@ namespace sp_grad_test {
                          const doublereal dijc = SpGradientTraits<TD>::dGetValue(Dc.GetElem(j, i));
                          const doublereal dij2 = Dv[(j - 1) * imatrowsa + i - 1];
 
-                         assert(fabs(dija - dij2) / std::max(1., fabs(dij2)) < dTol);
-                         assert(fabs(dijb - dij2) / std::max(1., fabs(dij2)) < dTol);
-                         assert(fabs(dijc - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dija - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dijb - dij2) / std::max(1., fabs(dij2)) < dTol);
+                         TESTSUITE_ASSERT(fabs(dijc - dij2) / std::max(1., fabs(dij2)) < dTol);
 
                          for (index_type k = 1; k <= nbdirs; ++k) {
                               const doublereal ddija = SpGradientTraits<TD>::dGetDeriv(Da.GetElem(j, i), k);
                               const doublereal ddijb = SpGradientTraits<TD>::dGetDeriv(Db.GetElem(j, i), k);
                               const doublereal ddijc = SpGradientTraits<TD>::dGetDeriv(Dc.GetElem(j, i), k);
                               const doublereal ddij2 = Dd[((j - 1) * imatrowsa + (i - 1) + (k - 1) * imatrowsa * imatcolsc)];
-                              assert(fabs(ddija - ddij2) / std::max(1., fabs(ddij2)) < dTol);
-                              assert(fabs(ddijb - ddij2) / std::max(1., fabs(ddij2)) < dTol);
-                              assert(fabs(ddijc - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddija - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddijb - ddij2) / std::max(1., fabs(ddij2)) < dTol);
+                              TESTSUITE_ASSERT(fabs(ddijc - ddij2) / std::max(1., fabs(ddij2)) < dTol);
                          }
                     }
                }
@@ -3334,7 +3344,7 @@ namespace sp_grad_test {
                sp_grad_assert_equal(q1, q2, dTol);
                sp_grad_assert_equal(q1, q3, dTol);
 
-               assert(SpGradientTraits<T>::dGetValue(q1) >= 0.);
+               TESTSUITE_ASSERT(SpGradientTraits<T>::dGetValue(q1) >= 0.);
 
                for (index_type i = 1; i <= 3; ++i) {
                     for (index_type j = 1; j <= 2; ++j) {
@@ -3591,11 +3601,11 @@ namespace sp_grad_test {
 #ifdef USE_TRILINOS
                for (size_t i = 0; i < Ax.size(); ++i) {
                     sp_grad_assert_equal(Aepx[i], Ax[i], dTol);
-                    assert(Ai[i] == Aepi[i]);
+                    TESTSUITE_ASSERT(Ai[i] == Aepi[i]);
                }
 
                for (size_t i = 0; i < Ap.size(); ++i) {
-                    assert(Ap[i] == Aepp[i]);
+                    TESTSUITE_ASSERT(Ap[i] == Aepp[i]);
                }
 #endif
                const CColMatrixHandler<1> oMatCC1(Ax, Ai, Ap);
@@ -3731,9 +3741,9 @@ namespace sp_grad_test {
 
                fcnz += fc.iGetSize();
 
-               assert(fabs(f.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(f.dGetValue() / fVal - 1.) < dTol);
 
-               assert(fabs(fc.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(fc.dGetValue() / fVal - 1.) < dTol);
 
                ud.clear();
                vd.clear();
@@ -3771,12 +3781,12 @@ namespace sp_grad_test {
                SP_GRAD_TRACE("fref f\n");
                SP_GRAD_TRACE(fVal << " " << f.dGetValue() << endl);
 
-               assert(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
 
                for (index_type i = 1; i <= s.iMaxDof; ++i) {
                     SP_GRAD_TRACE(fd[i - 1] << " " << f.dGetDeriv(i) << endl);
-                    assert(fabs(fd[i - 1] - f.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
-                    assert(fabs(fd[i - 1] - fc.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - f.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
+                    TESTSUITE_ASSERT(fabs(fd[i - 1] - fc.dGetDeriv(i)) < dTol * max(1.0, fabs(fd[i - 1])));
                }
           }
 
@@ -3852,7 +3862,7 @@ namespace sp_grad_test {
                sp_grad_time += high_resolution_clock::now() - sp_grad_start;
 
 
-               assert(fabs(f.dGetValue() / fVal - 1.) < dTol);
+               TESTSUITE_ASSERT(fabs(f.dGetValue() / fVal - 1.) < dTol);
 
                ud.clear();
                vd.clear();
@@ -3888,10 +3898,10 @@ namespace sp_grad_test {
                SP_GRAD_TRACE("fref f\n");
                SP_GRAD_TRACE(fVal << " " << f.dGetValue() << endl);
 
-               assert(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
+               TESTSUITE_ASSERT(fabs(f.dGetValue() - fVal) < dTol * max(1., fabs(fVal)));
 
                SP_GRAD_TRACE(fd[0] << " " << f.dGetDeriv() << endl);
-               assert(fabs(fd[0] - f.dGetDeriv()) < dTol * max(1.0, fabs(fd[0])));
+               TESTSUITE_ASSERT(fabs(fd[0] - f.dGetDeriv()) < dTol * max(1.0, fabs(fd[0])));
           }
 
           auto sp_grad_time_ns = duration_cast<nanoseconds>(sp_grad_time).count();
@@ -4348,19 +4358,19 @@ namespace sp_grad_test {
           Vec3 C3(C2);
           Vec3 D3(D2);
 
-          assert(C3.IsExactlySame(C1));
-          assert(D3.IsExactlySame(D1));
-          assert(Dot(C2, D2) == C1.Dot(D1));
+          TESTSUITE_ASSERT(C3.IsExactlySame(C1));
+          TESTSUITE_ASSERT(D3.IsExactlySame(D1));
+          TESTSUITE_ASSERT(Dot(C2, D2) == C1.Dot(D1));
 
           Mat3x3 A3(A2);
 
-          assert(A3.IsExactlySame(A1));
+          TESTSUITE_ASSERT(A3.IsExactlySame(A1));
 
           Mat3x3 B1 = A1 * A1.Transpose();
           SpMatrix<doublereal, 3, 3> B2 = A2 * Transpose(A2);
           Mat3x3 B3(B2);
 
-          assert(B3.IsExactlySame(B1));
+          TESTSUITE_ASSERT(B3.IsExactlySame(B1));
      }
 
      void test20a()
@@ -4393,38 +4403,38 @@ namespace sp_grad_test {
           Vec6 C3(C2);
           Vec6 D3(D2);
 
-          assert(C3.IsExactlySame(C1));
-          assert(D3.IsExactlySame(D1));
-          assert(Dot(C2, D2) == C1.Dot(D1));
+          TESTSUITE_ASSERT(C3.IsExactlySame(C1));
+          TESTSUITE_ASSERT(D3.IsExactlySame(D1));
+          TESTSUITE_ASSERT(Dot(C2, D2) == C1.Dot(D1));
 
           Mat6x6 A3(A2);
 
-          assert(A3.IsExactlySame(A1));
+          TESTSUITE_ASSERT(A3.IsExactlySame(A1));
 
           Mat6x6 B1 = A1 * A1.Transpose();
           SpMatrix<doublereal, 6, 6> B2 = A2 * Transpose(A2);
           Mat6x6 B3(B2);
 
-          assert(B3.IsExactlySame(B1));
+          TESTSUITE_ASSERT(B3.IsExactlySame(B1));
      }
 
      void check_PrincipalAxes(const Vec3& J_princ, const Mat3x3& R_princ, const Vec3& Jp, const Mat3x3& J_cm, const doublereal dTol)
      {
-          assert(fabs(R_princ.GetCol(1).Dot() - 1.) < dTol);
-          assert(fabs(R_princ.GetCol(2).Dot() - 1.) < dTol);
-          assert(fabs(R_princ.GetCol(3).Dot() - 1.) < dTol);
-          assert(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(2))) < dTol);
-          assert(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(3))) < dTol);
-          assert(fabs(R_princ.GetCol(2).Dot(R_princ.GetCol(3))) < dTol);
-          assert(fabs(J_cm.Trace() - Mat3x3(Mat3x3Diag, J_princ).Trace()) < dTol * fabs(J_cm.Trace()));
-          assert(R_princ.GetCol(1).Cross(R_princ.GetCol(2)).IsSame(R_princ.GetCol(3), dTol));
-          assert(R_princ.GetCol(3).Cross(R_princ.GetCol(1)).IsSame(R_princ.GetCol(2), dTol));
-          assert(R_princ.GetCol(2).Cross(R_princ.GetCol(3)).IsSame(R_princ.GetCol(1), dTol));
-          assert(R_princ.MulTM(R_princ).IsSame(Eye3, dTol));
-          assert(R_princ.MulMT(R_princ).IsSame(Eye3, dTol));
-          assert(R_princ.MulTM(J_cm * R_princ).IsSame(Mat3x3(Mat3x3Diag, J_princ), dTol * J_princ.Norm()) || (R_princ*J_cm.MulMT(R_princ)).IsSame(Mat3x3(Mat3x3Diag, J_princ), dTol * J_princ.Norm()));
-          assert(R_princ.IsSame(RotManip::Rot(RotManip::VecRot(R_princ)), dTol * M_PI));
-          assert(J_princ.IsSame(Jp, dTol * Jp.Norm()));
+          TESTSUITE_ASSERT(fabs(R_princ.GetCol(1).Dot() - 1.) < dTol);
+          TESTSUITE_ASSERT(fabs(R_princ.GetCol(2).Dot() - 1.) < dTol);
+          TESTSUITE_ASSERT(fabs(R_princ.GetCol(3).Dot() - 1.) < dTol);
+          TESTSUITE_ASSERT(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(2))) < dTol);
+          TESTSUITE_ASSERT(fabs(R_princ.GetCol(1).Dot(R_princ.GetCol(3))) < dTol);
+          TESTSUITE_ASSERT(fabs(R_princ.GetCol(2).Dot(R_princ.GetCol(3))) < dTol);
+          TESTSUITE_ASSERT(fabs(J_cm.Trace() - Mat3x3(Mat3x3Diag, J_princ).Trace()) < dTol * fabs(J_cm.Trace()));
+          TESTSUITE_ASSERT(R_princ.GetCol(1).Cross(R_princ.GetCol(2)).IsSame(R_princ.GetCol(3), dTol));
+          TESTSUITE_ASSERT(R_princ.GetCol(3).Cross(R_princ.GetCol(1)).IsSame(R_princ.GetCol(2), dTol));
+          TESTSUITE_ASSERT(R_princ.GetCol(2).Cross(R_princ.GetCol(3)).IsSame(R_princ.GetCol(1), dTol));
+          TESTSUITE_ASSERT(R_princ.MulTM(R_princ).IsSame(Eye3, dTol));
+          TESTSUITE_ASSERT(R_princ.MulMT(R_princ).IsSame(Eye3, dTol));
+          TESTSUITE_ASSERT(R_princ.MulTM(J_cm * R_princ).IsSame(Mat3x3(Mat3x3Diag, J_princ), dTol * J_princ.Norm()) || (R_princ*J_cm.MulMT(R_princ)).IsSame(Mat3x3(Mat3x3Diag, J_princ), dTol * J_princ.Norm()));
+          TESTSUITE_ASSERT(R_princ.IsSame(RotManip::Rot(RotManip::VecRot(R_princ)), dTol * M_PI));
+          TESTSUITE_ASSERT(J_princ.IsSame(Jp, dTol * Jp.Norm()));
      }
 
      void test21(index_type num_loops)
@@ -4501,8 +4511,8 @@ namespace sp_grad_test {
                     }
                }
 
-               assert(status1);
-               assert(status2);
+               TESTSUITE_ASSERT(status1);
+               TESTSUITE_ASSERT(status2);
 
                for (index_type i = 0; i < 4; ++i) {
                     check_PrincipalAxes(J_princ1, R_princ1[i], Jp, J1, dTol);
@@ -4527,7 +4537,7 @@ namespace sp_grad_test {
                     }
                }
 
-               assert(bValid1);
+               TESTSUITE_ASSERT(bValid1);
 
                bool bValid2 = false;
 
@@ -4547,7 +4557,7 @@ namespace sp_grad_test {
                     }
                }
 
-               assert(bValid2);
+               TESTSUITE_ASSERT(bValid2);
 
                check_PrincipalAxes(J_princ1, R_princ1_v, Jp, J1, dTol);
                check_PrincipalAxes(J_princ2, R_princ2_v, Jp, J2, dTol);
@@ -4582,7 +4592,7 @@ namespace sp_grad_test {
                bCaughtBadAlloc = true;
           }
 
-          assert(bCaughtBadAlloc);
+          TESTSUITE_ASSERT(bCaughtBadAlloc);
      }
 
      void test23() {
@@ -4593,7 +4603,7 @@ namespace sp_grad_test {
 
           if (0 != getrlimit(RLIMIT_DATA, &rlimprev)) {
                DEBUGCERR("getrlimit failed\n");
-               ASSERT(0);
+               TESTSUITE_ASSERT(0);
                return;
           }
 
@@ -4603,7 +4613,7 @@ namespace sp_grad_test {
 
           if (0 != setrlimit(RLIMIT_DATA, &rlimnew)) {
                DEBUGCERR("setrlimit failed\n");
-               ASSERT(0);
+               TESTSUITE_ASSERT(0);
                return;
           }
 
@@ -4618,39 +4628,245 @@ namespace sp_grad_test {
 
           if (0 != setrlimit(RLIMIT_DATA, &rlimprev)) {
                DEBUGCERR("setrlimit failed\n");
-               ASSERT(0);
+               TESTSUITE_ASSERT(0);
           }
 
-          assert(bCaughtBadAlloc);
+          TESTSUITE_ASSERT(bCaughtBadAlloc);
 #else
           DEBUGCERR("test23 will be skipped because setrlimit is not available\n");
 #endif
      }
 }
 
-int main(int argc, char* argv[])
-{
+
+namespace {
+     namespace sp_gradient_test_parameters {
+          using namespace sp_grad_test;
+          constexpr doublereal dall_tests = -1.0;
+          doublereal dtest = dall_tests;
+          index_type inumloops = 1;
+          index_type inumnz = 100;
+          index_type inumdof = 200;
+          index_type imatrows = 10;
+          index_type imatcols = 10;
+          index_type imatcolsb = 5;
+          index_type imatcolsc = 7;
+     }
+}
+
+#ifdef USE_GTEST
+
+TEST(sp_gradient_test, testx) {
      using namespace sp_grad_test;
+     testx();
+}
+
+TEST(sp_gradient_test, test0) {
+     using namespace sp_gradient_test_parameters;
+
+     test0(inumloops, inumnz, inumdof);
+     test0gp();
+}
+
+TEST(sp_gradient_test, test1) {
+     using namespace sp_grad_test;
+
+     test1();
+}
+
+TEST(sp_gradient_test, test2) {
+     using namespace sp_gradient_test_parameters;
+
+     test2(inumloops, inumnz, inumdof);
+     test2gp(inumloops, inumnz, inumdof);
+}
+
+
+TEST(sp_gradient_test, test3) {
+     using namespace sp_gradient_test_parameters;
+     test3<SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows);
+     test3<doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows);
+     test3<SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows);
+     test3<doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows);
+}
+
+TEST(sp_gradient_test, test4) {
+     using namespace sp_gradient_test_parameters;
+     test4<doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test4<doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test4<SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test4<SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+}
+
+TEST(sp_gradient_test, test6) {
+     using namespace sp_gradient_test_parameters;
+     test6(inumloops, inumnz, inumdof, imatrows, imatcols);
+}
+
+TEST(sp_gradient_test, test7) {
+     using namespace sp_gradient_test_parameters;
+     test7<SpGradient, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test7<doublereal, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test7<SpGradient, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test7<doublereal, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test7<doublereal, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test7<SpGradient, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test7<doublereal, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test7<SpGradient, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+
+     test7<SpGradient, SpGradient, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test7<doublereal, doublereal, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test7<SpGradient, doublereal, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test7<doublereal, SpGradient, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test7<doublereal, doublereal, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test7<SpGradient, SpGradient, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test7<doublereal, SpGradient, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test7<SpGradient, doublereal, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+
+     test7<SpGradient, SpGradient, SpGradient, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+     test7<doublereal, doublereal, doublereal, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+     test7<SpGradient, doublereal, doublereal, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+     test7<doublereal, SpGradient, doublereal, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+     test7<doublereal, doublereal, SpGradient, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+     test7<SpGradient, SpGradient, doublereal, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+     test7<doublereal, SpGradient, SpGradient, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+     test7<SpGradient, doublereal, SpGradient, 7, 9>(inumloops, inumnz, inumdof, 7, 9);
+}
+
+TEST(sp_gradient_test, test8) {
+     using namespace sp_gradient_test_parameters;
+     test8<SpGradient, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test8<doublereal, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test8<SpGradient, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test8<doublereal, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test8<doublereal, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test8<SpGradient, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test8<doublereal, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+     test8<SpGradient, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols);
+
+     test8<SpGradient, SpGradient, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test8<doublereal, doublereal, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test8<SpGradient, doublereal, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test8<doublereal, SpGradient, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test8<doublereal, doublereal, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test8<SpGradient, SpGradient, doublereal, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test8<doublereal, SpGradient, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+     test8<SpGradient, doublereal, SpGradient, iNumRowsStatic1, iNumColsStatic1>(inumloops, inumnz, inumdof, iNumRowsStatic1, iNumColsStatic1);
+
+     test8<SpGradient, SpGradient, SpGradient, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+     test8<doublereal, doublereal, doublereal, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+     test8<SpGradient, doublereal, doublereal, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+     test8<doublereal, SpGradient, doublereal, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+     test8<doublereal, doublereal, SpGradient, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+     test8<SpGradient, SpGradient, doublereal, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+     test8<doublereal, SpGradient, SpGradient, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+     test8<SpGradient, doublereal, SpGradient, iNumRowsStatic2, iNumColsStatic2>(inumloops, inumnz, inumdof, iNumRowsStatic2, iNumColsStatic2);
+}
+
+TEST(sp_gradient_test, test10) {
+     using namespace sp_gradient_test_parameters;
+     test10<SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb);
+     test10<doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb);
+     test10<SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb);
+     test10<doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb);
+}
+
+TEST(sp_gradient_test, test11) {
+     using namespace sp_gradient_test_parameters;
+     test11<SpGradient, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows);
+     test11<doublereal, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows);
+     test11<SpGradient, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows);
+     test11<doublereal, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows);
+     test11<doublereal, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows);
+     test11<SpGradient, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows);
+     test11<doublereal, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows);
+     test11<SpGradient, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows);
+}
+
+TEST(sp_gradient_test, test12) {
+     using namespace sp_gradient_test_parameters;
+     test12<SpGradient, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+     test12<doublereal, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+     test12<SpGradient, doublereal, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+     test12<doublereal, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+     test12<doublereal, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+     test12<SpGradient, SpGradient, doublereal>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+     test12<doublereal, SpGradient, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+     test12<SpGradient, doublereal, SpGradient>(inumloops, inumnz, inumdof, imatrows, imatcols, imatcolsb, imatcolsc);
+}
+
+TEST(sp_gradient_test, test13) {
+     using namespace sp_gradient_test_parameters;
+     test13<doublereal>(inumloops, inumnz, inumdof);
+     test13<SpGradient>(inumloops, inumnz, inumdof);
+}
+
+TEST(sp_gradient_test, test_bool1) {
+     using namespace sp_gradient_test_parameters;
+     test_bool1(inumloops, inumnz, inumdof);
+}
+
+TEST(sp_gradient_test, test15) {
+     using namespace sp_gradient_test_parameters;
+     test15<doublereal>(inumloops, inumnz, inumdof);
+     test15<SpGradient>(inumloops, inumnz, inumdof);
+}
+
+TEST(sp_gradient_test, test16) {
+     using namespace sp_gradient_test_parameters;
+     test16(inumloops, inumnz, inumdof, imatrows, imatcols);
+}
+
+TEST(sp_gradient_test, testInv) {
+     using namespace sp_gradient_test_parameters;
+     testInv<doublereal, 2>(inumloops, inumnz, inumdof);
+     testInv<doublereal, 3>(inumloops, inumnz, inumdof);
+     testInv<SpGradient, 2>(inumloops, inumnz, inumdof);
+     testInv<SpGradient, 3>(inumloops, inumnz, inumdof);
+}
+
+TEST(sp_gradient_test, test18) {
+     using namespace sp_gradient_test_parameters;
+     test18(inumloops, inumnz, inumdof);
+     test18gp(inumloops, inumnz, inumdof);
+}
+
+TEST(sp_gradient_test, test19) {
+     using namespace sp_gradient_test_parameters;
+     test19();
+     test19b();
+     test19c();
+}
+
+TEST(sp_gradient_test, test20) {
+     using namespace sp_gradient_test_parameters;
+     test20();
+     test20a();
+}
+
+TEST(sp_gradient_test, test21) {
+     using namespace sp_gradient_test_parameters;
+     test21(inumloops);
+}
+
+TEST(sp_gradient_test, test22) {
+     using namespace sp_gradient_test_parameters;
+     test22();
+}
+
+TEST(sp_gradient_test, test23) {
+     using namespace sp_gradient_test_parameters;
+     test23();
+}
+
+#else
+int RunTestSuite() {
+     using namespace sp_gradient_test_parameters;
      using namespace std;
 
      try {
-#ifdef HAVE_FEENABLEEXCEPT
-          feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW);
-#endif
-          const index_type inumloops = argc > 1 ? atoi(argv[1]) : 1;
-          const index_type inumnz = argc > 2 ? atoi(argv[2]) : 100;
-          const index_type inumdof = argc > 3 ? atoi(argv[3]) : 200;
-          const index_type imatrows = argc > 4 ? atoi(argv[4]) : 10;
-          const index_type imatcols = argc > 5 ? atoi(argv[5]) : 10;
-          const index_type imatcolsb = argc > 6 ? atoi(argv[6]) : 5;
-          const index_type imatcolsc = argc > 7 ? atoi(argv[7]) : 7;
-
-          constexpr doublereal dall_tests = -1.0;
-          const doublereal dtest = argc > 8 ? atof(argv[8]) : dall_tests;
-
 #define SP_GRAD_RUN_TEST(number)                        \
           (dtest == dall_tests || dtest == (number))
-
           testx();
 
           if (SP_GRAD_RUN_TEST(0.1)) {
@@ -4768,16 +4984,47 @@ int main(int argc, char* argv[])
           if (SP_GRAD_RUN_TEST(22.1)) test22();
           if (SP_GRAD_RUN_TEST(23.1)) test23();
 
+#undef SP_GRAD_RUN_TEST
+
           cerr << "All tests passed\n"
                << "\n\tloops performed: " << inumloops
                << "\n\tmax nonzeros: " << inumnz
                << "\n\tmax dof: " << inumdof
                << "\n\tmatrix size: " << imatrows << " x " << imatcols << " x " << imatcolsb << " x " << imatcolsc
                << endl;
-
-          return 0;
      } catch (const std::exception& err) {
           cerr << "an exception occured: " << err.what() << endl;
           return 1;
      }
+
+     return 0;
+}
+#endif
+
+int main(int argc, char* argv[]) {
+#ifdef USE_GTEST
+     testing::InitGoogleTest(&argc, argv);
+#endif
+
+#ifdef HAVE_FEENABLEEXCEPT
+     feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW);
+#endif
+
+     using namespace sp_grad_test;
+     using namespace sp_gradient_test_parameters;
+
+     dtest = argc > 8 ? atof(argv[8]) : dall_tests;
+     inumloops = argc > 1 ? atoi(argv[1]) : 1;
+     inumnz = argc > 2 ? atoi(argv[2]) : 100;
+     inumdof = argc > 3 ? atoi(argv[3]) : 200;
+     imatrows = argc > 4 ? atoi(argv[4]) : 10;
+     imatcols = argc > 5 ? atoi(argv[5]) : 10;
+     imatcolsb = argc > 6 ? atoi(argv[6]) : 5;
+     imatcolsc = argc > 7 ? atoi(argv[7]) : 7;
+
+#ifdef USE_GTEST
+     return RUN_ALL_TESTS();
+#else
+     return RunTestSuite();
+#endif
 }

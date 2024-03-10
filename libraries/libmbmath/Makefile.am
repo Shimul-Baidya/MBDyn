@@ -212,7 +212,8 @@ libmbmath.la \
 @FCLIBS@ \
 @LIBS@ \
 @TRILINOS_LIBS@ \
-@RT_LIBS@
+@RT_LIBS@ \
+@GTEST_LIBS@
 
 AM_CPPFLAGS = \
 -I../../include \
