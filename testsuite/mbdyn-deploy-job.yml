@@ -38,6 +38,9 @@ mbdyn-deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   environment: production
   needs:
-    - job: mbdyn-testsuite-report-job
+    - job: mbdyn-tests-private-test-job
+    - job: mbdyn-tests-public-test-job
+    - job: mbdyn-module-test-job
+    - job: octave-pkg-test-job
   script:
     - echo "Deployment not enabled yet!"
