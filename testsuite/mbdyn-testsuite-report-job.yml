@@ -38,36 +38,6 @@ variables:
   MBD_TEST_COVERAGE_XML: "mbdyn-test-coverage.xml"
   MBD_TEST_COVERAGE_HTML: "mbdyn-test-coverage.html"
 
-mbdyn-testsuite-report-job:
-  stage: test
-  needs:
-    - job: mbdyn-modules-test-job
-      artifacts: true
-    - job: mbdyn-tests-private-test-job
-      artifacts: true
-    - job: mbdyn-tests-public-test-job
-      artifacts: true
-    - job: octave-pkg-test-job
-      artifacts: true
-  script:
-    - status_files=`find "${TESTSUITE_PREFIX_TESTS}" -name '*-test-job.status'`
-    - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 4 || passed < tests || failed > 0) { exit 1; }}' ${status_files}
-
-mbdyn-testsuite-report-job-gcov:
-  stage: test
-  needs:
-    - job: mbdyn-tests-public-test-job-gcov
-      artifacts: true
-    - job: mbdyn-tests-private-test-job-gcov
-      artifacts: true
-    - job: mbdyn-modules-test-job-gcov
-      artifacts: true
-  rules:
-    - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
-  script:
-    - status_files=`find "${TESTSUITE_PREFIX_TESTS}" -name '*-test-job.status'`
-    - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 3 || passed < tests || failed > 0) { exit 1; }}' ${status_files}
-
 mbdyn-testsuite-report-job-coverage:
   variables:
     MBD_TESTSUITE_REPORT_JOB_NUM_TASKS: 12

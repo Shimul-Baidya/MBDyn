@@ -35,6 +35,10 @@
 # in the GNU Public License version 2.1
 
 variables:
+  TESTSUITE_TIME_CMD:
+    value: "/usr/bin/time --verbose"
+    description: "Command used to profile all the tests"
+
   ## Directories for binaries and temporary storage:
   ## All paths must be relative to $CI_PROJECT_DIR!
   ## So, we can use them with "artifacts:" and "cache:".

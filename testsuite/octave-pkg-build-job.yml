@@ -58,7 +58,7 @@ octave-pkg-build-job:       # This job runs in the build stage, which runs first
         - export OCTAVE_EXEC
         - export OCT_PKG_LIST
         - export MBD_COMPILER_FLAGS
-        - /usr/bin/time --verbose testsuite/octave_pkg_build_job.sh
+        - ${TESTSUITE_TIME_CMD} testsuite/octave_pkg_build_job.sh
   artifacts:
    name: octave-pkg-install-prefix
    expire_in: 24h
@@ -96,7 +96,7 @@ octave-pkg-build-job-gcov:       # This job runs in the build stage, which runs 
         - export OCT_PKG_LIST
         - export MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS_GCOV}"
         - export LDFLAGS="--coverage"
-        - /usr/bin/time --verbose testsuite/octave_pkg_build_job.sh
+        - ${TESTSUITE_TIME_CMD} testsuite/octave_pkg_build_job.sh
   rules:
     - if: $MBD_TEST_COVERAGE_ENABLED == "yes"
   artifacts:

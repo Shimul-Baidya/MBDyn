@@ -58,6 +58,7 @@ mbdyn_suppressed_errors=""
 
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
+TESTSUITE_TIME_CMD="${TESTSUITE_TIME_CMD:-/usr/bin/time --verbose}"
 
 program_dir=$(realpath $(dirname "${program_name}"))
 
@@ -388,7 +389,7 @@ function simple_testsuite_run_test()
 
         case "${mbdyn_print_res}" in
             all|*time*)
-                mbd_command="/usr/bin/time --verbose --output ${mbd_time_file} ${mbd_command}"
+                mbd_command="${TESTSUITE_TIME_CMD} --output ${mbd_time_file} ${mbd_command}"
                 ;;
         esac
 

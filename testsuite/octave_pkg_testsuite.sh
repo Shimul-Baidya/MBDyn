@@ -42,6 +42,7 @@
 set -o pipefail ## Needed for commands like "octave --eval ${cmd} |& tee logfile"
 
 program_name="$0"
+TESTSUITE_TIME_CMD="${TESTSUITE_TIME_CMD:-/usr/bin/time --verbose}"
 OCT_PKG_LIST="${OCT_PKG_LIST:-mboct-mbdyn-pkg:no:master:yes:unlimited}"
 OCT_PKG_TEST_DIR="${OCT_PKG_TEST_DIR:-octave-pkg-testsuite}"
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
@@ -247,7 +248,7 @@ function octave_pkg_testsuite_run()
 
     case "${OCT_PKG_PRINT_RES}" in
         all|*time*)
-            octave_pkg_timing_cmd="/usr/bin/time --verbose --output ${octave_pkg_timing_file}"
+            octave_pkg_timing_cmd="${TESTSUITE_TIME_CMD} --output ${octave_pkg_timing_file}"
             ;;
         *)
             octave_pkg_timing_cmd=""
