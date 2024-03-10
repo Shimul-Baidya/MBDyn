@@ -66,16 +66,16 @@
 
 class MBDynErrBase : public std::exception {
 private:
-     const char* const file;
-     const int line;
-     const char* const func;
-     const std::string r;
-     mutable std::string message;
+        const char* const file;
+        const int line;
+        const char* const func;
+        const std::string r;
+        mutable std::string message;
 public:
-	MBDynErrBase(MBDYN_EXCEPT_ARGS_DECL);
-	virtual ~MBDynErrBase(void) noexcept {};
-	void Set(const std::string& s);
-	const char * what(void) const noexcept override;
+        MBDynErrBase(MBDYN_EXCEPT_ARGS_DECL);
+        virtual ~MBDynErrBase(void) noexcept {};
+        void Set(const std::string& s);
+        const char * what(void) const noexcept override;
         const char* GetFile() const { return file; }
         int GetLine() const { return line; }
         const char* GetFunction() const { return func; }

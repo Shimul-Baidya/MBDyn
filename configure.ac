@@ -3187,13 +3187,13 @@ if test $ol_with_gtest != no ; then
         GTEST_INCLUDE="`${PKG_CONFIG} --cflags gtest`"
         GTEST_LIBS="`${PKG_CONFIG} --libs gtest`"
         GTEST_LIBS="${GTEST_LIBS:--lgtest}"
-        
+
         AC_LANG([C++])
-        
+
         save_CPPFLAGS="${CPPFLAGS}"
-        
+
         CPPFLAGS="${GTEST_INCLUDE} ${save_CPPFLAGS}"
-        
+
         AC_CHECK_HEADERS([gtest/gtest.h],[have_gtest_h=yes],[have_gtest_h=no])
 
         AC_MSG_CHECKING([for GoogleTest library])
@@ -3221,7 +3221,7 @@ if test $ol_with_gtest != no ; then
         fi
 
         CPPFLAGS="${save_CPPFLAGS}"
-        
+
         if test "$have_gtest" = "yes"; then
            AC_MSG_RESULT([yes])
            ol_link_gtest=yes

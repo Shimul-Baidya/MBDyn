@@ -86,6 +86,8 @@ mbdyn-testsuite-report-job-coverage:
       artifacts: true
     - job: mkl-build-job
       artifacts: true
+    - job: gtest-build-job
+      artifacts: true
     - job: mbdyn-modules-test-job-gcov ## Fetch all *.gcda and *.gcno
       artifacts: true
     - job: mbdyn-build-job-gcov

@@ -49,6 +49,8 @@ octave-pkg-test-job:   # This job runs in the test stage.
         artifacts: true
       - job: nlopt-build-job
         artifacts: true
+      - job: gtest-build-job
+        artifacts: true
       - job: mbdyn-build-job
         artifacts: true
       - job: gmsh-build-job
@@ -78,6 +80,7 @@ octave-pkg-test-job:   # This job runs in the test stage.
       - test_status="failed"
       - (/usr/bin/time --verbose testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}") && test_status="passed"
       - echo "${test_status}" > "${status_file}"
+      - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 1 || passed < tests || failed > 0) { exit 1; }}' "${status_files}"
   artifacts:
     name: octave-pkg-test-output-dir
     expire_in: 2 days

@@ -57,6 +57,8 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       artifacts: true
     - job: mkl-build-job
       artifacts: true
+    - job: gtest-build-job
+      artifacts: true
     - job: mbdyn-build-job
       artifacts: true
   script:
@@ -92,6 +94,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - test_status="failed"
       - (/usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
       - echo "${test_status}" >> "${status_file}"
+      - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 2 || passed < tests || failed > 0) { exit 1; }}' "${status_files}"
   artifacts:
     name: mbdyn-tests-public-test-job
     expire_in: 24h
@@ -99,7 +102,10 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_LOG_FILE
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR/$MBD_TESTS_PUBLIC_STATUS_FILE
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR/**/*.stdout
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR/**/*.xml
     when: always
+    reports:
+      junit: $MBD_TESTS_PUBLIC_OUTPUT_DIR/**/*.xml
 
 mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
   variables:
@@ -112,6 +118,8 @@ mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
     - job: netcdf-cxx4-build-job
       artifacts: true
     - job: mkl-build-job
+      artifacts: true
+    - job: gtest-build-job
       artifacts: true
     - job: mbdyn-build-job-gcov
       artifacts: true
@@ -146,6 +154,7 @@ mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
       - test_status="failed"
       - (/usr/bin/time --verbose testsuite/simple_testsuite_patched.sh --scale-when "always" --exit-status-mask "${MBD_TESTS_PUBLIC_EXIT_STATUS_MASK}" --timeout "${MBD_TESTS_PUBLIC_TIMEOUT}" --prefix-output "${MBD_TESTS_PUBLIC_OUTPUT_DIR}" --prefix-input "${MBD_TESTS_PUBLIC_INPUT_DIR}" --tasks "${MBD_TESTS_PUBLIC_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}") && test_status="passed"
       - echo "${test_status}" > "${status_file}"
+      - awk 'BEGIN{ passed=0; failed=0; tests=0; } BEGINFILE { ++tests; idx_test = 0; } { printf("%d.%s:%s:%s\n", tests, ++idx_test, FILENAME, $1); if (match($1,/^passed$/)) { ++passed; } else { ++failed; }} END { printf("%d/%d tests passed\n%d/%d tests failed\n", passed, failed + passed, failed, passed + failed); if (tests != 2 || passed < tests || failed > 0) { exit 1; }}' "${status_files}"
   artifacts:
     name: mbdyn-tests-public-test-job-gcov
     expire_in: 24h
@@ -153,5 +162,8 @@ mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/$MBD_TESTS_PUBLIC_LOG_FILE
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/$MBD_TESTS_PUBLIC_STATUS_FILE
       - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/**/*.stdout
+      - $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/**/*.xml
       - $MBD_BUILD_DIR_GCOV
     when: always
+    reports:
+      junit: $MBD_TESTS_PUBLIC_OUTPUT_DIR_GCOV/**/*.xml

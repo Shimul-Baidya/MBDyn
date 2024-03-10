@@ -301,7 +301,7 @@ mbdyn_welcome(void)
 }
 
 /* Dati di getopt */
-static char sShortOpts[] = "C:d:eE::f:GhHlN:o:pPrRsS:tTvwW:a:";
+static char sShortOpts[] = "Cd:eE::f:GhHlN:o:pPrRsS:tTvwW:a:";
 
 #ifdef HAVE_GETOPT_LONG
 static struct option LongOpts[] = {
@@ -310,8 +310,8 @@ static struct option LongOpts[] = {
 	{ "exceptions",     no_argument,       NULL,           int('e') },
 	{ "fp-mask",        optional_argument, NULL,           int('E') },
 	{ "input-file",     required_argument, NULL,           int('f') },
-        { "gtest",          no_argument,       NULL,           int('G') },        
-	{ "help",           no_argument,       NULL,           int('h') },
+        { "gtest",          no_argument,       NULL,           int('G') },
+        { "help",           no_argument,       NULL,           int('h') },
 	{ "show-table",     no_argument,       NULL,           int('H') },
 	{ "license",        no_argument,       NULL,           int('l') },
 	{ "threads",	    required_argument, NULL,	       int('N') },
@@ -1088,18 +1088,21 @@ public:
                         }
 
                         mbdyn_program(*mbp, argc, argv, currarg);
-                } catch (const NoErr& e) {
+                } catch (const NoErr&) {
                         silent_cout("MBDyn terminated normally\n");
                 } catch (const MBDynErrBase& e) {
                         silent_cerr("An error occurred during the execution of MBDyn (" << e.what() << ");"
                                     " aborting...\n");
-                        ADD_FAILURE_AT(e.GetFile(), e.GetLine());
+
+                        ADD_FAILURE_AT(e.GetFile(), e.GetLine()); // Record the location in the source code. So, it may be displayed in GitLab CI.
+
+                        throw; // Ensure that RUN_ALL_TESTS will return a nonzero exit status
                 }
         }
 private:
-        int argc;
-        char** argv;
-        mbdyn_proc_t* mbp;
+        const int argc;
+        char** const argv;
+        mbdyn_proc_t* const mbp;
 };
 #endif
 
@@ -1107,12 +1110,12 @@ int
 main(int argc, char* argv[])
 {
 #ifdef USE_GTEST
-        testing::InitGoogleTest(&argc, argv);
+	testing::InitGoogleTest(&argc, argv);
 #endif
 	int	rc = EXIT_SUCCESS;
 
-        mbdyn_proc_t mbp;
-        
+	mbdyn_proc_t mbp;
+
        	mbp.bException = false;
        	mbp.bRedefine = false;
        	mbp.bTable = false;

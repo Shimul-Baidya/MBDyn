@@ -49,7 +49,7 @@ mbdyn_verbose_output="no"
 mbdyn_keep_output="unexpected"
 mbdyn_print_res="no"
 mbdyn_patch_input="no"
-mbdyn_args_add="-C"
+mbdyn_args_add="-CG"
 mbdyn_exec_gen="yes"
 mbdyn_exec_solver="yes"
 declare -i mbdyn_exclude_inverse_dynamics=0
@@ -382,7 +382,7 @@ function simple_testsuite_run_test()
 
         if test -z "${mbd_command}"; then
             echo "No custom test script was found for input file ${mbd_filename}; The default command will be used to run the model"
-            mbd_command="mbdyn ${mbdyn_args_add} -f ${mbd_filename_patched} -o ${mbd_output_file}"
+            mbd_command="mbdyn ${mbdyn_args_add} -f ${mbd_filename_patched} -o ${mbd_output_file} --gtest_output=xml:${mbd_output_file}.xml"
         fi
 
         case "${mbdyn_print_res}" in

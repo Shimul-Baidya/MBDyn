@@ -43,12 +43,14 @@ MBDynErrBase::MBDynErrBase(MBDYN_EXCEPT_ARGS_DECL_NODEF)
 void
 MBDynErrBase::Set(const std::string& s)
 {
-	message = s;
+        message = s;
 }
 
 const char *
-MBDynErrBase::what(void) const noexcept 
+MBDynErrBase::what(void) const noexcept
 {
+        // In most situations what() is not called at all.
+        // So, we may save some overhead if the actual error message is initialized just on demand.
         if (message.empty()) {
                 std::stringstream ss;
                 ss << "[" << file << ":" << line << ",func=" << func << "]";
@@ -57,8 +59,8 @@ MBDynErrBase::what(void) const noexcept
                 }
                 message = ss.str();
         }
-     
-	return message.c_str();
+
+        return message.c_str();
 }
 
 void

@@ -83,6 +83,9 @@ variables:
   ## Local installation directory for nlopt
   NL_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/nlopt
 
+  ## Local installation directory for GoogleTest
+  GTEST_INSTALL_PREFIX: $TESTSUITE_PREFIX_CACHE/gtest
+
   ## Local build directories
   ## They must be relative to $CI_PROJECT_DIR, so we can use them with "cache:"
 
@@ -97,6 +100,8 @@ variables:
   NC_CXX4_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/netcdf-cxx4
 
   NL_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/nlopt
+
+  GTEST_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/gtest
 
   GMSH_BUILD_DIR: $TESTSUITE_PREFIX_BUILD/gmsh
 
@@ -386,6 +391,7 @@ include:
     - local: '/testsuite/mkl-build-job.yml'
     - local: '/testsuite/netcdf-build-job.yml'
     - local: '/testsuite/nlopt-build-job.yml'
+    - local: '/testsuite/gtest-build-job.yml'
     - local: '/testsuite/mbdyn-build-job.yml'
     - local: '/testsuite/octave-pkg-build-job.yml'
     - local: '/testsuite/gmsh-build-job.yml'

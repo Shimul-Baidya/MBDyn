@@ -51,12 +51,13 @@ MBD_BUILD_DIR="${MBD_BUILD_DIR:-${program_dir}/var/tmp/build/mbdyn}"
 MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS:--Ofast -Wall -march=native -mtune=native -Wno-unused-variable}"
 NC_INSTALL_PREFIX="${NC_INSTALL_PREFIX:-${program_dir}/var/cache/netcdf}"
 NC_CXX4_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX:-${program_dir}/var/cache/netcdf-cxx4}"
+GTEST_INSTALL_PREFIX="${GTEST_INSTALL_PREFIX:-${program_dir}/var/cache/gtest}"
 MKL_INSTALL_PREFIX="${MKL_INSTALL_PREFIX:-/usr/lib}"
 MKL_PKG_CONFIG="${MKL_PKG_CONFIG:-mkl-dynamic-lp64-gomp}"
 OCT_PKG_INSTALL_PREFIX="${OCT_PKG_INSTALL_PREFIX:-${program_dir}/var/cache/share/octave}"
 MBD_WITH_MODULE="${MBD_WITH_MODULE:-fabricate damper-gandhi pid hfelem fab-electric template2 cont-contact wheel4 mds indvel mcp_test1 scalarfunc muscles minmaxdrive drive-test loadinc cudatest randdrive imu convtest md autodiff_test rotor-loose-coupling namespace drive controller constlaw fab-sbearings rotor_disc hunt-crossley diff damper-hydraulic cyclocopter fab-motion flightgear hid ns damper-graall}"
 MBD_NUM_BUILD_JOBS="${MBD_NUM_BUILD_JOBS:-$(($(lscpu | awk '/^Socket\(s\)/{ print $2 }') * $(lscpu | awk '/^Core\(s\) per socket/{ print $4 }')))}"
-MBD_CONFIGURE_FLAGS="${MBD_CONFIGURE_FLAGS:---enable-python --enable-octave --enable-install_test_progs --enable-netcdf --with-umfpack --with-klu --with-suitesparseqr --with-static-modules --without-mpi --enable-runtime-loading --disable-Werror --with-trilinos}"
+MBD_CONFIGURE_FLAGS="${MBD_CONFIGURE_FLAGS:---enable-python --enable-octave --enable-install_test_progs --enable-netcdf --with-umfpack --with-klu --with-suitesparseqr --with-static-modules --without-mpi --enable-runtime-loading --disable-Werror --with-trilinos --with-gtest}"
 OCTAVE_MKOCTFILE="${MKOCTFILE:-mkoctfile}"
 OCTAVE_CLI="${OCTAVE_CLI:-octave-cli}"
 TRILINOS_INSTALL_PREFIX="${TRILINOS_INSTALL_PREFIX:-/usr}"
@@ -90,12 +91,20 @@ while ! test -z "$1"; do
             LDFLAGS="$2"
             shift
             ;;
+        --mbdyn-clean-build)
+            MBD_CLEAN_BUILD="$2"
+            shift
+            ;;
         --netcdf-install-prefix)
             NC_INSTALL_PREFIX="$2"
             shift
             ;;
         --netcdf-cxx4-install-prefix)
             NC_CXX4_INSTALL_PREFIX="$2"
+            shift
+            ;;
+        --gtest-install-prefix)
+            GTEST_INSTALL_PREFIX="$2"
             shift
             ;;
         --trilinos-install-prefix)
@@ -297,6 +306,17 @@ if test -d "${MKL_PKG_CONFIG_PATH}"; then
     fi
 else
     echo "Warning: MKL_PKG_CONFIG_PATH could not be detected"
+fi
+
+if test -d "${GTEST_INSTALL_PREFIX}"; then
+    GTEST_PKG_CONFIG=`find "${GTEST_INSTALL_PREFIX}" -name pkgconfig -and -type d`
+    if test -d "${GTEST_PKG_CONFIG}"; then
+        export PKG_CONFIG_PATH="${GTEST_PKG_CONFIG}:${PKG_CONFIG_PATH}"
+    else
+        echo "Warning: GTEST_PKG_CONFIG_PATH could not be detected"
+    fi
+else
+    echo "Warning: GTEST_PKG_CONFIG_PATH could not be detected"
 fi
 
 if ! test -z "${MBD_WITH_MODULE}"; then
