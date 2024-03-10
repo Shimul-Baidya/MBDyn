@@ -546,6 +546,11 @@ function simple_testsuite_run_test()
             rm -f "${mbd_log_file}"
             rm -f "${mbd_time_file}"
 
+            ## FIXME: Actually we should keep those files.
+            ## FIXME: But due to the huge number of tests GitLab-CI is not able to display all of them.
+            ## FIXME: So, by default, only failed test reports will be kept.
+            rm -f "${junit_xml_report_file}"
+
             if test "${mbdyn_patch_input}" != "no"; then
                 if ! test -f ${mbd_filename_patched_copy}; then
                     echo "File not found: \"${mbd_filename_patched_copy}\""
