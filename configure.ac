@@ -2579,8 +2579,6 @@ if test $ol_with_pastix != no ; then
         fi
 fi
 
-AM_CONDITIONAL([USE_PASTIX], [test "$ol_link_pastix" = "yes"])
-
 dnl ----------------------------------------------------------------
 dnl
 dnl Check for QRUPDATE
@@ -3822,7 +3820,7 @@ AM_CONDITIONAL(USE_RTAI,[test "$use_rtai" = yes])
 AM_CONDITIONAL(USE_SCHUR,[test "$use_schur" = yes])
 AM_CONDITIONAL(USE_SOCKET,[test "$use_socket" = yes])
 AM_CONDITIONAL(USE_ANN,[test "$ol_link_ann" = yes])
-AM_CONDITIONAL([USE_PASTIX],[test "$ol_link_pastix" = "yes"])
+AM_CONDITIONAL(USE_PASTIX,[test "$ol_link_pastix" = "yes"])
 
 AM_CONDITIONAL(FOOL_LIBTOOL,[test "$fool_libtool" = yes])
 
@@ -3838,6 +3836,7 @@ AM_CONDITIONAL(BUILD_CHARM,[test "$build_charm" = yes])
 AM_CONDITIONAL(HAVE_TERMIOS,[test "$have_termios" = yes])
 AM_CONDITIONAL(HAVE_GETPASS,[test "$have_getpass" = yes])
 AM_CONDITIONAL(INSTALL_TEST_PROGRAMS,[test "$ol_enable_install_test_progs" = yes])
+AM_CONDITIONAL(USE_GTEST,[test "$ol_link_gtest" = "yes"])
 
 dnl ----------------------------------------------------------------
 dnl

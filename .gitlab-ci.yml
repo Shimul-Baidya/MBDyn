@@ -143,6 +143,13 @@ variables:
   ## NOTE: We should compile without any optimization in order to get accurate profile information
   MBD_COMPILER_FLAGS_GCOV: "-Og -Wall -march=native -mtune=native -Wno-unused-variable"
 
+  JUNIT_XML_KEEP_ALL_OUTPUT:
+    value: "failure"
+    options:
+      - "always"
+      - "failure"
+    description: "Keep all JUnit XML files to be displayed in the test report"
+
   OCT_PKG_LIST_NURBS_REBUILD:
     value: "yes"
     options:
@@ -350,6 +357,7 @@ variables:
   ## This makes it easier to clean up temporary files and ther is no need to use /tmp which may reside in memory on some systems.
   ## Paths must be relative to CI_PROJECT_PATH
   TESTSUITE_PREFIX_TESTS: $TESTSUITE_PREFIX_TMP/tests
+  MBD_TEST_PROGS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-test-progs
   OCT_PKG_TEST_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob
   OCT_PKG_TEST_OUTPUT_DIR_GCOV: $TESTSUITE_PREFIX_TESTS/octave-pkg-testjob-gcov
   MBD_MODULE_TESTS_OUTPUT_DIR: $TESTSUITE_PREFIX_TESTS/mbdyn-modules-testjob

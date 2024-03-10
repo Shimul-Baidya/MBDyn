@@ -48,6 +48,7 @@ MBD_SOURCE_DIR=${MBD_SOURCE_DIR:-`dirname ${program_dir}`}
 MBD_SKIP_BUILD="${MBD_SKIP_BUILD:-no}"
 MBD_INSTALL_PREFIX="${MBD_INSTALL_PREFIX:-${program_dir}/var/cache/mbdyn}"
 MBD_BUILD_DIR="${MBD_BUILD_DIR:-${program_dir}/var/tmp/build/mbdyn}"
+MBD_TEST_PROGS_OUTPUT_DIR="${MBD_TEST_PROGS_OUTPUT_DIR:-${program_dir}/var/tmp/tests/mbdyn-test-progs/}"
 MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS:--Ofast -Wall -march=native -mtune=native -Wno-unused-variable}"
 NC_INSTALL_PREFIX="${NC_INSTALL_PREFIX:-${program_dir}/var/cache/netcdf}"
 NC_CXX4_INSTALL_PREFIX="${NC_CXX4_INSTALL_PREFIX:-${program_dir}/var/cache/netcdf-cxx4}"
@@ -366,7 +367,7 @@ if ! make -j${MBD_NUM_BUILD_JOBS}; then
 fi
 
 echo "Run built-in unit tests"
-if ! make test; then
+if ! make MBD_TEST_PROGS_OUTPUT_DIR=${MBD_TEST_PROGS_OUTPUT_DIR} test; then
     echo "Built-in unit tests failed"
     exit 1
 fi

@@ -99,10 +99,13 @@ endif
 libmbmath_la_LIBADD = @LIBS@ @FCLIBS@ @ANN_LIBS@ @TRILINOS_LIBS@ @SICONOS_LIBS@
 libmbmath_la_LDFLAGS =
 
-noinst_PROGRAMS = matmultest itertest dgeequtest subtest
+if INSTALL_TEST_PROGRAMS
+if USE_GTEST
+bin_PROGRAMS = sp_gradient_test
+endif
+endif
 
-noinst_PROGRAMS += \
-sp_gradient_test
+noinst_PROGRAMS = matmultest itertest dgeequtest subtest sp_gradient_test
 
 matmultest_SOURCES = matmultest.cc
 matmultest_LDADD = \

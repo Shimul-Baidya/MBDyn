@@ -70,6 +70,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - export TESTSUITE_TIME_CMD
+      - export JUNIT_XML_KEEP_ALL_OUTPUT
       - |
         if ! test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
           if ! git clone -b ${MBD_TESTS_PUBLIC_GITLAB_BRANCH} ${MBD_TESTS_PUBLIC_GITLAB} ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
@@ -81,6 +82,7 @@ mbdyn-tests-public-test-job:   # This job runs in the test stage.
       - cd ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - git pull --force
       - cd ${CI_PROJECT_DIR}
+      - sp_gradient_test --gtest_output=xml:${MBD_TESTS_PUBLIC_OUTPUT_DIR}/junit_xml_report_sp_gradient_test.xml
       - chmod +x testsuite/simple_testsuite.sh
       - mkdir -p ${MBD_TESTS_PUBLIC_OUTPUT_DIR} ## needed for realpath
       - log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_LOG_FILE}"
@@ -126,6 +128,7 @@ mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - export TESTSUITE_TIME_CMD
+      - export JUNIT_XML_KEEP_ALL_OUTPUT
       - |
         if ! test -d ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
           if ! git clone -b ${MBD_TESTS_PUBLIC_GITLAB_BRANCH} ${MBD_TESTS_PUBLIC_GITLAB} ${MBD_TESTS_PUBLIC_INPUT_DIR}; then
@@ -137,6 +140,7 @@ mbdyn-tests-public-test-job-gcov:   # This job runs in the test stage.
       - cd ${MBD_TESTS_PUBLIC_INPUT_DIR}
       - git pull --force
       - cd ${CI_PROJECT_DIR}
+      - sp_gradient_test --gtest_output=xml:${MBD_TESTS_PUBLIC_OUTPUT_DIR}/junit_xml_report_sp_gradient_test.xml
       - chmod +x testsuite/simple_testsuite.sh
       - mkdir -p ${MBD_TESTS_PUBLIC_OUTPUT_DIR} ## needed for realpath
       - log_file="${MBD_TESTS_PUBLIC_OUTPUT_DIR}/${MBD_TESTS_PUBLIC_LOG_FILE}"

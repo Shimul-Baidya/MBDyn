@@ -78,12 +78,14 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - export TESTSUITE_TIME_CMD
+      - export JUNIT_XML_KEEP_ALL_OUTPUT
       - MBD_MODULE_TESTS_INPUT_DIR=${CI_PROJECT_DIR}/modules
       - export LD_LIBRARY_PATH=${MBD_INSTALL_PREFIX}/libexec:${LD_LIBRARY_PATH}
       - log_file="${MBD_MODULE_TESTS_OUTPUT_DIR}/${MBD_MODULE_TESTS_LOG_FILE}"
       - test -d "${MBD_MODULE_TESTS_INPUT_DIR}"
       - mkdir -p "${MBD_MODULE_TESTS_OUTPUT_DIR}" ## needed for realpath
       - ls -lhF ${MBD_INSTALL_PREFIX}/libexec | tee ${log_file}
+      - sp_gradient_test --gtest_output=xml:${MBD_MODULE_TESTS_OUTPUT_DIR}/junit_xml_report_sp_gradient_test.xml
       - chmod +x testsuite/simple_testsuite.sh
       - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}" | awk -f testsuite/simple_testsuite_output_filter.awk
       - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite_patched.sh --keep-output failed --abort-after "${MBD_MODULE_TESTS_ABORT_AFTER}" --linear-solvers "${MBD_MODULE_TESTS_LINEAR_SOLVERS}" --nonlinear-solvers "${MBD_MODULE_TESTS_NONLINEAR_SOLVERS}" --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
@@ -135,6 +137,7 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
       - export PATH=${MBD_INSTALL_PREFIX}/bin:${GMSH_INSTALL_PREFIX}/bin:${OCT_PKG_INSTALL_PREFIX}/bin:${PATH}
       - export AWKPATH=${MBD_INSTALL_PREFIX}/share/awk:${AWKPATH}
       - export TESTSUITE_TIME_CMD
+      - export JUNIT_XML_KEEP_ALL_OUTPUT
       - MBD_MODULE_TESTS_INPUT_DIR=${CI_PROJECT_DIR}/modules
       - export LD_LIBRARY_PATH=${MBD_INSTALL_PREFIX}/libexec:${LD_LIBRARY_PATH}
       - log_file="${MBD_MODULE_TESTS_OUTPUT_DIR}/${MBD_MODULE_TESTS_LOG_FILE}"
@@ -142,6 +145,7 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
       - mkdir -p "${MBD_MODULE_TESTS_OUTPUT_DIR}" ## needed for realpath
       - ls -lhF ${MBD_INSTALL_PREFIX}/libexec | tee ${log_file}
       - chmod +x testsuite/simple_testsuite.sh
+      - sp_gradient_test --gtest_output=xml:${MBD_MODULE_TESTS_OUTPUT_DIR}/junit_xml_report_sp_gradient_test.xml
       - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite.sh --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}" | awk -f testsuite/simple_testsuite_output_filter.awk
       - ${TESTSUITE_TIME_CMD} testsuite/simple_testsuite_patched.sh --keep-output failed --abort-after "${MBD_MODULE_TESTS_ABORT_AFTER}" --linear-solvers "${MBD_MODULE_TESTS_LINEAR_SOLVERS}" --nonlinear-solvers "${MBD_MODULE_TESTS_NONLINEAR_SOLVERS}" --exit-status-mask "${MBD_MODULE_TESTS_EXIT_STATUS_MASK}" --timeout "${MBD_MODULE_TESTS_TIMEOUT}" --prefix-output "${MBD_MODULE_TESTS_OUTPUT_DIR}" --prefix-input "${MBD_MODULE_TESTS_INPUT_DIR}" --tasks "${MBD_MODULE_TESTS_NUM_TASKS}" ${MBD_SIMPLE_TESTSUITE_FLAGS} 2>&1 | tee -a "${log_file}"
       - ${TESTSUITE_TIME_CMD} testsuite/octave_pkg_testsuite.sh --tasks "${OCT_PKG_TEST_JOB_NUM_TASKS}" --octave-pkg-list "${OCT_PKG_LIST}" --octave-exec "${OCTAVE_EXEC}" --octave-pkg-test-dir "${OCT_PKG_TEST_OUTPUT_DIR}" --octave-pkg-test-mode "${OCT_PKG_TEST_MODE}" --octave-pkg-prefix "${OCT_PKG_INSTALL_PREFIX}" --octave-function-filter "${OCT_PKG_FUNCTION_FILTER}"  2>&1 | tee -a "${log_file}"

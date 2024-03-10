@@ -67,6 +67,7 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
     - export MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR}
     - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX}
     - export MBD_COMPILER_FLAGS=${MBD_COMPILER_FLAGS}
+    - export MBD_TEST_PROGS_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_TEST_PROGS_OUTPUT_DIR}
     - testsuite/mbdyn_build_job.sh
   artifacts:
    expire_in: 24h
@@ -74,8 +75,11 @@ mbdyn-build-job:       # This job runs in the build stage, which runs first.
    paths:
     - $MBD_INSTALL_PREFIX
     - $MBD_BUILD_DIR/**/config.log
+    - $MBD_TEST_PROGS_OUTPUT_DIR/**/*.xml
     - $OCT_PKG_INSTALL_PREFIX ## Because mbdyn_util_oct will be installed there!
    when: always
+   reports:
+     junit: $MBD_TEST_PROGS_OUTPUT_DIR/**/*.xml
   cache:
    key: mbdyn-build-job
    paths:
@@ -156,6 +160,7 @@ mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first
     - export MBD_INSTALL_PREFIX=${CI_PROJECT_DIR}/${MBD_INSTALL_PREFIX_GCOV}
     - export MBD_BUILD_DIR=${CI_PROJECT_DIR}/${MBD_BUILD_DIR_GCOV}
     - export OCT_PKG_INSTALL_PREFIX=${CI_PROJECT_DIR}/${OCT_PKG_INSTALL_PREFIX_GCOV}
+    - export MBD_TEST_PROGS_OUTPUT_DIR=${CI_PROJECT_DIR}/${MBD_TEST_PROGS_OUTPUT_DIR}
     - export MBD_COMPILER_FLAGS="${MBD_COMPILER_FLAGS_GCOV} --coverage"
     - export LDFLAGS="--coverage"
     ## Cleanup any profile data from previous builds in order to get a correct coverage report.
@@ -178,11 +183,14 @@ mbdyn-build-job-gcov:       # This job runs in the build stage, which runs first
     - $MBD_BUILD_DIR_GCOV/**/*.gcda ## Needed for gcovr
     - $MBD_BUILD_DIR_GCOV/**/*.gcno ## Needed for gcovr
     - $MBD_INSTALL_PREFIX_GCOV
+    - $MBD_TEST_PROGS_OUTPUT_DIR/**/*.xml
     - $OCT_PKG_INSTALL_PREFIX_GCOV ## Because mbdyn_util_oct will be installed there!
    exclude:
     - $MBD_BUILD_DIR_GCOV/**/*conftest.gcda
     - $MBD_BUILD_DIR_GCOV/**/*conftest.gcno
    when: always
+   reports:
+     junit: $MBD_TEST_PROGS_OUTPUT_DIR/**/*.xml
   cache:
    key: mbdyn-build-job-gcov
    paths:

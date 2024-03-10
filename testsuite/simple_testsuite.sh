@@ -59,7 +59,7 @@ mbdyn_suppressed_errors=""
 declare -i mbd_exit_status_mask=0 ## Define the errors codes which should not cause the pipeline to fail
 OCTAVE_EXEC="${OCTAVE_EXEC:-octave}"
 TESTSUITE_TIME_CMD="${TESTSUITE_TIME_CMD:-/usr/bin/time --verbose}"
-
+JUNIT_XML_KEEP_ALL_OUTPUT="${JUNIT_XML_KEEP_ALL_OUTPUT:-failure}"
 program_dir=$(realpath $(dirname "${program_name}"))
 
 if ! test -f "${program_dir}/mbdyn_input_file_format.awk"; then
@@ -122,6 +122,10 @@ while ! test -z "$1"; do
             ;;
         --keep-output)
             mbdyn_keep_output="$2"
+            shift
+            ;;
+        --keep-output-junit-xml)
+            JUNIT_XML_KEEP_ALL_OUTPUT="$2"
             shift
             ;;
         --patch-input)
@@ -546,10 +550,16 @@ function simple_testsuite_run_test()
             rm -f "${mbd_log_file}"
             rm -f "${mbd_time_file}"
 
-            ## FIXME: Actually we should keep those files.
-            ## FIXME: But due to the huge number of tests GitLab-CI is not able to display all of them.
-            ## FIXME: So, by default, only failed test reports will be kept.
-            ## rm -f "${junit_xml_report_file}"
+            case "${JUNIT_XML_KEEP_ALL_OUTPUT}" in
+                always)
+                    ;;
+                *)
+                    ## FIXME: Actually we should keep those files.
+                    ## FIXME: But due to the huge number of tests GitLab-CI is not able to display all of them.
+                    ## FIXME: So, by default, only failed test reports will be kept.
+                    rm -f "${junit_xml_report_file}"
+                    ;;
+            esac
 
             if test "${mbdyn_patch_input}" != "no"; then
                 if ! test -f ${mbd_filename_patched_copy}; then
@@ -640,6 +650,7 @@ else
     export mbdyn_suppressed_errors
     export MBD_NUM_THREADS
     export OCTAVE_EXEC
+    export JUNIT_XML_KEEP_ALL_OUTPUT
     export -f simple_testsuite_run_test
 
     if test "${mbdyn_exec_gen}" != "no"; then
