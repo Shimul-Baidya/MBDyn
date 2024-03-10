@@ -103,8 +103,8 @@ mbdyn-modules-test-job:   # This job runs in the test stage.
        - $MBD_MODULE_TESTS_OUTPUT_DIR/**/*.stdout
        - $MBD_MODULE_TESTS_OUTPUT_DIR/**/*.xml
      when: always
-    reports:
-      junit: $MBD_MODULE_TESTS_OUTPUT_DIR/**/*.xml
+     reports:
+       junit: $MBD_MODULE_TESTS_OUTPUT_DIR/**/*.xml
 
 mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
   variables:
@@ -171,5 +171,5 @@ mbdyn-modules-test-job-gcov:   # This job runs in the test stage.
        - $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/*.xml
        - $MBD_BUILD_DIR_GCOV
      when: always
-    reports:
-      junit: $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/*.xml
+     reports:
+       junit: $MBD_MODULE_TESTS_OUTPUT_DIR_GCOV/**/*.xml
