@@ -84,7 +84,7 @@ def simplify_null_element_multiplication(l, r):
 
 def simplify_null_element_division(l, r):
     assert get_value(r) != 0, (
-        'Error, division by zero: \'' + srt(l) + ' / ' + str(r) + 
+        'Error, division by zero: \'' + str(l) + ' / ' + str(r) + 
         '\'\n')
     if MBDynLib_simplify:
         if l == 0:
@@ -225,7 +225,7 @@ class terminal_expression(expression):
     def __get___(self):
         return self.value
     def __str__(self):
-        return str(value)
+        return str(self.value)
 
 class binary_expression(expression):
     def __init__(self, left, right):
@@ -851,7 +851,7 @@ class TotalJoint(Element):
         assert len(nodes) == len(position_orientations), (
             '\n-------------------\nERROR:' +
             ' defining a total joint with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions_orientations)) + ' position orientations;\n' +
+            ' nodes and ' + str(len(position_orientations)) + ' position orientations;\n' +
             '\n-------------------\n')
         assert isinstance(rotation_orientations, list), (
             '\n-------------------\nERROR:' + 
@@ -871,7 +871,7 @@ class TotalJoint(Element):
         assert len(position_constraints) == 3, (
             '\n-------------------\nERROR:' +
             ' defining a total joint with ' +
-            str(len(position_constrains)) + ' position constraints;\n' +
+            str(len(position_constraints)) + ' position constraints;\n' +
             '\n-------------------\n')
         assert isinstance(orientation_constraints, list), (
             '\n-------------------\nERROR:' +
@@ -881,7 +881,7 @@ class TotalJoint(Element):
         assert len(orientation_constraints) == 3, (
             '\n-------------------\nERROR:' +
             ' defining a total joint with ' +
-            str(len(orientation_constrains)) + ' orientation constraints;\n' +
+            str(len(orientation_constraints)) + ' orientation constraints;\n' +
             '\n-------------------\n')
         assert all([isinstance(pos, Position) for pos in positions]), (
             '\n-------------------\nERROR:' +
@@ -967,7 +967,7 @@ class TotalPinJoint(Element):
             '\n-------------------\n')
         assert len(position_constraints) == 3, (
             '\n-------------------\nERROR:' +
-            ' defining a total joint with ' + str(len(position_constrains)) + 
+            ' defining a total joint with ' + str(len(position_constraints)) + 
             ' position constraints;' + '\n-------------------\n')
         assert isinstance(orientation_constraints, list), (
             '\n-------------------\nERROR:' +
@@ -976,7 +976,7 @@ class TotalPinJoint(Element):
             '\n-------------------\n')
         assert len(orientation_constraints) == 3, (
             '\n-------------------\nERROR:' +
-            ' defining a total joint with ' + str(len(orientation_constrains)) + 
+            ' defining a total joint with ' + str(len(orientation_constraints)) + 
             ' orientation constraints;' + '\n-------------------\n')
         self.idx = idx
         self.type = 'joint'
@@ -1114,7 +1114,7 @@ class DeformableDiaplacement(Element):
             s = s + ',\n\t' + str(node)
             if not(pos.isnull()):
                 s + s + ',\n\t\tposition, ' + str(pos)
-            if not(pos_or.iseye()):
+            if not(self.pos_or.iseye()):
                 s + s + ',\n\t\torientation, ' + str(orient)
         s = s + '\n\t'
         if isinstance(self.constitutive_law, str):
@@ -2403,6 +2403,8 @@ class FourierSeriesDrive(DriveCaller):
                     '\n-------------------\n'
                 )
             self.initial_time= kwargs[arg]
+        except KeyError:
+            pass
         try:
             arg = 'angular_velocity'
             assert isinstance(kwargs[arg], (MBVar, Number)), (
@@ -2418,6 +2420,8 @@ class FourierSeriesDrive(DriveCaller):
                     '\n-------------------\n'
                 )
             self.angular_velocity = kwargs[arg]
+        except KeyError:
+            pass
         try:
             arg = 'number_of_terms'
             assert isinstance(kwargs[arg], (MBVar, Integral)), (
@@ -2433,6 +2437,8 @@ class FourierSeriesDrive(DriveCaller):
                     '\n-------------------\n'
                 )
             self.number_of_terms = kwargs[arg]
+        except KeyError:
+            pass
         try:
             arg = 'number_of_cycles'
             assert isinstance(kwargs[arg], (MBVar, Integral, str)), (
@@ -2449,6 +2455,8 @@ class FourierSeriesDrive(DriveCaller):
                         '\n-------------------\n'
                         )
             self.number_of_cycles = kwargs[arg]
+        except KeyError:
+            pass
     def __str__(self):
         s = ''
         if self.idx >= 0:
@@ -2459,7 +2467,7 @@ class FourierSeriesDrive(DriveCaller):
                     self.angular_velocity,
                     self.number_of_terms
                     )
-        s = s + ',\n\t {}'.format(self.coefs
+        s = s + ',\n\t {}'.format(self.coefs)
         return s
 
 
@@ -2586,7 +2594,7 @@ class Data:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             if key == 'problem type':
-                if value in problem_type:
+                if value in self.problem_type:
                     self.type = value
                 else:
                     raise ValueError('Unrecognised problem type')            
@@ -2594,7 +2602,7 @@ class Data:
 class InitialValueStrategy:
     strategy_type = ('NO CHANGE', 'FACTOR', 'CHANGE')
     def __init__(self, stype, **kwargs):
-        if stype in strategy_type:
+        if stype in self.strategy_type:
             self.type = value
         else:
             raise ValueError('Unrecognised strategy')
@@ -2613,7 +2621,7 @@ class InitialValueStrategy:
                     self.minimum_iterations = value
                 if key == 'maximum_iterations':
                     self.maximum_iterations = value
-        if self_type == 'CHANGE':
+        if self.self_type == 'CHANGE':
             self.time_step_pattern = DriveCaller('const', 1e-3);
 
 class InitialValue:
