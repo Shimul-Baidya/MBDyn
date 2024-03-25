@@ -1728,7 +1728,7 @@ class CosineDriveCaller(DriveCaller):
         except KeyError:
             errprint(
                     '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <amplitude> is required' + 
+                    ' CosineDriveCaller: <number_of_cycles> is required' + 
                     '\n-------------------\n'
             )
         try:
@@ -2097,7 +2097,7 @@ class DoubleRampDriveCaller(DriveCaller):
             (
                 '\n-------------------\nWARNING:' +
                 ' DoubleRampDriveCaller: <initial_value> must be provided' + 
-                '\n-------------------\n')
+                '\n-------------------\n') # Why is it not assumed to be zero?
     def __str__(self):
         s = ''
         if self.idx >= 0:
@@ -2470,11 +2470,111 @@ class FourierSeriesDrive(DriveCaller):
         s = s + ',\n\t {}'.format(self.coefs)
         return s
 
-
-class FrequencySweepDrive(DriveCaller):
-    # TODO
-    pass
-
+class FrequencySweepDriveCaller(DriveCaller):
+    type = 'frequency sweep'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <idx> must either be an integer value or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <initial_time> must either be a number or an MBVar' + 
+                    '\n-------------------\n')
+            self.initial_time = kwargs['initial_time']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nWARNING:' +
+                    ' FrequencySweepDriveCaller: <initial_time> not set, assuming 0.' + 
+                    '\n-------------------\n'
+                    )
+            self.initial_time = 0.
+            pass
+        try:
+            assert(isinstance(kwargs['angular_velocity_drive'], DriveCaller)), (
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <angular_velocity_drive> must be a DriveCaller' + 
+                    '\n-------------------\n'
+            )
+            self.angular_velocity_drive = kwargs['angular_velocity_drive']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <angular_velocity_drive> must be provided' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert(isinstance(kwargs['amplitude_drive'], DriveCaller)), (
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <amplitude_drive> must be a DriveCaller' + 
+                    '\n-------------------\n'
+            )
+            self.amplitude_drive = kwargs['amplitude_drive']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <amplitude_drive> must be provided' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <initial_value> must either be a number or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.initial_value = kwargs['initial_value']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nWARNING:' +
+                    ' FrequencySweepDriveCaller: <initial_value> not provided, assuming 0.' + 
+                    '\n-------------------\n'
+            )
+            self.initial_value = 0.
+            pass
+        try:
+            assert isinstance(kwargs['final_time'], (Number, MBVar, str)), (
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <final_time> must either be a number, '
+                    '\'forever\', or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.final_time = kwargs['final_time']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <final_time> is not set' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert isinstance(kwargs['final_value'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <final_value> must either be a number or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.final_value = kwargs['final_value']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' FrequencySweepDriveCaller: <final_value> is not set.' + 
+                    '\n-------------------\n'
+            )
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}'.format(self.type)
+        s = s + ',\n\t{}'.format(self.initial_time)
+        s = s + ',\n\t{}'.format(self.angular_velocity_drive)
+        s = s + ',\n\t{}'.format(self.amplitude_drive)
+        s = s + ',\n\t{}, {}'.format(self.initial_value, self.final_time)
+        s = s + ',\n\t{}'.format(self.final_value)
+        return s
 
 class GiNaCDriveCaller(DriveCaller):
     type = 'ginac'
@@ -2587,7 +2687,6 @@ class LinearDriveCaller(DriveCaller):
         s = s + '{}'.format(self.type)
         s = s + ', {}, {}'.format(self.const_coef, self.slope_coef)
         return s
-
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
