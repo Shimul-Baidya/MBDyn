@@ -2687,6 +2687,96 @@ class LinearDriveCaller(DriveCaller):
         s = s + '{}'.format(self.type)
         s = s + ', {}, {}'.format(self.const_coef, self.slope_coef)
         return s
+    
+class SineDriveCaller(DriveCaller):
+    type = 'sine'
+    def __init__(self, **kwargs):
+        try:
+            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <idx> must either be an integer value or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.idx = kwargs['idx']
+        except KeyError:
+            pass
+        try:
+            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <initial_time> must either be a number or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.initial_time = kwargs['initial_time']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nWARNING:' +
+                    ' SineDriveCaller: <initial_time> not set, assuming 0.' + 
+                    '\n-------------------\n'
+            )
+            self.initial_time = 0.
+            pass
+        try:
+            assert isinstance(kwargs['angular_velocity'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <angular_velocity> must either be a number or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.angular_velocity = kwargs['angular_velocity']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <angular_velocity> is required' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert isinstance(kwargs['amplitude'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <amplitude> must either be a number or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.amplitude = kwargs['amplitude']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <amplitude> is required' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert isinstance(kwargs['number_of_cycles'], (Number, MBVar, str)), (
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <number_of_cycles> must either be a number,'
+                    ' one in (\'half\', \'one\', \'forever\'), or an MBVar' + 
+                    '\n-------------------\n')
+            self.number_of_cycles = kwargs['number_of_cycles']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <amplitude> is required' + 
+                    '\n-------------------\n'
+            )
+        try:
+            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
+                    '\n-------------------\nERROR:' +
+                    ' SineDriveCaller: <initial_value> must either be a number or an MBVar' + 
+                    '\n-------------------\n'
+            )
+            self.initial_value = kwargs['initial_value']
+        except KeyError:
+            errprint(
+                    '\n-------------------\nWARNING:' +
+                    ' SineDriveCaller: <initial_value> not provided, assuming 0.' + 
+                    '\n-------------------\n'
+            )
+            self.initial_value = 0.
+            pass
+    def __str__(self):
+        s = ''
+        if self.idx >= 0:
+            s = s + 'drive caller: {}, '.format(self.idx)
+        s = s + '{}, {}, '.format(self.type, self.initial_time)
+        s = s + '{}, {}, '.format(self.angular_velocity, self.amplitude)
+        s = s + '{}, {}'.format(self.number_of_cycles, self.initial_value)
+        return s
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
