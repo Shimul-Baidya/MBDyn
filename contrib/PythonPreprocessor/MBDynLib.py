@@ -3203,7 +3203,7 @@ class BistopDriveCaller(DriveCaller2):
     This drive caller returns 1.0 (TRUE) when its status is active and 0.0 (FALSE) when it is inactive.
     When in inactive status, it turns to active if the activation_condition is TRUE. When in active
     status, it turns to inactive if the deactivation_condition is TRUE.
-    This drive caller is useful to implement a “robust” and irreversible status change
+    This drive caller is useful to implement a "robust" and irreversible status change
     '''
     
     initial_status: Optional[Literal['active', 'inactive']] = 'active'
@@ -3227,60 +3227,6 @@ class BistopDriveCaller(DriveCaller2):
         else:
             s += f'\n\t{self.deactivation_condition}'
         return s
-    
-# class BistopDriveCaller(DriveCaller):
-#     type = 'bistop'
-#     def __init__(self, **kwargs):
-#         try:
-#             if kwargs['initial_status'] in ['active', 'inactive']:
-#                 self.initial_status = kwargs['initial status']
-#             else:
-#                 raise ValueError(
-#                         '\n------------------\nERROR:' + 
-#                         ' BistopDriveCaller: <initial_status> must be' + 
-#                         ' either \'active\' or \'inactive\'' + 
-#                         '\n------------------\n')
-#         except KeyError:
-#             self.initial_status = 'active'
-#             pass
-#         try:
-#             assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-#                     '\n-------------------\nERROR:' +
-#                     ' BistopDriveCaller: <idx> must either be an integer value or an MBVar' + 
-#                     '\n-------------------\n')
-#             self.idx = kwargs['idx']
-#         except KeyError:
-#             pass
-#         assert isinstance(kwargs['activation_condition'], DriveCaller), (
-#                 '\n-------------------\nERROR:' +
-#                 ' BistopDriveCaller: <activation_condition> must be' + 
-#                 ' a DriveCaller instance' + 
-#                 '\n-------------------\n')
-
-#         assert isinstance(kwargs['deactivation_condition'], DriveCaller), (
-#                 '\n-------------------\nERROR:' +
-#                 ' BistopDriveCaller: <deactivation_condition> must be' + 
-#                 ' a DriveCaller instance' + 
-#                 '\n-------------------\n')
-#         self.activation_condition = kwargs['activation_condition']
-#         self.deactivation_condition = kwargs['deactivation_condition']
-#     def __str__(self):
-#         s = ''
-#         if self.idx >= 0:
-#             s = s + 'drive caller: {}, '.format(self.idx)
-#         s = s + '{},\n\tinitial status, {},'.format(self.type, self.initial_status)
-#         s = s + '\n\t# activation condition drive'
-#         if self.activation_condition.idx < 0:
-#             s = s + '\n\t{}'.format(self.activation_condition)
-#         else:
-#             s = s + '\n\treference, {}'.format(self.activation_condition.idx)
-#         s = s + '\n\t# deactivation condition drive'
-#         if self.deactivation_condition.idx < 0:
-#             s = s + '\n\t{}'.format(self.deactivation_condition)
-#         else:
-#             s = s + '\n\treference, {}'.format(self.deactivation_condition.idx)
-#         return s
-
 
 class ConstDriveCaller(DriveCaller2):
     """An example of `DriveCaller` that always returns the same constant value"""
@@ -3295,65 +3241,31 @@ class ConstDriveCaller(DriveCaller2):
     def __str__(self):
         return f'''{self.drive_header()}, {self.const_value}'''
     
-class ClosestNextDriveCaller(DriveCaller):
-    type = 'closest next'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ClosestNextDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ClosestNextDriveCaller: <initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_time = kwargs['initial_time']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' ClosestNextDriveCaller: <initial_time> is not set, assuming 0.' + 
-                '\n-------------------\n')
-            self.initial_time = 0.
-        
-        try:
-            assert isinstance(kwargs['final_time'], (Number, MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' ClosestNextDriveCaller: <final_time> must either be a number, '
-                    '\'forever\', or an MBVar' + 
-                    '\n-------------------\n')
-            self.final_time = kwargs['final_time']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' ClosestNextDriveCaller: <final_time> is not set' + 
-                    '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['increment'], DriveCaller), (
-                    '\n-------------------\nERROR:' +
-                    ' ClosestNextDriveCaller: <increment> should be a' + 
-                    ' DriveCaller instance' + 
-                    '\n-------------------\n')
-            self.increment = kwargs['increment']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' ClosestNextDriveCaller: <increment> is not set' + 
-                    '\n-------------------\n')
+class ClosestNextDriveCaller(DriveCaller2):
+    '''
+    This drive returns a non-zero value when called for the ﬁrst time with an argument greater that or equal
+    to the current threshold value, which is computed starting from initial_time and incrementing it each
+    time by as many increment values as required to pass the current value of Time. As soon as a threshold
+    value is exceeded, as many values of increment as required to pass the current value of Time are added,
+    and the process repeats.
+    This drive caller is useful within the output meter statement
+    '''
+
+    initial_time: Union[float, MBVar] = 0.
+    final_time: Union[float, MBVar, Literal['forever']]
+    increment: Union[DriveCaller2]
+    
+    def drive_type(self) -> str:
+        return 'closest next'
+
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ',\n\t{}, {},'.format(self.initial_time, self.final_time)
-        s = s + '\n\t# increment drive'
-        if self.increment.idx < 0:
-            s = s + '\n\t{}'.format(self.increment)
+        s = f'{self.drive_header()}'
+        s += f',\n\t{self.initial_time}, {self.final_time}'
+        s += ',\n\t# increment drive'
+        if self.increment.idx is not None and self.increment.idx >= 0:
+            s += f'\n\treference, {self.increment.idx}'
         else:
-            s = s + '\n\treference, {}'.format(self.increment.idx)
+            s += f'\n\t{self.increment}'
         return s
 
 class CosineDriveCaller(DriveCaller):
@@ -5271,7 +5183,7 @@ if imported_pydantic:
 
 class ConstitutiveLaw(MBEntity):
     """
-    Abstract class for C++ type `ConstitutiveLaw`. Every time a “deformable”
+    Abstract class for C++ type `ConstitutiveLaw`. Every time a "deformable"
     entity requires a constitutive law, a template constitutive law is read. This has been implemented by
     means of C++ templates in order to allow the definition of a general constitutive law when possible.
 
@@ -6122,7 +6034,7 @@ class BistopConstitutiveLaw(ConstitutiveLaw):
 
 class InvariantAngularWrapper(ConstitutiveLaw):
     """
-    Invariant angular wrapper for 3D constitutive laws used within the “attached” variant of the deformable hinge joint.
+    Invariant angular wrapper for 3D constitutive laws used within the "attached" variant of the deformable hinge joint.
     """
 
     xi: Union[float, int, MBVar]
@@ -7105,7 +7017,7 @@ class ControlData(MBEntity):
     to tailor the initial assembly of the joints in case of structural simulations, and to tell the data manager
     how many entities of every type it should expect from the following sections. Historically this is due to
     the fact that the data structure for nodes and elements is allocated at the beginning with ﬁxed size. This
-    is going to change, giving raise to a “free” and resizeable structure. But this practice is to be considered
+    is going to change, giving raise to a "free" and resizeable structure. But this practice is to be considered
     reliable since it allows a sort of double-check on the entities that are inserted.
     '''
 

@@ -316,6 +316,131 @@ class TestConstDrive(unittest.TestCase):
         with self.assertRaises(TypeError):
             dc = l.DriveCaller2()
 
+
+class TestClosestNextDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create sample drive callers for testing
+        self.const_drive = l.ConstDriveCaller(const_value=5.0)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=10.0)
+
+    def test_closest_next_drive_caller_creation_valid(self):
+        """Test that ClosestNextDriveCaller works with valid input"""
+        # Create with default initial_time and other required fields
+        closest_next_drive = l.ClosestNextDriveCaller(
+            final_time='forever',
+            increment=self.const_drive
+        )
+        self.assertIsInstance(closest_next_drive, l.ClosestNextDriveCaller)
+        self.assertEqual(closest_next_drive.initial_time, 0.0)
+        self.assertEqual(closest_next_drive.final_time, 'forever')
+        self.assertEqual(closest_next_drive.increment, self.const_drive)
+        
+        # Create with custom initial_time and numeric final_time
+        closest_next_drive = l.ClosestNextDriveCaller(
+            initial_time=1.5,
+            final_time=100.0,
+            increment=self.const_drive
+        )
+        self.assertIsInstance(closest_next_drive, l.ClosestNextDriveCaller)
+        self.assertEqual(closest_next_drive.initial_time, 1.5)
+        self.assertEqual(closest_next_drive.final_time, 100.0)
+        
+        # Create with specific idx
+        closest_next_drive = l.ClosestNextDriveCaller(
+            idx=10,
+            final_time='forever',
+            increment=self.const_drive
+        )
+        self.assertIsInstance(closest_next_drive, l.ClosestNextDriveCaller)
+        self.assertEqual(closest_next_drive.idx, 10)
+
+    def test_closest_next_drive_caller_str_representation(self):
+        """Test the string representation of ClosestNextDriveCaller"""
+        # Test without idx
+        closest_next_drive = l.ClosestNextDriveCaller(
+            final_time='forever',
+            increment=self.const_drive
+        )
+        expected_str = "closest next,\n\t0.0, forever,\n\t# increment drive\n\tconst, 5.0"
+        self.assertEqual(str(closest_next_drive), expected_str)
+        
+        # Test with idx
+        closest_next_drive = l.ClosestNextDriveCaller(
+            idx=10,
+            initial_time=2.0,
+            final_time=50.0,
+            increment=self.const_drive
+        )
+        expected_str = "drive caller: 10, closest next,\n\t2.0, 50.0,\n\t# increment drive\n\tconst, 5.0"
+        self.assertEqual(str(closest_next_drive), expected_str)
+        
+        # Test with reference drive
+        closest_next_drive = l.ClosestNextDriveCaller(
+            final_time='forever',
+            increment=self.const_drive_with_idx
+        )
+        expected_str = "closest next,\n\t0.0, forever,\n\t# increment drive\n\treference, 5"
+        self.assertEqual(str(closest_next_drive), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_closest_next_drive_caller_missing_required_field(self):
+        """Test creating a ClosestNextDriveCaller instance missing a required field"""
+        # Missing final_time
+        with self.assertRaises(Exception):
+            l.ClosestNextDriveCaller(
+                increment=self.const_drive
+            )
+        
+        # Missing increment
+        with self.assertRaises(Exception):
+            l.ClosestNextDriveCaller(
+                final_time='forever'
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_closest_next_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for initial_time
+        with self.assertRaises(Exception):
+            l.ClosestNextDriveCaller(
+                initial_time="invalid",
+                final_time='forever',
+                increment=self.const_drive
+            )
+        
+        # Invalid type for final_time
+        with self.assertRaises(Exception):
+            l.ClosestNextDriveCaller(
+                final_time='time',  # Should be float, MBVar, or 'forever'
+                increment=self.const_drive
+            )
+        
+        # Invalid type for increment
+        with self.assertRaises(Exception):
+            l.ClosestNextDriveCaller(
+                final_time='forever',
+                increment="not a drive"  # Should be a DriveCaller
+            )
+
+    def test_closest_next_drive_caller_nested(self):
+        """Test creating nested ClosestNextDriveCaller"""
+        # Create an ArrayDriveCaller as the increment
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive, self.const_drive_with_idx])
+        
+        closest_next_drive = l.ClosestNextDriveCaller(
+            final_time='forever',
+            increment=array_drive
+        )
+        
+        self.assertIsInstance(closest_next_drive, l.ClosestNextDriveCaller)
+        self.assertEqual(closest_next_drive.increment, array_drive)
+        
+        # Verify the string representation with nested drive
+        expected_str = "closest next,\n\t0.0, forever,\n\t# increment drive\n\tarray, 2,\n\tconst, 5.0,\n\treference, 5"
+        self.assertEqual(str(closest_next_drive), expected_str)
+
+
 class TestLinearElastic(unittest.TestCase):
     def setUp(self):
         self.scalar_law = l.LinearElastic(law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, stiffness=1e9)
