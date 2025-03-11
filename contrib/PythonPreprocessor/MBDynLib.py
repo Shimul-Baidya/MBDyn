@@ -3268,89 +3268,19 @@ class ClosestNextDriveCaller(DriveCaller2):
             s += f'\n\t{self.increment}'
         return s
 
-class CosineDriveCaller(DriveCaller):
-    type = 'cosine'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_time = kwargs['initial_time']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' CosineDriveCaller: <initial_time> not set, assuming 0.' + 
-                    '\n-------------------\n'
-                    )
-            self.initial_time = 0.
-            pass
-        try:
-            assert isinstance(kwargs['angular_velocity'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <angular_velocity> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.angular_velocity = kwargs['angular_velocity']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <angular_velocity> is required' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['amplitude'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <amplitude> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.amplitude = kwargs['amplitude']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <amplitude> is required' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['number_of_cycles'], (Number, MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <number_of_cycles> must either be a number,'
-                    ' one in (\'half\', \'one\', \'forever\'), or an MBVar' + 
-                    '\n-------------------\n')
-            self.number_of_cycles = kwargs['number_of_cycles']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <number_of_cycles> is required' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CosineDriveCaller: <initial_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_value = kwargs['initial_value']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' CosineDriveCaller: <initial_value> not provided, assuming 0.' + 
-                    '\n-------------------\n'
-            )
-            self.initial_value = 0.
-            pass
+class CosineDriveCaller(DriveCaller2):    
+    initial_time: Union[float, MBVar] = 0.0    
+    angular_velocity: Union[float, MBVar]    
+    amplitude: Union[float, MBVar]
+    number_of_cycles: Union[float, MBVar, Literal['half', 'one', 'forever']]    
+    initial_value: Union[float, MBVar] = 0.0
+
+    def drive_type(self) -> str:
+        return 'cosine'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}, {}, '.format(self.type, self.initial_time)
-        s = s + '{}, {}, '.format(self.angular_velocity, self.amplitude)
-        s = s + '{}, {}'.format(self.number_of_cycles, self.initial_value)
+        s = f'{self.drive_header()}'
+        s += f',\n\t{self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value}'
         return s
 
 class CubicDriveCaller(DriveCaller):

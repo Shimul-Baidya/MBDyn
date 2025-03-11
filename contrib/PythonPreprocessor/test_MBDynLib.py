@@ -441,6 +441,222 @@ class TestClosestNextDriveCaller(unittest.TestCase):
         self.assertEqual(str(closest_next_drive), expected_str)
 
 
+class TestCosineDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        self.angular_velocity = 2.0
+        self.amplitude = 1.5
+        self.number_of_cycles = 'forever'
+        self.initial_value = 0.5
+        
+        if 'test_angular_velocity' not in l.declared_MBVars:
+            self.angular_velocity_var = l.MBVar(name='test_angular_velocity', var_type='real', expression=3.14)
+        else:
+            self.angular_velocity_var = l.declared_MBVars['test_angular_velocity']
+            
+        if 'test_amplitude' not in l.declared_MBVars:
+            self.amplitude_var = l.MBVar(name='test_amplitude', var_type='real', expression=2.5)
+        else:
+            self.amplitude_var = l.declared_MBVars['test_amplitude']
+            
+        if 'test_initial_time' not in l.declared_MBVars:
+            self.initial_time_var = l.MBVar(name='test_initial_time', var_type='real', expression=1.0)
+        else:
+            self.initial_time_var = l.declared_MBVars['test_initial_time']
+
+    def test_cosine_drive_caller_creation_valid(self):
+        """Test that CosineDriveCaller works with valid input"""
+        # Create with minimum required parameters (defaults for initial_time and initial_value)
+        cosine_drive = l.CosineDriveCaller(
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles
+        )
+        self.assertIsInstance(cosine_drive, l.CosineDriveCaller)
+        self.assertEqual(cosine_drive.initial_time, 0.0)
+        self.assertEqual(cosine_drive.angular_velocity, self.angular_velocity)
+        self.assertEqual(cosine_drive.amplitude, self.amplitude)
+        self.assertEqual(cosine_drive.number_of_cycles, self.number_of_cycles)
+        self.assertEqual(cosine_drive.initial_value, 0.0)
+        
+        # Create with all parameters specified
+        cosine_drive = l.CosineDriveCaller(
+            initial_time=1.0,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(cosine_drive, l.CosineDriveCaller)
+        self.assertEqual(cosine_drive.initial_time, 1.0)
+        self.assertEqual(cosine_drive.initial_value, self.initial_value)
+        
+        # Create with specific idx
+        cosine_drive = l.CosineDriveCaller(
+            idx=10,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles
+        )
+        self.assertIsInstance(cosine_drive, l.CosineDriveCaller)
+        self.assertEqual(cosine_drive.idx, 10)
+        
+        # Test with string literals for number_of_cycles
+        for cycles in ['half', 'one', 'forever']:
+            cosine_drive = l.CosineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles=cycles
+            )
+            self.assertEqual(cosine_drive.number_of_cycles, cycles)
+            
+        # Test with numeric value for number_of_cycles
+        cosine_drive = l.CosineDriveCaller(
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=2.5
+        )
+        self.assertEqual(cosine_drive.number_of_cycles, 2.5)
+
+    def test_cosine_drive_caller_with_mbvars(self):
+        """Test CosineDriveCaller with MBVar objects for parameters"""
+        # Create with MBVar for angular_velocity
+        cosine_drive = l.CosineDriveCaller(
+            angular_velocity=self.angular_velocity_var,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles
+        )
+        self.assertIsInstance(cosine_drive, l.CosineDriveCaller)
+        self.assertEqual(cosine_drive.angular_velocity, self.angular_velocity_var)
+        
+        # Create with MBVar for amplitude
+        cosine_drive = l.CosineDriveCaller(
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude_var,
+            number_of_cycles=self.number_of_cycles
+        )
+        self.assertEqual(cosine_drive.amplitude, self.amplitude_var)
+        
+        # Create with MBVar for initial_time
+        cosine_drive = l.CosineDriveCaller(
+            initial_time=self.initial_time_var,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles
+        )
+        self.assertEqual(cosine_drive.initial_time, self.initial_time_var)
+        
+        # Create with multiple MBVar parameters
+        cosine_drive = l.CosineDriveCaller(
+            initial_time=self.initial_time_var,
+            angular_velocity=self.angular_velocity_var,
+            amplitude=self.amplitude_var,
+            number_of_cycles=self.number_of_cycles
+        )
+        self.assertEqual(cosine_drive.initial_time, self.initial_time_var)
+        self.assertEqual(cosine_drive.angular_velocity, self.angular_velocity_var)
+        self.assertEqual(cosine_drive.amplitude, self.amplitude_var)
+
+    def test_cosine_drive_caller_str_representation(self):
+        """Test the string representation of CosineDriveCaller"""
+        # Test without idx, with default values for initial_time and initial_value
+        cosine_drive = l.CosineDriveCaller(
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles
+        )
+        expected_str = "cosine,\n\t0.0, 2.0, 1.5, forever, 0.0"
+        self.assertEqual(str(cosine_drive), expected_str)
+        
+        # Test with idx and custom values
+        cosine_drive = l.CosineDriveCaller(
+            idx=10,
+            initial_time=1.0,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles='one',
+            initial_value=0.5
+        )
+        expected_str = "drive caller: 10, cosine,\n\t1.0, 2.0, 1.5, one, 0.5"
+        self.assertEqual(str(cosine_drive), expected_str)
+        
+        # Test with MBVar parameters
+        cosine_drive = l.CosineDriveCaller(
+            angular_velocity=self.angular_velocity_var,
+            amplitude=self.amplitude_var,
+            number_of_cycles=self.number_of_cycles
+        )
+        expected_str = f"cosine,\n\t0.0, {self.angular_velocity_var}, {self.amplitude_var}, forever, 0.0"
+        self.assertEqual(str(cosine_drive), expected_str)
+
+    def test_cosine_drive_caller_drive_type(self):
+        """Test the drive_type method of CosineDriveCaller"""
+        cosine_drive = l.CosineDriveCaller(
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles
+        )
+        self.assertEqual(cosine_drive.drive_type(), 'cosine')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_cosine_drive_caller_missing_required_field(self):
+        """Test creating a CosineDriveCaller instance missing a required field"""
+        # Missing angular_velocity
+        with self.assertRaises(Exception):
+            l.CosineDriveCaller(
+                amplitude=self.amplitude,
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Missing amplitude
+        with self.assertRaises(Exception):
+            l.CosineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Missing number_of_cycles
+        with self.assertRaises(Exception):
+            l.CosineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_cosine_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for angular_velocity
+        with self.assertRaises(Exception):
+            l.CosineDriveCaller(
+                angular_velocity="invalid",
+                amplitude=self.amplitude,
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Invalid type for amplitude
+        with self.assertRaises(Exception):
+            l.CosineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude="invalid",
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Invalid type for number_of_cycles
+        with self.assertRaises(Exception):
+            l.CosineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles='Invalid'  # Should be float, MBVar, or specific strings
+            )
+        
+        # Invalid value for number_of_cycles
+        with self.assertRaises(Exception):
+            l.CosineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles="invalid_value"  # Should be 'half', 'one', or 'forever' if a string
+            )
+
 class TestLinearElastic(unittest.TestCase):
     def setUp(self):
         self.scalar_law = l.LinearElastic(law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, stiffness=1e9)
