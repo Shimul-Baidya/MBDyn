@@ -3283,91 +3283,32 @@ class CosineDriveCaller(DriveCaller2):
         s += f',\n\t{self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value}'
         return s
 
-class CubicDriveCaller(DriveCaller):
-    type = 'cubic'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['const_coef'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <const_coef> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.const_coef = kwargs['const_coef']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <const_coef> is required' + 
-                    '\n-------------------\n'
-                    )
-        try:
-            assert isinstance(kwargs['linear_coef'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <linear_coef> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.linear_coef = kwargs['linear_coef']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <linear_coef> is required' + 
-                    '\n-------------------\n'
-                    )
-        try:
-            assert isinstance(kwargs['parabolic_coef'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <parabolic_coef> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.parabolic_coef = kwargs['parabolic_coef']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <parabolic_coef> is required' + 
-                    '\n-------------------\n'
-                    )
-        try:
-            assert isinstance(kwargs['cubic_coef'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <cubic_coef> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.cubic_coef = kwargs['cubic_coef']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' CubicDriveCaller: <cubic_coef> is required' + 
-                    '\n-------------------\n'
-                    )
+class CubicDriveCaller(DriveCaller2):
+    const_coef: Union[MBVar, float]
+    linear_coef: Union[MBVar, float]
+    parabolic_coef: Union[MBVar, float]
+    cubic_coef: Union[MBVar, float]
+    
+    def drive_type(self) -> str:
+        return 'cubic'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}, {}, '.format(self.type, self.const_coef)
-        s = s + '{}, {}, '.format(self.linear_coef, self.parabolic_coef)
-        s = s + '{}'.format(self.cubic_coef)
+        s = f'{self.drive_header()}'
+        s += f', {self.const_coef}, {self.linear_coef}, {self.parabolic_coef}, {self.cubic_coef}'
         return s
 
-class DirectDriveCaller(DriveCaller):
-    type = 'direct'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DirectDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
+class DirectDriveCaller(DriveCaller2):
+    '''
+    Transparently returns the input value; the arglist is empty. It is useful in conjunction with those drive
+    callers that require their output to be fed into another drive caller, like the dof, node and element drive
+    callers, when the output needs to be used as is.
+    '''
+    
+    def drive_type(self) -> str:
+        return 'direct'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        return s
+        return f'{self.drive_header()}'
 
 class DiscreteFilterDriveCaller(DriveCaller):
     type = 'discrete filter'

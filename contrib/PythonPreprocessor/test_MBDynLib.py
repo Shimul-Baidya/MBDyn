@@ -657,6 +657,184 @@ class TestCosineDriveCaller(unittest.TestCase):
                 number_of_cycles="invalid_value"  # Should be 'half', 'one', or 'forever' if a string
             )
 
+class TestCubicDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create variables for testing
+        if 'test_const_coef' not in l.declared_MBVars:
+            self.const_coef_var = l.MBVar(name='test_const_coef', var_type='real', expression=1.0)
+        else:
+            self.const_coef_var = l.declared_MBVars['test_const_coef']
+            
+    def test_cubic_drive_caller_creation_valid(self):
+        """Test that CubicDriveCaller works with valid input"""
+        # Create with required parameters
+        cubic_drive = l.CubicDriveCaller(
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0,
+            cubic_coef=4.0
+        )
+        self.assertIsInstance(cubic_drive, l.CubicDriveCaller)
+        self.assertEqual(cubic_drive.const_coef, 1.0)
+        self.assertEqual(cubic_drive.linear_coef, 2.0)
+        self.assertEqual(cubic_drive.parabolic_coef, 3.0)
+        self.assertEqual(cubic_drive.cubic_coef, 4.0)
+        
+        # Create with specific idx
+        cubic_drive = l.CubicDriveCaller(
+            idx=10,
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0,
+            cubic_coef=4.0
+        )
+        self.assertIsInstance(cubic_drive, l.CubicDriveCaller)
+        self.assertEqual(cubic_drive.idx, 10)
+
+    def test_cubic_drive_caller_with_mbvars(self):
+        """Test CubicDriveCaller with MBVar objects for parameters"""
+        # Create with MBVar for const_coef
+        cubic_drive = l.CubicDriveCaller(
+            const_coef=self.const_coef_var,
+            linear_coef=2.0,
+            parabolic_coef=3.0,
+            cubic_coef=4.0
+        )
+        self.assertIsInstance(cubic_drive, l.CubicDriveCaller)
+        self.assertEqual(cubic_drive.const_coef, self.const_coef_var)
+
+    def test_cubic_drive_caller_str_representation(self):
+        """Test the string representation of CubicDriveCaller"""
+        # Test without idx
+        cubic_drive = l.CubicDriveCaller(
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0,
+            cubic_coef=4.0
+        )
+        expected_str = "cubic, 1.0, 2.0, 3.0, 4.0"
+        self.assertEqual(str(cubic_drive), expected_str)
+        
+        # Test with idx
+        cubic_drive = l.CubicDriveCaller(
+            idx=10,
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0,
+            cubic_coef=4.0
+        )
+        expected_str = "drive caller: 10, cubic, 1.0, 2.0, 3.0, 4.0"
+        self.assertEqual(str(cubic_drive), expected_str)
+        
+        # Test with MBVar
+        cubic_drive = l.CubicDriveCaller(
+            const_coef=self.const_coef_var,
+            linear_coef=2.0,
+            parabolic_coef=3.0,
+            cubic_coef=4.0
+        )
+        expected_str = f"cubic, {self.const_coef_var}, 2.0, 3.0, 4.0"
+        self.assertEqual(str(cubic_drive), expected_str)
+
+    def test_cubic_drive_caller_drive_type(self):
+        """Test the drive_type method of CubicDriveCaller"""
+        cubic_drive = l.CubicDriveCaller(
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0,
+            cubic_coef=4.0
+        )
+        self.assertEqual(cubic_drive.drive_type(), 'cubic')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_cubic_drive_caller_missing_required_field(self):
+        """Test creating a CubicDriveCaller instance missing a required field"""
+        # Missing const_coef
+        with self.assertRaises(Exception):
+            l.CubicDriveCaller(
+                linear_coef=2.0,
+                parabolic_coef=3.0,
+                cubic_coef=4.0
+            )
+        
+        # Missing linear_coef
+        with self.assertRaises(Exception):
+            l.CubicDriveCaller(
+                const_coef=1.0,
+                parabolic_coef=3.0,
+                cubic_coef=4.0
+            )
+        
+        # Missing parabolic_coef
+        with self.assertRaises(Exception):
+            l.CubicDriveCaller(
+                const_coef=1.0,
+                linear_coef=2.0,
+                cubic_coef=4.0
+            )
+        
+        # Missing cubic_coef
+        with self.assertRaises(Exception):
+            l.CubicDriveCaller(
+                const_coef=1.0,
+                linear_coef=2.0,
+                parabolic_coef=3.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_cubic_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for const_coef
+        with self.assertRaises(Exception):
+            l.CubicDriveCaller(
+                const_coef="invalid",
+                linear_coef=2.0,
+                parabolic_coef=3.0,
+                cubic_coef=4.0
+            )
+        
+        # Invalid type for linear_coef
+        with self.assertRaises(Exception):
+            l.CubicDriveCaller(
+                const_coef=1.0,
+                linear_coef="invalid",
+                parabolic_coef=3.0,
+                cubic_coef=4.0
+            )
+
+
+class TestDirectDriveCaller(unittest.TestCase):
+    def test_direct_drive_caller_creation_valid(self):
+        """Test that DirectDriveCaller works with valid input"""
+        # Create without idx
+        direct_drive = l.DirectDriveCaller()
+        self.assertIsInstance(direct_drive, l.DirectDriveCaller)
+        self.assertEqual(direct_drive.idx, None)
+        
+        # Create with specific idx
+        direct_drive = l.DirectDriveCaller(idx=10)
+        self.assertIsInstance(direct_drive, l.DirectDriveCaller)
+        self.assertEqual(direct_drive.idx, 10)
+
+    def test_direct_drive_caller_str_representation(self):
+        """Test the string representation of DirectDriveCaller"""
+        # Test without idx
+        direct_drive = l.DirectDriveCaller()
+        expected_str = "direct"
+        self.assertEqual(str(direct_drive), expected_str)
+        
+        # Test with idx
+        direct_drive = l.DirectDriveCaller(idx=10)
+        expected_str = "drive caller: 10, direct"
+        self.assertEqual(str(direct_drive), expected_str)
+
+    def test_direct_drive_caller_drive_type(self):
+        """Test the drive_type method of DirectDriveCaller"""
+        direct_drive = l.DirectDriveCaller()
+        self.assertEqual(direct_drive.drive_type(), 'direct')
+
+
 class TestLinearElastic(unittest.TestCase):
     def setUp(self):
         self.scalar_law = l.LinearElastic(law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, stiffness=1e9)
