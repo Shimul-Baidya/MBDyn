@@ -1,5 +1,5 @@
 from io import StringIO
-import unittest
+import unittest, warnings
 
 import MBDynLib as l
 
@@ -25,6 +25,141 @@ def patched_errprint(*args, **kwargs):
 # put our function instead of the original one (monkeypatching)
 l.errprint = patched_errprint
 
+
+class TestNodeDof(unittest.TestCase):
+    def test_node_dof_creation_valid(self):
+        """Test creating a NodeDof instance with valid data"""
+        # Test with all required fields only
+        node_dof = l.NodeDof(
+            node_label=1,
+            node_type='structural'
+        )
+        self.assertIsInstance(node_dof, l.NodeDof)
+        self.assertEqual(node_dof.node_label, 1)
+        self.assertEqual(node_dof.node_type, 'structural')
+        self.assertIsNone(node_dof.dof_number)
+        self.assertIsNone(node_dof.dof_order)
+
+        # Test with all fields
+        node_dof = l.NodeDof(
+            node_label=2,
+            node_type='electric',
+            dof_number=3,
+            dof_order='algebraic'
+        )
+        self.assertIsInstance(node_dof, l.NodeDof)
+        self.assertEqual(node_dof.node_label, 2)
+        self.assertEqual(node_dof.node_type, 'electric')
+        self.assertEqual(node_dof.dof_number, 3)
+        self.assertEqual(node_dof.dof_order, 'algebraic')
+
+    def test_node_dof_str_method(self):
+        """Test the __str__ method of NodeDof"""
+        # Test with required fields only
+        node_dof = l.NodeDof(
+            node_label=1,
+            node_type='structural'
+        )
+        expected_str = '1, structural'
+        self.assertEqual(str(node_dof), expected_str)
+
+        # Test with dof_number
+        node_dof = l.NodeDof(
+            node_label=2,
+            node_type='electric',
+            dof_number=3
+        )
+        expected_str = '2, electric, 3'
+        self.assertEqual(str(node_dof), expected_str)
+
+        # Test with dof_order
+        node_dof = l.NodeDof(
+            node_label=3,
+            node_type='parameter',
+            dof_order='differential'
+        )
+        expected_str = '3, parameter, differential'
+        self.assertEqual(str(node_dof), expected_str)
+
+        # Test with all fields
+        node_dof = l.NodeDof(
+            node_label=4,
+            node_type='thermal',
+            dof_number=5,
+            dof_order='algebraic'
+        )
+        expected_str = '4, thermal, 5, algebraic'
+        self.assertEqual(str(node_dof), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_node_dof_missing_required_fields(self):
+        """Test that NodeDof raises appropriate errors when required fields are missing"""
+        # Missing node_label
+        with self.assertRaises(Exception):
+            l.NodeDof(
+                node_type='structural'
+            )
+        
+        # Missing node_type
+        with self.assertRaises(Exception):
+            l.NodeDof(
+                node_label=1
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_node_dof_invalid_types(self):
+        """Test that NodeDof raises appropriate errors when fields have invalid types"""
+        # Invalid node_type
+        with self.assertRaises(Exception):
+            l.NodeDof(
+                node_label=1,
+                node_type='invalid_type'
+            )
+        
+        # Invalid node_label type
+        with self.assertRaises(Exception):
+            l.NodeDof(
+                node_label='invalid',  # Should be int or MBVar
+                node_type='structural'
+            )
+        
+        # Invalid dof_number type
+        with self.assertRaises(Exception):
+            l.NodeDof(
+                node_label=1,
+                node_type='structural',
+                dof_number='invalid'  # Should be int or MBVar
+            )
+        
+        # Invalid dof_order
+        with self.assertRaises(Exception):
+            l.NodeDof(
+                node_label=1,
+                node_type='structural',
+                dof_order='invalid_order'  # Should be 'algebraic' or 'differential'
+            )
+
+    def test_node_dof_with_mbvar(self):
+        """Test creating a NodeDof instance with MBVar"""
+        if 'node_var' not in l.declared_MBVars:
+            node_label_var = l.MBVar(name='node_var', var_type='integer', expression=100)
+        else:
+            node_label_var = l.declared_MBVars['node_var']
+
+        if 'dof_var' not in l.declared_MBVars:
+            dof_number_var = l.MBVar(name='dof_var', var_type='integer', expression=5)
+        else:
+            dof_number_var = l.declared_MBVars['dof_var']
+        
+        node_dof = l.NodeDof(
+            node_label=node_label_var,
+            node_type='structural',
+            dof_number=dof_number_var
+        )
+        
+        self.assertEqual(node_dof.node_label, node_label_var)
+        self.assertEqual(node_dof.dof_number, dof_number_var)
+        self.assertIn(str(node_label_var), str(node_dof))
 
 class TestArrayDriveCaller(unittest.TestCase):
     def setUp(self):
@@ -834,6 +969,792 @@ class TestDirectDriveCaller(unittest.TestCase):
         direct_drive = l.DirectDriveCaller()
         self.assertEqual(direct_drive.drive_type(), 'direct')
 
+class TestDiscreteFilterDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create sample drive caller for testing
+        self.const_drive = l.ConstDriveCaller(const_value=1.5)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=2.0)
+        
+        # Create MBVar objects for testing
+        if 'test_n_a' not in l.declared_MBVars:
+            self.n_a_var = l.MBVar(name='test_n_a', var_type='integer', expression=2)
+        else:
+            self.n_a_var = l.declared_MBVars['test_n_a']
+            
+        if 'test_b_0' not in l.declared_MBVars:
+            self.b_0_var = l.MBVar(name='test_b_0', var_type='real', expression=0.5)
+        else:
+            self.b_0_var = l.declared_MBVars['test_b_0']
+
+    def test_discrete_filter_drive_caller_creation_valid(self):
+        """Test that DiscreteFilterDriveCaller works with valid input"""
+        # Create with integer values for n_a and n_b
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        self.assertIsInstance(discrete_filter, l.DiscreteFilterDriveCaller)
+        self.assertEqual(discrete_filter.n_a, 2)
+        self.assertEqual(discrete_filter.a, [0.1, 0.2])
+        self.assertEqual(discrete_filter.b_0, 0.5)
+        self.assertEqual(discrete_filter.n_b, 3)
+        self.assertEqual(discrete_filter.b, [0.3, 0.4, 0.5])
+        self.assertEqual(discrete_filter.input_drive, self.const_drive)
+        
+        # Create with MBVar for n_a
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=self.n_a_var,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        self.assertEqual(discrete_filter.n_a, self.n_a_var)
+        
+        # Create with MBVar for b_0
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=self.b_0_var,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        self.assertEqual(discrete_filter.b_0, self.b_0_var)
+        
+        # Create with specific idx
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            idx=10,
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        self.assertEqual(discrete_filter.idx, 10)
+        
+        # Create with reference drive
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive_with_idx
+        )
+        self.assertEqual(discrete_filter.input_drive, self.const_drive_with_idx)
+
+    def test_discrete_filter_drive_caller_str_representation(self):
+        """Test the string representation of DiscreteFilterDriveCaller"""
+        # Test without idx
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        expected_str = "discrete filter,\n\t2, 0.1, 0.2,\n\t0.5,\n\t3, 0.3, 0.4, 0.5,\n\tconst, 1.5"
+        self.assertEqual(str(discrete_filter), expected_str)
+        
+        # Test with idx
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            idx=10,
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        expected_str = "drive caller: 10, discrete filter,\n\t2, 0.1, 0.2,\n\t0.5,\n\t3, 0.3, 0.4, 0.5,\n\tconst, 1.5"
+        self.assertEqual(str(discrete_filter), expected_str)
+        
+        # Test with reference drive
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive_with_idx
+        )
+        expected_str = "discrete filter,\n\t2, 0.1, 0.2,\n\t0.5,\n\t3, 0.3, 0.4, 0.5,\n\treference, 5"
+        self.assertEqual(str(discrete_filter), expected_str)
+        
+        # Test with MBVar parameters
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=self.n_a_var,
+            a=[0.1, 0.2],
+            b_0=self.b_0_var,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        expected_str = f"discrete filter,\n\t{self.n_a_var}, 0.1, 0.2,\n\t{self.b_0_var},\n\t3, 0.3, 0.4, 0.5,\n\tconst, 1.5"
+        self.assertEqual(str(discrete_filter), expected_str)
+
+    def test_discrete_filter_drive_caller_drive_type(self):
+        """Test the drive_type method of DiscreteFilterDriveCaller"""
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=self.const_drive
+        )
+        self.assertEqual(discrete_filter.drive_type(), 'discrete filter')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_discrete_filter_drive_caller_missing_required_field(self):
+        """Test creating a DiscreteFilterDriveCaller instance missing a required field"""
+        # Missing n_a
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                a=[0.1, 0.2],
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        
+        # Missing a
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        
+        # Missing b_0
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1, 0.2],
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        
+        # Missing n_b
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1, 0.2],
+                b_0=0.5,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        
+        # Missing b
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1, 0.2],
+                b_0=0.5,
+                n_b=3,
+                input_drive=self.const_drive
+            )
+        
+        # Missing input_drive
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1, 0.2],
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4, 0.5]
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_discrete_filter_drive_caller_coefficient_length_validation(self):
+        """Test validation of coefficient array lengths"""
+        # a list length doesn't match n_a
+        with self.assertRaises(ValueError) as context:
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1],  # Should have 2 elements
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        self.assertIn("Length of 'a' list", str(context.exception))
+        
+        # b list length doesn't match n_b
+        with self.assertRaises(ValueError) as context:
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1, 0.2],
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4],  # Should have 3 elements
+                input_drive=self.const_drive
+            )
+        self.assertIn("Length of 'b' list", str(context.exception))
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_discrete_filter_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for n_a
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a="invalid",
+                a=[0.1, 0.2],
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        
+        # Invalid type for a
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a="invalid",  # Should be a list
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        
+        # Invalid type for b_0
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1, 0.2],
+                b_0="invalid",
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive=self.const_drive
+            )
+        
+        # Invalid type for input_drive
+        with self.assertRaises(Exception):
+            l.DiscreteFilterDriveCaller(
+                n_a=2,
+                a=[0.1, 0.2],
+                b_0=0.5,
+                n_b=3,
+                b=[0.3, 0.4, 0.5],
+                input_drive="not a drive"  # Should be a DriveCaller
+            )
+
+    def test_discrete_filter_drive_caller_nested(self):
+        """Test nesting DiscreteFilterDriveCaller with other drive callers"""
+        # Create an ArrayDriveCaller to use as input
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive, self.const_drive_with_idx])
+        
+        # Use it as input to a DiscreteFilterDriveCaller
+        discrete_filter = l.DiscreteFilterDriveCaller(
+            n_a=2,
+            a=[0.1, 0.2],
+            b_0=0.5,
+            n_b=3,
+            b=[0.3, 0.4, 0.5],
+            input_drive=array_drive
+        )
+        
+        self.assertIsInstance(discrete_filter, l.DiscreteFilterDriveCaller)
+        self.assertEqual(discrete_filter.input_drive, array_drive)
+        
+        # Check string representation with nested drive
+        expected_str = "discrete filter,\n\t2, 0.1, 0.2,\n\t0.5,\n\t3, 0.3, 0.4, 0.5,\n\tarray, 2,\n\tconst, 1.5,\n\treference, 5"
+        self.assertEqual(str(discrete_filter), expected_str)
+
+class TestDofDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create sample drive callers for testing
+        self.const_drive = l.ConstDriveCaller(const_value=1.5)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=2.0)
+        
+        # Create NodeDof instances for testing
+        self.node_dof = l.NodeDof(node_label=1, node_type="structural", dof_number=2)
+        self.node_dof_with_order = l.NodeDof(
+            node_label=2, 
+            node_type="structural", 
+            dof_number=3, 
+            dof_order="differential"
+        )
+
+    def test_dof_drive_caller_creation_valid(self):
+        """Test that DofDriveCaller works with valid input"""
+        # Create with required parameters
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive
+        )
+        self.assertIsInstance(dof_drive, l.DofDriveCaller)
+        self.assertEqual(dof_drive.driving_dof, self.node_dof)
+        self.assertEqual(dof_drive.func_drive, self.const_drive)
+        
+        # Create with specific idx
+        dof_drive = l.DofDriveCaller(
+            idx=10,
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive
+        )
+        self.assertIsInstance(dof_drive, l.DofDriveCaller)
+        self.assertEqual(dof_drive.idx, 10)
+        
+        # Create with reference drive
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive_with_idx
+        )
+        self.assertEqual(dof_drive.func_drive, self.const_drive_with_idx)
+        
+        # Create with a different NodeDof that includes dof_order
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof_with_order,
+            func_drive=self.const_drive
+        )
+        self.assertEqual(dof_drive.driving_dof, self.node_dof_with_order)
+
+    def test_dof_drive_caller_str_representation(self):
+        """Test the string representation of DofDriveCaller"""
+        # Test without idx
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive
+        )
+        expected_str = "dof,\n\t1, structural, 2,\n\tconst, 1.5"
+        self.assertEqual(str(dof_drive), expected_str)
+        
+        # Test with idx
+        dof_drive = l.DofDriveCaller(
+            idx=10,
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive
+        )
+        expected_str = "drive caller: 10, dof,\n\t1, structural, 2,\n\tconst, 1.5"
+        self.assertEqual(str(dof_drive), expected_str)
+        
+        # Test with reference drive
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive_with_idx
+        )
+        expected_str = "dof,\n\t1, structural, 2,\n\treference, 5"
+        self.assertEqual(str(dof_drive), expected_str)
+        
+        # Test with NodeDof that includes dof_order
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof_with_order,
+            func_drive=self.const_drive
+        )
+        expected_str = "dof,\n\t2, structural, 3, differential,\n\tconst, 1.5"
+        self.assertEqual(str(dof_drive), expected_str)
+
+    def test_dof_drive_caller_drive_type(self):
+        """Test the drive_type method of DofDriveCaller"""
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive
+        )
+        self.assertEqual(dof_drive.drive_type(), 'dof')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_dof_drive_caller_missing_required_field(self):
+        """Test creating a DofDriveCaller instance missing a required field"""
+        # Missing driving_dof
+        with self.assertRaises(Exception):
+            l.DofDriveCaller(
+                func_drive=self.const_drive
+            )
+        
+        # Missing func_drive
+        with self.assertRaises(Exception):
+            l.DofDriveCaller(
+                driving_dof=self.node_dof
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_dof_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for driving_dof
+        with self.assertRaises(Exception):
+            l.DofDriveCaller(
+                driving_dof="not a NodeDof",
+                func_drive=self.const_drive
+            )
+        
+        # Invalid type for func_drive
+        with self.assertRaises(Exception):
+            l.DofDriveCaller(
+                driving_dof=self.node_dof,
+                func_drive="not a drive"
+            )
+
+    def test_dof_drive_caller_nested(self):
+        """Test nesting DofDriveCaller with other drive callers"""
+        # Create an ArrayDriveCaller to use as func_drive
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive, self.const_drive_with_idx])
+        
+        # Use it as func_drive in a DofDriveCaller
+        dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof,
+            func_drive=array_drive
+        )
+        
+        self.assertIsInstance(dof_drive, l.DofDriveCaller)
+        self.assertEqual(dof_drive.func_drive, array_drive)
+        
+        # Check string representation with nested drive
+        expected_str = "dof,\n\t1, structural, 2,\n\tarray, 2,\n\tconst, 1.5,\n\treference, 5"
+        self.assertEqual(str(dof_drive), expected_str)
+
+    def test_dof_drive_caller_complex_nesting(self):
+        """Test complex nesting with DofDriveCaller"""
+        # Create a DofDriveCaller to be used as func_drive in another DofDriveCaller
+        inner_dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof,
+            func_drive=self.const_drive
+        )
+        
+        # Create a DofDriveCaller that uses another DofDriveCaller as its func_drive
+        outer_dof_drive = l.DofDriveCaller(
+            driving_dof=self.node_dof_with_order,
+            func_drive=inner_dof_drive
+        )
+        
+        self.assertIsInstance(outer_dof_drive, l.DofDriveCaller)
+        self.assertEqual(outer_dof_drive.driving_dof, self.node_dof_with_order)
+        self.assertEqual(outer_dof_drive.func_drive, inner_dof_drive)
+        
+        # Check the string representation with nested dof drive
+        expected_str = "dof,\n\t2, structural, 3, differential,\n\tdof,\n\t1, structural, 2,\n\tconst, 1.5"
+        self.assertEqual(str(outer_dof_drive), expected_str)
+
+class TestDoubleRampDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create MBVar objects for testing
+        if 'test_slope' not in l.declared_MBVars:
+            self.slope_var = l.MBVar(name='test_slope', var_type='real', expression=2.5)
+        else:
+            self.slope_var = l.declared_MBVars['test_slope']
+            
+        if 'test_time' not in l.declared_MBVars:
+            self.time_var = l.MBVar(name='test_time', var_type='real', expression=3.0)
+        else:
+            self.time_var = l.declared_MBVars['test_time']
+
+    def test_double_ramp_drive_caller_creation_valid(self):
+        """Test that DoubleRampDriveCaller works with valid input"""
+        # Create with all required parameters (a_initial_time is optional with default)
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=1.0,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        self.assertIsInstance(double_ramp_drive, l.DoubleRampDriveCaller)
+        self.assertEqual(double_ramp_drive.a_slope, 1.0)
+        self.assertEqual(double_ramp_drive.a_initial_time, 0.0)  # Default value
+        self.assertEqual(double_ramp_drive.a_final_time, 2.0)
+        self.assertEqual(double_ramp_drive.d_slope, 0.5)
+        self.assertEqual(double_ramp_drive.d_initial_time, 3.0)
+        self.assertEqual(double_ramp_drive.d_final_time, 4.0)
+        self.assertEqual(double_ramp_drive.initial_value, 0.0)
+        
+        # Create with explicit a_initial_time
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=1.0,
+            a_initial_time=0.5,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        self.assertEqual(double_ramp_drive.a_initial_time, 0.5)
+        
+        # Create with 'forever' for d_final_time
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=1.0,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time='forever',
+            initial_value=0.0
+        )
+        self.assertEqual(double_ramp_drive.d_final_time, 'forever')
+        
+        # Create with specific idx
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            idx=10,
+            a_slope=1.0,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        self.assertEqual(double_ramp_drive.idx, 10)
+
+    def test_double_ramp_drive_caller_with_mbvars(self):
+        """Test DoubleRampDriveCaller with MBVar objects for parameters"""
+        # Create with MBVar for slopes
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=self.slope_var,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        self.assertIsInstance(double_ramp_drive, l.DoubleRampDriveCaller)
+        self.assertEqual(double_ramp_drive.a_slope, self.slope_var)
+        
+        # Create with MBVar for times
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=1.0,
+            a_final_time=self.time_var,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        self.assertEqual(double_ramp_drive.a_final_time, self.time_var)
+
+    def test_double_ramp_drive_caller_default_a_initial_time(self):
+        """Test the default behavior of a_initial_time if not provided"""
+        # Test that a warning is issued when a_initial_time is not provided
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            
+            double_ramp_drive = l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                d_final_time=4.0,
+                initial_value=0.0
+            )
+            
+            # Verify a warning was raised
+            self.assertTrue(len(w) > 0)
+            self.assertTrue(any("<a_initial_time> is not set" in str(warning.message) for warning in w))
+            
+            # Verify the default value was set
+            self.assertEqual(double_ramp_drive.a_initial_time, 0.0)
+
+    def test_double_ramp_drive_caller_default_warning(self):
+        """Test that a warning is issued when a_initial_time isn't provided"""
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered
+            warnings.simplefilter("always")
+            
+            # Create a DoubleRampDriveCaller without specifying a_initial_time
+            double_ramp_drive = l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_final_time=5.0,
+                d_slope=2.0,
+                d_initial_time=10.0,
+                d_final_time=15.0,
+                initial_value=0.0
+            )
+            
+            # Verify a warning was raised
+            self.assertEqual(len(w), 1)
+            self.assertIn("<a_initial_time> is not set, assuming 0.0.", str(w[0].message))
+
+        # No warning when a_initial_time is explicitly provided
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            
+            double_ramp_drive = l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_initial_time=1.0,  # Explicitly provided
+                a_final_time=5.0,
+                d_slope=2.0,
+                d_initial_time=10.0,
+                d_final_time=15.0,
+                initial_value=0.0
+            )
+            
+            self.assertEqual(len(w), 0)  # No warnings
+
+    def test_double_ramp_drive_caller_str_representation(self):
+        """Test the string representation of DoubleRampDriveCaller"""
+        # Test without idx
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=1.0,
+            a_initial_time=0.5,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        expected_str = "double ramp,\n\t1.0, 0.5, 2.0,\n\t0.5, 3.0, 4.0,\n\t0.0"
+        self.assertEqual(str(double_ramp_drive), expected_str)
+        
+        # Test with idx
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            idx=10,
+            a_slope=1.0,
+            a_initial_time=0.5,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        expected_str = "drive caller: 10, double ramp,\n\t1.0, 0.5, 2.0,\n\t0.5, 3.0, 4.0,\n\t0.0"
+        self.assertEqual(str(double_ramp_drive), expected_str)
+        
+        # Test with 'forever'
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=1.0,
+            a_initial_time=0.5,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time='forever',
+            initial_value=0.0
+        )
+        expected_str = "double ramp,\n\t1.0, 0.5, 2.0,\n\t0.5, 3.0, forever,\n\t0.0"
+        self.assertEqual(str(double_ramp_drive), expected_str)
+        
+        # Test with MBVar parameters
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=self.slope_var,
+            a_final_time=self.time_var,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        expected_str = f"double ramp,\n\t{self.slope_var}, 0.0, {self.time_var},\n\t0.5, 3.0, 4.0,\n\t0.0"
+        self.assertEqual(str(double_ramp_drive), expected_str)
+
+    def test_double_ramp_drive_caller_drive_type(self):
+        """Test the drive_type method of DoubleRampDriveCaller"""
+        double_ramp_drive = l.DoubleRampDriveCaller(
+            a_slope=1.0,
+            a_final_time=2.0,
+            d_slope=0.5,
+            d_initial_time=3.0,
+            d_final_time=4.0,
+            initial_value=0.0
+        )
+        self.assertEqual(double_ramp_drive.drive_type(), 'double ramp')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_double_ramp_drive_caller_missing_required_field(self):
+        """Test creating a DoubleRampDriveCaller instance missing a required field"""
+        # Missing a_slope
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                d_final_time=4.0,
+                initial_value=0.0
+            )
+        
+        # Missing a_final_time
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                d_final_time=4.0,
+                initial_value=0.0
+            )
+        
+        # Missing d_slope
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_final_time=2.0,
+                d_initial_time=3.0,
+                d_final_time=4.0,
+                initial_value=0.0
+            )
+        
+        # Missing d_initial_time
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_final_time=4.0,
+                initial_value=0.0
+            )
+        
+        # Missing d_final_time
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                initial_value=0.0
+            )
+        
+        # Missing initial_value
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                d_final_time=4.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_double_ramp_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for a_slope
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope="invalid",
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                d_final_time=4.0,
+                initial_value=0.0
+            )
+        
+        # Invalid type for a_initial_time
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_initial_time="invalid",
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                d_final_time=4.0,
+                initial_value=0.0
+            )
+        
+        # Invalid type for d_final_time (should be float, MBVar, or 'forever')
+        with self.assertRaises(Exception):
+            l.DoubleRampDriveCaller(
+                a_slope=1.0,
+                a_final_time=2.0,
+                d_slope=0.5,
+                d_initial_time=3.0,
+                d_final_time="invalid",
+                initial_value=0.0
+            )
 
 class TestLinearElastic(unittest.TestCase):
     def setUp(self):

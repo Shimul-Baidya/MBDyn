@@ -3053,63 +3053,35 @@ class AerodynamicBeam(Element):
         return s
 
 # General stuff
-class NodeDof:
-    idx = -1
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['node_label'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' NodeDof: <node_label> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.node_label = kwargs['node_label']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' NodeDof: <node_label> must be provided' + 
-                    '\n-------------------\n'
-            )
-        try:
-            if kwargs['node_type'] not in ('abstract', 'electric', 'hydraulic', 'parameter', 'structural', 'thermal'):
-                raise ValueError(
-                    '\n-------------------\nERROR:' +
-                    ' NodeDof: <node_type> must be either \'abstract\', \'electric\'' +
-                    ' \'hydraulic\', \'parameter\', \'structural\', \'thermal\'' +
-                    '\n-------------------\n'
-                    )
-            else:
-                self.node_type = kwargs['node_type']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' NodeDof: <node_type> must be provided' +
-                    '\n-------------------\n'
-                    )
-        try:
-            assert isinstance(kwargs['dof_number'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' NodeDof: <dof_number> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.dof_number = kwargs['dof_number']
-        except KeyError:
-            pass
-        try:
-            if kwargs['dof_order'] not in ('algebraic', 'differential'):
-                raise ValueError(
-                    '\n-------------------\nERROR:' +
-                    ' NodeDof: <dof_order> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n'
-                    )
-            else:
-                self.dof_order = kwargs['dof_order']
-        except KeyError:
-            pass
-    def __str__(self):
-        s = '{}, {}'.format(self.node_label, self.node_type)
-        if hasattr(self, 'dof_number'):
-            s = s + ', {}'.format(self.dof_number)
-        if hasattr(self, 'dof_order'):
-            s = s + ', {}'.format(self.dof_order)
+class NodeDof(MBEntity):
+    """
+    A node in MBDyn is an entity that owns public degrees of freedom and instantiates the corresponding
+    public equations. It can lend them to other entities, called elements, to let them write contributions to
+    public equations, possibly depending on the value of the public degrees of freedom.
+    Usually elements access nodal degrees of freedom through well-deﬁned interfaces, at a high level. But
+    in a few cases, nodal degrees of freedom must be accessed at a very low level, with the bare knowledge of
+    the node label, the node type, the internal number of the degree of freedom, and the order of that degree
+    of freedom (algebraic or diﬀerential, if any). The data that allows an entity to track a nodal degree of
+    freedom is called NodeDof
+    """
+
+    node_label: Union[int, MBVar]    
+    node_type: Literal['abstract', 'electric', 'hydraulic', 'parameter', 'structural', 'thermal']
+    """refers to a non-scalar node type"""
+    
+    dof_number: Optional[Union[int, MBVar]] = None
+    """required to indicate the requested degree of freedom"""
+    
+    dof_order: Optional[Literal['algebraic', 'differential']] = None
+
+    def __str__(self) -> str:
+        s = f'{self.node_label}, {self.node_type}'
+        if self.dof_number is not None:
+            s += f', {self.dof_number}'
+        if self.dof_order is not None:
+            s += f', {self.dof_order}'
         return s
+    
 
 # Drives
 class DriveCaller():
@@ -3310,272 +3282,112 @@ class DirectDriveCaller(DriveCaller2):
     def __str__(self):
         return f'{self.drive_header()}'
 
-class DiscreteFilterDriveCaller(DriveCaller):
-    type = 'discrete filter'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['n_a'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <n_a> must either be an integer or an MBVar' + 
-                    '\n-------------------\n')
-            self.n_a = kwargs['n_a']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' DiscreteFilterDriveCaller: <n_a> is required' + 
-                    '\n-------------------\n'
-                    )
-        try:
-            assert isinstance(kwargs['a'], list), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <a> must be a list of' + 
-                    ' numbers or MBVars' + 
-                    '\n-------------------\n')
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' DiscreteFilterDriveCaller: <n_a> is required' + 
-                    '\n-------------------\n'
-                    )
-        for a_i in kwargs['a']:
-            assert isinstance(a_i, (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: each component of <a> must be a' + 
-                    ' number or an MBVar' + 
-                    '\n-------------------\n'
-                )
-        self.a = kwargs['a']
-        try:
-            assert isinstance(kwargs['b_0'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <b_0> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.b_0 = kwargs['b_0']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' DiscreteFilterDriveCaller: <b_0> is required' +
-                    ' set to 0 if not needed' +
-                    '\n-------------------\n'
-                    )
-        try:
-            assert isinstance(kwargs['n_b'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <n_b> must either be an integer or an MBVar' + 
-                    '\n-------------------\n')
-            self.n_b = kwargs['n_b']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' DiscreteFilterDriveCaller: <n_b> is required' + 
-                    '\n-------------------\n'
-                    )
-        try:
-            assert isinstance(kwargs['b'], list), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <b> must be a list of' + 
-                    ' numbers or MBVars' + 
-                    '\n-------------------\n')
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' DiscreteFilterDriveCaller: <n_b> is required' + 
-                    '\n-------------------\n'
-                    )
-        for b_i in kwargs['b']:
-            assert isinstance(b_i, (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: each component of <b> must be a' + 
-                    ' number or an MBVar' + 
-                    '\n-------------------\n'
-                )
-        self.b = kwargs['b']
-        try:
-            assert isinstance(kwargs['input_drive'], DriveCaller), (
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <input_drive> should be a' + 
-                    ' DriveCaller instance' + 
-                    '\n-------------------\n')
-            self.input_drive = kwargs['input_drive']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' DiscreteFilterDriveCaller: <input_drive> is not set' + 
-                    '\n-------------------\n')
+class DiscreteFilterDriveCaller(DriveCaller2):
+    """
+    Filters the output of the ancillary drive caller <input_drive> according to the discrete ﬁlter coeﬃcients
+    """
+    
+    n_a: Union[int, MBVar]    
+    """number of regression coeﬃcients"""
+
+    a: List[Union[float, MBVar]]    
+    """list of regression coeﬃcients"""
+
+    b_0: Union[float, MBVar]    
+    """direct transmission coeﬃcient, must always be present; set to zero if not needed"""
+
+    n_b: Union[int, MBVar]    
+    """number of input coeﬃcients"""
+
+    b: List[Union[float, MBVar]]    
+    """list of input coeﬃcients"""
+
+    input_drive: DriveCaller2
+    """ancillary drive caller"""
+
+    @field_validator('a')
+    def validate_a_coefficients(cls, v, info: FieldValidationInfo):
+        n_a = info.data.get('n_a', 0)
+        if len(v) != n_a:
+            raise ValueError(f"Length of 'a' list ({len(v)}) must match n_a ({n_a})")
+        return v
+    
+    @field_validator('b')
+    def validate_b_coefficients(cls, v, info: FieldValidationInfo):
+        n_b = info.data.get('n_b', 0)
+        if len(v) != n_b:
+            raise ValueError(f"Length of 'b' list ({len(v)}) must match n_b ({n_b})")
+        return v
+    
+    def drive_type(self) -> str:
+        return 'discrete filter'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}, '.format(self.type)
-        s = s + '\n\t{}'.format(self.n_a)
+        s = f'{self.drive_header()}'
+        s += f',\n\t{self.n_a}'
         for a_i in self.a:
-            s = s + ',\n\t\t{}'.format(a_i)
-        s = s + ',\n\t{}'.format(self.b_0)
-        s = s + ',\n\t{}'.format(self.n_b)
+            s += f', {a_i}'
+        s += f',\n\t{self.b_0}'
+        s += f',\n\t{self.n_b}'
         for b_i in self.b:
-            s = s + ',\n\t\t{}'.format(b_i)
-        if self.input_drive.idx >= 0:
-            s = s + ',\n\treference, {}'.format(self.input_drive.idx)
+            s += f', {b_i}'
+        if self.input_drive.idx is not None and self.input_drive.idx >= 0:
+            s += f',\n\treference, {self.input_drive.idx}'
         else:
-            s = s + ',\n\t{}'.format(self.input_drive)
+            s += f',\n\t{self.input_drive}'
         return s
 
-
-class DofDriveCaller(DriveCaller):
-    type = 'dof'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DofDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n'
-            )
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert(isinstance(kwargs['driving_dof'], NodeDof)), (
-                    '\n-------------------\nERROR:' +
-                    ' DofDriveCaller: <driving_dof> must be a NodeDof' + 
-                    '\n-------------------\n'
-            )
-            self.driving_dof = kwargs['driving_dof']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' DofDriveCaller: <driving_dof> must be provided' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert(isinstance(kwargs['func_drive'], DriveCaller)), (
-                    '\n-------------------\nERROR:' +
-                    ' DofDriveCaller: <func_drive> must be a DriveCaller' + 
-                    '\n-------------------\n'
-            )
-            self.func_drive = kwargs['func_drive']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' DofDriveCaller: <func_drive> must be provided' + 
-                    '\n-------------------\n'
-            )
+class DofDriveCaller(DriveCaller2):
+    '''
+    a NodeDof, namely the reference to a degree of freedom of a node, is read. Then a recursive call to a
+    drive data is read. The driver returns the value of the <func_drive> using the value of the NodeDof
+    as input instead of the time. This can be used as a sort of explicit feedback, to implement fancy springs
+    (where a force is driven through a function by the displacement of the node it is applied to) or an active
+    control system
+    '''
+    
+    driving_dof: NodeDof    
+    func_drive: DriveCaller2
+    
+    def drive_type(self) -> str:
+        return 'dof'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}'.format(self.idx)
-        s = s + ', {}'.format(self.type)
-        s = s + ',\n\t{}'.format(self.driving_dof)
-        s = s + ',\n\t{}'.format(self.func_drive)
+        s = f'{self.drive_header()}'
+        s += f',\n\t{self.driving_dof}'
+        if self.func_drive.idx is not None and self.func_drive.idx >= 0:
+            s += f',\n\treference, {self.func_drive.idx}'
+        else:
+            s += f',\n\t{self.func_drive}'
         return s
 
-class DoubleRampDriveCaller(DriveCaller):
-    type = 'double ramp'
+class DoubleRampDriveCaller(DriveCaller2):
+    a_slope: Union[float, MBVar]    
+    a_initial_time: Union[float, MBVar]
+    a_final_time: Union[float, MBVar]    
+    d_slope: Union[float, MBVar]    
+    d_initial_time: Union[float, MBVar]    
+    d_final_time: Union[float, MBVar, Literal['forever']]    
+    initial_value: Union[float, MBVar]
+    
+    def drive_type(self) -> str:
+        return 'double ramp'
+    
     def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['a_slope'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <a_slope> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.a_slope = kwargs['a_slope']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleRampDriveCaller: <a_slope> must be provided' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['a_initial_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <a_initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.a_initial_time = kwargs['a_initial_time']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleRampDriveCaller: <a_initial_time> is not set, assuming 0.' + 
-                '\n-------------------\n')
-            self.a_initial_time = 0.
-            pass
-        try:
-            assert isinstance(kwargs['a_final_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <a_final_time> must either be a number'
-                    ' or an MBVar' + 
-                    '\n-------------------\n')
-            self.a_final_time = kwargs['a_final_time']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <a_final_time> must be provided' + 
-                    '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['d_slope'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <d_slope> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.d_slope = kwargs['d_slope']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleRampDriveCaller: <d_slope> must be provided' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['d_initial_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <d_initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.d_initial_time = kwargs['d_initial_time']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleRampDriveCaller: <d_initial_time> must be provided' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['d_final_time'], (Number, MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <a_final_time> must either be a number,'
-                    ' an MBVar, or \'forever\'' + 
-                    '\n-------------------\n')
-            self.d_final_time = kwargs['d_final_time']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <d_final_time> is not set' + 
-                    '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleRampDriveCaller: <initial_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_value = kwargs['initial_value']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleRampDriveCaller: <initial_value> must be provided' + 
-                '\n-------------------\n') # Why is it not assumed to be zero?
+        # Check if a_initial_time wasn't explicitly provided
+        if 'a_initial_time' not in kwargs:
+            warnings.warn(
+                "DoubleRampDriveCaller: <a_initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['a_initial_time'] = 0.0
+        super().__init__(**kwargs)
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ',\n\t{}, {}, {}'.format(self.a_slope, self.a_initial_time, self.a_final_time)
-        s = s + ',\n\t{}, {}, {}'.format(self.d_slope, self.d_initial_time, self.d_final_time)
-        s = s + ',\n\t{}'.format(self.initial_value)
+        s = f'{self.drive_header()}'
+        s += f',\n\t{self.a_slope}, {self.a_initial_time}, {self.a_final_time}'
+        s += f',\n\t{self.d_slope}, {self.d_initial_time}, {self.d_final_time}'
+        s += f',\n\t{self.initial_value}'
         return s
 
 class DoubleStepDriveCaller(DriveCaller):
