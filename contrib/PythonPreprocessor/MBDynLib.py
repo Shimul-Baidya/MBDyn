@@ -3390,274 +3390,121 @@ class DoubleRampDriveCaller(DriveCaller2):
         s += f',\n\t{self.initial_value}'
         return s
 
-class DoubleStepDriveCaller(DriveCaller):
-    type = 'double step'
+class DoubleStepDriveCaller(DriveCaller2):
+    initial_time: Union[float, MBVar]
+    final_time: Union[float, MBVar]
+    step_value: Union[float, MBVar]
+    initial_value: Union[float, MBVar]
+
+    def drive_type(self) -> str:
+        return 'double step'
+    
     def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleStepDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleStepDriveCaller: <initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_time = kwargs['initial_time']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleStepDriveCaller: <initial_time> not set, assuming 0.' + 
-                '\n-------------------\n')
-            self.initial_time = 0.
-            pass
-        try:
-            assert isinstance(kwargs['final_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleStepDriveCaller: <final_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.final_time = kwargs['final_time']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleStepDriveCaller: <final_time> is not set' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['step_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleStepDriveCaller: <step_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.step_value = kwargs['step_value']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleStepDriveCaller: <step_value> is not set' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DoubleStepDriveCaller: <initial_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_value = kwargs['initial_value']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DoubleStepDriveCaller: <initial_value> is not set, assuming 0.' + 
-                '\n-------------------\n')
-            self.initial_value = 0.
-            pass
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0
+            
+        # Check if initial_value wasn't explicitly provided
+        if 'initial_value' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_value> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_value'] = 0.0
+            
+        super().__init__(**kwargs)
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ',\n\t{}, {}'.format(self.initial_time, self.final_time)
-        s = s + ',\n\t{}, {}'.format(self.step_value, self.initial_value)
+        s = f'{self.drive_header()}'
+        s += f',\n\t{self.initial_time}, {self.final_time}'
+        s += f',\n\t{self.step_value}, {self.initial_value}'
         return s
 
-
-class DriveDriveCaller(DriveCaller):
-    type = 'drive'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' DriveDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['drive_caller1'], DriveCaller), (
-                    '\n-------------------\nERROR:' +
-                    ' DriveDriveCaller: <drive_caller1> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.drive_caller1 = kwargs['drive_caller1']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DriveDriveCaller: <drive_caller1> not set' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['drive_caller2'], DriveCaller), (
-                    '\n-------------------\nERROR:' +
-                    ' DriveDriveCaller: <drive_caller2> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.drive_caller2 = kwargs['drive_caller2']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' DriveDriveCaller: <drive_caller1> not set' + 
-                '\n-------------------\n')
+class DriveDriveCaller(DriveCaller2):    
+    drive_caller1: DriveCaller2
+    drive_caller2: DriveCaller2
+    
+    def drive_type(self) -> str:
+        return 'drive'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        if self.drive_caller1.idx < 0:
-            s = s + ',\n\t{}'.format(self.drive_caller1)
+        s = f'{self.drive_header()}'
+        if self.drive_caller1.idx is not None and self.drive_caller1.idx >= 0:
+            s += f',\n\treference, {self.drive_caller1.idx}'
         else:
-            s = s + ',\n\treference, {}'.format(self.drive_caller1.idx)
-        if self.drive_caller2.idx < 0:
-            s = s + ',\n\t{}'.format(self.drive_caller2)
+            s += f',\n\t{self.drive_caller1}'
+        if self.drive_caller2.idx is not None and self.drive_caller2.idx >= 0:
+            s += f',\n\treference, {self.drive_caller2.idx}'
         else:
-            s = s + ',\n\treference, {}'.format(self.drive_caller2.idx)
+            s += f',\n\t{self.drive_caller2}'
         return s
 
-
-class ElementDriveCaller(DriveCaller):
-    type = 'element'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ElementDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['element'], Element), (
-                    '\n-------------------\nERROR:' +
-                    ' ElementDriveCaller: <element> must be an instance of Element' + 
-                    '\n-------------------\n')
-            self.element = kwargs['element']
-        except KeyError:
-            (
-                '\n-------------------\nERROR:' +
-                ' ElementDriveCaller: <element> not set' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['private_data'], str), (
-                    '\n-------------------\nERROR:' +
-                    ' ElementDriveCaller: <private_data> must be a string' + 
-                    '\n-------------------\n')
-            self.private_data = kwargs['private_data']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' ElementDriveCaller: <private_data> is not set' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['func_drive'], (DriveCaller, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' ElementDriveCaller: <func_drive> must either be a' +
-                    ' DriveCaller or \'direct\'' + 
-                    '\n-------------------\n')
-            if isinstance(kwargs['func_drive'], str) and kwargs['func_drive'] != 'direct':
-                raise ValueError(
-                    '\n-------------------\nERROR:' +
-                    ' ElementDriveCaller: <func_drive> must either be a' +
-                    ' DriveCaller or \'direct\'' + 
-                    '\n-------------------\n'
-                    )
-            self.func_drive = kwargs['func_drive']
-        except KeyError:
-            (
-                '\n-------------------\nERROR:' +
-                ' ElementDriveCaller: <func_drive> is not set' + 
-                '\n-------------------\n')
+class ElementDriveCaller(DriveCaller2):    
+    element: Element2    
+    private_data: str    
+    func_drive: Union[DriveCaller2, Literal['direct']]
+    
+    def drive_type(self) -> str:
+        return 'element'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}, {}'.format(self.element.idx, self.element.type)
-        s = s + ', string, \"{}\"'.format(self.private_data)
-        s = s + ', {}'.format(self.func_drive)
+        s = f'{self.drive_header()}'
+        s += f', {self.element.idx}, {self.element.element_type()}'
+        s += f', string, \"{self.private_data}\"'
+        if isinstance(self.func_drive, str) and self.func_drive == 'direct':
+            s += f', {self.func_drive}'
+        elif hasattr(self.func_drive, 'idx') and self.func_drive.idx is not None and self.func_drive.idx >= 0:
+            s += f', reference, {self.func_drive.idx}'
+        else:
+            s += f', {self.func_drive}'
         return s
 
+class ExponentialDriveCaller(DriveCaller2):
+    """
+    This drive yields a function that resembles the response of a ﬁrst-order system to a step input. Its
+    value corresponds to initial_value for t < initial_time. For t ≥ initial_time, it grows to
+    initial_value+amplitude_value exponentially. The growth rate is governed by time_constant_value
+    """
+    
+    amplitude_value: Union[float, MBVar]    
+    time_constant_value: Union[float, MBVar]    
+    initial_time: Union[float, MBVar]    
+    initial_value: Union[float, MBVar]
 
-class ExponentialDriveCaller(DriveCaller):
-    type = 'exponential'
+    def drive_type(self) -> str:
+        return 'exponential'
+
     def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) + 
-                    ' an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'amplitude_value'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
-                    ' a number of an MBVar' + 
-                    '\n-------------------\n')
-            self.amplitude_value = kwargs[arg]
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' {}: <{}> not set'.format(self.__class__.__name__, arg) + 
-                '\n-------------------\n')
-        try:
-            arg = 'time_constant_value'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
-                    ' a number of an MBVar' + 
-                    '\n-------------------\n')
-            self.time_constant_value = kwargs[arg]
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' {}: <{}> not set'.format(self.__class__.__name__, arg) + 
-                '\n-------------------\n')
-        try:
-            arg = 'initial_time'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
-                    ' a number of an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_time = kwargs[arg]
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' {}: <{}> not set, assuming 0.'.format(self.__class__.__name__, arg) + 
-                '\n-------------------\n')
-            self.initial_time = 0.
-            pass
-        try:
-            arg = 'initial_value'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) +
-                    ' a number of an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_value = kwargs[arg]
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' {}: <{}> not set, assuming 0.'.format(self.__class__.__name__, arg) + 
-                '\n-------------------\n')
-            self.initial_value = 0.
-            pass
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0
+            
+        # Check if initial_value wasn't explicitly provided
+        if 'initial_value' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_value> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_value'] = 0.0
+            
+        super().__init__(**kwargs)
+        
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}, {}, {}, {}'.format(
-                    self.amplitude_value, 
-                    self.time_constant_value,
-                    self.initial_time,
-                    self.initial_value
-                    )
+        s = f'{self.drive_header()}'
+        s += f', {self.amplitude_value}, {self.time_constant_value}, {self.initial_time}, {self.initial_value}'
         return s
 
-
-class FileDriveDrive(DriveCaller):
+class FileDriveDrive(DriveCaller2):
     # TODO: needs FileDrive before
     pass
-
 
 class FourierSeriesDrive(DriveCaller):
     type = 'fourier series'
@@ -3751,117 +3598,64 @@ class FourierSeriesDrive(DriveCaller):
                     )
         s = s + ',\n\t {}'.format(self.coefs)
         return s
+    
+class FrequencySweepDriveCaller(DriveCaller2):
+    """
+    this drive recursively calls two other drives that supply the angular velocity and the amplitude of the
+    oscillation
+    """
+    
+    initial_time: Union[float, MBVar]    
+    angular_velocity_drive: DriveCaller2    
+    amplitude_drive: DriveCaller2    
+    initial_value: Union[float, MBVar]    
+    final_time: Union[float, MBVar, Literal['forever']]    
+    final_value: Union[float, MBVar]
+    
+    @field_validator('initial_time', 'initial_value', 'final_value')
+    def validate_real_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: Field must be an MBVar of type real or a float'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'frequency sweep'
 
-class FrequencySweepDriveCaller(DriveCaller):
-    type = 'frequency sweep'
     def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n'
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
             )
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_time = kwargs['initial_time']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' FrequencySweepDriveCaller: <initial_time> not set, assuming 0.' + 
-                    '\n-------------------\n'
-                    )
-            self.initial_time = 0.
-            pass
-        try:
-            assert(isinstance(kwargs['angular_velocity_drive'], DriveCaller)), (
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <angular_velocity_drive> must be a DriveCaller' + 
-                    '\n-------------------\n'
+            kwargs['initial_time'] = 0.0
+            
+        # Check if initial_value wasn't explicitly provided
+        if 'initial_value' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_value> is not set, assuming 0.0.",
+                UserWarning
             )
-            self.angular_velocity_drive = kwargs['angular_velocity_drive']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <angular_velocity_drive> must be provided' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert(isinstance(kwargs['amplitude_drive'], DriveCaller)), (
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <amplitude_drive> must be a DriveCaller' + 
-                    '\n-------------------\n'
-            )
-            self.amplitude_drive = kwargs['amplitude_drive']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <amplitude_drive> must be provided' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <initial_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n'
-            )
-            self.initial_value = kwargs['initial_value']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' FrequencySweepDriveCaller: <initial_value> not provided, assuming 0.' + 
-                    '\n-------------------\n'
-            )
-            self.initial_value = 0.
-            pass
-        try:
-            assert isinstance(kwargs['final_time'], (Number, MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <final_time> must either be a number, '
-                    '\'forever\', or an MBVar' + 
-                    '\n-------------------\n'
-            )
-            self.final_time = kwargs['final_time']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <final_time> is not set' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['final_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <final_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n'
-            )
-            self.final_value = kwargs['final_value']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' FrequencySweepDriveCaller: <final_value> is not set.' + 
-                    '\n-------------------\n'
-            )
+            kwargs['initial_value'] = 0.0
+            
+        super().__init__(**kwargs)
+        
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}'.format(self.initial_time)
-        if self.angular_velocity_drive.idx < 0:
-            s = s + ',\n\t{}'.format(self.angular_velocity_drive)
+        s = f'{self.drive_header()}'
+        s += f', {self.initial_time}'
+        if hasattr(self.angular_velocity_drive, 'idx') and self.angular_velocity_drive.idx is not None and self.angular_velocity_drive.idx >= 0:
+            s += f',\n\treference, {self.angular_velocity_drive.idx}'
         else:
-            s = s + ',\n\treference, {}'.format(self.angular_velocity_drive.idx)
-        if self.amplitude_drive.idx < 0:
-            s = s + ',\n\t{}'.format(self.amplitude_drive)
+            s += f',\n\t{self.angular_velocity_drive}'
+        if hasattr(self.amplitude_drive, 'idx') and self.amplitude_drive.idx is not None and self.amplitude_drive.idx >= 0:
+            s += f',\n\treference, {self.amplitude_drive.idx}'
         else:
-            s = s + ',\n\treference, {}'.format(self.amplitude_drive.idx)
-        s = s + '\n{}, {}'.format(self.initial_value, self.final_time)
-        s = s + ', {}'.format(self.final_value)
+            s += f',\n\t{self.amplitude_drive}'
+        s += f'\n\t{self.initial_value}, {self.final_time}, {self.final_value}'
         return s
 
 class GiNaCDriveCaller(DriveCaller):
