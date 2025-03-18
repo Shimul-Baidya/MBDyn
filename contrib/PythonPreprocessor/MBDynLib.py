@@ -3522,7 +3522,7 @@ class FourierSeriesDriveCaller(DriveCaller2):
     number_of_cycles: Union[int, MBVar, Literal['one', 'forever']]    
     initial_value: Union[float, MBVar]
     
-    @field_validator('initial_time', 'angular_velocity', 'initial_value')
+    @field_validator('initial_time', 'angular_velocity', 'a_0', 'initial_value')
     def validate_real_mbvar(cls, v):
         if isinstance(v, MBVar) and 'real' not in v.var_type:
             raise TypeError(
@@ -3556,6 +3556,15 @@ class FourierSeriesDriveCaller(DriveCaller2):
                 f'(a_1, b_1, a_2, b_2, ..., a_n, b_n) for {number_of_terms} terms'
                 f'\n-------------------\n'
             )
+        
+        # Validate all coefficients are real numbers or MBVars of type real
+        for i, coef in enumerate(v):
+            if isinstance(coef, MBVar) and 'real' not in coef.var_type:
+                raise TypeError(
+                    f'\n-------------------\nERROR: '
+                    f'{cls.__name__}: Coefficient at index {i} must be an MBVar of type real or a float'
+                    f'\n-------------------\n'
+                )
         return v
     
     def drive_type(self) -> str:

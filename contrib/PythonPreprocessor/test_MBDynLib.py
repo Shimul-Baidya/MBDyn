@@ -3174,6 +3174,30 @@ class TestFourierSeriesDriveCaller(unittest.TestCase):
                 initial_value=self.initial_value
             )
 
+        # Test invalid type for number_of_cycles
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=2.5,  # Invalid type
+                initial_value=self.initial_value
+            )
+
+        # Test invalid type for a_0
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0='invalid',  # Invalid type
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_coefficients_validation(self):
         """Test validation of coefficients list length"""
@@ -3212,6 +3236,97 @@ class TestFourierSeriesDriveCaller(unittest.TestCase):
             initial_value=self.initial_value
         )
         self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+
+    def test_fourier_series_with_mbvar_coefficients(self):
+        """Test validation of coefficients when using MBVars"""
+        # Create MBVars for coefficients
+        if 'coef_a1' not in l.declared_MBVars:
+            coef_a1 = l.MBVar(name="coef_a1", var_type="real", expression=0.75)
+        else:
+            coef_a1 = l.declared_MBVars['coef_a1']
+            
+        if 'coef_b1' not in l.declared_MBVars:
+            coef_b1 = l.MBVar(name="coef_b1", var_type="real", expression=0.25)
+        else:
+            coef_b1 = l.declared_MBVars['coef_b1']
+        
+        # Test with MBVars in the coefficients list
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=1,
+            a_0=self.a_0,
+            coefficients=[coef_a1, coef_b1],  # Using MBVars as coefficients
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        self.assertEqual(drive.coefficients[0], coef_a1)
+        self.assertEqual(drive.coefficients[1], coef_b1)
+        
+        # Test with mixed regular values and MBVars
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=2,
+            a_0=self.a_0,
+            coefficients=[coef_a1, coef_b1, 0.3, 0.2],  # Mix of MBVars and floats
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        
+    def test_fourier_series_with_mbvar_number_of_terms(self):
+        """Test validation of coefficients when number_of_terms is an MBVar"""
+        # Create MBVar for number_of_terms
+        if 'terms_var' not in l.declared_MBVars:
+            terms_var = l.MBVar(name="terms_var", var_type="integer", expression=2)
+        else:
+            terms_var = l.declared_MBVars['terms_var']
+        
+        # Test with correct number of coefficients for MBVar terms
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=terms_var,
+            a_0=self.a_0,
+            coefficients=[0.5, 0.6, 0.3, 0.2],  # 4 coefficients for 2 terms
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        
+        # Test with incorrect number of coefficients
+        with self.assertRaises(ValueError):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=terms_var,
+                a_0=self.a_0,
+                coefficients=[0.5, 0.6, 0.3],  # Only 3 coefficients instead of 4
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+
+    def test_fourier_series_with_invalid_mbvar_coefficients(self):
+        """Test validation fails with invalid MBVar types in coefficients"""
+        # Create invalid MBVar (string type instead of real)
+        if 'invalid_coef' not in l.declared_MBVars:
+            invalid_coef = l.MBVar(name="invalid_coef", var_type="integer", expression=10)
+        else:
+            invalid_coef = l.declared_MBVars['invalid_coef']
+        
+        # Test with invalid MBVar type in coefficients
+        with self.assertRaises(TypeError):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=[0.5, 0.6, invalid_coef, 0.2],  # Invalid MBVar type
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
 
 
 class TestLinearElastic(unittest.TestCase):
