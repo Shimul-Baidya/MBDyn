@@ -2805,6 +2805,415 @@ class TestFrequencySweepDriveCaller(unittest.TestCase):
             )
         self.assertIn("Field must be an MBVar of type real or a float", str(context.exception))
 
+class TestFourierSeriesDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Reset warnings to make sure we capture them in tests
+        warnings.simplefilter("always")
+        
+        # Create standard values for tests
+        self.initial_time = 0.0
+        self.angular_velocity = 2.0
+        self.number_of_terms = 2
+        self.a_0 = 1.0
+        self.coefficients = [0.5, 0.6, 0.3, 0.2]  # a_1, b_1, a_2, b_2
+        self.number_of_cycles = "forever"
+        self.initial_value = 0.0
+        
+    def test_fourier_series_drive_caller_creation_valid(self):
+        """Test that FourierSeriesDriveCaller works with valid input"""
+        # Test with all parameters specified
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        self.assertEqual(drive.initial_time, self.initial_time)
+        self.assertEqual(drive.angular_velocity, self.angular_velocity)
+        self.assertEqual(drive.number_of_terms, self.number_of_terms)
+        self.assertEqual(drive.a_0, self.a_0)
+        self.assertEqual(drive.coefficients, self.coefficients)
+        self.assertEqual(drive.number_of_cycles, self.number_of_cycles)
+        self.assertEqual(drive.initial_value, self.initial_value)
+        
+        # Test with idx
+        drive = l.FourierSeriesDriveCaller(
+            idx=5,
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        self.assertEqual(drive.idx, 5)
+        
+        # Test with "one" for number_of_cycles
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles="one",
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        self.assertEqual(drive.number_of_cycles, "one")
+        
+        # Test with integer for number_of_cycles
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles=3,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        self.assertEqual(drive.number_of_cycles, 3)
+
+    def test_fourier_series_drive_caller_with_mbvars(self):
+        """Test with MBVar inputs"""
+        # Create MBVars for testing
+        if 'init_time' not in l.declared_MBVars:
+            init_time_var = l.MBVar(name="init_time", var_type="real", expression=1.5)
+        else:
+            init_time_var = l.declared_MBVars['init_time']
+        if 'ang_vel' not in l.declared_MBVars:
+            ang_vel_var = l.MBVar(name="ang_vel", var_type="real", expression=3.14)
+        else:
+            ang_vel_var = l.declared_MBVars['ang_vel']
+        if 'terms' not in l.declared_MBVars:
+            terms_var = l.MBVar(name="terms", var_type="integer", expression=2)
+        else:
+            terms_var = l.declared_MBVars['terms']
+        if 'a0' not in l.declared_MBVars:
+            a0_var = l.MBVar(name="a0", var_type="real", expression=2.0)
+        else:
+            a0_var = l.declared_MBVars['a0']
+        if 'cycles' not in l.declared_MBVars:
+            cycles_var = l.MBVar(name="cycles", var_type="integer", expression=4)
+        else:
+            cycles_var = l.declared_MBVars['cycles']
+        if 'init_val' not in l.declared_MBVars:
+            init_val_var = l.MBVar(name="init_val", var_type="real", expression=0.5)
+        else:
+            init_val_var = l.declared_MBVars['init_val']
+        
+        # Test with MBVar inputs
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=init_time_var,
+            angular_velocity=ang_vel_var,
+            number_of_terms=terms_var,
+            a_0=a0_var,
+            coefficients=self.coefficients,
+            number_of_cycles=cycles_var,
+            initial_value=init_val_var
+        )
+        
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        self.assertEqual(drive.initial_time, init_time_var)
+        self.assertEqual(drive.angular_velocity, ang_vel_var)
+        self.assertEqual(drive.number_of_terms, terms_var)
+        self.assertEqual(drive.a_0, a0_var)
+        self.assertEqual(drive.coefficients, self.coefficients)
+        self.assertEqual(drive.number_of_cycles, cycles_var)
+        self.assertEqual(drive.initial_value, init_val_var)
+
+    def test_fourier_series_drive_caller_default_warning(self):
+        """Test warnings for default parameters"""
+        # Test warning for default initial_time
+        with warnings.catch_warnings(record=True) as w:
+            drive = l.FourierSeriesDriveCaller(
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,#
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(drive.initial_time, 0.0)
+        
+        # Test warning for default initial_value
+        with warnings.catch_warnings(record=True) as w:
+            drive = l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles
+            )
+            self.assertTrue(any("<initial_value> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(drive.initial_value, 0.0)
+        
+        # Test both warnings together
+        with warnings.catch_warnings(record=True) as w:
+            drive = l.FourierSeriesDriveCaller(
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles
+            )
+            warning_messages = [str(warning.message) for warning in w]
+            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in msg for msg in warning_messages))
+            self.assertTrue(any("<initial_value> is not set, assuming 0.0." in msg for msg in warning_messages))
+            self.assertEqual(drive.initial_time, 0.0)
+            self.assertEqual(drive.initial_value, 0.0)
+
+    def test_fourier_series_drive_caller_str_representation(self):
+        """Test string representation"""
+        # Test string representation without idx
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        expected_str = (
+            "fourier series, 0.0, 2.0, 2,\n"
+            "\t1.0,\n"
+            "\t0.5, 0.6,\n"
+            "\t0.3, 0.2,\n"
+            "\tforever, 0.0"
+        )
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test string representation with idx
+        drive = l.FourierSeriesDriveCaller(
+            idx=5,
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        expected_str = (
+            "drive caller: 5, fourier series, 0.0, 2.0, 2,\n"
+            "\t1.0,\n"
+            "\t0.5, 0.6,\n"
+            "\t0.3, 0.2,\n"
+            "\tforever, 0.0"
+        )
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test string representation with "one" for number_of_cycles
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles="one",
+            initial_value=self.initial_value
+        )
+        expected_str = (
+            "fourier series, 0.0, 2.0, 2,\n"
+            "\t1.0,\n"
+            "\t0.5, 0.6,\n"
+            "\t0.3, 0.2,\n"
+            "\tone, 0.0"
+        )
+        self.assertEqual(str(drive), expected_str)
+
+    def test_fourier_series_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=self.number_of_terms,
+            a_0=self.a_0,
+            coefficients=self.coefficients,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertEqual(drive.drive_type(), "fourier series")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_fourier_series_drive_caller_missing_required_field(self):
+        """Test creating a FourierSeriesDriveCaller instance missing a required field"""
+        # Missing angular_velocity
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Missing number_of_terms
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Missing a_0
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Missing coefficients
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Missing number_of_cycles
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                initial_value=self.initial_value
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_fourier_series_drive_caller_invalid_types(self):
+        """Test with invalid field types"""
+        # Test invalid type for angular_velocity
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity="not a number",  # Invalid type
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Test invalid type for number_of_terms
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms="not an integer",  # Invalid type
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Test invalid type for coefficients
+        with self.assertRaises(Exception):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients="not a list",  # Invalid type
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Test invalid MBVar type for initial_time (should be real)
+        with self.assertRaises(TypeError):
+            if 'invalid_string_mbvar' not in l.declared_MBVars:
+                invalid_string_mbvar = l.MBVar(name="invalid_string_mbvar", var_type="string", expression="string value")
+            else:
+                invalid_string_mbvar = l.declared_MBVars['invalid_string_mbvar']
+            l.FourierSeriesDriveCaller(
+                initial_time=invalid_string_mbvar,  # Invalid MBVar type
+                angular_velocity=self.angular_velocity,
+                number_of_terms=self.number_of_terms,
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Test invalid MBVar type for number_of_terms (should be integer)
+        with self.assertRaises(TypeError):
+            if 'invalid_real_mbvar' not in l.declared_MBVars:
+                invalid_real_mbvar = l.MBVar(name="invalid_real_mbvar", var_type="real", expression=2.5)
+            else:
+                invalid_real_mbvar = l.declared_MBVars['invalid_real_mbvar']
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=invalid_real_mbvar,  # Invalid MBVar type
+                a_0=self.a_0,
+                coefficients=self.coefficients,
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_coefficients_validation(self):
+        """Test validation of coefficients list length"""
+        # Test with incorrect number of coefficients
+        with self.assertRaises(ValueError):
+            l.FourierSeriesDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                number_of_terms=2,
+                a_0=self.a_0,
+                coefficients=[0.5, 0.6, 0.3],  # Should be 4 elements for 2 terms
+                number_of_cycles=self.number_of_cycles,
+                initial_value=self.initial_value
+            )
+            
+        # Test with correct number of coefficients for different number_of_terms
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=1,
+            a_0=self.a_0,
+            coefficients=[0.5, 0.6],  # Correct for 1 term (a_1, b_1)
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+        
+        # Test with 3 terms
+        drive = l.FourierSeriesDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            number_of_terms=3,
+            a_0=self.a_0,
+            coefficients=[0.5, 0.6, 0.3, 0.2, 0.1, 0.05],  # 6 elements for 3 terms
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertIsInstance(drive, l.FourierSeriesDriveCaller)
+
+
 class TestLinearElastic(unittest.TestCase):
     def setUp(self):
         self.scalar_law = l.LinearElastic(law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, stiffness=1e9)

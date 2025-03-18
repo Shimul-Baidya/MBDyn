@@ -3506,97 +3506,94 @@ class FileDriveDrive(DriveCaller2):
     # TODO: needs FileDrive before
     pass
 
-class FourierSeriesDrive(DriveCaller):
-    type = 'fourier series'
+class FourierSeriesDriveCaller(DriveCaller2):
+    """
+    This drive corresponds to a Fourier series of fundamental angular velocity ω, truncated after n terms,
+    over a given number of cycles P and starting at a given initial time
+
+    f(t) = a_0/2 + ∑(a_k*cos(kω(t-t0)) + b_k*sin(kω(t-t0))) for k=1 to n
+    """
+    
+    initial_time: Union[float, MBVar]    
+    angular_velocity: Union[float, MBVar]    
+    number_of_terms: Union[int, MBVar]    
+    a_0: Union[float, MBVar]
+    coefficients: List[Union[float, MBVar]]    
+    number_of_cycles: Union[int, MBVar, Literal['one', 'forever']]    
+    initial_value: Union[float, MBVar]
+    
+    @field_validator('initial_time', 'angular_velocity', 'initial_value')
+    def validate_real_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: Field must be an MBVar of type real or a float'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    @field_validator('number_of_terms')
+    def validate_integer_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'integer' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: number_of_terms must be an MBVar of type integer or an int'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    @field_validator('coefficients')
+    def validate_coefficients(cls, v, info: FieldValidationInfo):
+        number_of_terms = info.data.get('number_of_terms')
+        if isinstance(number_of_terms, MBVar):
+            expected_length = 2 * number_of_terms.expression
+        else:
+            expected_length = 2 * number_of_terms
+        if len(v) != expected_length:
+            raise ValueError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: coefficients list should have {expected_length} elements '
+                f'(a_1, b_1, a_2, b_2, ..., a_n, b_n) for {number_of_terms} terms'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'fourier series'
+
     def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' FourierSeriesDrive: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            arg = 'initial_time'
-            assert isinstance(kwargs[arg], (MBVar, Number)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' a number or an MBVar' + 
-                    '\n-------------------\n')
-            if isinstance(kwargs[arg], MBVar) and ('real' not in kwargs[arg].var_type):
-                raise TypeError(
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' an MBVar of type real' + 
-                    '\n-------------------\n'
-                )
-            self.initial_time= kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'angular_velocity'
-            assert isinstance(kwargs[arg], (MBVar, Number)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' a number or an MBVar' + 
-                    '\n-------------------\n')
-            if isinstance(kwargs[arg], MBVar) and ('real' not in kwargs[arg].var_type):
-                raise TypeError(
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' an MBVar of type real' + 
-                    '\n-------------------\n'
-                )
-            self.angular_velocity = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'number_of_terms'
-            assert isinstance(kwargs[arg], (MBVar, Integral)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' a number or an MBVar' + 
-                    '\n-------------------\n')
-            if isinstance(kwargs[arg], MBVar) and ('integer' not in kwargs[arg].var_type):
-                raise TypeError(
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' an MBVar of type integer' + 
-                    '\n-------------------\n'
-                )
-            self.number_of_terms = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'number_of_cycles'
-            assert isinstance(kwargs[arg], (MBVar, Integral, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' a number or an MBVar' + 
-                    '\n-------------------\n')
-            if isinstance(kwargs[arg], MBVar) and kwargs[arg].var_type == 'string':
-                if kwargs[arg] not in ('one', 'forever'):
-                    raise ValueError(
-                        '\n-------------------\nERROR:' +
-                        ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                        ' either \'one\' or \'forever\', if of type string' + 
-                        '\n-------------------\n'
-                        )
-            self.number_of_cycles = kwargs[arg]
-        except KeyError:
-            pass
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0
+            
+        # Check if initial_value wasn't explicitly provided
+        if 'initial_value' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_value> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_value'] = 0.0
+            
+        super().__init__(**kwargs)
+        
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}, {}, {}'.format(
-                    self.initial_time, 
-                    self.angular_velocity,
-                    self.number_of_terms
-                    )
-        s = s + ',\n\t {}'.format(self.coefs)
+        s = f'{self.drive_header()}'
+        s += f', {self.initial_time}, {self.angular_velocity}, {self.number_of_terms}'
+        # Add a_0 term
+        s += f',\n\t{self.a_0}'     
+        if isinstance(self.number_of_terms, MBVar):
+            expected_length = 2 * self.number_of_terms.expression
+        else:
+            expected_length = 2 * self.number_of_terms   
+        for i in range(0, expected_length, 2):
+            if i+1 < expected_length:
+                # Add a_k, b_k pair
+                s += f',\n\t{self.coefficients[i]}, {self.coefficients[i+1]}'
+        s += f',\n\t{self.number_of_cycles}, {self.initial_value}'
         return s
     
 class FrequencySweepDriveCaller(DriveCaller2):
