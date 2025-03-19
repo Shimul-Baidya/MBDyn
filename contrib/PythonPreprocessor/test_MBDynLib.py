@@ -2493,318 +2493,6 @@ class TestExponentialDriveCaller(unittest.TestCase):
                 initial_value="invalid"
             )
 
-class TestFrequencySweepDriveCaller(unittest.TestCase):
-    def setUp(self):
-        """Set up test fixtures before each test method."""
-        # Create sample drive callers for testing
-        self.const_drive1 = l.ConstDriveCaller(const_value=2.0)
-        self.const_drive2 = l.ConstDriveCaller(const_value=3.0)
-        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=4.0)
-        
-        # Create MBVar objects for testing
-        if 'test_initial_time' not in l.declared_MBVars:
-            self.initial_time_var = l.MBVar(name='test_initial_time', var_type='real', expression=1.5)
-        else:
-            self.initial_time_var = l.declared_MBVars['test_initial_time']
-            
-        if 'test_final_value' not in l.declared_MBVars:
-            self.final_value_var = l.MBVar(name='test_final_value', var_type='real', expression=7.5)
-        else:
-            self.final_value_var = l.declared_MBVars['test_final_value']
-
-    def test_frequency_sweep_drive_caller_creation_valid(self):
-        """Test that FrequencySweepDriveCaller works with valid input"""
-        # Create with all required parameters (initial_time and initial_value are optional with defaults)
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            final_time=10.0,
-            final_value=5.0
-        )
-        self.assertIsInstance(freq_sweep_drive, l.FrequencySweepDriveCaller)
-        self.assertEqual(freq_sweep_drive.initial_time, 0.0)  # Default value
-        self.assertEqual(freq_sweep_drive.angular_velocity_drive, self.const_drive1)
-        self.assertEqual(freq_sweep_drive.amplitude_drive, self.const_drive2)
-        self.assertEqual(freq_sweep_drive.initial_value, 0.0)  # Default value
-        self.assertEqual(freq_sweep_drive.final_time, 10.0)
-        self.assertEqual(freq_sweep_drive.final_value, 5.0)
-        
-        # Create with explicit initial_time and initial_value
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            initial_time=2.0,
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            initial_value=1.0,
-            final_time=10.0,
-            final_value=5.0
-        )
-        self.assertEqual(freq_sweep_drive.initial_time, 2.0)
-        self.assertEqual(freq_sweep_drive.initial_value, 1.0)
-        
-        # Create with 'forever' for final_time
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            final_time='forever',
-            final_value=5.0
-        )
-        self.assertEqual(freq_sweep_drive.final_time, 'forever')
-        
-        # Create with specific idx
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            idx=10,
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            final_time=10.0,
-            final_value=5.0
-        )
-        self.assertEqual(freq_sweep_drive.idx, 10)
-        
-        # Create with drive callers that have idx
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            angular_velocity_drive=self.const_drive_with_idx,
-            amplitude_drive=self.const_drive2,
-            final_time=10.0,
-            final_value=5.0
-        )
-        self.assertEqual(freq_sweep_drive.angular_velocity_drive, self.const_drive_with_idx)
-
-    def test_frequency_sweep_drive_caller_with_mbvars(self):
-        """Test FrequencySweepDriveCaller with MBVar objects for parameters"""
-        # Create with MBVar for initial_time
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            initial_time=self.initial_time_var,
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            final_time=10.0,
-            final_value=5.0
-        )
-        self.assertEqual(freq_sweep_drive.initial_time, self.initial_time_var)
-        
-        # Create with MBVar for final_value
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            final_time=10.0,
-            final_value=self.final_value_var
-        )
-        self.assertEqual(freq_sweep_drive.final_value, self.final_value_var)
-
-    def test_frequency_sweep_drive_caller_default_warning(self):
-        """Test that a warning is issued when initial_time or initial_value isn't provided"""
-        with warnings.catch_warnings(record=True) as w:
-            # Cause all warnings to always be triggered
-            warnings.simplefilter("always")
-            
-            # Create a FrequencySweepDriveCaller without specifying initial_time or initial_value
-            freq_sweep_drive = l.FrequencySweepDriveCaller(
-                angular_velocity_drive=self.const_drive1,
-                amplitude_drive=self.const_drive2,
-                final_time=10.0,
-                final_value=5.0
-            )
-            
-            # Verify warnings were raised
-            self.assertEqual(len(w), 2)
-            warning_messages = [str(warning.message) for warning in w]
-            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in msg for msg in warning_messages))
-            self.assertTrue(any("<initial_value> is not set, assuming 0.0." in msg for msg in warning_messages))
-
-        # No warnings when initial_time and initial_value are explicitly provided
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            
-            freq_sweep_drive = l.FrequencySweepDriveCaller(
-                initial_time=2.0,
-                angular_velocity_drive=self.const_drive1,
-                amplitude_drive=self.const_drive2,
-                initial_value=1.0,
-                final_time=10.0,
-                final_value=5.0
-            )
-            
-            self.assertEqual(len(w), 0)  # No warnings
-
-    def test_frequency_sweep_drive_caller_str_representation(self):
-        """Test the string representation of FrequencySweepDriveCaller"""
-        # Test without idx
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            initial_time=2.0,
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            initial_value=1.0,
-            final_time=10.0,
-            final_value=5.0
-        )
-        expected_str = "frequency sweep, 2.0,\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, 10.0, 5.0"
-        self.assertEqual(str(freq_sweep_drive), expected_str)
-        
-        # Test with idx
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            idx=10,
-            initial_time=2.0,
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            initial_value=1.0,
-            final_time=10.0,
-            final_value=5.0
-        )
-        expected_str = "drive caller: 10, frequency sweep, 2.0,\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, 10.0, 5.0"
-        self.assertEqual(str(freq_sweep_drive), expected_str)
-        
-        # Test with drive callers that have idx
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            initial_time=2.0,
-            angular_velocity_drive=self.const_drive_with_idx,
-            amplitude_drive=self.const_drive2,
-            initial_value=1.0,
-            final_time=10.0,
-            final_value=5.0
-        )
-        expected_str = "frequency sweep, 2.0,\n\treference, 5,\n\tconst, 3.0\n\t1.0, 10.0, 5.0"
-        self.assertEqual(str(freq_sweep_drive), expected_str)
-        
-        # Test with MBVar parameters
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            initial_time=self.initial_time_var,
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            initial_value=1.0,
-            final_time=10.0,
-            final_value=self.final_value_var
-        )
-        expected_str = f"frequency sweep, {self.initial_time_var},\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, 10.0, {self.final_value_var}"
-        self.assertEqual(str(freq_sweep_drive), expected_str)
-        
-        # Test with 'forever'
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            initial_time=2.0,
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            initial_value=1.0,
-            final_time='forever',
-            final_value=5.0
-        )
-        expected_str = "frequency sweep, 2.0,\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, forever, 5.0"
-        self.assertEqual(str(freq_sweep_drive), expected_str)
-
-    def test_frequency_sweep_drive_caller_drive_type(self):
-        """Test the drive_type method of FrequencySweepDriveCaller"""
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            angular_velocity_drive=self.const_drive1,
-            amplitude_drive=self.const_drive2,
-            final_time=10.0,
-            final_value=5.0
-        )
-        self.assertEqual(freq_sweep_drive.drive_type(), 'frequency sweep')
-
-    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
-    def test_frequency_sweep_drive_caller_missing_required_field(self):
-        """Test creating a FrequencySweepDriveCaller instance missing a required field"""
-        # Missing angular_velocity_drive
-        with self.assertRaises(Exception):
-            l.FrequencySweepDriveCaller(
-                amplitude_drive=self.const_drive2,
-                final_time=10.0,
-                final_value=5.0
-            )
-        
-        # Missing amplitude_drive
-        with self.assertRaises(Exception):
-            l.FrequencySweepDriveCaller(
-                angular_velocity_drive=self.const_drive1,
-                final_time=10.0,
-                final_value=5.0
-            )
-        
-        # Missing final_time
-        with self.assertRaises(Exception):
-            l.FrequencySweepDriveCaller(
-                angular_velocity_drive=self.const_drive1,
-                amplitude_drive=self.const_drive2,
-                final_value=5.0
-            )
-        
-        # Missing final_value
-        with self.assertRaises(Exception):
-            l.FrequencySweepDriveCaller(
-                angular_velocity_drive=self.const_drive1,
-                amplitude_drive=self.const_drive2,
-                final_time=10.0,
-            )
-
-    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
-    def test_frequency_sweep_drive_caller_invalid_types(self):
-        """Test invalid types for fields"""
-        # Invalid type for initial_time
-        with self.assertRaises(Exception):
-            l.FrequencySweepDriveCaller(
-                initial_time="invalid",
-                angular_velocity_drive=self.const_drive1,
-                amplitude_drive=self.const_drive2,
-                final_time=10.0,
-                final_value=5.0
-            )
-        
-        # Invalid type for angular_velocity_drive
-        with self.assertRaises(Exception):
-            l.FrequencySweepDriveCaller(
-                angular_velocity_drive="not a drive",
-                amplitude_drive=self.const_drive2,
-                final_time=10.0,
-                final_value=5.0
-            )
-        
-        # Invalid type for final_time (should be float, MBVar, or 'forever')
-        with self.assertRaises(Exception):
-            l.FrequencySweepDriveCaller(
-                angular_velocity_drive=self.const_drive1,
-                amplitude_drive=self.const_drive2,
-                final_time="invalid",
-                final_value=5.0
-            )
-
-    def test_frequency_sweep_drive_caller_nested(self):
-        """Test nesting FrequencySweepDriveCaller with other drive callers"""
-        # Create array drives to use as angular_velocity_drive and amplitude_drive
-        array_drive1 = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive2])
-        array_drive2 = l.ArrayDriveCaller(drives=[self.const_drive2, self.const_drive_with_idx])
-        
-        # Use them in a FrequencySweepDriveCaller
-        freq_sweep_drive = l.FrequencySweepDriveCaller(
-            angular_velocity_drive=array_drive1,
-            amplitude_drive=array_drive2,
-            final_time=10.0,
-            final_value=5.0
-        )
-        
-        self.assertIsInstance(freq_sweep_drive, l.FrequencySweepDriveCaller)
-        self.assertEqual(freq_sweep_drive.angular_velocity_drive, array_drive1)
-        self.assertEqual(freq_sweep_drive.amplitude_drive, array_drive2)
-        
-        # Check string representation with nested drives
-        expected_str = "frequency sweep, 0.0,\n\tarray, 2,\n\tconst, 2.0,\n\tconst, 3.0,\n\tarray, 2,\n\tconst, 3.0,\n\treference, 5\n\t0.0, 10.0, 5.0"
-        self.assertEqual(str(freq_sweep_drive), expected_str)
-
-    def test_field_validator_for_real_mbvar(self):
-        """Test the field validator for real MBVar fields"""
-        # Create an MBVar with a non-real type
-        if 'test_non_real' not in l.declared_MBVars:
-            non_real_var = l.MBVar(name='test_non_real', var_type='integer', expression=5)
-        else:
-            non_real_var = l.declared_MBVars['test_non_real']
-        
-        # Test that using a non-real MBVar for initial_time raises an error
-        with self.assertRaises(TypeError) as context:
-            l.FrequencySweepDriveCaller(
-                initial_time=non_real_var,  # This should be a real MBVar or float
-                angular_velocity_drive=self.const_drive1,
-                amplitude_drive=self.const_drive2,
-                final_time=10.0,
-                final_value=5.0
-            )
-        self.assertIn("Field must be an MBVar of type real or a float", str(context.exception))
-
 class TestFourierSeriesDriveCaller(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
@@ -3327,6 +3015,1360 @@ class TestFourierSeriesDriveCaller(unittest.TestCase):
                 number_of_cycles=self.number_of_cycles,
                 initial_value=self.initial_value
             )
+
+class TestFrequencySweepDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create sample drive callers for testing
+        self.const_drive1 = l.ConstDriveCaller(const_value=2.0)
+        self.const_drive2 = l.ConstDriveCaller(const_value=3.0)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=4.0)
+        
+        # Create MBVar objects for testing
+        if 'test_initial_time' not in l.declared_MBVars:
+            self.initial_time_var = l.MBVar(name='test_initial_time', var_type='real', expression=1.5)
+        else:
+            self.initial_time_var = l.declared_MBVars['test_initial_time']
+            
+        if 'test_final_value' not in l.declared_MBVars:
+            self.final_value_var = l.MBVar(name='test_final_value', var_type='real', expression=7.5)
+        else:
+            self.final_value_var = l.declared_MBVars['test_final_value']
+
+    def test_frequency_sweep_drive_caller_creation_valid(self):
+        """Test that FrequencySweepDriveCaller works with valid input"""
+        # Create with all required parameters (initial_time and initial_value are optional with defaults)
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            final_time=10.0,
+            final_value=5.0
+        )
+        self.assertIsInstance(freq_sweep_drive, l.FrequencySweepDriveCaller)
+        self.assertEqual(freq_sweep_drive.initial_time, 0.0)  # Default value
+        self.assertEqual(freq_sweep_drive.angular_velocity_drive, self.const_drive1)
+        self.assertEqual(freq_sweep_drive.amplitude_drive, self.const_drive2)
+        self.assertEqual(freq_sweep_drive.initial_value, 0.0)  # Default value
+        self.assertEqual(freq_sweep_drive.final_time, 10.0)
+        self.assertEqual(freq_sweep_drive.final_value, 5.0)
+        
+        # Create with explicit initial_time and initial_value
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            initial_time=2.0,
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            initial_value=1.0,
+            final_time=10.0,
+            final_value=5.0
+        )
+        self.assertEqual(freq_sweep_drive.initial_time, 2.0)
+        self.assertEqual(freq_sweep_drive.initial_value, 1.0)
+        
+        # Create with 'forever' for final_time
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            final_time='forever',
+            final_value=5.0
+        )
+        self.assertEqual(freq_sweep_drive.final_time, 'forever')
+        
+        # Create with specific idx
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            idx=10,
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            final_time=10.0,
+            final_value=5.0
+        )
+        self.assertEqual(freq_sweep_drive.idx, 10)
+        
+        # Create with drive callers that have idx
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            angular_velocity_drive=self.const_drive_with_idx,
+            amplitude_drive=self.const_drive2,
+            final_time=10.0,
+            final_value=5.0
+        )
+        self.assertEqual(freq_sweep_drive.angular_velocity_drive, self.const_drive_with_idx)
+
+    def test_frequency_sweep_drive_caller_with_mbvars(self):
+        """Test FrequencySweepDriveCaller with MBVar objects for parameters"""
+        # Create with MBVar for initial_time
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            initial_time=self.initial_time_var,
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            final_time=10.0,
+            final_value=5.0
+        )
+        self.assertEqual(freq_sweep_drive.initial_time, self.initial_time_var)
+        
+        # Create with MBVar for final_value
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            final_time=10.0,
+            final_value=self.final_value_var
+        )
+        self.assertEqual(freq_sweep_drive.final_value, self.final_value_var)
+
+    def test_frequency_sweep_drive_caller_default_warning(self):
+        """Test that a warning is issued when initial_time or initial_value isn't provided"""
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered
+            warnings.simplefilter("always")
+            
+            # Create a FrequencySweepDriveCaller without specifying initial_time or initial_value
+            freq_sweep_drive = l.FrequencySweepDriveCaller(
+                angular_velocity_drive=self.const_drive1,
+                amplitude_drive=self.const_drive2,
+                final_time=10.0,
+                final_value=5.0
+            )
+            
+            # Verify warnings were raised
+            self.assertEqual(len(w), 2)
+            warning_messages = [str(warning.message) for warning in w]
+            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in msg for msg in warning_messages))
+            self.assertTrue(any("<initial_value> is not set, assuming 0.0." in msg for msg in warning_messages))
+
+        # No warnings when initial_time and initial_value are explicitly provided
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            
+            freq_sweep_drive = l.FrequencySweepDriveCaller(
+                initial_time=2.0,
+                angular_velocity_drive=self.const_drive1,
+                amplitude_drive=self.const_drive2,
+                initial_value=1.0,
+                final_time=10.0,
+                final_value=5.0
+            )
+            
+            self.assertEqual(len(w), 0)  # No warnings
+
+    def test_frequency_sweep_drive_caller_str_representation(self):
+        """Test the string representation of FrequencySweepDriveCaller"""
+        # Test without idx
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            initial_time=2.0,
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            initial_value=1.0,
+            final_time=10.0,
+            final_value=5.0
+        )
+        expected_str = "frequency sweep, 2.0,\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, 10.0, 5.0"
+        self.assertEqual(str(freq_sweep_drive), expected_str)
+        
+        # Test with idx
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            idx=10,
+            initial_time=2.0,
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            initial_value=1.0,
+            final_time=10.0,
+            final_value=5.0
+        )
+        expected_str = "drive caller: 10, frequency sweep, 2.0,\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, 10.0, 5.0"
+        self.assertEqual(str(freq_sweep_drive), expected_str)
+        
+        # Test with drive callers that have idx
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            initial_time=2.0,
+            angular_velocity_drive=self.const_drive_with_idx,
+            amplitude_drive=self.const_drive2,
+            initial_value=1.0,
+            final_time=10.0,
+            final_value=5.0
+        )
+        expected_str = "frequency sweep, 2.0,\n\treference, 5,\n\tconst, 3.0\n\t1.0, 10.0, 5.0"
+        self.assertEqual(str(freq_sweep_drive), expected_str)
+        
+        # Test with MBVar parameters
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            initial_time=self.initial_time_var,
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            initial_value=1.0,
+            final_time=10.0,
+            final_value=self.final_value_var
+        )
+        expected_str = f"frequency sweep, {self.initial_time_var},\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, 10.0, {self.final_value_var}"
+        self.assertEqual(str(freq_sweep_drive), expected_str)
+        
+        # Test with 'forever'
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            initial_time=2.0,
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            initial_value=1.0,
+            final_time='forever',
+            final_value=5.0
+        )
+        expected_str = "frequency sweep, 2.0,\n\tconst, 2.0,\n\tconst, 3.0\n\t1.0, forever, 5.0"
+        self.assertEqual(str(freq_sweep_drive), expected_str)
+
+    def test_frequency_sweep_drive_caller_drive_type(self):
+        """Test the drive_type method of FrequencySweepDriveCaller"""
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            angular_velocity_drive=self.const_drive1,
+            amplitude_drive=self.const_drive2,
+            final_time=10.0,
+            final_value=5.0
+        )
+        self.assertEqual(freq_sweep_drive.drive_type(), 'frequency sweep')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_frequency_sweep_drive_caller_missing_required_field(self):
+        """Test creating a FrequencySweepDriveCaller instance missing a required field"""
+        # Missing angular_velocity_drive
+        with self.assertRaises(Exception):
+            l.FrequencySweepDriveCaller(
+                amplitude_drive=self.const_drive2,
+                final_time=10.0,
+                final_value=5.0
+            )
+        
+        # Missing amplitude_drive
+        with self.assertRaises(Exception):
+            l.FrequencySweepDriveCaller(
+                angular_velocity_drive=self.const_drive1,
+                final_time=10.0,
+                final_value=5.0
+            )
+        
+        # Missing final_time
+        with self.assertRaises(Exception):
+            l.FrequencySweepDriveCaller(
+                angular_velocity_drive=self.const_drive1,
+                amplitude_drive=self.const_drive2,
+                final_value=5.0
+            )
+        
+        # Missing final_value
+        with self.assertRaises(Exception):
+            l.FrequencySweepDriveCaller(
+                angular_velocity_drive=self.const_drive1,
+                amplitude_drive=self.const_drive2,
+                final_time=10.0,
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_frequency_sweep_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for initial_time
+        with self.assertRaises(Exception):
+            l.FrequencySweepDriveCaller(
+                initial_time="invalid",
+                angular_velocity_drive=self.const_drive1,
+                amplitude_drive=self.const_drive2,
+                final_time=10.0,
+                final_value=5.0
+            )
+        
+        # Invalid type for angular_velocity_drive
+        with self.assertRaises(Exception):
+            l.FrequencySweepDriveCaller(
+                angular_velocity_drive="not a drive",
+                amplitude_drive=self.const_drive2,
+                final_time=10.0,
+                final_value=5.0
+            )
+        
+        # Invalid type for final_time (should be float, MBVar, or 'forever')
+        with self.assertRaises(Exception):
+            l.FrequencySweepDriveCaller(
+                angular_velocity_drive=self.const_drive1,
+                amplitude_drive=self.const_drive2,
+                final_time="invalid",
+                final_value=5.0
+            )
+
+    def test_frequency_sweep_drive_caller_nested(self):
+        """Test nesting FrequencySweepDriveCaller with other drive callers"""
+        # Create array drives to use as angular_velocity_drive and amplitude_drive
+        array_drive1 = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive2])
+        array_drive2 = l.ArrayDriveCaller(drives=[self.const_drive2, self.const_drive_with_idx])
+        
+        # Use them in a FrequencySweepDriveCaller
+        freq_sweep_drive = l.FrequencySweepDriveCaller(
+            angular_velocity_drive=array_drive1,
+            amplitude_drive=array_drive2,
+            final_time=10.0,
+            final_value=5.0
+        )
+        
+        self.assertIsInstance(freq_sweep_drive, l.FrequencySweepDriveCaller)
+        self.assertEqual(freq_sweep_drive.angular_velocity_drive, array_drive1)
+        self.assertEqual(freq_sweep_drive.amplitude_drive, array_drive2)
+        
+        # Check string representation with nested drives
+        expected_str = "frequency sweep, 0.0,\n\tarray, 2,\n\tconst, 2.0,\n\tconst, 3.0,\n\tarray, 2,\n\tconst, 3.0,\n\treference, 5\n\t0.0, 10.0, 5.0"
+        self.assertEqual(str(freq_sweep_drive), expected_str)
+
+    def test_field_validator_for_real_mbvar(self):
+        """Test the field validator for real MBVar fields"""
+        # Create an MBVar with a non-real type
+        if 'test_non_real' not in l.declared_MBVars:
+            non_real_var = l.MBVar(name='test_non_real', var_type='integer', expression=5)
+        else:
+            non_real_var = l.declared_MBVars['test_non_real']
+        
+        # Test that using a non-real MBVar for initial_time raises an error
+        with self.assertRaises(TypeError) as context:
+            l.FrequencySweepDriveCaller(
+                initial_time=non_real_var,  # This should be a real MBVar or float
+                angular_velocity_drive=self.const_drive1,
+                amplitude_drive=self.const_drive2,
+                final_time=10.0,
+                final_value=5.0
+            )
+        self.assertIn("Field must be an MBVar of type real or a float", str(context.exception))
+
+class TestGiNaCDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Reset warnings to make sure we capture them in tests
+        warnings.resetwarnings()
+        
+        # Create sample expressions for testing
+        self.expression_str = "x^2 + sin(x)"
+        self.symbol_str = "x"
+        
+        # Create MBVars for testing
+        if pydantic is not None:  # Only create if validation is available
+            if 'expr_var' not in l.declared_MBVars:
+                self.expr_var=l.MBVar("expr_var", "string", "x^2 + 2*x + 1")
+            else:
+                self.expr_var=l.declared_MBVars['expr_var'] = l.MBVar("expr_var", "string", "x^2 + 2*x + 1")
+            if 'sym_var' not in l.declared_MBVars:
+                self.sym_var=l.MBVar("sym_var", "string", "x")
+            else:
+                self.sym_var=l.declared_MBVars['sym_var'] = l.MBVar("sym_var", "string", "x")
+
+    def test_ginac_drive_caller_creation_valid(self):
+        """Test that GiNaCDriveCaller works with valid input"""
+        # Create with just expression (string)
+        ginac_drive = l.GiNaCDriveCaller(expression=self.expression_str)
+        self.assertIsInstance(ginac_drive, l.GiNaCDriveCaller)
+        self.assertEqual(ginac_drive.expression, self.expression_str)
+        self.assertIsNone(ginac_drive.symbol)
+        
+        # Create with expression and symbol (both strings)
+        ginac_drive = l.GiNaCDriveCaller(expression=self.expression_str, symbol=self.symbol_str)
+        self.assertIsInstance(ginac_drive, l.GiNaCDriveCaller)
+        self.assertEqual(ginac_drive.expression, self.expression_str)
+        self.assertEqual(ginac_drive.symbol, self.symbol_str)
+        
+        # Create with specific idx
+        ginac_drive = l.GiNaCDriveCaller(idx=10, expression=self.expression_str)
+        self.assertIsInstance(ginac_drive, l.GiNaCDriveCaller)
+        self.assertEqual(ginac_drive.idx, 10)
+        self.assertEqual(ginac_drive.expression, self.expression_str)
+        
+        if pydantic is not None:  # Only test with MBVars if validation is available
+            # Create with expression as MBVar
+            ginac_drive = l.GiNaCDriveCaller(expression=self.expr_var)
+            self.assertIsInstance(ginac_drive, l.GiNaCDriveCaller)
+            self.assertEqual(ginac_drive.expression, self.expr_var)
+            
+            # Create with symbol as MBVar
+            ginac_drive = l.GiNaCDriveCaller(expression=self.expression_str, symbol=self.sym_var)
+            self.assertIsInstance(ginac_drive, l.GiNaCDriveCaller)
+            self.assertEqual(ginac_drive.symbol, self.sym_var)
+            
+            # Create with both expression and symbol as MBVars
+            ginac_drive = l.GiNaCDriveCaller(expression=self.expr_var, symbol=self.sym_var)
+            self.assertIsInstance(ginac_drive, l.GiNaCDriveCaller)
+            self.assertEqual(ginac_drive.expression, self.expr_var)
+            self.assertEqual(ginac_drive.symbol, self.sym_var)
+
+    def test_ginac_drive_caller_str_representation(self):
+        """Test the string representation of GiNaCDriveCaller"""
+        # Test without idx or symbol
+        ginac_drive = l.GiNaCDriveCaller(expression=self.expression_str)
+        expected_str = f'ginac, "{self.expression_str}"'
+        self.assertEqual(str(ginac_drive), expected_str)
+        
+        # Test with idx but no symbol
+        ginac_drive = l.GiNaCDriveCaller(idx=10, expression=self.expression_str)
+        expected_str = f'drive caller: 10, ginac, "{self.expression_str}"'
+        self.assertEqual(str(ginac_drive), expected_str)
+        
+        # Test with symbol but no idx
+        ginac_drive = l.GiNaCDriveCaller(expression=self.expression_str, symbol=self.symbol_str)
+        expected_str = f'ginac, symbol, "{self.symbol_str}", "{self.expression_str}"'
+        self.assertEqual(str(ginac_drive), expected_str)
+        
+        # Test with both idx and symbol
+        ginac_drive = l.GiNaCDriveCaller(idx=10, expression=self.expression_str, symbol=self.symbol_str)
+        expected_str = f'drive caller: 10, ginac, symbol, "{self.symbol_str}", "{self.expression_str}"'
+        self.assertEqual(str(ginac_drive), expected_str)
+        
+        if pydantic is not None:  # Only test with MBVars if validation is available
+            # Test with expression as MBVar
+            ginac_drive = l.GiNaCDriveCaller(expression=self.expr_var)
+            expected_str = f'ginac, {self.expr_var}'
+            self.assertEqual(str(ginac_drive), expected_str)
+            
+            # Test with symbol as MBVar
+            ginac_drive = l.GiNaCDriveCaller(expression=self.expression_str, symbol=self.sym_var)
+            expected_str = f'ginac, symbol, {self.sym_var}, "{self.expression_str}"'
+            self.assertEqual(str(ginac_drive), expected_str)
+            
+            # Test with both expression and symbol as MBVars
+            ginac_drive = l.GiNaCDriveCaller(expression=self.expr_var, symbol=self.sym_var)
+            expected_str = f'ginac, symbol, {self.sym_var}, {self.expr_var}'
+            self.assertEqual(str(ginac_drive), expected_str)
+
+    def test_ginac_drive_caller_drive_type(self):
+        """Test the drive_type method returns the correct string"""
+        ginac_drive = l.GiNaCDriveCaller(expression=self.expression_str)
+        self.assertEqual(ginac_drive.drive_type(), "ginac")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_ginac_drive_caller_missing_required_field(self):
+        """Test creating a GiNaCDriveCaller instance missing a required field"""
+        # Test missing expression
+        with self.assertRaises(Exception):
+            l.GiNaCDriveCaller()  # Missing expression field
+        
+        # Test with only idx (missing expression)
+        with self.assertRaises(Exception):
+            l.GiNaCDriveCaller(idx=10)  # Missing expression field
+        
+        # Test with only symbol (missing expression)
+        with self.assertRaises(Exception):
+            l.GiNaCDriveCaller(symbol=self.symbol_str)  # Missing expression field
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_ginac_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Test invalid type for expression (not string or string MBVar)
+        with self.assertRaises(TypeError):
+            if 'invalid_expr' not in l.declared_MBVars:
+                invalid_expr = l.MBVar("invalid_expr", "integer", 42)
+            else:
+                invalid_expr = l.declared_MBVars['invalid_expr']
+            l.GiNaCDriveCaller(expression=invalid_expr)  # Should be string MBVar
+        
+        with self.assertRaises(Exception):
+            l.GiNaCDriveCaller(expression=42)  # Should be string
+        
+        # Test invalid type for symbol (not string or string MBVar)
+        with self.assertRaises(TypeError):
+            if 'invalid_sym' not in l.declared_MBVars:
+                invalid_sym = l.MBVar("invalid_sym", "integer", 42)
+            else:
+                invalid_sym = l.declared_MBVars['invalid_sym']
+            l.GiNaCDriveCaller(expression=self.expression_str, symbol=invalid_sym)  # Should be string MBVar
+        
+        with self.assertRaises(Exception):
+            l.GiNaCDriveCaller(expression=self.expression_str, symbol=42)  # Should be string
+
+    def test_ginac_drive_caller_complex_expressions(self):
+        """Test with more complex mathematical expressions"""
+        # Test complex expression
+        complex_expr = "sin(x)^2 + cos(x)^2 + tan(x/2) + sqrt(abs(x))"
+        ginac_drive = l.GiNaCDriveCaller(expression=complex_expr)
+        self.assertEqual(ginac_drive.expression, complex_expr)
+        expected_str = f'ginac, "{complex_expr}"'
+        self.assertEqual(str(ginac_drive), expected_str)
+        
+        # Test expression with different variable
+        ginac_drive = l.GiNaCDriveCaller(expression="a*t^2 + b*t + c", symbol="t")
+        expected_str = 'ginac, symbol, "t", "a*t^2 + b*t + c"'
+        self.assertEqual(str(ginac_drive), expected_str)
+
+class TestLinearDriveCaller(unittest.TestCase):
+    def setUp(self):
+        # Setup common values for testing
+        self.const_coef = 2.5
+        self.slope_coef = 1.5
+
+        # Create MBVar objects
+        if 'const_coef_var' not in l.declared_MBVars:
+            self.const_coef_var = l.MBVar(name='const_coef_var', var_type='real', expression=3.0)
+        else:
+            self.const_coef_var = l.declared_MBVars['const_coef_var']
+            
+        if 'slope_coef_var' not in l.declared_MBVars:
+            self.slope_coef_var = l.MBVar(name='slope_coef_var', var_type='real', expression=2.0)
+        else:
+            self.slope_coef_var = l.declared_MBVars['slope_coef_var']
+    
+    def test_linear_drive_caller_creation_valid(self):
+        """Test creating a LinearDriveCaller with valid parameters"""
+        # Basic creation with all parameters
+        drive = l.LinearDriveCaller(
+            const_coef=self.const_coef,
+            slope_coef=self.slope_coef
+        )
+        
+        # Verify properties are set correctly
+        self.assertEqual(drive.const_coef, self.const_coef)
+        self.assertEqual(drive.slope_coef, self.slope_coef)
+        self.assertEqual(drive.drive_type(), "linear")
+        
+        # Test with idx parameter
+        drive = l.LinearDriveCaller(
+            const_coef=self.const_coef,
+            slope_coef=self.slope_coef,
+            idx=5
+        )
+        
+        self.assertEqual(drive.idx, 5)
+        
+    def test_linear_drive_caller_with_mbvars(self):
+        """Test creating a LinearDriveCaller with MBVar objects"""        
+        # Create with MBVar objects
+        drive = l.LinearDriveCaller(
+            const_coef=self.const_coef_var,
+            slope_coef=self.slope_coef_var
+        )
+        
+        # Check that MBVar references are stored correctly
+        self.assertEqual(drive.const_coef, self.const_coef_var)
+        self.assertEqual(drive.slope_coef, self.slope_coef_var)
+        
+        # Create with mixed types (MBVar and float)
+        drive = l.LinearDriveCaller(
+            const_coef=self.const_coef_var,
+            slope_coef=self.slope_coef
+        )
+        
+        self.assertEqual(drive.const_coef, self.const_coef_var)
+        self.assertEqual(drive.slope_coef, self.slope_coef)
+        
+    def test_linear_drive_caller_str_representation(self):
+        """Test the string representation of LinearDriveCaller"""
+        # Test without idx
+        drive = l.LinearDriveCaller(
+            const_coef=self.const_coef,
+            slope_coef=self.slope_coef
+        )
+        
+        expected_str = f"linear, {self.const_coef}, {self.slope_coef}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with idx
+        drive = l.LinearDriveCaller(
+            const_coef=self.const_coef,
+            slope_coef=self.slope_coef,
+            idx=5
+        )
+        
+        expected_str = f"drive caller: 5, linear, {self.const_coef}, {self.slope_coef}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with MBVars        
+        drive = l.LinearDriveCaller(
+            const_coef=self.const_coef_var,
+            slope_coef=self.slope_coef_var
+        )
+        
+        expected_str = f"linear, {self.const_coef_var}, {self.slope_coef_var}"
+        self.assertEqual(str(drive), expected_str)
+        
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_drive_caller_missing_required_field(self):
+        """Test validation fails when required fields are missing"""
+        # Missing const_coef
+        with self.assertRaises(Exception):
+            l.LinearDriveCaller(
+                slope_coef=self.slope_coef
+            )
+        
+        # Missing slope_coef
+        with self.assertRaises(Exception):
+            l.LinearDriveCaller(
+                const_coef=self.const_coef
+            )
+            
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_drive_caller_invalid_types(self):
+        """Test validation fails with invalid types"""
+        # const_coef as string
+        with self.assertRaises(ValueError):
+            l.LinearDriveCaller(
+                const_coef="invalid",
+                slope_coef=self.slope_coef
+            )
+        
+        # slope_coef as string
+        with self.assertRaises(ValueError):
+            l.LinearDriveCaller(
+                const_coef=self.const_coef,
+                slope_coef="invalid"
+            )
+        
+        # Create an MBVar with a non-real type
+        if 'non_real_var' not in l.declared_MBVars:
+            non_real_var = l.MBVar(name='non_real_var', var_type='integer', expression=5)
+        else:
+            non_real_var = l.declared_MBVars['non_real_var']
+        
+        # Test with non-real MBVar for const_coef
+        with self.assertRaises(TypeError) as context:
+            l.LinearDriveCaller(
+                const_coef=non_real_var,
+                slope_coef=self.slope_coef
+            )
+        self.assertIn("coefficients must be real numbers or MBVars of type real", str(context.exception))
+        
+        # Test with non-real MBVar for slope_coef
+        with self.assertRaises(TypeError) as context:
+            l.LinearDriveCaller(
+                const_coef=self.const_coef,
+                slope_coef=non_real_var
+            )
+        self.assertIn("coefficients must be real numbers or MBVars of type real", str(context.exception))
+        
+    def test_linear_drive_caller_in_other_drives(self):
+        """Test using LinearDriveCaller as input to other drive callers"""
+        # Create a LinearDriveCaller
+        linear_drive = l.LinearDriveCaller(
+            const_coef=self.const_coef,
+            slope_coef=self.slope_coef
+        )
+        
+        # Use it in a MultDriveCaller
+        const_drive = l.ConstDriveCaller(const_value=3.0)
+        mult_drive = l.MultDriveCaller(
+            drive_1=linear_drive,
+            drive_2=const_drive
+        )
+        
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.drive_1, linear_drive)
+        self.assertEqual(mult_drive.drive_2, const_drive)
+        
+        # Check string representation
+        expected_str = f"mult,\n\tlinear, {self.const_coef}, {self.slope_coef},\n\tconst, 3.0"
+        self.assertEqual(str(mult_drive), expected_str)
+
+class TestMeterDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Reset warnings to make sure we capture them in tests
+        warnings.resetwarnings()
+        # Setup common values for testing
+        self.initial_time = 1.0
+        self.final_time = 10.0
+        self.steps_between_spikes = 5
+    
+    def test_meter_drive_caller_creation_valid(self):
+        """Test creating a MeterDriveCaller with valid parameters"""
+        # Create with all parameters
+        drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time=self.final_time,
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        # Verify all properties are set correctly
+        self.assertEqual(drive.initial_time, self.initial_time)
+        self.assertEqual(drive.final_time, self.final_time)
+        self.assertEqual(drive.steps_between_spikes, self.steps_between_spikes)
+        self.assertEqual(drive.drive_type(), "meter")
+        
+        # Test without optional steps_between_spikes
+        drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time=self.final_time
+        )
+        
+        self.assertEqual(drive.initial_time, self.initial_time)
+        self.assertEqual(drive.final_time, self.final_time)
+        self.assertIsNone(drive.steps_between_spikes)
+        
+        # Test with 'forever' for final_time
+        drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time='forever',
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        self.assertEqual(drive.final_time, 'forever')
+        
+        # Test with idx parameter
+        drive = l.MeterDriveCaller(
+            idx=5,
+            initial_time=self.initial_time,
+            final_time=self.final_time,
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        self.assertEqual(drive.idx, 5)
+    
+    def test_meter_drive_caller_default_values(self):
+        """Test that default values are set correctly with warnings"""
+        with warnings.catch_warnings(record=True) as w:
+            # Create drive without initial_time
+            drive = l.MeterDriveCaller(
+                final_time=self.final_time,
+                steps_between_spikes=self.steps_between_spikes
+            )
+            
+            # Check default value
+            self.assertEqual(drive.initial_time, 0.0)
+            
+            # Verify warnings were raised
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[0].category, UserWarning))
+            self.assertTrue("<initial_time> is not set, assuming 0.0." in str(w[0].message))
+    
+    def test_meter_drive_caller_with_mbvars(self):
+        """Test creating a MeterDriveCaller with MBVar objects"""
+        # Create MBVar objects
+        if 'meter_init_time' not in l.declared_MBVars:
+            initial_time_var = l.MBVar(name='meter_init_time', var_type='real', expression=1.5)
+        else:
+            initial_time_var = l.declared_MBVars['meter_init_time']
+            
+        if 'meter_final_time' not in l.declared_MBVars:
+            final_time_var = l.MBVar(name='meter_final_time', var_type='real', expression=12.0)
+        else:
+            final_time_var = l.declared_MBVars['meter_final_time']
+            
+        if 'meter_steps' not in l.declared_MBVars:
+            steps_var = l.MBVar(name='meter_steps', var_type='integer', expression=8)
+        else:
+            steps_var = l.declared_MBVars['meter_steps']
+        
+        # Create with all MBVar objects
+        drive = l.MeterDriveCaller(
+            initial_time=initial_time_var,
+            final_time=final_time_var,
+            steps_between_spikes=steps_var
+        )
+        
+        # Check that MBVar references are stored correctly
+        self.assertEqual(drive.initial_time, initial_time_var)
+        self.assertEqual(drive.final_time, final_time_var)
+        self.assertEqual(drive.steps_between_spikes, steps_var)
+        
+        # Create with mixed parameters (some MBVars, some values)
+        drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time=final_time_var,
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        self.assertEqual(drive.initial_time, self.initial_time)
+        self.assertEqual(drive.final_time, final_time_var)
+        self.assertEqual(drive.steps_between_spikes, self.steps_between_spikes)
+    
+    def test_meter_drive_caller_str_representation(self):
+        """Test the string representation of MeterDriveCaller"""
+        # Test with all parameters
+        drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time=self.final_time,
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        expected_str = f"meter, {self.initial_time}, {self.final_time}, steps, {self.steps_between_spikes}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test without steps_between_spikes
+        drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time=self.final_time
+        )
+        
+        expected_str = f"meter, {self.initial_time}, {self.final_time}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with idx
+        drive = l.MeterDriveCaller(
+            idx=5,
+            initial_time=self.initial_time,
+            final_time=self.final_time,
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        expected_str = f"drive caller: 5, meter, {self.initial_time}, {self.final_time}, steps, {self.steps_between_spikes}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with 'forever'
+        drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time='forever',
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        expected_str = f"meter, {self.initial_time}, forever, steps, {self.steps_between_spikes}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with MBVars
+        initial_time_var = l.MBVar(name='meter_init_time', var_type='real', expression=1.5)
+        final_time_var = l.MBVar(name='meter_final_time', var_type='real', expression=12.0)
+        
+        drive = l.MeterDriveCaller(
+            initial_time=initial_time_var,
+            final_time=final_time_var,
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        expected_str = f"meter, {initial_time_var}, {final_time_var}, steps, {self.steps_between_spikes}"
+        self.assertEqual(str(drive), expected_str)
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_meter_drive_caller_missing_required_field(self):
+        """Test validation fails when required fields are missing"""
+        # Missing final_time
+        with self.assertRaises(Exception):
+            l.MeterDriveCaller(
+                initial_time=self.initial_time
+            )
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_meter_drive_caller_invalid_types(self):
+        """Test validation fails with invalid types"""
+        # Invalid type for initial_time
+        with self.assertRaises(Exception):
+            l.MeterDriveCaller(
+                initial_time="invalid",
+                final_time=self.final_time
+            )
+        
+        # Invalid string for final_time (not 'forever')
+        with self.assertRaises(Exception):
+            l.MeterDriveCaller(
+                initial_time=self.initial_time,
+                final_time="invalid"
+            )
+        
+        # Invalid (non-positive) value for steps_between_spikes
+        with self.assertRaises(ValueError) as context:
+            l.MeterDriveCaller(
+                initial_time=self.initial_time,
+                final_time=self.final_time,
+                steps_between_spikes=0  # Should be positive
+            )
+        self.assertIn("steps_between_spikes must be a positive integer", str(context.exception))
+        
+        # Create MBVars with wrong types
+        if 'non_real_var' not in l.declared_MBVars:
+            non_real_var = l.MBVar(name='non_real_var', var_type='integer', expression=5)
+        else:
+            non_real_var = l.declared_MBVars['non_real_var']
+            
+        if 'non_integer_var' not in l.declared_MBVars:
+            non_integer_var = l.MBVar(name='non_integer_var', var_type='real', expression=5.0)
+        else:
+            non_integer_var = l.declared_MBVars['non_integer_var']
+        
+        # Test with non-real MBVar for initial_time
+        with self.assertRaises(TypeError) as context:
+            l.MeterDriveCaller(
+                initial_time=non_real_var,
+                final_time=self.final_time
+            )
+        self.assertIn("Field must be a real number or an MBVar of type real", str(context.exception))
+        
+        # Test with non-real MBVar for final_time
+        with self.assertRaises(TypeError) as context:
+            l.MeterDriveCaller(
+                initial_time=self.initial_time,
+                final_time=non_real_var
+            )
+        self.assertIn("Field must be a real number or an MBVar of type real", str(context.exception))
+        
+        # Test with non-integer MBVar for steps_between_spikes
+        with self.assertRaises(TypeError) as context:
+            l.MeterDriveCaller(
+                initial_time=self.initial_time,
+                final_time=self.final_time,
+                steps_between_spikes=non_integer_var
+            )
+        self.assertIn("steps_between_spikes must be an integer or an MBVar of type integer", str(context.exception))
+    
+    def test_meter_drive_caller_in_other_drives(self):
+        """Test using MeterDriveCaller as input to other drive callers"""
+        # Create a MeterDriveCaller
+        meter_drive = l.MeterDriveCaller(
+            initial_time=self.initial_time,
+            final_time=self.final_time,
+            steps_between_spikes=self.steps_between_spikes
+        )
+        
+        # Use it in a MultDriveCaller
+        const_drive = l.ConstDriveCaller(const_value=2.0)
+        mult_drive = l.MultDriveCaller(
+            drive_1=meter_drive,
+            drive_2=const_drive
+        )
+        
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.drive_1, meter_drive)
+        self.assertEqual(mult_drive.drive_2, const_drive)
+        
+        # Check string representation
+        expected_mult_str = f"mult,\n\tmeter, {self.initial_time}, {self.final_time}, steps, {self.steps_between_spikes},\n\tconst, 2.0"
+        self.assertEqual(str(mult_drive), expected_mult_str)
+        
+        # Use it in an ArrayDriveCaller
+        array_drive = l.ArrayDriveCaller(drives=[meter_drive, const_drive])
+        
+        self.assertIsInstance(array_drive, l.ArrayDriveCaller)
+        self.assertEqual(len(array_drive.drives), 2)
+        self.assertEqual(array_drive.drives[0], meter_drive)
+        
+        # Check string representation
+        expected_array_str = f"array, 2,\n\tmeter, {self.initial_time}, {self.final_time}, steps, {self.steps_between_spikes},\n\tconst, 2.0"
+        self.assertEqual(str(array_drive), expected_array_str)
+
+class TestMultDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create sample drive callers for testing
+        self.const_drive1 = l.ConstDriveCaller(const_value=3.0)
+        self.const_drive2 = l.ConstDriveCaller(const_value=4.0)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=5.0)
+
+    def test_mult_drive_caller_creation_valid(self):
+        """Test that MultDriveCaller works with valid input"""
+        # Create with two drives without idx
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive1, drive_2=self.const_drive2)
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.drive_1, self.const_drive1)
+        self.assertEqual(mult_drive.drive_2, self.const_drive2)
+        
+        # Create with one drive having idx
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive_with_idx, drive_2=self.const_drive2)
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.drive_1, self.const_drive_with_idx)
+        self.assertEqual(mult_drive.drive_2, self.const_drive2)
+        
+        # Create with both drives having idx
+        other_drive_with_idx = l.ConstDriveCaller(idx=6, const_value=6.0)
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive_with_idx, drive_2=other_drive_with_idx)
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.drive_1, self.const_drive_with_idx)
+        self.assertEqual(mult_drive.drive_2, other_drive_with_idx)
+        
+        # Create with specific idx for the mult drive
+        mult_drive = l.MultDriveCaller(idx=10, drive_1=self.const_drive1, drive_2=self.const_drive2)
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.idx, 10)
+        self.assertEqual(mult_drive.drive_1, self.const_drive1)
+        self.assertEqual(mult_drive.drive_2, self.const_drive2)
+
+    def test_mult_drive_caller_str_representation(self):
+        """Test the string representation of MultDriveCaller"""
+        # Test without idx
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive1, drive_2=self.const_drive2)
+        expected_str = "mult,\n\tconst, 3.0,\n\tconst, 4.0"
+        self.assertEqual(str(mult_drive), expected_str)
+        
+        # Test with idx
+        mult_drive = l.MultDriveCaller(idx=10, drive_1=self.const_drive1, drive_2=self.const_drive2)
+        expected_str = "drive caller: 10, mult,\n\tconst, 3.0,\n\tconst, 4.0"
+        self.assertEqual(str(mult_drive), expected_str)
+        
+        # Test with drive_1 having idx
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive_with_idx, drive_2=self.const_drive2)
+        expected_str = "mult,\n\treference, 5,\n\tconst, 4.0"
+        self.assertEqual(str(mult_drive), expected_str)
+        
+        # Test with drive_2 having idx
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive1, drive_2=self.const_drive_with_idx)
+        expected_str = "mult,\n\tconst, 3.0,\n\treference, 5"
+        self.assertEqual(str(mult_drive), expected_str)
+        
+        # Test with both drives having idx
+        other_drive_with_idx = l.ConstDriveCaller(idx=6, const_value=6.0)
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive_with_idx, drive_2=other_drive_with_idx)
+        expected_str = "mult,\n\treference, 5,\n\treference, 6"
+        self.assertEqual(str(mult_drive), expected_str)
+
+    def test_mult_drive_caller_drive_type(self):
+        """Test the drive_type method of MultDriveCaller"""
+        mult_drive = l.MultDriveCaller(drive_1=self.const_drive1, drive_2=self.const_drive2)
+        self.assertEqual(mult_drive.drive_type(), 'mult')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_mult_drive_caller_missing_required_field(self):
+        """Test creating a MultDriveCaller instance missing a required field"""
+        # Missing drive_1
+        with self.assertRaises(Exception):
+            l.MultDriveCaller(drive_2=self.const_drive2)
+        
+        # Missing drive_2
+        with self.assertRaises(Exception):
+            l.MultDriveCaller(drive_1=self.const_drive1)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_mult_drive_caller_invalid_types(self):
+        """Test invalid types for fields"""
+        # Invalid type for drive_1
+        with self.assertRaises(Exception):
+            l.MultDriveCaller(drive_1="not a drive", drive_2=self.const_drive2)
+        
+        # Invalid type for drive_2
+        with self.assertRaises(Exception):
+            l.MultDriveCaller(drive_1=self.const_drive1, drive_2="not a drive")
+
+    def test_mult_drive_caller_nested(self):
+        """Test nesting MultDriveCaller with other drive callers"""
+        # Create a nested mult drive caller
+        inner_mult = l.MultDriveCaller(drive_1=self.const_drive1, drive_2=self.const_drive2)
+        outer_mult = l.MultDriveCaller(drive_1=inner_mult, drive_2=self.const_drive_with_idx)
+        
+        self.assertIsInstance(outer_mult, l.MultDriveCaller)
+        self.assertEqual(outer_mult.drive_1, inner_mult)
+        self.assertEqual(outer_mult.drive_2, self.const_drive_with_idx)
+        
+        # Check string representation with nested drive
+        expected_str = "mult,\n\tmult,\n\tconst, 3.0,\n\tconst, 4.0,\n\treference, 5"
+        self.assertEqual(str(outer_mult), expected_str)
+
+    def test_mult_drive_caller_complex_nesting(self):
+        """Test more complex nesting with different drive caller types"""
+        # Create an array drive caller
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive2])
+        
+        # Use it in a mult drive caller
+        mult_drive = l.MultDriveCaller(drive_1=array_drive, drive_2=self.const_drive_with_idx)
+        
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.drive_1, array_drive)
+        self.assertEqual(mult_drive.drive_2, self.const_drive_with_idx)
+        
+        # Check string representation with complex nesting
+        expected_str = "mult,\n\tarray, 2,\n\tconst, 3.0,\n\tconst, 4.0,\n\treference, 5"
+        self.assertEqual(str(mult_drive), expected_str)
+        
+        # Create an even more complex nested structure
+        inner_mult = l.MultDriveCaller(drive_1=self.const_drive1, drive_2=self.const_drive2)
+        middle_mult = l.MultDriveCaller(drive_1=inner_mult, drive_2=array_drive)
+        outer_mult = l.MultDriveCaller(drive_1=middle_mult, drive_2=self.const_drive_with_idx)
+        
+        self.assertIsInstance(outer_mult, l.MultDriveCaller)
+        
+        # Check string representation with complex nesting
+        expected_str = "mult,\n\tmult,\n\tmult,\n\tconst, 3.0,\n\tconst, 4.0,\n\tarray, 2,\n\tconst, 3.0,\n\tconst, 4.0,\n\treference, 5"
+        self.assertEqual(str(outer_mult), expected_str)
+
+class TestSineDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Reset warnings to make sure we capture them in tests
+        warnings.resetwarnings()
+        # Setup common values for testing
+        self.initial_time = 1.0
+        self.angular_velocity = 2.0
+        self.amplitude = 3.0
+        self.number_of_cycles = 5
+        self.initial_value = 0.5
+    
+    def test_sine_drive_caller_creation_valid(self):
+        """Test creating a SineDriveCaller with valid parameters"""
+        # Create with all parameters
+        drive = l.SineDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        
+        # Verify all properties are set correctly
+        self.assertEqual(drive.initial_time, self.initial_time)
+        self.assertEqual(drive.angular_velocity, self.angular_velocity)
+        self.assertEqual(drive.amplitude, self.amplitude)
+        self.assertEqual(drive.number_of_cycles, self.number_of_cycles)
+        self.assertEqual(drive.initial_value, self.initial_value)
+        self.assertEqual(drive.drive_type(), "sine")
+        
+        # Test with string values for number_of_cycles
+        for cycle_value in ['half', 'one', 'forever']:
+            drive = l.SineDriveCaller(
+                initial_time=self.initial_time,
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles=cycle_value,
+                initial_value=self.initial_value
+            )
+            self.assertEqual(drive.number_of_cycles, cycle_value)
+        
+        # Test with idx parameter
+        drive = l.SineDriveCaller(
+            idx=5,
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        self.assertEqual(drive.idx, 5)
+    
+    def test_sine_drive_caller_default_values(self):
+        """Test that default values are set correctly with warnings"""
+        with warnings.catch_warnings(record=True) as w:
+            # Create drive without initial_time and initial_value
+            drive = l.SineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles=self.number_of_cycles
+            )
+            
+            # Check default values
+            self.assertEqual(drive.initial_time, 0.0)
+            self.assertEqual(drive.initial_value, 0.0)
+            
+            # Verify warnings were raised
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, UserWarning))
+            self.assertTrue("<initial_time> is not set, assuming 0.0." in str(w[0].message))
+            self.assertTrue(issubclass(w[1].category, UserWarning))
+            self.assertTrue("<initial_value> is not set, assuming 0.0." in str(w[1].message))
+    
+    def test_sine_drive_caller_with_mbvars(self):
+        """Test creating a SineDriveCaller with MBVar objects"""
+        # Create MBVar objects
+        if 'init_time' not in l.declared_MBVars:
+            initial_time_var = l.MBVar(name='init_time', var_type='real', expression=1.5)
+        else:
+            initial_time_var = l.declared_MBVars['init_time']
+            
+        if 'omega' not in l.declared_MBVars:
+            angular_velocity_var = l.MBVar(name='omega', var_type='real', expression=3.5)
+        else:
+            angular_velocity_var = l.declared_MBVars['omega']
+            
+        if 'amp' not in l.declared_MBVars:
+            amplitude_var = l.MBVar(name='amp', var_type='real', expression=4.0)
+        else:
+            amplitude_var = l.declared_MBVars['amp']
+            
+        if 'cycles' not in l.declared_MBVars:
+            number_of_cycles_var = l.MBVar(name='cycles', var_type='integer', expression=10)
+        else:
+            number_of_cycles_var = l.declared_MBVars['cycles']
+            
+        if 'init_val' not in l.declared_MBVars:
+            initial_value_var = l.MBVar(name='init_val', var_type='real', expression=0.75)
+        else:
+            initial_value_var = l.declared_MBVars['init_val']
+        
+        # Create with all MBVar objects
+        drive = l.SineDriveCaller(
+            initial_time=initial_time_var,
+            angular_velocity=angular_velocity_var,
+            amplitude=amplitude_var,
+            number_of_cycles=number_of_cycles_var,
+            initial_value=initial_value_var
+        )
+        
+        # Check that MBVar references are stored correctly
+        self.assertEqual(drive.initial_time, initial_time_var)
+        self.assertEqual(drive.angular_velocity, angular_velocity_var)
+        self.assertEqual(drive.amplitude, amplitude_var)
+        self.assertEqual(drive.number_of_cycles, number_of_cycles_var)
+        self.assertEqual(drive.initial_value, initial_value_var)
+        
+        # Create with mixed parameters (some MBVars, some values)
+        drive = l.SineDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=angular_velocity_var,
+            amplitude=self.amplitude,
+            number_of_cycles='forever',
+            initial_value=initial_value_var
+        )
+        
+        self.assertEqual(drive.initial_time, self.initial_time)
+        self.assertEqual(drive.angular_velocity, angular_velocity_var)
+        self.assertEqual(drive.amplitude, self.amplitude)
+        self.assertEqual(drive.number_of_cycles, 'forever')
+        self.assertEqual(drive.initial_value, initial_value_var)
+    
+    def test_sine_drive_caller_str_representation(self):
+        """Test the string representation of SineDriveCaller"""
+        # Test without idx
+        drive = l.SineDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        
+        expected_str = f"sine, {self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with idx
+        drive = l.SineDriveCaller(
+            idx=5,
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        
+        expected_str = f"drive caller: 5, sine, {self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with string number_of_cycles
+        drive = l.SineDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles='forever',
+            initial_value=self.initial_value
+        )
+        
+        expected_str = f"sine, {self.initial_time}, {self.angular_velocity}, {self.amplitude}, forever, {self.initial_value}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with MBVars
+        initial_time_var = l.MBVar(name='init_time', var_type='real', expression=1.5)
+        angular_velocity_var = l.MBVar(name='omega', var_type='real', expression=3.5)
+        
+        drive = l.SineDriveCaller(
+            initial_time=initial_time_var,
+            angular_velocity=angular_velocity_var,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        
+        expected_str = f"sine, {initial_time_var}, {angular_velocity_var}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value}"
+        self.assertEqual(str(drive), expected_str)
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_sine_drive_caller_missing_required_field(self):
+        """Test validation fails when required fields are missing"""
+        # Missing angular_velocity
+        with self.assertRaises(Exception):
+            l.SineDriveCaller(
+                amplitude=self.amplitude,
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Missing amplitude
+        with self.assertRaises(Exception):
+            l.SineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Missing number_of_cycles
+        with self.assertRaises(Exception):
+            l.SineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude
+            )
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_sine_drive_caller_invalid_types(self):
+        """Test validation fails with invalid types"""
+        # Invalid type for angular_velocity
+        with self.assertRaises(Exception):
+            l.SineDriveCaller(
+                angular_velocity="invalid",
+                amplitude=self.amplitude,
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Invalid type for amplitude
+        with self.assertRaises(Exception):
+            l.SineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude="invalid",
+                number_of_cycles=self.number_of_cycles
+            )
+        
+        # Invalid string for number_of_cycles
+        with self.assertRaises(ValueError):
+            l.SineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles="invalid"
+            )
+        
+        # Create an MBVar with a non-real type
+        if 'test_non_real' not in l.declared_MBVars:
+            non_real_var = l.MBVar(name='test_non_real', var_type='integer', expression=5)
+        else:
+            non_real_var = l.declared_MBVars['test_non_real']
+        
+        # Create an MBVar with a non-integer type
+        if 'test_non_integer' not in l.declared_MBVars:
+            non_integer_var = l.MBVar(name='test_non_integer', var_type='real', expression=5.0)
+        else:
+            non_integer_var = l.declared_MBVars['test_non_integer']
+        
+        # Test with non-real MBVar for initial_time
+        with self.assertRaises(TypeError) as context:
+            l.SineDriveCaller(
+                initial_time=non_real_var,
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles=self.number_of_cycles
+            )
+        self.assertIn("Field must be an MBVar of type real or a float", str(context.exception))
+        
+        # Test with non-real MBVar for angular_velocity
+        with self.assertRaises(TypeError) as context:
+            l.SineDriveCaller(
+                angular_velocity=non_real_var,
+                amplitude=self.amplitude,
+                number_of_cycles=self.number_of_cycles
+            )
+        self.assertIn("Field must be an MBVar of type real or a float", str(context.exception))
+        
+        # Test with non-integer MBVar for number_of_cycles
+        with self.assertRaises(TypeError) as context:
+            l.SineDriveCaller(
+                angular_velocity=self.angular_velocity,
+                amplitude=self.amplitude,
+                number_of_cycles=non_integer_var
+            )
+        self.assertIn("number_of_cycles must be an integer", str(context.exception))
+    
+    def test_sine_drive_caller_in_other_drives(self):
+        """Test using SineDriveCaller as input to other drive callers"""
+        # Create a SineDriveCaller
+        sine_drive = l.SineDriveCaller(
+            initial_time=self.initial_time,
+            angular_velocity=self.angular_velocity,
+            amplitude=self.amplitude,
+            number_of_cycles=self.number_of_cycles,
+            initial_value=self.initial_value
+        )
+        
+        # Use it in a MultDriveCaller
+        const_drive = l.ConstDriveCaller(const_value=2.0)
+        mult_drive = l.MultDriveCaller(
+            drive_1=sine_drive,
+            drive_2=const_drive
+        )
+        
+        self.assertIsInstance(mult_drive, l.MultDriveCaller)
+        self.assertEqual(mult_drive.drive_1, sine_drive)
+        self.assertEqual(mult_drive.drive_2, const_drive)
+        
+        # Check string representation
+        expected_mult_str = f"mult,\n\tsine, {self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value},\n\tconst, 2.0"
+        self.assertEqual(str(mult_drive), expected_mult_str)
+        
+        # Use it in an ArrayDriveCaller
+        array_drive = l.ArrayDriveCaller(drives=[sine_drive, const_drive])
+        
+        self.assertIsInstance(array_drive, l.ArrayDriveCaller)
+        self.assertEqual(len(array_drive.drives), 2)
+        self.assertEqual(array_drive.drives[0], sine_drive)
+        
+        # Check string representation
+        expected_array_str = f"array, 2,\n\tsine, {self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value},\n\tconst, 2.0"
+        self.assertEqual(str(array_drive), expected_array_str)
 
 
 class TestLinearElastic(unittest.TestCase):

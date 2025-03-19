@@ -3454,7 +3454,7 @@ class ElementDriveCaller(DriveCaller2):
     def __str__(self):
         s = f'{self.drive_header()}'
         s += f', {self.element.idx}, {self.element.element_type()}'
-        s += f', string, \"{self.private_data}\"'
+        s += f', string, "{self.private_data}"'
         if isinstance(self.func_drive, str) and self.func_drive == 'direct':
             s += f', {self.func_drive}'
         elif hasattr(self.func_drive, 'idx') and self.func_drive.idx is not None and self.func_drive.idx >= 0:
@@ -3663,322 +3663,161 @@ class FrequencySweepDriveCaller(DriveCaller2):
             s += f',\n\t{self.amplitude_drive}'
         s += f'\n\t{self.initial_value}, {self.final_time}, {self.final_value}'
         return s
-
-class GiNaCDriveCaller(DriveCaller):
-    type = 'ginac'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must either be'.format(self.__class__.__name__, arg) + 
-                    ' an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'expression'
-            assert isinstance(kwargs[arg], (MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' a string or an MBVar' + 
-                    '\n-------------------\n')
-            if isinstance(kwargs[arg], MBVar) and ('string' not in kwargs[arg].var_type):
-                raise TypeError(
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' an MBVar of type string' + 
-                    '\n-------------------\n'
-                )
-            self.expression = kwargs[arg]
-        except KeyError:
-                errprint(
-                '\n-------------------\nERROR' +
-                ' {}: <{}> not set'.format(self.__class__.__name__, arg) + 
-                '\n-------------------\n'
-                )
-        try:
-            arg = 'symbol'
-            assert isinstance(kwargs[arg], (MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' a string or an MBVar' + 
-                    '\n-------------------\n')
-            if isinstance (kwargs[arg], MBVar) and ('string' not in kwargs[arg].var_type):
-                raise TypeError(
-                    '\n-------------------\nERROR:' +
-                    ' {}: <{}> must be'.format(self.__class__.__name__, arg) +
-                    ' an MBVar of type string' + 
-                    '\n-------------------\n'
-                )
-            self.symbol = kwargs[arg]
-        except KeyError:
-            pass
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        try:
-            if isinstance(self.symbol, MBVar):
-                s = s + ', symbol, {}'.format(self.symbol)
-            else:
-                s = s + ', symbol, \"{}\"'.format(self.symbol)
-        except AttributeError:
-            pass
-        if isinstance(self.expression, MBVar):
-            s = s + ', {}'.format(self.expression)
-        else:
-            s = s + ', \"{}\"'.format(self.expression)
-        return s
-    pass
-
-
-class LinearDriveCaller(DriveCaller):
-    type = 'linear'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' LinearDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['const_coef'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' LinearDriveCaller: <const_coef> must either be a number of an MBVar' + 
-                    '\n-------------------\n')
-            self.const_coef = kwargs['const_coef']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' LinearDriveCaller: <const_coef> not set' + 
-                '\n-------------------\n')
-        try:
-            assert isinstance(kwargs['slope_coef'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' LinearDriveCaller: <slope_coef> must either be a number of an MBVar' + 
-                    '\n-------------------\n')
-            self.slope_coef = kwargs['slope_coef']
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' LinearDriveCaller: <slope_coef> not set' + 
-                '\n-------------------\n')
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}, {}'.format(self.const_coef, self.slope_coef)
-        return s
     
-class SineDriveCaller(DriveCaller):
-    type = 'sine'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n'
+class GiNaCDriveCaller(DriveCaller2):
+    """
+    The GiNaC drive caller evaluates mathematical expressions.
+    The function expression is evaluated and differentiated, if needed, as a function of the variable 
+    passed as the optional symbol. If none is passed, 'Var' is used.
+    """
+    
+    expression: Union[str, MBVar]    
+    symbol: Optional[Union[str, MBVar]] = None
+    
+    @field_validator('expression')
+    def validate_expression(cls, v):
+        if isinstance(v, MBVar) and 'string' not in v.var_type:
+            raise TypeError(
+                '\n-------------------\nERROR: '
+                'GiNaCDriveCaller: expression must be a string or an MBVar of type string'
+                '\n-------------------\n'
             )
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            assert isinstance(kwargs['initial_time'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n'
+        return v
+    
+    @field_validator('symbol')
+    def validate_symbol(cls, v):
+        if v is not None and isinstance(v, MBVar) and 'string' not in v.var_type:
+            raise TypeError(
+                '\n-------------------\nERROR: '
+                'GiNaCDriveCaller: symbol must be a string or an MBVar of type string'
+                '\n-------------------\n'
             )
-            self.initial_time = kwargs['initial_time']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' SineDriveCaller: <initial_time> not set, assuming 0.' + 
-                    '\n-------------------\n'
-            )
-            self.initial_time = 0.
-            pass
-        try:
-            assert isinstance(kwargs['angular_velocity'], (Number, MBVar, expression)), (
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <angular_velocity> must be a number, MBVar, or expression' + 
-                    '\n-------------------\n'
-            )
-            self.angular_velocity = kwargs['angular_velocity']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <angular_velocity> is required' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['amplitude'], (Number, MBVar, expression)), (
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <amplitude> must be a number, MBVar, or expression' + 
-                    '\n-------------------\n'
-            )
-            self.amplitude = kwargs['amplitude']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <amplitude> is required' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['number_of_cycles'], (Number, MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <number_of_cycles> must either be a number,'
-                    ' one in (\'half\', \'one\', \'forever\'), or an MBVar' + 
-                    '\n-------------------\n')
-            self.number_of_cycles = kwargs['number_of_cycles']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <number_of_cycles> is required' + 
-                    '\n-------------------\n'
-            )
-        try:
-            assert isinstance(kwargs['initial_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <initial_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n'
-            )
-            self.initial_value = kwargs['initial_value']
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' SineDriveCaller: <initial_value> not provided, assuming 0.' + 
-                    '\n-------------------\n'
-            )
-            self.initial_value = 0.
-            pass
+        return v
+    
+    def drive_type(self) -> str:
+        return 'ginac'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}, {}, '.format(self.type, self.initial_time)
-        s = s + '{}, {}, '.format(self.angular_velocity, self.amplitude)
-        s = s + '{}, {}'.format(self.number_of_cycles, self.initial_value)
+        s = self.drive_header()
+        if self.symbol is not None:
+            if isinstance(self.symbol, MBVar):
+                s += f', symbol, {self.symbol}'
+            else:
+                s += f', symbol, "{self.symbol}"'
+        if isinstance(self.expression, MBVar):
+            s += f', {self.expression}'
+        else:
+            s += f', "{self.expression}"'            
+        return s
+
+class LinearDriveCaller(DriveCaller2):
+    """
+    The Linear drive caller implements a linear function of time:
+    f(t) = const_coef + slope_coef · t
+    """
+    
+    const_coef: Union[float, MBVar]    
+    slope_coef: Union[float, MBVar]
+    
+    @field_validator('const_coef', 'slope_coef')
+    def validate_coefficients(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                '\n-------------------\nERROR: '
+                'LinearDriveCaller: coefficients must be real numbers or MBVars of type real'
+                '\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'linear'
+    
+    def __str__(self):
+        s = self.drive_header()
+        s += f', {self.const_coef}, {self.slope_coef}'
+        return s
+
+class MeterDriveCaller(DriveCaller2):
+    """
+    The Meter drive caller has value zero except for every 'steps_between_spikes' steps, 
+    where it assumes unit value.
+    """
+    
+    initial_time: Union[float, MBVar]    
+    final_time: Union[float, MBVar, Literal['forever']]    
+    steps_between_spikes: Optional[Union[int, MBVar]] = None
+    
+    @field_validator('initial_time', 'final_time')
+    def validate_initial_time(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: Field must be a real number or an MBVar of type real'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    @field_validator('steps_between_spikes')
+    def validate_steps(cls, v):
+        if v is not None:
+            if isinstance(v, MBVar) and 'integer' not in v.var_type:
+                raise TypeError(
+                    f'\n-------------------\nERROR: '
+                    f'{cls.__name__}: steps_between_spikes must be an integer or an MBVar of type integer'
+                    f'\n-------------------\n'
+                )
+            elif isinstance(v, int) and v <= 0:
+                raise ValueError(
+                    f'\n-------------------\nERROR: '
+                    f'{cls.__name__}: steps_between_spikes must be a positive integer'
+                    f'\n-------------------\n'
+                )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'meter'
+    
+    def __init__(self, **kwargs):
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0
+            
+        super().__init__(**kwargs)
+    
+    def __str__(self):
+        s = self.drive_header()
+        s += f', {self.initial_time}, {self.final_time}'
+        if self.steps_between_spikes is not None:
+            s += f', steps, {self.steps_between_spikes}'
+        return s
+            
+class MultDriveCaller(DriveCaller2):
+    """
+    The Mult drive caller multiplies the value of two subordinate drives.
+    """
+    
+    drive_1: DriveCaller2    
+    drive_2: DriveCaller2
+        
+    def drive_type(self) -> str:
+        return 'mult'
+    
+    def __str__(self):
+        s = self.drive_header()
+        if hasattr(self.drive_1, 'idx') and self.drive_1.idx is not None and self.drive_1.idx >= 0:
+            s += f',\n\treference, {self.drive_1.idx}'
+        else:
+            s += f',\n\t{self.drive_1}'
+        if hasattr(self.drive_2, 'idx') and self.drive_2.idx is not None and self.drive_2.idx >= 0:
+            s += f',\n\treference, {self.drive_2.idx}'
+        else:
+            s += f',\n\t{self.drive_2}'
         return s
         
-class MeterDriveCaller(DriveCaller):
-    type = 'meter'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' MeterDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            arg = 'initial_time'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' MeterDriveCaller: <initial_time> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.initial_time = kwargs[arg]
-        except KeyError:
-            errprint(
-                    '\n-------------------\nWARNING:' +
-                    ' MeterDriveCaller: <initial_time> not set, assuming 0.' + 
-                    '\n-------------------\n'
-            )
-            self.initial_time = 0.
-        try:
-            arg = 'final_time'
-            assert isinstance(kwargs[arg], (Number, MBVar, str)), (
-                    '\n-------------------\nERROR:' +
-                    ' MeterDriveCaller: <final_time> must either be a number, '
-                    '\'forever\', or an MBVar' + 
-                    '\n-------------------\n')
-            self.final_time = kwargs[arg]
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' MeterDriveCaller: <final_time> is not set' + 
-                    '\n-------------------\n')
-        try:
-            arg = 'steps_between_spikes'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' MeterDriveCaller: <steps_between_spikes> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.steps = kwargs[arg]
-        except KeyError:
-            pass
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}, {}, '.format(self.type, self.initial_time)
-        s = s + '{}'.format(self.final_time)
-        try:
-            s = s + ', steps, {}'.format(self.steps_between_spikes)
-        except AttributeError:
-            pass
-        return s
-    
-class MultDriveCaller(DriveCaller):
-    type = 'mult'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' MultDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        try:
-            arg = 'drive_1'
-            assert(isinstance(kwargs[arg], DriveCaller)), (
-                    '\n-------------------\nERROR:' +
-                    ' MultDriveCaller: <drive_1> must be a DriveCaller' + 
-                    '\n-------------------\n')
-            self.drive_1 = kwargs[arg]
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' MultDriveCaller: <drive_1> must be provided' + 
-                    '\n-------------------\n'
-            )
-        try:
-            arg = 'drive_2'
-            assert(isinstance(kwargs[arg], DriveCaller)), (
-                    '\n-------------------\nERROR:' +
-                    ' MultDriveCaller: <drive_2> must be a DriveCaller' + 
-                    '\n-------------------\n')
-            self.drive_2 = kwargs[arg]
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' MultDriveCaller: <drive_2> must be provided' + 
-                    '\n-------------------\n'
-            )
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        if self.drive_1.idx < 0:
-            s = s + ',\n\t{}'.format(self.drive_1)
-        else:
-            s = s + ',\n\treference, {}'.format(self.drive_1.idx)
-        if self.drive_2.idx < 0:
-            s = s + ',\n\t{}'.format(self.drive_2)
-        else:
-            s = s + ',\n\treference, {}'.format(self.drive_2.idx)
-        return s
-    
 class NullDriveCaller(DriveCaller):
     type = 'null'
     def __init__(self, **kwargs):
@@ -4455,6 +4294,74 @@ class SampleAndHoldDriveCaller(DriveCaller):
             except AttributeError:
                 pass
             return s
+        
+class SineDriveCaller(DriveCaller2):
+    """
+    The Sine drive caller implements a sinusoidal function:
+    f(t) = initial_value + amplitude · sin(angular_velocity · (t - initial_time))
+    """
+    
+    initial_time: Union[float, MBVar]  
+    angular_velocity: Union[float, MBVar, expression]    
+    amplitude: Union[float, MBVar, expression]    
+    number_of_cycles: Union[int, MBVar, Literal['half', 'one', 'forever']]    
+    initial_value: Union[float, MBVar]
+    
+    @field_validator('initial_time', 'initial_value', 'angular_velocity', 'amplitude')
+    def validate_real_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: Field must be an MBVar of type real or a float'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    @field_validator('number_of_cycles')
+    def validate_cycles(cls, v):
+        if isinstance(v, str) and v not in ['half', 'one', 'forever']:
+            raise ValueError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: string value for number_of_cycles must be one of: '
+                f'"half", "one", "forever"'
+                f'\n-------------------\n'
+            )
+        elif isinstance(v, MBVar) and 'integer' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: number_of_cycles must be an integer, '
+                f'one of ("half", "one", "forever"), or an MBVar of type integer'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'sine'
+    
+    def __init__(self, **kwargs):
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0
+            
+        # Check if initial_value wasn't explicitly provided
+        if 'initial_value' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_value> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_value'] = 0.0
+            
+        super().__init__(**kwargs)
+
+    def __str__(self):
+        s = self.drive_header()
+        s += f', {self.initial_time}, {self.angular_velocity}, {self.amplitude}'
+        s += f', {self.number_of_cycles}, {self.initial_value}'
+        return s
 
 class StepDriveCaller(DriveCaller):
     type = 'step'
