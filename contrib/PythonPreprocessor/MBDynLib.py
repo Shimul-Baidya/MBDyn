@@ -3817,149 +3817,86 @@ class MultDriveCaller(DriveCaller2):
         else:
             s += f',\n\t{self.drive_2}'
         return s
-        
-class NullDriveCaller(DriveCaller):
-    type = 'null'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' NullDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
+    
+class NullDriveCaller(DriveCaller2):
+    """Zero valued drive caller; the arglist is empty."""
+    
+    def drive_type(self) -> str:
+        return 'null'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
+        return f'{self.drive_header()}'
+    
+class ParabolicDriveCaller(DriveCaller2):
+    """
+    The Parabolic drive caller implements a quadratic function of time:
+    f(t) = const_coef + linear_coef · t + parabolic_coef · t²
+    """
+    
+    const_coef: Union[float, MBVar]    
+    linear_coef: Union[float, MBVar]    
+    parabolic_coef: Union[float, MBVar]
+    
+    @field_validator('const_coef', 'linear_coef', 'parabolic_coef')
+    def validate_coefficients(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                '\n-------------------\nERROR: '
+                'ParabolicDriveCaller: coefficients must be real numbers or MBVars of type real'
+                '\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'parabolic'
+    
+    def __str__(self):
+        s = self.drive_header()
+        s += f', {self.const_coef}, {self.linear_coef}, {self.parabolic_coef}'
         return s
     
-class ParabolicDriveCaller(DriveCaller):
-    type = 'parabolic'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ParabolicDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'const_coef'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ParabolicDriveCaller: <const_coef> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.const_coef = kwargs[arg]
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' ParabolicDriveCaller: <const_coef> is required' + 
-                    '\n-------------------\n'
-                    )
-        try:
-            arg = 'liner_coef'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ParabolicDriveCaller: <linear_coef> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.linear_coef = kwargs[arg]
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' ParabolicDriveCaller: <linear_coef> is required' + 
-                    '\n-------------------\n'
-                    )
-        try:
-            arg = 'parabolic_coef'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ParabolicDriveCaller: <parabolic_coef> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.parabolic_coef = kwargs[arg]
-        except KeyError:
-            errprint(
-                    '\n-------------------\nERROR:' +
-                    ' ParabolicDriveCaller: <parabolic_coef> is required' + 
-                    '\n-------------------\n'
-                    )
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}, {}, '.format(self.type, self.const_coef)
-        s = s + '{}, {}'.format(self.linear_coef, self.parabolic_coef)
-        return s
-    
-class PeriodicDriveCaller(DriveCaller):
-    type = 'periodic'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' PeriodicDriveCaller: <idx> must either be an integer value or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'initial_time'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' PeriodicDriveCaller: <initial_time> must either be a number or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.initial_time = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nWARNING:' +
-                ' PeriodicDriveCaller: <initial_time> not set, assuming 0.' +
-                '\n-------------------\n'
-            )
-            self.initial_time = 0.
-        try:
-            arg = 'period'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' PeriodicDriveCaller: <period> must either be a number or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.period = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' PeriodicDriveCaller: <period> is required' +
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'func_drive'
-            assert isinstance(kwargs[arg], DriveCaller), (
-                '\n-------------------\nERROR:' +
-                ' PeriodicDriveCaller: <func_drive> must be a DriveCaller' +
-                '\n-------------------\n'
-            )
-            self.func_drive = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' PeriodicDriveCaller: <func_drive> must be provided' +
-                '\n-------------------\n'
-            )
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}, {}, {}'.format(self.initial_time, self.period, self.func_drive)
-        return s
+class PeriodicDriveCaller(DriveCaller2):
+    """
+    Represents a periodic drive function that is zero before the initial time and follows 
+    f(t) = func_drive(t - initial_time - period * floor((t - initial_time) / period)) for t ≥ initial_time.
+    """
 
+    initial_time: Union[float, MBVar]
+    period: Union[float, MBVar]
+    func_drive: DriveCaller2
+    
+    @field_validator('initial_time', 'period')
+    def validate_time_params(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: time parameters must be real numbers or MBVars of type real'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'periodic'
+    
+    def __init__(self, **kwargs):
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0   
+        super().__init__(**kwargs)
+    
+    def __str__(self):
+        s = f'{self.drive_header()}'
+        s += f', {self.initial_time}, {self.period}'
+        if hasattr(self.func_drive, 'idx') and self.func_drive.idx is not None and self.func_drive.idx >= 0:
+            s += f',\n\treference, {self.func_drive.idx}'
+        else:
+            s += f',\n\t{self.func_drive}'
+        return s
+        
 class NodeDriveCaller(DriveCaller):
     type = 'node'
     def __init__(self, **kwargs):

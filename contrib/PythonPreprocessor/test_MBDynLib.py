@@ -4055,6 +4055,324 @@ class TestMultDriveCaller(unittest.TestCase):
         expected_str = "mult,\n\tmult,\n\tmult,\n\tconst, 3.0,\n\tconst, 4.0,\n\tarray, 2,\n\tconst, 3.0,\n\tconst, 4.0,\n\treference, 5"
         self.assertEqual(str(outer_mult), expected_str)
 
+class TestNullDriveCaller(unittest.TestCase):
+    def test_null_drive_caller_creation_and_representation(self):
+        """Test creating a NullDriveCaller and its string representation"""
+        # Create without idx
+        null_drive = l.NullDriveCaller()
+        self.assertIsInstance(null_drive, l.NullDriveCaller)
+        self.assertEqual(str(null_drive), 'null')
+        self.assertEqual(null_drive.drive_type(), 'null')
+        
+        # Create with idx
+        null_drive = l.NullDriveCaller(idx=5)
+        self.assertIsInstance(null_drive, l.NullDriveCaller)
+        self.assertEqual(str(null_drive), 'drive caller: 5, null')
+        self.assertEqual(null_drive.idx, 5)
+
+class TestParabolicDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method"""
+        # Create MBVar objects for testing if needed
+        if 'const_coef_var' not in l.declared_MBVars:
+            self.const_coef_var = l.MBVar(name='const_coef_var', var_type='real', expression=1.5)
+        else:
+            self.const_coef_var = l.declared_MBVars['const_coef_var']
+    
+    def test_parabolic_drive_caller_creation_valid(self):
+        """Test that ParabolicDriveCaller works with valid numeric inputs"""
+        # Create with all parameters
+        parabolic_drive = l.ParabolicDriveCaller(
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0
+        )
+        self.assertIsInstance(parabolic_drive, l.ParabolicDriveCaller)
+        self.assertEqual(parabolic_drive.const_coef, 1.0)
+        self.assertEqual(parabolic_drive.linear_coef, 2.0)
+        self.assertEqual(parabolic_drive.parabolic_coef, 3.0)
+        
+        # Create with idx
+        parabolic_drive = l.ParabolicDriveCaller(
+            idx=10,
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0
+        )
+        self.assertEqual(parabolic_drive.idx, 10)
+    
+    def test_parabolic_drive_caller_with_mbvars(self):
+        """Test ParabolicDriveCaller with MBVar objects"""
+        parabolic_drive = l.ParabolicDriveCaller(
+            const_coef=self.const_coef_var,
+            linear_coef=2.0,
+            parabolic_coef=3.0
+        )
+        self.assertEqual(parabolic_drive.const_coef, self.const_coef_var)
+    
+    def test_parabolic_drive_caller_str_representation(self):
+        """Test string representation of ParabolicDriveCaller"""
+        # Test without idx
+        parabolic_drive = l.ParabolicDriveCaller(
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0
+        )
+        expected_str = "parabolic, 1.0, 2.0, 3.0"
+        self.assertEqual(str(parabolic_drive), expected_str)
+        
+        # Test with idx
+        parabolic_drive = l.ParabolicDriveCaller(
+            idx=10,
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0
+        )
+        expected_str = "drive caller: 10, parabolic, 1.0, 2.0, 3.0"
+        self.assertEqual(str(parabolic_drive), expected_str)
+        
+        # Test with MBVar
+        parabolic_drive = l.ParabolicDriveCaller(
+            const_coef=self.const_coef_var,
+            linear_coef=2.0,
+            parabolic_coef=3.0
+        )
+        expected_str = f"parabolic, {self.const_coef_var}, 2.0, 3.0"
+        self.assertEqual(str(parabolic_drive), expected_str)
+    
+    def test_parabolic_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        parabolic_drive = l.ParabolicDriveCaller(
+            const_coef=1.0,
+            linear_coef=2.0,
+            parabolic_coef=3.0
+        )
+        self.assertEqual(parabolic_drive.drive_type(), "parabolic")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_parabolic_drive_caller_missing_required_field(self):
+        """Test creating a ParabolicDriveCaller missing a required field"""
+        # Missing const_coef
+        with self.assertRaises(Exception):
+            l.ParabolicDriveCaller(
+                linear_coef=2.0,
+                parabolic_coef=3.0
+            )
+        
+        # Missing linear_coef
+        with self.assertRaises(Exception):
+            l.ParabolicDriveCaller(
+                const_coef=1.0,
+                parabolic_coef=3.0
+            )
+        
+        # Missing parabolic_coef
+        with self.assertRaises(Exception):
+            l.ParabolicDriveCaller(
+                const_coef=1.0,
+                linear_coef=2.0
+            )
+
+    unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_parabolic_drive_caller_invalid_types(self):
+        """Test invalid types for ParabolicDriveCaller fields"""
+        # Invalid type for const_coef
+        with self.assertRaises(Exception):
+            l.ParabolicDriveCaller(
+                const_coef="invalid string",
+                linear_coef=2.0,
+                parabolic_coef=3.0
+            )
+        
+        # Invalid type for linear_coef
+        with self.assertRaises(Exception):
+            l.ParabolicDriveCaller(
+                const_coef=1.0,
+                linear_coef=[1, 2, 3],  # List is invalid
+                parabolic_coef=3.0
+            )
+        
+        # Invalid MBVar type for parabolic_coef (using string MBVar)
+        if 'string_var' not in l.declared_MBVars:
+            string_var = l.MBVar(name='string_var', var_type='string', expression="test")
+        else:
+            string_var = l.declared_MBVars['string_var']
+            
+        with self.assertRaises(TypeError):
+            l.ParabolicDriveCaller(
+                const_coef=1.0,
+                linear_coef=2.0,
+                parabolic_coef=string_var  # String MBVar is invalid for numeric field
+            )
+
+class TestPeriodicDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method"""
+        # Create sample drive callers for testing
+        self.const_drive = l.ConstDriveCaller(const_value=5.0)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=10.0)
+    
+    def test_periodic_drive_caller_creation_valid(self):
+        """Test that PeriodicDriveCaller works with valid inputs"""
+        # Create with all parameters
+        periodic_drive = l.PeriodicDriveCaller(
+            initial_time=1.0,
+            period=2.0,
+            func_drive=self.const_drive
+        )
+        self.assertIsInstance(periodic_drive, l.PeriodicDriveCaller)
+        self.assertEqual(periodic_drive.initial_time, 1.0)
+        self.assertEqual(periodic_drive.period, 2.0)
+        self.assertEqual(periodic_drive.func_drive, self.const_drive)
+        
+        # Create with default initial_time
+        periodic_drive = l.PeriodicDriveCaller(
+            period=2.0,
+            func_drive=self.const_drive
+        )
+        self.assertEqual(periodic_drive.initial_time, 0.0)
+        
+        # Create with idx
+        periodic_drive = l.PeriodicDriveCaller(
+            idx=10,
+            initial_time=1.0,
+            period=2.0,
+            func_drive=self.const_drive
+        )
+        self.assertEqual(periodic_drive.idx, 10)
+    
+    def test_periodic_drive_caller_default_warning(self):
+        """Test warning when initial_time is not specified"""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            
+            periodic_drive = l.PeriodicDriveCaller(
+                period=2.0,
+                func_drive=self.const_drive
+            )
+            
+            # Verify a warning was raised
+            self.assertTrue(len(w) > 0)
+            self.assertTrue(any("<initial_time> is not set" in str(warning.message) for warning in w))
+    
+    def test_periodic_drive_caller_str_representation(self):
+        """Test string representation of PeriodicDriveCaller"""
+        # Test with regular drive
+        periodic_drive = l.PeriodicDriveCaller(
+            initial_time=1.0,
+            period=2.0,
+            func_drive=self.const_drive
+        )
+        expected_str = "periodic, 1.0, 2.0,\n\tconst, 5.0"
+        self.assertEqual(str(periodic_drive), expected_str)
+        
+        # Test with idx
+        periodic_drive = l.PeriodicDriveCaller(
+            idx=10,
+            initial_time=1.0,
+            period=2.0,
+            func_drive=self.const_drive
+        )
+        expected_str = "drive caller: 10, periodic, 1.0, 2.0,\n\tconst, 5.0"
+        self.assertEqual(str(periodic_drive), expected_str)
+        
+        # Test with referenced drive
+        periodic_drive = l.PeriodicDriveCaller(
+            initial_time=1.0,
+            period=2.0,
+            func_drive=self.const_drive_with_idx
+        )
+        expected_str = "periodic, 1.0, 2.0,\n\treference, 5"
+        self.assertEqual(str(periodic_drive), expected_str)
+    
+    def test_periodic_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        periodic_drive = l.PeriodicDriveCaller(
+            initial_time=1.0,
+            period=2.0,
+            func_drive=self.const_drive
+        )
+        self.assertEqual(periodic_drive.drive_type(), "periodic")
+    
+    def test_periodic_drive_caller_nested(self):
+        """Test nesting PeriodicDriveCaller with other drives"""
+        # Create a periodic drive
+        periodic_drive = l.PeriodicDriveCaller(
+            initial_time=1.0,
+            period=2.0,
+            func_drive=self.const_drive
+        )
+        
+        # Create a drive that uses the periodic drive
+        outer_drive = l.DriveDriveCaller(
+            drive_caller1=periodic_drive,
+            drive_caller2=self.const_drive_with_idx
+        )
+        
+        self.assertIsInstance(outer_drive, l.DriveDriveCaller)
+        self.assertEqual(outer_drive.drive_caller1, periodic_drive)
+        
+        # Check string representation
+        expected_str = "drive,\n\tperiodic, 1.0, 2.0,\n\tconst, 5.0,\n\treference, 5"
+        self.assertEqual(str(outer_drive), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_periodic_drive_caller_missing_required_field(self):
+        """Test creating a PeriodicDriveCaller missing a required field"""
+        # Missing period
+        with self.assertRaises(Exception):
+            l.PeriodicDriveCaller(
+                initial_time=1.0,
+                func_drive=self.const_drive
+            )
+        
+        # Missing func_drive
+        with self.assertRaises(Exception):
+            l.PeriodicDriveCaller(
+                initial_time=1.0,
+                period=2.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_periodic_drive_caller_invalid_types(self):
+        """Test invalid types for PeriodicDriveCaller fields"""
+        # Invalid type for initial_time
+        with self.assertRaises(Exception):
+            l.PeriodicDriveCaller(
+                initial_time="invalid string",
+                period=2.0,
+                func_drive=self.const_drive
+            )
+        
+        # Invalid type for period
+        with self.assertRaises(Exception):
+            l.PeriodicDriveCaller(
+                initial_time=1.0,
+                period=[1, 2, 3],  # List is invalid
+                func_drive=self.const_drive
+            )
+        
+        # Invalid type for func_drive (not a DriveCaller)
+        with self.assertRaises(Exception):
+            l.PeriodicDriveCaller(
+                initial_time=1.0,
+                period=2.0,
+                func_drive="not a drive caller"
+            )
+        
+        # Invalid MBVar type for initial_time (using string MBVar)
+        if 'string_var' not in l.declared_MBVars:
+            string_var = l.MBVar(name='string_var', var_type='string', expression="test")
+        else:
+            string_var = l.declared_MBVars['string_var']
+            
+        with self.assertRaises(TypeError):
+            l.PeriodicDriveCaller(
+                initial_time=string_var,  # String MBVar is invalid for numeric field
+                period=2.0,
+                func_drive=self.const_drive
+            )
+
 class TestSineDriveCaller(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
