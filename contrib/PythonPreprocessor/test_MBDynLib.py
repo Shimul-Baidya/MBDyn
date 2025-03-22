@@ -4598,6 +4598,515 @@ class TestPostponedDriveCaller(unittest.TestCase):
         # Invalid type for label (should be int or MBVar)
         with self.assertRaises(Exception):
             l.PostponedDriveCaller(label="not an integer")
+
+class TestRampDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method"""
+        # Create MBVar objects for testing
+        if 'slope_var' not in l.declared_MBVars:
+            self.slope_var = l.MBVar(name='slope_var', var_type='real', expression=2.5)
+        else:
+            self.slope_var = l.declared_MBVars['slope_var']
+    
+    def test_ramp_drive_caller_creation_valid(self):
+        """Test that RampDriveCaller works with valid inputs"""
+        # Create with all parameters
+        ramp_drive = l.RampDriveCaller(
+            slope=1.0,
+            initial_time=0.0,
+            final_time=10.0,
+            initial_value=5.0
+        )
+        self.assertIsInstance(ramp_drive, l.RampDriveCaller)
+        self.assertEqual(ramp_drive.slope, 1.0)
+        self.assertEqual(ramp_drive.initial_time, 0.0)
+        self.assertEqual(ramp_drive.final_time, 10.0)
+        self.assertEqual(ramp_drive.initial_value, 5.0)
+        
+        # Create with 'forever' as final_time
+        ramp_drive = l.RampDriveCaller(
+            slope=1.0,
+            initial_time=0.0,
+            final_time='forever',
+            initial_value=5.0
+        )
+        self.assertIsInstance(ramp_drive, l.RampDriveCaller)
+        self.assertEqual(ramp_drive.final_time, 'forever')
+        
+        # Create with idx
+        ramp_drive = l.RampDriveCaller(
+            idx=10,
+            slope=1.0,
+            initial_time=0.0,
+            final_time=10.0,
+            initial_value=5.0
+        )
+        self.assertEqual(ramp_drive.idx, 10)
+    
+    def test_ramp_drive_caller_with_mbvars(self):
+        """Test RampDriveCaller with MBVar objects"""
+        ramp_drive = l.RampDriveCaller(
+            slope=self.slope_var,
+            initial_time=0.0,
+            final_time=10.0,
+            initial_value=5.0
+        )
+        self.assertEqual(ramp_drive.slope, self.slope_var)
+    
+    def test_ramp_drive_caller_default_warning(self):
+        """Test warnings for default parameters"""
+        # Test warning for default initial_time
+        with warnings.catch_warnings(record=True) as w:
+            ramp_drive = l.RampDriveCaller(
+                slope=1.0,
+                final_time=10.0
+            )
+            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(ramp_drive.initial_time, 0.0)
+        
+        # Test warning for default initial_value
+        with warnings.catch_warnings(record=True) as w:
+            ramp_drive = l.RampDriveCaller(
+                slope=1.0,
+                final_time=10.0,
+                initial_time=0.0
+            )
+            self.assertTrue(any("<initial_value> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(ramp_drive.initial_value, 0.0)
+    
+    def test_ramp_drive_caller_str_representation(self):
+        """Test string representation of RampDriveCaller"""
+        # Test without idx
+        ramp_drive = l.RampDriveCaller(
+            slope=1.0,
+            initial_time=0.0,
+            final_time=10.0,
+            initial_value=5.0
+        )
+        expected_str = "ramp, 1.0, 0.0, 10.0, 5.0"
+        self.assertEqual(str(ramp_drive), expected_str)
+        
+        # Test with idx
+        ramp_drive = l.RampDriveCaller(
+            idx=10,
+            slope=1.0,
+            initial_time=0.0,
+            final_time=10.0,
+            initial_value=5.0
+        )
+        expected_str = "drive caller: 10, ramp, 1.0, 0.0, 10.0, 5.0"
+        self.assertEqual(str(ramp_drive), expected_str)
+        
+        # Test with 'forever' and MBVar
+        ramp_drive = l.RampDriveCaller(
+            slope=self.slope_var,
+            initial_time=0.0,
+            final_time='forever',
+            initial_value=5.0
+        )
+        expected_str = f"ramp, {self.slope_var}, 0.0, forever, 5.0"
+        self.assertEqual(str(ramp_drive), expected_str)
+    
+    def test_ramp_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        ramp_drive = l.RampDriveCaller(
+            slope=1.0,
+            initial_time=0.0,
+            final_time=10.0,
+            initial_value=5.0
+        )
+        self.assertEqual(ramp_drive.drive_type(), "ramp")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_ramp_drive_caller_missing_required_field(self):
+        """Test creating a RampDriveCaller missing a required field"""
+        # Missing slope
+        with self.assertRaises(Exception):
+            l.RampDriveCaller(
+                initial_time=0.0,
+                final_time=10.0,
+                initial_value=5.0
+            )
+        
+        # Missing final_time
+        with self.assertRaises(Exception):
+            l.RampDriveCaller(
+                slope=1.0,
+                initial_time=0.0,
+                initial_value=5.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_ramp_drive_caller_invalid_types(self):
+        """Test invalid types for RampDriveCaller fields"""
+        # Invalid type for slope
+        with self.assertRaises(Exception):
+            l.RampDriveCaller(
+                slope="invalid string",
+                initial_time=0.0,
+                final_time=10.0,
+                initial_value=5.0
+            )
+        
+        # Invalid MBVar type for initial_value (using string MBVar)
+        if 'string_var' not in l.declared_MBVars:
+            string_var = l.MBVar(name='string_var', var_type='string', expression="test")
+        else:
+            string_var = l.declared_MBVars['string_var']
+            
+        with self.assertRaises(TypeError):
+            l.RampDriveCaller(
+                slope=1.0,
+                initial_time=0.0,
+                final_time=10.0,
+                initial_value=string_var  # String MBVar is invalid for numeric field
+            )
+
+
+class TestRandomDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method"""
+        # Create MBVar objects for testing
+        if 'amplitude_var' not in l.declared_MBVars:
+            self.amplitude_var = l.MBVar(name='amplitude_var', var_type='real', expression=2.5)
+        else:
+            self.amplitude_var = l.declared_MBVars['amplitude_var']
+            
+        if 'steps_var' not in l.declared_MBVars:
+            self.steps_var = l.MBVar(name='steps_var', var_type='integer', expression=5)
+        else:
+            self.steps_var = l.declared_MBVars['steps_var']
+    
+    def test_random_drive_caller_creation_valid(self):
+        """Test that RandomDriveCaller works with valid inputs"""
+        # Create with required parameters
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time=10.0
+        )
+        self.assertIsInstance(random_drive, l.RandomDriveCaller)
+        self.assertEqual(random_drive.amplitude_value, 1.0)
+        self.assertEqual(random_drive.mean_value, 0.0)
+        self.assertEqual(random_drive.initial_time, 0.0)
+        self.assertEqual(random_drive.final_time, 10.0)
+        self.assertIsNone(random_drive.steps_to_hold_value)
+        self.assertIsNone(random_drive.seed_value)
+        
+        # Create with all parameters
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time=10.0,
+            steps_to_hold_value=3,
+            seed_value=42
+        )
+        self.assertIsInstance(random_drive, l.RandomDriveCaller)
+        self.assertEqual(random_drive.steps_to_hold_value, 3)
+        self.assertEqual(random_drive.seed_value, 42)
+        
+        # Create with 'time' as seed_value
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time=10.0,
+            seed_value='time'
+        )
+        self.assertEqual(random_drive.seed_value, 'time')
+        
+        # Create with 'forever' as final_time
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time='forever'
+        )
+        self.assertEqual(random_drive.final_time, 'forever')
+    
+    def test_random_drive_caller_with_mbvars(self):
+        """Test RandomDriveCaller with MBVar objects"""
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=self.amplitude_var,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time=10.0,
+            steps_to_hold_value=self.steps_var
+        )
+        self.assertEqual(random_drive.amplitude_value, self.amplitude_var)
+        self.assertEqual(random_drive.steps_to_hold_value, self.steps_var)
+    
+    def test_random_drive_caller_default_warning(self):
+        """Test warning for default initial_time"""
+        with warnings.catch_warnings(record=True) as w:
+            random_drive = l.RandomDriveCaller(
+                amplitude_value=1.0,
+                mean_value=0.0,
+                final_time=10.0
+            )
+            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(random_drive.initial_time, 0.0)
+    
+    def test_random_drive_caller_str_representation(self):
+        """Test string representation of RandomDriveCaller"""
+        # Test basic parameters
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time=10.0
+        )
+        expected_str = "random, 1.0, 0.0, 0.0, 10.0"
+        self.assertEqual(str(random_drive), expected_str)
+        
+        # Test with all parameters
+        random_drive = l.RandomDriveCaller(
+            idx=5,
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time=10.0,
+            steps_to_hold_value=3,
+            seed_value=42
+        )
+        expected_str = "drive caller: 5, random, 1.0, 0.0, 0.0, 10.0, steps, 3, seed, 42"
+        self.assertEqual(str(random_drive), expected_str)
+        
+        # Test with 'time' and 'forever'
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time='forever',
+            seed_value='time'
+        )
+        expected_str = "random, 1.0, 0.0, 0.0, forever, seed, time"
+        self.assertEqual(str(random_drive), expected_str)
+    
+    def test_random_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        random_drive = l.RandomDriveCaller(
+            amplitude_value=1.0,
+            mean_value=0.0,
+            initial_time=0.0,
+            final_time=10.0
+        )
+        self.assertEqual(random_drive.drive_type(), "random")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_random_drive_caller_missing_required_field(self):
+        """Test creating a RandomDriveCaller missing a required field"""
+        # Missing amplitude_value
+        with self.assertRaises(Exception):
+            l.RandomDriveCaller(
+                mean_value=0.0,
+                initial_time=0.0,
+                final_time=10.0
+            )
+        
+        # Missing mean_value
+        with self.assertRaises(Exception):
+            l.RandomDriveCaller(
+                amplitude_value=1.0,
+                initial_time=0.0,
+                final_time=10.0
+            )
+        
+        # Missing final_time
+        with self.assertRaises(Exception):
+            l.RandomDriveCaller(
+                amplitude_value=1.0,
+                mean_value=0.0,
+                initial_time=0.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_random_drive_caller_invalid_types(self):
+        """Test invalid types for RandomDriveCaller fields"""
+        # Invalid type for steps_to_hold_value
+        with self.assertRaises(Exception):
+            l.RandomDriveCaller(
+                amplitude_value=1.0,
+                mean_value=0.0,
+                initial_time=0.0,
+                final_time=10.0,
+                steps_to_hold_value="not an integer"
+            )
+        
+        # Invalid value for steps_to_hold_value (must be positive)
+        with self.assertRaises(ValueError):
+            l.RandomDriveCaller(
+                amplitude_value=1.0,
+                mean_value=0.0,
+                initial_time=0.0,
+                final_time=10.0,
+                steps_to_hold_value=0
+            )
+        
+        # Invalid type for seed_value
+        with self.assertRaises(Exception):
+            l.RandomDriveCaller(
+                amplitude_value=1.0,
+                mean_value=0.0,
+                initial_time=0.0,
+                final_time=10.0,
+                seed_value=3.14  # Should be integer or 'time'
+            )
+
+
+class TestSampleAndHoldDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method"""
+        # Create sample drive callers for testing
+        self.function_drive = l.ConstDriveCaller(const_value=5.0)
+        self.trigger_drive = l.ConstDriveCaller(const_value=1.0)
+        self.function_drive_with_idx = l.ConstDriveCaller(idx=10, const_value=5.0)
+        self.trigger_drive_with_idx = l.ConstDriveCaller(idx=20, const_value=1.0)
+        
+        # Create MBVar for testing
+        if 'initial_val_var' not in l.declared_MBVars:
+            self.initial_val_var = l.MBVar(name='initial_val_var', var_type='real', expression=3.0)
+        else:
+            self.initial_val_var = l.declared_MBVars['initial_val_var']
+    
+    def test_sample_and_hold_drive_caller_creation_valid(self):
+        """Test creating a SampleAndHoldDriveCaller with valid parameters"""
+        # Create with required parameters
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive,
+            trigger=self.trigger_drive
+        )
+        self.assertIsInstance(drive, l.SampleAndHoldDriveCaller)
+        self.assertEqual(drive.function, self.function_drive)
+        self.assertEqual(drive.trigger, self.trigger_drive)
+        self.assertIsNone(drive.initial_value)
+        
+        # Create with initial_value
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive,
+            trigger=self.trigger_drive,
+            initial_value=2.0
+        )
+        self.assertIsInstance(drive, l.SampleAndHoldDriveCaller)
+        self.assertEqual(drive.initial_value, 2.0)
+        
+        # Create with idx
+        drive = l.SampleAndHoldDriveCaller(
+            idx=5,
+            function=self.function_drive,
+            trigger=self.trigger_drive
+        )
+        self.assertEqual(drive.idx, 5)
+    
+    def test_sample_and_hold_drive_caller_with_mbvars(self):
+        """Test SampleAndHoldDriveCaller with MBVar for initial_value"""
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive,
+            trigger=self.trigger_drive,
+            initial_value=self.initial_val_var
+        )
+        self.assertEqual(drive.initial_value, self.initial_val_var)
+    
+    def test_sample_and_hold_drive_caller_with_reference_drives(self):
+        """Test SampleAndHoldDriveCaller with drives that have idx (reference)"""
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive_with_idx,
+            trigger=self.trigger_drive_with_idx
+        )
+        self.assertEqual(drive.function, self.function_drive_with_idx)
+        self.assertEqual(drive.trigger, self.trigger_drive_with_idx)
+    
+    def test_sample_and_hold_drive_caller_str_representation(self):
+        """Test string representation of SampleAndHoldDriveCaller"""
+        # Test with regular drives
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive,
+            trigger=self.trigger_drive
+        )
+        expected_str = "sample and hold,\n\tconst, 5.0,\n\tconst, 1.0"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with idx
+        drive = l.SampleAndHoldDriveCaller(
+            idx=5,
+            function=self.function_drive,
+            trigger=self.trigger_drive
+        )
+        expected_str = "drive caller: 5, sample and hold,\n\tconst, 5.0,\n\tconst, 1.0"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with reference drives and initial_value
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive_with_idx,
+            trigger=self.trigger_drive_with_idx,
+            initial_value=2.0
+        )
+        expected_str = "sample and hold,\n\treference, 10,\n\treference, 20, initial value, 2.0"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with MBVar initial_value
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive,
+            trigger=self.trigger_drive,
+            initial_value=self.initial_val_var
+        )
+        expected_str = f"sample and hold,\n\tconst, 5.0,\n\tconst, 1.0, initial value, {self.initial_val_var}"
+        self.assertEqual(str(drive), expected_str)
+    
+    def test_sample_and_hold_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        drive = l.SampleAndHoldDriveCaller(
+            function=self.function_drive,
+            trigger=self.trigger_drive
+        )
+        self.assertEqual(drive.drive_type(), "sample and hold")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_sample_and_hold_drive_caller_missing_required_field(self):
+        """Test creating a SampleAndHoldDriveCaller missing a required field"""
+        # Missing function
+        with self.assertRaises(Exception):
+            l.SampleAndHoldDriveCaller(
+                trigger=self.trigger_drive
+            )
+        
+        # Missing trigger
+        with self.assertRaises(Exception):
+            l.SampleAndHoldDriveCaller(
+                function=self.function_drive
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_sample_and_hold_drive_caller_invalid_types(self):
+        """Test invalid types for SampleAndHoldDriveCaller fields"""
+        # Invalid type for function
+        with self.assertRaises(Exception):
+            l.SampleAndHoldDriveCaller(
+                function="not a drive caller",
+                trigger=self.trigger_drive
+            )
+        
+        # Invalid type for trigger
+        with self.assertRaises(Exception):
+            l.SampleAndHoldDriveCaller(
+                function=self.function_drive,
+                trigger="not a drive caller"
+            )
+        
+        # Invalid MBVar type for initial_value
+        if 'string_var' not in l.declared_MBVars:
+            string_var = l.MBVar(name='string_var', var_type='string', expression="test")
+        else:
+            string_var = l.declared_MBVars['string_var']
+            
+        with self.assertRaises(TypeError):
+            l.SampleAndHoldDriveCaller(
+                function=self.function_drive,
+                trigger=self.trigger_drive,
+                initial_value=string_var  # String MBVar is invalid for numeric field
+            )
             
 class TestSineDriveCaller(unittest.TestCase):
     def setUp(self):

@@ -4035,268 +4035,170 @@ class NodeDriveCaller(DriveCaller):
         s = s + ', string, \"{}\"'.format(self.private_data)
         s = s + ', {}'.format(self.func_drive)
         return s
+    
+class RampDriveCaller(DriveCaller2):
+    """
+    The Ramp drive caller implements a ramp function with specified slope.
+    
+    f(t) = initial_value                           if t < initial_time
+           initial_value + slope·(t-initial_time)  if initial_time ≤ t ≤ final_time
+           initial_value + slope·(final_time-initial_time)  if t > final_time
+    """
+    
+    slope: Union[float, MBVar]    
+    initial_time: Union[float, MBVar]  
+    final_time: Union[float, MBVar, Literal['forever']]    
+    initial_value: Union[float, MBVar]
+    
+    @field_validator('slope', 'initial_time', 'final_time', 'initial_value')
+    def validate_real_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: <{v}> must be a real number or an MBVar of type real'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'ramp'
+    
+    def __init__(self, **kwargs):
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0
+            
+        # Check if initial_value wasn't explicitly provided
+        if 'initial_value' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_value> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_value'] = 0.0
+            
+        super().__init__(**kwargs)
+
+    def __str__(self):
+        s = f'{self.drive_header()}'
+        s += f', {self.slope}, {self.initial_time}, {self.final_time}, {self.initial_value}'
+        return s
+
+class RandomDriveCaller(DriveCaller2):
+    """
+    The Random drive caller generates pseudo-random numbers.
+    Numbers are uniformly distributed in the interval [mean_value - amplitude_value, mean_value + amplitude_value).
+    The output can be held for a specified number of steps, and the random seed can be specified.
+    """
+    
+    amplitude_value: Union[float, MBVar]    
+    mean_value: Union[float, MBVar]    
+    initial_time: Union[float, MBVar]  
+    final_time: Union[float, MBVar, Literal['forever']]    
+    steps_to_hold_value: Optional[Union[int, MBVar]] = None    
+    seed_value: Optional[Union[int, MBVar, Literal['time']]] = None
+    
+    @field_validator('amplitude_value', 'mean_value', 'initial_time', 'final_time')
+    def validate_real_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: <{v}> must be a real number or an MBVar of type real'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    @field_validator('steps_to_hold_value')
+    def validate_steps(cls, v):
+        if v is not None:
+            if isinstance(v, MBVar) and 'integer' not in v.var_type:
+                raise TypeError(
+                    f'\n-------------------\nERROR: '
+                    f'{cls.__name__}: <steps_to_hold_value> must be an integer or an MBVar of type integer'
+                    f'\n-------------------\n'
+                )
+            if v <= 0:
+                raise ValueError(
+                    f'\n-------------------\nERROR: '
+                    f'{cls.__name__}: <steps_to_hold_value> must be a positive integer'
+                    f'\n-------------------\n'
+                )
+        return v
+    
+    @field_validator('seed_value')
+    def validate_seed(cls, v):
+        if v is not None and v != 'time':
+            if isinstance(v, MBVar) and 'integer' not in v.var_type:
+                raise TypeError(
+                    f'\n-------------------\nERROR: '
+                    f'{cls.__name__}: <seed_value> must be an integer, "time", or an MBVar of type integer'
+                    f'\n-------------------\n'
+                )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'random'
+    
+    def __init__(self, **kwargs):
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_time'] = 0.0
+        super().__init__(**kwargs)
+    
+    def __str__(self):
+        s = f'{self.drive_header()}'
+        s += f', {self.amplitude_value}, {self.mean_value}, {self.initial_time}, {self.final_time}'
+        if self.steps_to_hold_value is not None:
+            s += f', steps, {self.steps_to_hold_value}'
+        if self.seed_value is not None:
+            s += f', seed, {self.seed_value}'
+        return s
         
-class RampDriveCaller(DriveCaller):
-    type = 'ramp'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RampDriveCaller: <idx> must either be an integer value or an MBVar' +
-                '\n-------------------\n'
+class SampleAndHoldDriveCaller(DriveCaller2):
+    """    
+    When trigger is non-zero, the value of function is recorded after convergence at the end of the time
+    step, and returned whenever the drive is called afterwards. When trigger is zero, the last recorded value
+    is returned. When initial_value is provided, if the trigger is initially zero, this value is returned 
+    until trigger becomes non-zero.
+    """
+    
+    function: DriveCaller2    
+    trigger: DriveCaller2    
+    initial_value: Optional[Union[float, MBVar]] = None
+    
+    @field_validator('initial_value')
+    def validate_real_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: <initial_value> must be a real number or an MBVar of type real'
+                f'\n-------------------\n'
             )
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'slope'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RampDriveCaller: <slope> must either be a number or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.slope = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' RampDriveCaller: <slope> is required' +
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'initial_time'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RampDriveCaller: <initial_time> must either be a number or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.initial_time = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nWARNING:' +
-                ' RampDriveCaller: <initial_time> not set, assuming 0.' +
-                '\n-------------------\n'
-            )
-            self.initial_time = 0.
-        try:
-            arg = 'final_time'
-            assert isinstance(kwargs[arg], (Number, MBVar, str)), (
-                '\n-------------------\nERROR:' +
-                ' RampDriveCaller: <final_time> must either be a number, '
-                '\'forever\', or an MBVar' + 
-                '\n-------------------\n')
-            self.final_time = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' RampDriveCaller: <final_time> is not set' + 
-                '\n-------------------\n')
-        try:
-            arg = 'initial_value'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RampDriveCaller: <initial_value> must either be a number or an MBVar' + 
-                '\n-------------------\n'
-            )
-            self.initial_value = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nWARNING:' +
-                ' RampDriveCaller: <initial_value> not provided, assuming 0.' + 
-                '\n-------------------\n'
-            )
-            self.initial_value = 0.        
+        return v
+    
+    def drive_type(self) -> str:
+        return 'sample and hold'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}, {}'.format(self.slope, self.initial_time)
-        s = s + ', {}, {}'.format(self.final_time, self.initial_value)
+        s = f'{self.drive_header()}'
+        if hasattr(self.function, 'idx') and self.function.idx is not None and self.function.idx >= 0:
+            s += f',\n\treference, {self.function.idx}'
+        else:
+            s += f',\n\t{self.function}'
+        if hasattr(self.trigger, 'idx') and self.trigger.idx is not None and self.trigger.idx >= 0:
+            s += f',\n\treference, {self.trigger.idx}'
+        else:
+            s += f',\n\t{self.trigger}'
+        if self.initial_value is not None:
+            s += f', initial value, {self.initial_value}'
         return s
-
-class RandomDriveCaller(DriveCaller):
-    type = 'random'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <idx> must either be an integer value or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'amplitude_value'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <amplitude_value> must either be a number or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.amplitude_value = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <amplitude_value> is required' +
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'mean_value'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <mean_value> must either be a number or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.mean_value = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <mean_value> is required' +
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'initial_time'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <initial_time> must either be a number or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.initial_time = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nWARNING:' +
-                ' RandomDriveCaller: <initial_time> not set, assuming 0.' +
-                '\n-------------------\n'
-            )
-            self.initial_time = 0.
-        try:
-            arg = 'final_time'
-            assert isinstance(kwargs[arg], (Number, MBVar, str)), (
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <final_time> must either be a number, '
-                '\'forever\', or an MBVar' + 
-                '\n-------------------\n'
-            )
-            self.final_time = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <final_time> is required' +
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'steps_to_hold_value'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <steps_to_hold_value> must either be an integer value or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.steps_to_hold_value = kwargs[arg]
-        except KeyError:
-            pass  
-        try:
-            arg = 'seed_value'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' RandomDriveCaller: <seed_value> must either be an integer value or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.seed_value = kwargs[arg]
-        except KeyError:
-            pass   
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}'.format(self.idx)
-        s = s + ', {}, {}'.format(self.type, self.amplitude_value)
-        s = s + ', {}, {}'.format(self.mean_value, self.initial_time)
-        s = s + ', {}'.format(self.final_time)
-        try:
-            s = s + ', steps, {}'.format(self.steps_to_hold_value)
-        except AttributeError:
-            pass
-        try:
-            s = s + ', seed, {}'.format(self.seed_value)
-        except AttributeError:
-            pass
-        return s
-
-class SampleAndHoldDriveCaller(DriveCaller):
-    type = 'sample and hold'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' SampleAndHoldDriveCaller: <idx> must either be an integer value or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'function'
-            assert(isinstance(kwargs[arg], DriveCaller)), (
-                '\n-------------------\nERROR:' +
-                ' SampleAndHoldDriveCaller: <function> must be a DriveCaller' + 
-                '\n-------------------\n'
-            )
-            self.function = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' SampleAndHoldDriveCaller: <function> must be provided' + 
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'trigger'
-            assert(isinstance(kwargs[arg], DriveCaller)), (
-                '\n-------------------\nERROR:' +
-                ' SampleAndHoldDriveCaller: <trigger> must be a DriveCaller' + 
-                '\n-------------------\n'
-            )
-            self.trigger = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' SampleAndHoldDriveCaller: <trigger> must be provided' + 
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'initial_value'
-            assert isinstance(kwargs[arg], (Number, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' SampleAndHoldDriveCaller: <initial_value> must either be a number or an MBVar' + 
-                '\n-------------------\n'
-            )
-            self.initial_value = kwargs[arg]
-        except KeyError:
-            errprint(
-                '\n-------------------\nWARNING:' +
-                ' SampleAndHoldDriveCaller: <initial_value> not provided, assuming 0.' + 
-                '\n-------------------\n'
-            )
-            self.initial_value = 0.
-        def __str__(self):
-            s = ''
-            if self.idx >= 0:
-                s = s + 'drive caller: {}, '.format(self.idx)
-            s = s + '{}'.format(self.type)
-            if self.function.idx < 0:
-                s = s + ',\n\t{}'.format(self.function)
-            else:
-                s = s + ',\n\treference, {}'.format(self.function.idx)
-            if self.trigger.idx < 0:
-                s = s + ',\n\t{}'.format(self.trigger)
-            else:
-                s = s + ',\n\treference, {}'.format(self.trigger.idx)
-            try:
-                s = s + ', initial value, {}'.format(self.initial_value)
-            except AttributeError:
-                pass
-            return s
         
 class SineDriveCaller(DriveCaller2):
     """
