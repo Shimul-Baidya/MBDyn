@@ -4373,6 +4373,232 @@ class TestPeriodicDriveCaller(unittest.TestCase):
                 func_drive=self.const_drive
             )
 
+class TestPiecewiseLinearDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Sample points and values for testing
+        self.num_points = 3
+        self.points_values = [(0.0, 0.0), (1.0, 2.0), (2.0, 1.0)]
+        
+        # Create MBVar objects for testing if needed
+        if 'points_var' not in l.declared_MBVars:
+            self.points_var = l.MBVar(name='points_var', var_type='integer', expression=3)
+        else:
+            self.points_var = l.declared_MBVars['points_var']
+    
+    def test_piecewise_linear_drive_caller_creation_valid(self):
+        """Test creating a PiecewiseLinearDriveCaller with valid parameters"""
+        # Create with integer num_points
+        drive = l.PiecewiseLinearDriveCaller(
+            num_points=self.num_points,
+            points_values=self.points_values
+        )
+        self.assertIsInstance(drive, l.PiecewiseLinearDriveCaller)
+        self.assertEqual(drive.num_points, self.num_points)
+        self.assertEqual(drive.points_values, self.points_values)
+        self.assertEqual(drive.drive_type(), "piecewise linear")
+        
+        # Create with MBVar for num_points
+        drive = l.PiecewiseLinearDriveCaller(
+            num_points=self.points_var,
+            points_values=self.points_values
+        )
+        self.assertIsInstance(drive, l.PiecewiseLinearDriveCaller)
+        self.assertEqual(drive.num_points, self.points_var)
+        
+        # Create with idx
+        drive = l.PiecewiseLinearDriveCaller(
+            idx=10,
+            num_points=self.num_points,
+            points_values=self.points_values
+        )
+        self.assertEqual(drive.idx, 10)
+    
+    def test_piecewise_linear_drive_caller_with_mbvars_in_points(self):
+        """Test using MBVar objects in the points_values list"""
+        # Create MBVars for points and values
+        if 'point1' not in l.declared_MBVars:
+            point1_var = l.MBVar(name='point1', var_type='real', expression=1.5)
+        else:
+            point1_var = l.declared_MBVars['point1']
+            
+        if 'value1' not in l.declared_MBVars:
+            value1_var = l.MBVar(name='value1', var_type='real', expression=3.0)
+        else:
+            value1_var = l.declared_MBVars['value1']
+        
+        # Create points_values with MBVars
+        points_values_with_mbvars = [(0.0, 0.0), (point1_var, value1_var), (2.0, 1.0)]
+        
+        # Create drive with MBVars in points_values
+        drive = l.PiecewiseLinearDriveCaller(
+            num_points=self.num_points,
+            points_values=points_values_with_mbvars
+        )
+        self.assertIsInstance(drive, l.PiecewiseLinearDriveCaller)
+        self.assertEqual(drive.points_values[1][0], point1_var)
+        self.assertEqual(drive.points_values[1][1], value1_var)
+    
+    def test_piecewise_linear_drive_caller_str_representation(self):
+        """Test string representation of the drive caller"""
+        # Create a drive
+        drive = l.PiecewiseLinearDriveCaller(
+            num_points=self.num_points,
+            points_values=self.points_values
+        )
+        
+        # Expected string representation
+        expected_str = "piecewise linear, 3,\n\t0.0, 0.0,\n\t1.0, 2.0,\n\t2.0, 1.0"
+        
+        # Test string representation
+        self.assertEqual(str(drive), expected_str)
+        
+        # Create with idx
+        drive = l.PiecewiseLinearDriveCaller(
+            idx=10,
+            num_points=self.num_points,
+            points_values=self.points_values
+        )
+        
+        # Expected string with idx
+        expected_str_with_idx = "drive caller: 10, piecewise linear, 3,\n\t0.0, 0.0,\n\t1.0, 2.0,\n\t2.0, 1.0"
+        
+        self.assertEqual(str(drive), expected_str_with_idx)
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_piecewise_linear_drive_caller_validation(self):
+        """Test validation of num_points against length of points_values"""
+        # Test with mismatched num_points and points_values length
+        with self.assertRaises(ValueError) as context:
+            l.PiecewiseLinearDriveCaller(
+                num_points=4,  # Doesn't match the 3 points below
+                points_values=self.points_values
+            )
+        self.assertIn("number of (point, value) pairs", str(context.exception))
+        
+        # Test with too few points
+        with self.assertRaises(ValueError):
+            l.PiecewiseLinearDriveCaller(
+                num_points=1,
+                points_values=[(0.0, 0.0)]  # Need at least 2 points for interpolation
+            )
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_piecewise_linear_drive_caller_missing_required_field(self):
+        """Test validation when required fields are missing"""
+        # Missing num_points
+        with self.assertRaises(Exception):
+            l.PiecewiseLinearDriveCaller(
+                points_values=self.points_values
+            )
+        
+        # Missing points_values
+        with self.assertRaises(Exception):
+            l.PiecewiseLinearDriveCaller(
+                num_points=self.num_points
+            )
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_piecewise_linear_drive_caller_invalid_types(self):
+        """Test with invalid field types"""
+        # Invalid type for num_points
+        with self.assertRaises(Exception):
+            l.PiecewiseLinearDriveCaller(
+                num_points="not an integer",
+                points_values=self.points_values
+            )
+        
+        # Invalid type for points_values
+        with self.assertRaises(Exception):
+            l.PiecewiseLinearDriveCaller(
+                num_points=self.num_points,
+                points_values="not a list"
+            )
+        
+        # # Works with lists too
+        # # Invalid structure in points_values (not tuples)
+        # with self.assertRaises(Exception):
+        #     l.PiecewiseLinearDriveCaller(
+        #         num_points=3,
+        #         points_values=[[0.0, 0.0], [1.0, 2.0], [2.0, 1.0]]  # Lists instead of tuples
+        #     )
+        
+        # Invalid values in tuples
+        with self.assertRaises(Exception):
+            l.PiecewiseLinearDriveCaller(
+                num_points=3,
+                points_values=[(0.0, 0.0), ("string", 2.0), (2.0, 1.0)]  # String instead of number
+            )
+
+class TestPostponedDriveCaller(unittest.TestCase):
+    def test_postponed_drive_caller_creation_valid(self):
+        """Test creating a PostponedDriveCaller with valid parameters"""
+        # Create without idx but with required label
+        drive = l.PostponedDriveCaller(label=42)
+        self.assertIsInstance(drive, l.PostponedDriveCaller)
+        self.assertEqual(drive.label, 42)
+        
+        # Create with idx and label
+        drive = l.PostponedDriveCaller(idx=10, label=42)
+        self.assertIsInstance(drive, l.PostponedDriveCaller)
+        self.assertEqual(drive.idx, 10)
+        self.assertEqual(drive.label, 42)
+    
+    def test_postponed_drive_caller_with_mbvar_label(self):
+        """Test using MBVar as label"""
+        if 'post_label' not in l.declared_MBVars:
+            label_var = l.MBVar(name='post_label', var_type='integer', expression=5)
+        else:
+            label_var = l.declared_MBVars['post_label']
+        
+        drive = l.PostponedDriveCaller(label=label_var)
+        self.assertIsInstance(drive, l.PostponedDriveCaller)
+        self.assertEqual(drive.label, label_var)
+    
+    def test_postponed_drive_caller_str_representation(self):
+        """Test string representation of the drive caller"""
+        # Create drive without idx
+        drive = l.PostponedDriveCaller(label=42)
+        expected_str = "postponed, 42"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Create drive with idx
+        drive = l.PostponedDriveCaller(idx=10, label=42)
+        expected_str = "drive caller: 10, postponed, 42"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with MBVar label
+        if 'post_label' not in l.declared_MBVars:
+            label_var = l.MBVar(name='post_label', var_type='integer', expression=5)
+        else:
+            label_var = l.declared_MBVars['post_label']
+        
+        drive = l.PostponedDriveCaller(label=label_var)
+        expected_str = "postponed, post_label"
+        self.assertEqual(str(drive), expected_str)
+    
+    def test_postponed_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        drive = l.PostponedDriveCaller(label=42)
+        self.assertEqual(drive.drive_type(), "postponed")
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_postponed_drive_caller_missing_required_field(self):
+        """Test creating a PostponedDriveCaller missing the required label field"""
+        with self.assertRaises(Exception):
+            l.PostponedDriveCaller()  # Missing required label
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_postponed_drive_caller_invalid_types(self):
+        """Test with invalid field types"""
+        # Invalid type for idx
+        with self.assertRaises(Exception):
+            l.PostponedDriveCaller(idx="not an integer", label=42)
+            
+        # Invalid type for label (should be int or MBVar)
+        with self.assertRaises(Exception):
+            l.PostponedDriveCaller(label="not an integer")
+            
 class TestSineDriveCaller(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""

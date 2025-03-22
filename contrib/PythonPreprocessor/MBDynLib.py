@@ -3896,6 +3896,72 @@ class PeriodicDriveCaller(DriveCaller2):
         else:
             s += f',\n\t{self.func_drive}'
         return s
+    
+class PiecewiseLinearDriveCaller(DriveCaller2):
+    """    
+    The function performs linear interpolation between defined (point, value) pairs.
+    The first and last point/value pairs are extrapolated if a value beyond the extremes is required.
+    """
+    
+    num_points: Union[int, MBVar]    
+    points_values: List[Tuple[Union[float, MBVar], Union[float, MBVar]]]
+    """List of (point, value) coordinate pairs defining the piecewise linear function"""
+
+    @field_validator('num_points')
+    def validate_num_points(cls, v):
+        if isinstance(v, MBVar) and 'integer' not in v.var_type:
+            raise TypeError(
+                '\n-------------------\nERROR: '
+                'PiecewiseLinearDriveCaller: num_points must be an integer or an MBVar of type integer'
+                '\n-------------------\n'
+            )
+        if v < 2:
+            raise ValueError(
+                '\n-------------------\nERROR: '
+                'PiecewiseLinearDriveCaller: num_points must be at least 2'
+                '\n-------------------\n'
+            )
+        return v
+
+    @model_validator(mode='after')
+    def validate_points_values_length(self):
+        """Validate that the number of points matches the length of points_values"""
+        if isinstance(self.num_points, int) and len(self.points_values) != self.num_points:
+            raise ValueError(
+                '\n-------------------\nERROR: '
+                f'PiecewiseLinearDriveCaller: number of (point, value) pairs ({len(self.points_values)}) '
+                f'does not match num_points ({self.num_points})'
+                '\n-------------------\n'
+            )
+        return self
+    
+    def drive_type(self) -> str:
+        return 'piecewise linear'
+    
+    def __str__(self):
+        s = f'{self.drive_header()}'
+        s += f', {self.num_points}'
+        for point, value in self.points_values:
+            s += f',\n\t{point}, {value}'
+        return s
+    
+class PostponedDriveCaller(DriveCaller2):
+    """    
+    This drive is a stub for a drive that cannot be defined early in the input file 
+    because it occurs when the data manager is not yet available.
+    A drive caller with the same label must be defined before this drive caller is first used.
+    """
+    
+    label: Union[int, MBVar]
+    """Label that identifies this drive for later definition"""
+        
+    def drive_type(self) -> str:
+        return 'postponed'
+    
+    def __str__(self):
+        s = f'{self.drive_header()}'
+        s += f', {self.label}'
+        return s
         
 class NodeDriveCaller(DriveCaller):
     type = 'node'
