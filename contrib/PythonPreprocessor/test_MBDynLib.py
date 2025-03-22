@@ -4762,7 +4762,6 @@ class TestRampDriveCaller(unittest.TestCase):
                 initial_value=string_var  # String MBVar is invalid for numeric field
             )
 
-
 class TestRandomDriveCaller(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method"""
@@ -5422,6 +5421,337 @@ class TestSineDriveCaller(unittest.TestCase):
         # Check string representation
         expected_array_str = f"array, 2,\n\tsine, {self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value},\n\tconst, 2.0"
         self.assertEqual(str(array_drive), expected_array_str)
+
+class TestStepDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method"""
+        # Create MBVar objects for testing if needed
+        if 'step_var' not in l.declared_MBVars:
+            self.step_var = l.MBVar(name='step_var', var_type='real', expression=2.5)
+        else:
+            self.step_var = l.declared_MBVars['step_var']
+    
+    def test_step_drive_caller_creation_valid(self):
+        """Test that StepDriveCaller works with valid inputs"""
+        # Create with all parameters
+        step_drive = l.StepDriveCaller(
+            initial_time=1.0,
+            step_value=5.0,
+            initial_value=0.0
+        )
+        self.assertIsInstance(step_drive, l.StepDriveCaller)
+        self.assertEqual(step_drive.initial_time, 1.0)
+        self.assertEqual(step_drive.step_value, 5.0)
+        self.assertEqual(step_drive.initial_value, 0.0)
+        
+        # Create with idx
+        step_drive = l.StepDriveCaller(
+            idx=10,
+            initial_time=1.0,
+            step_value=5.0,
+            initial_value=0.0
+        )
+        self.assertEqual(step_drive.idx, 10)
+    
+    def test_step_drive_caller_with_mbvars(self):
+        """Test StepDriveCaller with MBVar objects"""
+        step_drive = l.StepDriveCaller(
+            initial_time=1.0,
+            step_value=self.step_var,
+            initial_value=0.0
+        )
+        self.assertEqual(step_drive.step_value, self.step_var)
+    
+    def test_step_drive_caller_default_warning(self):
+        """Test warnings for default parameters"""
+        # Test warning for default initial_time
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            step_drive = l.StepDriveCaller(
+                step_value=5.0
+            )
+            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(step_drive.initial_time, 0.0)
+        
+        # Test warning for default initial_value
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            step_drive = l.StepDriveCaller(
+                step_value=5.0,
+                initial_time=1.0
+            )
+            self.assertTrue(any("<initial_value> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(step_drive.initial_value, 0.0)
+    
+    def test_step_drive_caller_str_representation(self):
+        """Test string representation of StepDriveCaller"""
+        # Test without idx
+        step_drive = l.StepDriveCaller(
+            initial_time=1.0,
+            step_value=5.0,
+            initial_value=0.0
+        )
+        expected_str = "step, 1.0, 5.0, 0.0"
+        self.assertEqual(str(step_drive), expected_str)
+        
+        # Test with idx
+        step_drive = l.StepDriveCaller(
+            idx=10,
+            initial_time=1.0,
+            step_value=5.0,
+            initial_value=0.0
+        )
+        expected_str = "drive caller: 10, step, 1.0, 5.0, 0.0"
+        self.assertEqual(str(step_drive), expected_str)
+        
+        # Test with MBVar
+        step_drive = l.StepDriveCaller(
+            initial_time=1.0,
+            step_value=self.step_var,
+            initial_value=0.0
+        )
+        expected_str = f"step, 1.0, {self.step_var}, 0.0"
+        self.assertEqual(str(step_drive), expected_str)
+    
+    def test_step_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        step_drive = l.StepDriveCaller(
+            initial_time=1.0,
+            step_value=5.0,
+            initial_value=0.0
+        )
+        self.assertEqual(step_drive.drive_type(), "step")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_step_drive_caller_missing_required_field(self):
+        """Test creating a StepDriveCaller missing a required field"""
+        # Missing step_value
+        with self.assertRaises(Exception):
+            l.StepDriveCaller(
+                initial_time=1.0,
+                initial_value=0.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_step_drive_caller_invalid_types(self):
+        """Test invalid types for StepDriveCaller fields"""
+        # Invalid type for step_value
+        with self.assertRaises(Exception):
+            l.StepDriveCaller(
+                initial_time=1.0,
+                step_value="invalid string",
+                initial_value=0.0
+            )
+        
+        # Invalid MBVar type (using string MBVar)
+        if 'string_var' not in l.declared_MBVars:
+            string_var = l.MBVar(name='string_var', var_type='string', expression="test")
+        else:
+            string_var = l.declared_MBVars['string_var']
+            
+        with self.assertRaises(TypeError):
+            l.StepDriveCaller(
+                initial_time=1.0,
+                step_value=string_var,  # String MBVar is invalid for numeric field
+                initial_value=0.0
+            )
+
+class TestTanhDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method"""
+        # Create MBVar objects for testing if needed
+        if 'amplitude_var' not in l.declared_MBVars:
+            self.amplitude_var = l.MBVar(name='amplitude_var', var_type='real', expression=2.5)
+        else:
+            self.amplitude_var = l.declared_MBVars['amplitude_var']
+    
+    def test_tanh_drive_caller_creation_valid(self):
+        """Test that TanhDriveCaller works with valid inputs"""
+        # Create with all parameters
+        tanh_drive = l.TanhDriveCaller(
+            initial_time=1.0,
+            amplitude=2.0,
+            nd_slope=3.0,
+            initial_value=0.0
+        )
+        self.assertIsInstance(tanh_drive, l.TanhDriveCaller)
+        self.assertEqual(tanh_drive.initial_time, 1.0)
+        self.assertEqual(tanh_drive.amplitude, 2.0)
+        self.assertEqual(tanh_drive.nd_slope, 3.0)
+        self.assertEqual(tanh_drive.initial_value, 0.0)
+        
+        # Create with idx
+        tanh_drive = l.TanhDriveCaller(
+            idx=10,
+            initial_time=1.0,
+            amplitude=2.0,
+            nd_slope=3.0,
+            initial_value=0.0
+        )
+        self.assertEqual(tanh_drive.idx, 10)
+    
+    def test_tanh_drive_caller_with_mbvars(self):
+        """Test TanhDriveCaller with MBVar objects"""
+        tanh_drive = l.TanhDriveCaller(
+            initial_time=1.0,
+            amplitude=self.amplitude_var,
+            nd_slope=3.0,
+            initial_value=0.0
+        )
+        self.assertEqual(tanh_drive.amplitude, self.amplitude_var)
+    
+    def test_tanh_drive_caller_default_warning(self):
+        """Test warnings for default parameters"""
+        # Test warning for default initial_time
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            tanh_drive = l.TanhDriveCaller(
+                amplitude=2.0,
+                nd_slope=3.0
+            )
+            self.assertTrue(any("<initial_time> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(tanh_drive.initial_time, 0.0)
+        
+        # Test warning for default initial_value
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            tanh_drive = l.TanhDriveCaller(
+                amplitude=2.0,
+                nd_slope=3.0,
+                initial_time=1.0
+            )
+            self.assertTrue(any("<initial_value> is not set, assuming 0.0." in str(warning.message) for warning in w))
+            self.assertEqual(tanh_drive.initial_value, 0.0)
+    
+    def test_tanh_drive_caller_str_representation(self):
+        """Test string representation of TanhDriveCaller"""
+        # Test without idx
+        tanh_drive = l.TanhDriveCaller(
+            initial_time=1.0,
+            amplitude=2.0,
+            nd_slope=3.0,
+            initial_value=0.0
+        )
+        expected_str = "tanh, 1.0, 2.0, 3.0, 0.0"
+        self.assertEqual(str(tanh_drive), expected_str)
+        
+        # Test with idx
+        tanh_drive = l.TanhDriveCaller(
+            idx=10,
+            initial_time=1.0,
+            amplitude=2.0,
+            nd_slope=3.0,
+            initial_value=0.0
+        )
+        expected_str = "drive caller: 10, tanh, 1.0, 2.0, 3.0, 0.0"
+        self.assertEqual(str(tanh_drive), expected_str)
+        
+        # Test with MBVar
+        tanh_drive = l.TanhDriveCaller(
+            initial_time=1.0,
+            amplitude=self.amplitude_var,
+            nd_slope=3.0,
+            initial_value=0.0
+        )
+        expected_str = f"tanh, 1.0, {self.amplitude_var}, 3.0, 0.0"
+        self.assertEqual(str(tanh_drive), expected_str)
+    
+    def test_tanh_drive_caller_drive_type(self):
+        """Test the drive_type method"""
+        tanh_drive = l.TanhDriveCaller(
+            initial_time=1.0,
+            amplitude=2.0,
+            nd_slope=3.0,
+            initial_value=0.0
+        )
+        self.assertEqual(tanh_drive.drive_type(), "tanh")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_tanh_drive_caller_missing_required_field(self):
+        """Test creating a TanhDriveCaller missing a required field"""
+        # Missing amplitude
+        with self.assertRaises(Exception):
+            l.TanhDriveCaller(
+                initial_time=1.0,
+                nd_slope=3.0,
+                initial_value=0.0
+            )
+        
+        # Missing nd_slope
+        with self.assertRaises(Exception):
+            l.TanhDriveCaller(
+                initial_time=1.0,
+                amplitude=2.0,
+                initial_value=0.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_tanh_drive_caller_invalid_types(self):
+        """Test invalid types for TanhDriveCaller fields"""
+        # Invalid type for amplitude
+        with self.assertRaises(Exception):
+            l.TanhDriveCaller(
+                initial_time=1.0,
+                amplitude="invalid string",
+                nd_slope=3.0,
+                initial_value=0.0
+            )
+        
+        # Invalid MBVar type (using string MBVar)
+        if 'string_var' not in l.declared_MBVars:
+            string_var = l.MBVar(name='string_var', var_type='string', expression="test")
+        else:
+            string_var = l.declared_MBVars['string_var']
+            
+        with self.assertRaises(TypeError):
+            l.TanhDriveCaller(
+                initial_time=1.0,
+                amplitude=2.0,
+                nd_slope=string_var,  # String MBVar is invalid for numeric field
+                initial_value=0.0
+            )
+
+class TestTimeDriveCaller(unittest.TestCase):
+    def test_time_drive_caller_creation_valid_and_str_representation(self):
+        """Test that TimeDriveCaller works with valid inputs"""
+        # Create without idx
+        time_drive = l.TimeDriveCaller()
+        self.assertIsInstance(time_drive, l.TimeDriveCaller)
+        expected_str = "time"
+        self.assertEqual(str(time_drive), expected_str)
+        
+        # Create with idx
+        time_drive = l.TimeDriveCaller(idx=10)
+        self.assertIsInstance(time_drive, l.TimeDriveCaller)
+        self.assertEqual(time_drive.idx, 10)
+        expected_str = "drive caller: 10, time"
+        self.assertEqual(str(time_drive), expected_str)
+        
+        # Create with MBVar for idx
+        if 'idx_var' not in l.declared_MBVars:
+            idx_var = l.MBVar(name='idx_var', var_type='integer', expression=5)
+        else:
+            idx_var = l.declared_MBVars['idx_var']
+        time_drive = l.TimeDriveCaller(idx=idx_var)
+        self.assertEqual(time_drive.idx, idx_var)
+        expected_str = f"drive caller: {idx_var}, time"
+        self.assertEqual(str(time_drive), expected_str)
+
+class TestTimestepDriveCaller(unittest.TestCase):
+    def test_timestep_drive_caller_creation_valid_and_str_representation(self):
+        """Test that TimestepDriveCaller works with valid inputs"""
+        # Create without idx
+        timestep_drive = l.TimestepDriveCaller()
+        self.assertIsInstance(timestep_drive, l.TimestepDriveCaller)
+        expected_str = "timestep"
+        self.assertEqual(str(timestep_drive), expected_str)
+
+        # Create with idx
+        timestep_drive = l.TimestepDriveCaller(idx=10)
+        self.assertIsInstance(timestep_drive, l.TimestepDriveCaller)
+        self.assertEqual(timestep_drive.idx, 10)
+        expected_str = "drive caller: 10, timestep"
+        self.assertEqual(str(timestep_drive), expected_str)
 
 
 class TestLinearElastic(unittest.TestCase):
