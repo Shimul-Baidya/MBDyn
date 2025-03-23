@@ -5556,6 +5556,254 @@ class TestStepDriveCaller(unittest.TestCase):
                 initial_value=0.0
             )
 
+class TestStep5DriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Reset warnings to make sure we capture them in tests
+        warnings.resetwarnings()
+        # Setup common values for testing
+        self.initial_time = 1.0
+        self.initial_value = 0.5
+        self.final_time = 5.0
+        self.final_value = 2.0
+    
+    def test_step5_drive_caller_creation_valid(self):
+        """Test creating a Step5DriveCaller with valid parameters"""
+        # Create with all parameters
+        drive = l.Step5DriveCaller(
+            initial_time=self.initial_time,
+            initial_value=self.initial_value,
+            final_time=self.final_time,
+            final_value=self.final_value
+        )
+        
+        # Verify all properties are set correctly
+        self.assertEqual(drive.initial_time, self.initial_time)
+        self.assertEqual(drive.initial_value, self.initial_value)
+        self.assertEqual(drive.final_time, self.final_time)
+        self.assertEqual(drive.final_value, self.final_value)
+        self.assertEqual(drive.drive_type(), "step5")
+    
+    def test_step5_drive_caller_default_values(self):
+        """Test that default values are set correctly with warnings"""
+        with warnings.catch_warnings(record=True) as w:
+            # Create drive without initial_time and initial_value
+            drive = l.Step5DriveCaller(
+                final_time=self.final_time,
+                final_value=self.final_value
+            )
+            
+            # Check default values
+            self.assertEqual(drive.initial_time, 0.0)
+            self.assertEqual(drive.initial_value, 0.0)
+            
+            # Verify warnings were raised
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, UserWarning))
+            self.assertTrue("<initial_time> is not set, assuming 0.0." in str(w[0].message))
+            self.assertTrue(issubclass(w[1].category, UserWarning))
+            self.assertTrue("<initial_value> is not set, assuming 0.0." in str(w[1].message))
+    
+    def test_step5_drive_caller_str_representation(self):
+        """Test string representation of the drive caller"""
+        # Test without idx
+        drive = l.Step5DriveCaller(
+            initial_time=self.initial_time,
+            initial_value=self.initial_value,
+            final_time=self.final_time,
+            final_value=self.final_value
+        )
+        
+        expected_str = f"step5, {self.initial_time}, {self.initial_value}, {self.final_time}, {self.final_value}"
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with idx
+        drive = l.Step5DriveCaller(
+            idx=5,
+            initial_time=self.initial_time,
+            initial_value=self.initial_value,
+            final_time=self.final_time,
+            final_value=self.final_value
+        )
+        
+        expected_str = f"drive caller: 5, step5, {self.initial_time}, {self.initial_value}, {self.final_time}, {self.final_value}"
+        self.assertEqual(str(drive), expected_str)
+    
+    def test_step5_drive_caller_with_mbvars(self):
+        """Test creating a Step5DriveCaller with MBVar objects"""
+        # Create MBVar objects
+        if 'init_time' not in l.declared_MBVars:
+            initial_time_var = l.MBVar(name='init_time', var_type='real', expression=1.5)
+        else:
+            initial_time_var = l.declared_MBVars['init_time']
+            
+        if 'final_val' not in l.declared_MBVars:
+            final_value_var = l.MBVar(name='final_val', var_type='real', expression=3.0)
+        else:
+            final_value_var = l.declared_MBVars['final_val']
+        
+        # Create with MBVar objects
+        drive = l.Step5DriveCaller(
+            initial_time=initial_time_var,
+            initial_value=self.initial_value,
+            final_time=self.final_time,
+            final_value=final_value_var
+        )
+        
+        # Check that MBVar references are stored correctly
+        self.assertEqual(drive.initial_time, initial_time_var)
+        self.assertEqual(drive.final_value, final_value_var)
+        
+        # Check string representation with MBVars
+        expected_str = f"step5, {initial_time_var}, {self.initial_value}, {self.final_time}, {final_value_var}"
+        self.assertEqual(str(drive), expected_str)
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_step5_drive_caller_missing_required_field(self):
+        """Test validation fails when required fields are missing"""
+        # Missing final_time
+        with self.assertRaises(Exception):
+            l.Step5DriveCaller(
+                initial_time=self.initial_time,
+                initial_value=self.initial_value,
+                final_value=self.final_value
+            )
+        
+        # Missing final_value
+        with self.assertRaises(Exception):
+            l.Step5DriveCaller(
+                initial_time=self.initial_time,
+                initial_value=self.initial_value,
+                final_time=self.final_time
+            )
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_step5_drive_caller_invalid_types(self):
+        """Test validation fails with invalid types"""
+        # Invalid type for initial_time
+        with self.assertRaises(Exception):
+            l.Step5DriveCaller(
+                initial_time="invalid",
+                initial_value=self.initial_value,
+                final_time=self.final_time,
+                final_value=self.final_value
+            )
+        
+        # Create an MBVar with a non-real type
+        if 'test_non_real' not in l.declared_MBVars:
+            non_real_var = l.MBVar(name='test_non_real', var_type='integer', expression=5)
+        else:
+            non_real_var = l.declared_MBVars['test_non_real']
+        
+        # Test with non-real MBVar for final_value
+        with self.assertRaises(TypeError) as context:
+            l.Step5DriveCaller(
+                initial_time=self.initial_time,
+                initial_value=self.initial_value,
+                final_time=self.final_time,
+                final_value=non_real_var
+            )
+        self.assertIn("must be a real number or an MBVar of type real", str(context.exception))
+
+
+class TestStringDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Sample expressions for testing
+        self.expression = "e^(-Time)*cos(2.*pi*Time)"
+        self.var_expression = "e^(-Var)*cos(2.*pi*Time)"
+    
+    def test_string_drive_caller_creation_valid(self):
+        """Test creating a StringDriveCaller with valid parameters"""
+        # Basic creation with string expression
+        drive = l.StringDriveCaller(expression=self.expression)
+        
+        # Verify properties are set correctly
+        self.assertEqual(drive.expression, self.expression)
+        self.assertEqual(drive.drive_type(), "string")
+        
+        # Create with idx
+        drive = l.StringDriveCaller(idx=5, expression=self.expression)
+        self.assertEqual(drive.idx, 5)
+
+        # Test complex expression
+        complex_expr = "1+cos(2*pi*Time)"
+        drive = l.StringDriveCaller(expression=complex_expr)
+        self.assertEqual(drive.expression, complex_expr)
+        
+        # Test expression with integer_eval
+        eval_expr = "integer_eval(model::distance(CURR_NODE, CURR_NODE+1))"
+        drive = l.StringDriveCaller(expression=eval_expr)
+        self.assertEqual(drive.expression, eval_expr)
+        
+        # Test expression with multiple functions
+        func_expr = "sin(Time)^2 + cos(Time)^2 + tan(Time/2) + sqrt(abs(Time))"
+        drive = l.StringDriveCaller(expression=func_expr)
+        self.assertEqual(drive.expression, func_expr)
+
+    
+    def test_string_drive_caller_with_mbvar(self):
+        """Test creating a StringDriveCaller with an MBVar"""
+        # Create MBVar for expression
+        if 'expr_var' not in l.declared_MBVars:
+            expr_var = l.MBVar(name='expr_var', var_type='string', expression=self.expression)
+        else:
+            expr_var = l.declared_MBVars['expr_var']
+        
+        # Create with MBVar
+        drive = l.StringDriveCaller(expression=expr_var)
+        
+        # Check properties
+        self.assertEqual(drive.expression, expr_var)
+        
+        # Check string representation
+        expected_str = f'string, "{expr_var.expression}"'
+        self.assertEqual(str(drive), expected_str)
+        print(expected_str)
+        print(str(drive))
+    
+    def test_string_drive_caller_str_representation(self):
+        """Test string representation of the drive caller"""
+        # Test without idx
+        drive = l.StringDriveCaller(expression=self.expression)
+        expected_str = f'string, "{self.expression}"'
+        self.assertEqual(str(drive), expected_str)
+        
+        # Test with idx
+        drive = l.StringDriveCaller(idx=10, expression=self.expression)
+        expected_str = f'drive caller: 10, string, "{self.expression}"'
+        self.assertEqual(str(drive), expected_str)
+
+        # Test with variable expression
+        drive = l.StringDriveCaller(expression=self.var_expression)
+        expected_str = f'string, "{self.var_expression}"'
+        self.assertEqual(str(drive), expected_str)
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_string_drive_caller_missing_required_field(self):
+        """Test validation fails when required fields are missing"""
+        # Missing expression
+        with self.assertRaises(Exception):
+            l.StringDriveCaller()
+    
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_string_drive_caller_invalid_types(self):
+        """Test validation fails with invalid types"""
+        # Invalid non-string expression
+        with self.assertRaises(Exception):
+            l.StringDriveCaller(expression=123)
+        
+        # Create an MBVar with a non-string type
+        if 'non_string_var' not in l.declared_MBVars:
+            non_string_var = l.MBVar(name='non_string_var', var_type='integer', expression=42)
+        else:
+            non_string_var = l.declared_MBVars['non_string_var']
+        
+        # Test with non-string MBVar for expression
+        with self.assertRaises(TypeError) as context:
+            l.StringDriveCaller(expression=non_string_var)
+        self.assertIn("must be a string or an MBVar of type string", str(context.exception))
+    
 class TestTanhDriveCaller(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method"""
@@ -5666,6 +5914,8 @@ class TestTanhDriveCaller(unittest.TestCase):
         )
         self.assertEqual(tanh_drive.drive_type(), "tanh")
 
+
+
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_tanh_drive_caller_missing_required_field(self):
         """Test creating a TanhDriveCaller missing a required field"""
@@ -5753,6 +6003,31 @@ class TestTimestepDriveCaller(unittest.TestCase):
         expected_str = "drive caller: 10, timestep"
         self.assertEqual(str(timestep_drive), expected_str)
 
+class TestUnitDriveCaller(unittest.TestCase):
+    def test_unit_drive_caller_creation_valid_and_str_representation(self):
+        """Test that UnitDriveCaller works with valid inputs"""
+        # Create without idx
+        unit_drive = l.UnitDriveCaller()
+        self.assertIsInstance(unit_drive, l.UnitDriveCaller)
+        expected_str = "unit"
+        self.assertEqual(str(unit_drive), expected_str)
+        
+        # Create with idx
+        unit_drive = l.UnitDriveCaller(idx=10)
+        self.assertIsInstance(unit_drive, l.UnitDriveCaller)
+        self.assertEqual(unit_drive.idx, 10)
+        expected_str = "drive caller: 10, unit"
+        self.assertEqual(str(unit_drive), expected_str)
+        
+        # Create with MBVar for idx
+        if 'idx_var' not in l.declared_MBVars:
+            idx_var = l.MBVar(name='idx_var', var_type='integer', expression=5)
+        else:
+            idx_var = l.declared_MBVars['idx_var']
+        unit_drive = l.UnitDriveCaller(idx=idx_var)
+        self.assertEqual(unit_drive.idx, idx_var)
+        expected_str = f"drive caller: {idx_var}, unit"
+        self.assertEqual(str(unit_drive), expected_str)
 
 class TestLinearElastic(unittest.TestCase):
     def setUp(self):

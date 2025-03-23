@@ -4199,6 +4199,9 @@ class SampleAndHoldDriveCaller(DriveCaller2):
         if self.initial_value is not None:
             s += f', initial value, {self.initial_value}'
         return s
+
+class ScalarFunctionDriveCaller(DriveCaller2):
+    pass
         
 class SineDriveCaller(DriveCaller2):
     """
@@ -4314,6 +4317,73 @@ class StepDriveCaller(DriveCaller2):
         s = f'{self.drive_header()}'
         s += f', {self.initial_time}, {self.step_value}, {self.initial_value}'
         return s
+
+class Step5DriveCaller(DriveCaller2):
+    initial_time: Union[float, MBVar]
+    initial_value: Union[float, MBVar]
+    final_time: Union[float, MBVar]
+    final_value: Union[float, MBVar]
+    
+    @field_validator('initial_time', 'initial_value', 'final_time', 'final_value')
+    def validate_real_mbvar(cls, v):
+        if isinstance(v, MBVar) and 'real' not in v.var_type:
+            raise TypeError(
+                f'\n-------------------\nERROR: '
+                f'{cls.__name__}: <{v}> must be a real number or an MBVar of type real'
+                f'\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'step5'
+
+    def __init__(self, **kwargs):
+        # Check if initial_time wasn't explicitly provided
+        if 'initial_time' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_time> is not set, assuming 0.0.",
+                UserWarning 
+            )
+            kwargs['initial_time'] = 0.0
+            
+        # Check if initial_value wasn't explicitly provided
+        if 'initial_value' not in kwargs:
+            warnings.warn(
+                f"{self.__class__.__name__}: <initial_value> is not set, assuming 0.0.",
+                UserWarning
+            )
+            kwargs['initial_value'] = 0.0
+            
+        super().__init__(**kwargs)
+    
+    def __str__(self):
+        s = f'{self.drive_header()}'
+        s += f', {self.initial_time}, {self.initial_value}, {self.final_time}, {self.final_value}'
+        return s
+
+class StringDriveCaller(DriveCaller2):    
+    expression: Union[str, MBVar]
+    
+    @field_validator('expression')
+    def validate_expression(cls, v):
+        if isinstance(v, MBVar) and 'string' not in v.var_type:
+            raise TypeError(
+                '\n-------------------\nERROR: '
+                'StringDriveCaller: expression must be a string or an MBVar of type string'
+                '\n-------------------\n'
+            )
+        return v
+    
+    def drive_type(self) -> str:
+        return 'string'
+    
+    def __str__(self):
+        s = self.drive_header()
+        if isinstance(self.expression, MBVar):
+            s += f', "{self.expression.expression}"'
+        else:
+            s += f', "{self.expression}"'
+        return s
     
 class TanhDriveCaller(DriveCaller2):
     """    
@@ -4384,26 +4454,16 @@ class TimestepDriveCaller(DriveCaller2):
     
     def __str__(self):
         return f'{self.drive_header()}'
-            
-class UnitDriveCaller(DriveCaller):
-    type = 'unit'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' UnitDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        return s
     
+class UnitDriveCaller(DriveCaller2):
+    """Always 1"""
+    
+    def drive_type(self) -> str:
+        return 'unit'
+    
+    def __str__(self):
+        return f'{self.drive_header()}'
+                
 class TplDriveCaller(DriveCaller2):
     pass
 
