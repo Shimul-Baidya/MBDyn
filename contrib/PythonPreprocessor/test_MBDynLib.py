@@ -26,6 +26,71 @@ def patched_errprint(*args, **kwargs):
 l.errprint = patched_errprint
 
 
+class TestPosition2(unittest.TestCase):
+    def test_initialization_with_list(self):
+        pos = l.Position('', [1.0, 2.0, 3.0])
+        self.assertEqual(pos.relative_position, [1.0, 2.0, 3.0])
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        self.assertEqual(pos2.relative_position, [1.0, 2.0, 3.0])
+        self.assertEqual(pos.relative_position, pos2.relative_position)
+
+    def test_initialization_with_non_list(self):
+        pos = l.Position('', 1.0)
+        self.assertEqual(pos.relative_position, [1.0])
+        pos2 = l.Position2(reference='', relative_position=1.0)
+        self.assertEqual(pos2.relative_position, [1.0])
+        self.assertEqual(pos.relative_position, pos2.relative_position)
+
+    def test_string_representation_with_empty_reference(self):
+        pos = l.Position('', [1.0, 2.0, 3.0])
+        self.assertEqual(str(pos), '1.0, 2.0, 3.0')
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        self.assertEqual(str(pos2), '1.0, 2.0, 3.0')
+        self.assertEqual(str(pos), str(pos2))
+
+    def test_string_representation_with_non_empty_reference(self):
+        pos = l.Position('global', [1.0, 2.0, 3.0])
+        self.assertEqual(str(pos), 'reference, global, 1.0, 2.0, 3.0')
+        pos2 = l.Position2(reference='global', relative_position=[1.0, 2.0, 3.0])
+        self.assertEqual(str(pos2), 'reference, global, 1.0, 2.0, 3.0')
+        self.assertEqual(str(pos), str(pos2))
+
+    def test_isnull(self):
+        pos = l.Position('', [ l.null()])
+        self.assertTrue(pos.isnull())
+        pos2 = l.Position2(reference='', relative_position=[l.null()])
+        self.assertTrue(pos2.isnull())
+        self.assertEqual(str(pos), str(pos2))
+
+    def test_iseye(self):
+        pos = l.Position('', [l.eye()])
+        self.assertTrue(pos.iseye())
+        pos2 = l.Position2(reference='', relative_position=[l.eye()])
+        self.assertTrue(pos2.iseye())
+        self.assertEqual(str(pos), str(pos2))
+
+class TestReference2(unittest.TestCase):
+    def test_initialization(self):
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
+        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
+        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
+        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
+        self.assertEqual(str(ref2), 'reference: 1, \n\t1.0, 2.0, 3.0,\n\t0.0, 0.0, 1.0,\n\t0.0, 0.0, 0.0,\n\t0.1, 0.1, 0.1;\n')
+
+    def test_against_Reference(self):
+        pos = l.Position('', [1.0, 2.0, 3.0])
+        orient = l.Position('', [0.0, 0.0, 1.0])
+        vel = l.Position('', [0.0, 0.0, 0.0])
+        angvel = l.Position('', [0.1, 0.1, 0.1])
+        ref = l.Reference(1, pos, orient, vel, angvel)
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
+        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
+        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
+        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
+        self.assertEqual(str(ref), str(ref2))
+
 class TestNodeClasses(unittest.TestCase):
     def setUp(self):
         # Create Position2 instances for testing correctly
@@ -119,6 +184,40 @@ class TestNodeClasses(unittest.TestCase):
                        f"\treference, global, 0.1, 0.2, 0.3;\n")
         
         self.assertEqual(str(node), expected_str)
+
+class TestPointMass(unittest.TestCase):
+    def setUp(self):
+        # Create Position2 instances for testing
+        self.pos = l.Position2(relative_position=[1.0, 2.0, 3.0], reference='global')
+        self.orient = l.Position2(relative_position=[l.eye()], reference='')
+        self.vel = l.Position2(relative_position=[0.1, 0.2, 0.3], reference='global')
+        self.ang_vel = l.Position2(relative_position=[l.null()], reference='')
+    
+    def test_point_mass_with_dynamic_node(self):
+        """Test PointMass with a DynamicNode2"""
+        # Create a dynamic node to use with the point mass
+        node = l.DynamicNode2(idx=1, pos=self.pos, orient=self.orient, 
+                            vel=self.vel, angular_vel=self.ang_vel)
+        # Create a point mass with default output
+        mass = l.PointMass(idx=10, node=node, mass=5.0)
+        self.assertEqual(mass.idx, 10)
+        self.assertEqual(mass.node, node)
+        self.assertEqual(mass.mass, 5.0)
+        self.assertEqual(mass.output, 'yes')  # Default value
+        # Test string representation
+        expected_str = f"body: 10, {node}, 5.0;\n"
+        self.assertEqual(str(mass), expected_str)
+
+    def test_point_mass_with_static_node(self):
+        """Test PointMass with a StaticNode2"""
+        node = l.StaticNode2(idx=2, pos=self.pos, orient=self.orient, 
+                           vel=self.vel, angular_vel=self.ang_vel)
+        # Create a point mass with non-default output
+        mass = l.PointMass(idx=11, node=node, mass=7.5, output='no')
+        self.assertEqual(mass.output, 'no')
+        # Test string representation with output option
+        expected_str = f"body: 11, {node}, 7.5, output, no;\n"
+        self.assertEqual(str(mass), expected_str)
 
 class TestNodeDof(unittest.TestCase):
     def test_node_dof_creation_valid(self):
@@ -6322,71 +6421,6 @@ class TestLinearViscoelasticGeneric(unittest.TestCase):
                 viscosity=[[2.0]],
                 factor=0.5
             )
-
-class TestPosition2(unittest.TestCase):
-    def test_initialization_with_list(self):
-        pos = l.Position('', [1.0, 2.0, 3.0])
-        self.assertEqual(pos.relative_position, [1.0, 2.0, 3.0])
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
-        self.assertEqual(pos2.relative_position, [1.0, 2.0, 3.0])
-        self.assertEqual(pos.relative_position, pos2.relative_position)
-
-    def test_initialization_with_non_list(self):
-        pos = l.Position('', 1.0)
-        self.assertEqual(pos.relative_position, [1.0])
-        pos2 = l.Position2(reference='', relative_position=1.0)
-        self.assertEqual(pos2.relative_position, [1.0])
-        self.assertEqual(pos.relative_position, pos2.relative_position)
-
-    def test_string_representation_with_empty_reference(self):
-        pos = l.Position('', [1.0, 2.0, 3.0])
-        self.assertEqual(str(pos), '1.0, 2.0, 3.0')
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
-        self.assertEqual(str(pos2), '1.0, 2.0, 3.0')
-        self.assertEqual(str(pos), str(pos2))
-
-    def test_string_representation_with_non_empty_reference(self):
-        pos = l.Position('global', [1.0, 2.0, 3.0])
-        self.assertEqual(str(pos), 'reference, global, 1.0, 2.0, 3.0')
-        pos2 = l.Position2(reference='global', relative_position=[1.0, 2.0, 3.0])
-        self.assertEqual(str(pos2), 'reference, global, 1.0, 2.0, 3.0')
-        self.assertEqual(str(pos), str(pos2))
-
-    def test_isnull(self):
-        pos = l.Position('', [ l.null()])
-        self.assertTrue(pos.isnull())
-        pos2 = l.Position2(reference='', relative_position=[l.null()])
-        self.assertTrue(pos2.isnull())
-        self.assertEqual(str(pos), str(pos2))
-
-    def test_iseye(self):
-        pos = l.Position('', [l.eye()])
-        self.assertTrue(pos.iseye())
-        pos2 = l.Position2(reference='', relative_position=[l.eye()])
-        self.assertTrue(pos2.iseye())
-        self.assertEqual(str(pos), str(pos2))
-
-class TestReference2(unittest.TestCase):
-    def test_initialization(self):
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
-        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
-        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
-        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
-        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
-        self.assertEqual(str(ref2), 'reference: 1, \n\t1.0, 2.0, 3.0,\n\t0.0, 0.0, 1.0,\n\t0.0, 0.0, 0.0,\n\t0.1, 0.1, 0.1;\n')
-
-    def test_against_Reference(self):
-        pos = l.Position('', [1.0, 2.0, 3.0])
-        orient = l.Position('', [0.0, 0.0, 1.0])
-        vel = l.Position('', [0.0, 0.0, 0.0])
-        angvel = l.Position('', [0.1, 0.1, 0.1])
-        ref = l.Reference(1, pos, orient, vel, angvel)
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
-        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
-        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
-        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
-        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
-        self.assertEqual(str(ref), str(ref2))
 
 class TestAngularAcceleration(unittest.TestCase):
 

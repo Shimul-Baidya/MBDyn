@@ -786,20 +786,20 @@ class StaticDisplacementNode2(DisplacementNode2):
         super().__init__(idx=idx, position=pos, velocity=vel, node_type='static')
     def __str__(self):
         return super().__str__() + ';\n'
-    
-class PointMass:
-    def __init__(self, idx, node, mass, output = 'yes'):
-        self.idx = idx
-        self.node = node
-        self.mass = mass
-        self.output = output
-    def __str__(self):
-        s = 'body: ' + str(self.idx) + ', ' + str(self.node) + ', ' + str(self.mass)
-        if self.output != 'yes':
-            s = s + ', output, ' + str(self.output)
-        s = s + ';\n'
-        return s
 
+class PointMass(MBEntity):
+    idx: Union[int, MBVar]
+    node: Node2
+    mass: Union[float, MBVar]
+    output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
+    
+    def __str__(self):
+        s = f"body: {self.idx}, {self.node}, {self.mass}"
+        if self.output != 'yes':
+            s += f", output, {self.output}"
+        s += ";\n"
+        return s
+    
 class Element:
     idx = -1
 
