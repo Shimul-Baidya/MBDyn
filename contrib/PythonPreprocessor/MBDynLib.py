@@ -560,12 +560,10 @@ class Position:
 # TODO: Rename to Position when all are moved
 class Position2(MBEntity):
     """Position definition for MBDyn elements"""
-    
-    model_config = ConfigDict(arbitrary_types_allowed=True)  # Add this line to allow expression type
-    
-    relative_position: Union[List[Union[float, MBVar, null, eye, expression]], 
-                           List[List[Union[float, MBVar, null, eye, expression]]]]
-    reference: Union['Reference2', Literal['global', 'node', 'other node', '']]
+        
+    relative_position: Union[List[Union[float, MBVar, null, eye]], 
+                           List[List[Union[float, MBVar, null, eye]]]]
+    reference: Union['Reference2', Literal['global', 'node', 'other node', '']] # TODO: Make reference an optional field (remove '')
 
     @field_validator('relative_position', mode='before')
     def ensure_list(cls, v):
@@ -705,9 +703,9 @@ class Node2(MBEntity):
     orientation: Position2
     velocity: Position2
     angular_velocity: Position2
-    node_type: str = 'dynamic'
-    scale: Optional[Union[str, float, MBVar]] = 'default'
-    output: Optional[Union[Literal['yes', 'no'], bool, int]] = 'yes'
+    node_type: Literal['dynamic', 'static', 'modal'] = 'dynamic'
+    scale: Optional[Union[Literal['default'], float, MBVar]] = 'default'
+    output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
     def __str__(self):
         s = f"structural: {self.idx}, {self.node_type},\n"
         s += f"\t{self.position},\n"
@@ -721,7 +719,7 @@ class Node2(MBEntity):
         return s
     
 class DynamicNode2(Node2):
-    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
+    accelerations: Optional[Union[Literal['yes', 'no'], int, bool]] = None
     def __init__(self, idx, pos, orient, vel, angular_vel, accelerations=None):
         super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='dynamic')
         self.accelerations = accelerations
@@ -739,7 +737,12 @@ class StaticNode2(Node2):
         return super().__str__() + ';\n'
 
 class ModalNode(Node2):
-    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
+    """
+    The modal node is basically a regular dynamic node that must be used to describe the rigid reference
+    motion of a modal joint.
+    """
+
+    accelerations: Optional[Union[Literal['yes', 'no'], int, bool]] = None
     def __init__(self, idx, pos, orient, vel, angular_vel, accelerations=None):
         super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='modal')
         self.accelerations = accelerations
@@ -754,9 +757,9 @@ class DisplacementNode2(MBEntity):
     idx: Union[int, MBVar]
     position: Position2
     velocity: Position2
-    node_type: str = 'dynamic'
-    scale: Optional[Union[str, float, MBVar]] = 'default'
-    output: Optional[Union[Literal['yes', 'no'], bool, int]] = 'yes'
+    node_type: Literal['dynamic', 'static'] = 'dynamic'
+    scale: Optional[Union[Literal['default'], float, MBVar]] = 'default'
+    output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
     def __str__(self):
         s = f"structural: {self.idx}, {self.node_type} displacement,\n"
         s += f"\t{self.position},\n"
@@ -768,7 +771,7 @@ class DisplacementNode2(MBEntity):
         return s
 
 class DynamicDisplacementNode2(DisplacementNode2):
-    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
+    accelerations: Optional[Union[Literal['yes', 'no'], int, bool]] = None
     def __init__(self, idx, pos, vel, accelerations=None):
         super().__init__(idx=idx, position=pos, velocity=vel, node_type='dynamic')
         self.accelerations = accelerations
@@ -783,17 +786,6 @@ class StaticDisplacementNode2(DisplacementNode2):
         super().__init__(idx=idx, position=pos, velocity=vel, node_type='static')
     def __str__(self):
         return super().__str__() + ';\n'
-
-class ModalDisplacementNode(DisplacementNode2):
-    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
-    def __init__(self, idx, pos, vel, accelerations=None):
-        super().__init__(idx=idx, position=pos, velocity=vel, node_type='modal')
-        self.accelerations = accelerations
-    def __str__(self):
-        s = super().__str__()
-        if self.accelerations is not None:
-            s += f",\n\taccelerations, {self.accelerations}"
-        return s + ';\n'
     
 class PointMass:
     def __init__(self, idx, node, mass, output = 'yes'):
