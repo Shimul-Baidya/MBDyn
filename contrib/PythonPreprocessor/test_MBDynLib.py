@@ -26,6 +26,100 @@ def patched_errprint(*args, **kwargs):
 l.errprint = patched_errprint
 
 
+class TestNodeClasses(unittest.TestCase):
+    def setUp(self):
+        # Create Position2 instances for testing correctly
+        self.pos = l.Position2(relative_position=[1.0, 2.0, 3.0], reference='global')
+        self.orient = l.Position2(relative_position=[l.eye()], reference='')
+        self.vel = l.Position2(relative_position=[0.1, 0.2, 0.3], reference='global')
+        self.ang_vel = l.Position2(relative_position=[l.null()], reference='')
+    
+    def test_node2_initialization(self):
+        """Test that Node2 initializes correctly with default values"""
+        node = l.Node2(idx=1, position=self.pos, orientation=self.orient, 
+                    velocity=self.vel, angular_velocity=self.ang_vel)
+        
+        self.assertEqual(node.idx, 1)
+        self.assertEqual(node.position, self.pos)
+        self.assertEqual(node.orientation, self.orient)
+        self.assertEqual(node.velocity, self.vel)
+        self.assertEqual(node.angular_velocity, self.ang_vel)
+        self.assertEqual(node.node_type, 'dynamic')  # Default value
+        self.assertEqual(node.scale, 'default')
+        self.assertEqual(node.output, 'yes')
+    
+    def test_dynamic_node2(self):
+        """Test DynamicNode2 initialization and string representation"""
+        node = l.DynamicNode2(idx=2, pos=self.pos, orient=self.orient, 
+                          vel=self.vel, angular_vel=self.ang_vel, 
+                          accelerations='yes')
+        
+        expected_str = (f"structural: 2, dynamic,\n"
+                       f"\treference, global, 1.0, 2.0, 3.0,\n"
+                       f"\t{self.orient},\n"
+                       f"\treference, global, 0.1, 0.2, 0.3,\n"
+                       f"\t{self.ang_vel},\n"
+                       f"\taccelerations, yes;\n")
+        
+        self.assertEqual(str(node), expected_str)
+    
+    def test_static_node2(self):
+        """Test StaticNode2 initialization and string representation"""
+        node = l.StaticNode2(idx=3, pos=self.pos, orient=self.orient, 
+                         vel=self.vel, angular_vel=self.ang_vel)
+        
+        expected_str = (f"structural: 3, static,\n"
+                       f"\treference, global, 1.0, 2.0, 3.0,\n"
+                       f"\t{self.orient},\n"
+                       f"\treference, global, 0.1, 0.2, 0.3,\n"
+                       f"\t{self.ang_vel};\n")
+        
+        self.assertEqual(str(node), expected_str)
+    
+    def test_modal_node(self):
+        """Test ModalNode initialization and string representation"""
+        node = l.ModalNode(idx=4, pos=self.pos, orient=self.orient, 
+                       vel=self.vel, angular_vel=self.ang_vel)
+        
+        expected_str = (f"structural: 4, modal,\n"
+                       f"\treference, global, 1.0, 2.0, 3.0,\n"
+                       f"\t{self.orient},\n"
+                       f"\treference, global, 0.1, 0.2, 0.3,\n"
+                       f"\t{self.ang_vel};\n")
+        
+        self.assertEqual(str(node), expected_str)
+    
+    def test_displacement_node2(self):
+        """Test DisplacementNode2 initialization"""
+        node = l.DisplacementNode2(idx=5, position=self.pos, velocity=self.vel)
+        
+        self.assertEqual(node.idx, 5)
+        self.assertEqual(node.position, self.pos)
+        self.assertEqual(node.velocity, self.vel)
+        self.assertEqual(node.node_type, 'dynamic')  # Default value
+    
+    def test_dynamic_displacement_node2(self):
+        """Test DynamicDisplacementNode2 initialization and string representation"""
+        node = l.DynamicDisplacementNode2(idx=6, pos=self.pos, vel=self.vel, 
+                                      accelerations='yes')
+        
+        expected_str = (f"structural: 6, dynamic displacement,\n"
+                       f"\treference, global, 1.0, 2.0, 3.0,\n"
+                       f"\treference, global, 0.1, 0.2, 0.3,\n"
+                       f"\taccelerations, yes;\n")
+        
+        self.assertEqual(str(node), expected_str)
+    
+    def test_static_displacement_node2(self):
+        """Test StaticDisplacementNode2 initialization and string representation"""
+        node = l.StaticDisplacementNode2(idx=7, pos=self.pos, vel=self.vel)
+        
+        expected_str = (f"structural: 7, static displacement,\n"
+                       f"\treference, global, 1.0, 2.0, 3.0,\n"
+                       f"\treference, global, 0.1, 0.2, 0.3;\n")
+        
+        self.assertEqual(str(node), expected_str)
+
 class TestNodeDof(unittest.TestCase):
     def test_node_dof_creation_valid(self):
         """Test creating a NodeDof instance with valid data"""
