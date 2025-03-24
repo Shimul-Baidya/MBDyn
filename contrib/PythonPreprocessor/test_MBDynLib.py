@@ -6520,6 +6520,243 @@ class TestLinearViscoelasticGeneric(unittest.TestCase):
                 factor=0.5
             )
 
+class TestBody(unittest.TestCase):
+    def setUp(self):
+        self.node = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+
+    def test_basic_body(self):
+        body = l.Body(
+            idx=1,
+            node=self.node,
+            mass=10.0,
+            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            inertial_matrix=l.Position2(relative_position=[1, 1, 1], reference='')
+        )
+        self.assertEqual(body.mass, 10.0)
+        self.assertEqual(body.node.idx, 1)
+
+    def test_body_with_inertial(self):
+        body = l.Body(
+            idx=1,
+            node=self.node,
+            mass=10.0,
+            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            inertial_matrix=l.Position2(relative_position=[1, 1, 1], reference=''),
+            inertial=l.Position2(relative_position=[0.1, 0.1, 0.1], reference='')
+        )
+        self.assertIsNotNone(body.inertial)
+
+    def test_body_str_representation(self):
+        body = l.Body(
+            idx=1,
+            node=self.node,
+            mass=10.0,
+            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            inertial_matrix=l.Position2(relative_position=[1, 1, 1], reference='')
+        )
+        expected = "body: 1, 1,\n\t10.0,\n\t0.0, 0.0, 0.0,\n\t1.0, 1.0, 1.0;\n"
+        self.assertEqual(str(body), expected)
+
+class TestStructuralForce(unittest.TestCase):
+    def setUp(self):
+        self.node = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+
+    def test_absolute_force(self):
+        force = l.StructuralForce(
+            idx=1,
+            node=self.node,
+            ftype='absolute',
+            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            force_drive=[10, 0, 0]
+        )
+        self.assertEqual(force.ftype, 'absolute')
+        self.assertEqual(force.force_drive, [10, 0, 0])
+
+    def test_total_force(self):
+        force = l.StructuralForce(
+            idx=1,
+            node=self.node,
+            ftype='total',
+            force_orientation=l.Position2(relative_position=[1, 0, 0], reference=''),
+            moment_orientation=l.Position2(relative_position=[0, 1, 0], reference=''),
+            force_drive=[10, 0, 0],
+            moment_drive=[0, 10, 0]
+        )
+        self.assertEqual(force.ftype, 'total')
+
+    def test_force_str_representation(self):
+        force = l.StructuralForce(
+            idx=1,
+            node=self.node,
+            ftype='absolute',
+            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            force_drive=[10, 0, 0]
+        )
+        expected = "force: 1, absolute,\n\t1,\n\t\tposition, 0.0, 0.0, 0.0,\n\t\t10, 0, 0;\n"
+        self.assertEqual(str(force), expected)
+
+class TestStructuralInternalForce(unittest.TestCase):
+    def setUp(self):
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+        self.node2 = l.DynamicNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+
+    def test_absolute_internal_force(self):
+        force = l.StructuralInternalForce(
+            idx=1,
+            nodes=[self.node1, self.node2],
+            ftype='absolute',
+            positions=[
+                l.Position2(relative_position=[0, 0, 0], reference=''),
+                l.Position2(relative_position=[1, 0, 0], reference='')
+            ],
+            force_drive=[100, 0, 0]
+        )
+        self.assertEqual(len(force.nodes), 2)
+        self.assertEqual(force.ftype, 'absolute')
+
+    def test_invalid_nodes_count(self):
+        with self.assertRaises(ValueError):
+            l.StructuralInternalForce(
+                idx=1,
+                nodes=[self.node1],
+                ftype='absolute',
+                positions=[l.Position2(relative_position=[0, 0, 0], reference='')],
+                force_drive=[100, 0, 0]
+            )
+
+    def test_internal_force_str_representation(self):
+        force = l.StructuralInternalForce(
+            idx=1,
+            nodes=[self.node1, self.node2],
+            ftype='absolute',
+            positions=[
+                l.Position2(relative_position=[0, 0, 0], reference=''),
+                l.Position2(relative_position=[1, 0, 0], reference='')
+            ],
+            force_drive=[100, 0, 0]
+        )
+        expected = "force: 1, absolute internal,\n\t1,\n\t\tposition, 0.0, 0.0, 0.0,\n\t2,\n\t\tposition, 1.0, 0.0, 0.0,\n\t\t100, 0, 0;\n"
+        self.assertEqual(str(force), expected)
+
+class TestStructuralCouple(unittest.TestCase):
+    def setUp(self):
+        self.node = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+
+    def test_absolute_couple(self):
+        couple = l.StructuralCouple(
+            idx=1,
+            node=self.node,
+            ctype='absolute',
+            couple_drive=[0, 0, 10]
+        )
+        self.assertEqual(couple.ctype, 'absolute')
+        self.assertEqual(couple.couple_drive, [0, 0, 10])
+
+    def test_couple_with_position(self):
+        couple = l.StructuralCouple(
+            idx=1,
+            node=self.node,
+            ctype='absolute',
+            position=l.Position2(relative_position=[1, 1, 1], reference=''),
+            couple_drive=[0, 0, 10]
+        )
+        self.assertIsNotNone(couple.position)
+
+    def test_couple_str_representation(self):
+        couple = l.StructuralCouple(
+            idx=1,
+            node=self.node,
+            ctype='absolute',
+            position=l.Position2(relative_position=[1, 1, 1], reference=''),
+            couple_drive=[0, 0, 10]
+        )
+        expected = "couple: 1, absolute,\n\t1,\n\t\tposition, 1.0, 1.0, 1.0,\n\t\t0, 0, 10;\n"
+        self.assertEqual(str(couple), expected)
+
+class TestStructuralInternalCouple(unittest.TestCase):
+    def setUp(self):
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+        self.node2 = l.DynamicNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+
+    def test_basic_internal_couple(self):
+        couple = l.StructuralInternalCouple(
+            idx=1,
+            nodes=[self.node1, self.node2],
+            ctype='absolute',
+            couple_drive=[0, 0, 10]
+        )
+        self.assertEqual(len(couple.nodes), 2)
+        self.assertEqual(couple.couple_drive, [0, 0, 10])
+
+    def test_internal_couple_with_positions(self):
+        couple = l.StructuralInternalCouple(
+            idx=1,
+            nodes=[self.node1, self.node2],
+            ctype='absolute',
+            positions=[
+                l.Position2(relative_position=[0, 0, 0], reference=''),
+                l.Position2(relative_position=[1, 0, 0], reference='')
+            ],
+            couple_drive=[0, 0, 10]
+        )
+        self.assertEqual(len(couple.positions), 2)
+
+    def test_internal_couple_str_representation(self):
+        couple = l.StructuralInternalCouple(
+            idx=1,
+            nodes=[self.node1, self.node2],
+            ctype='absolute',
+            positions=[
+                l.Position2(relative_position=[0, 0, 0], reference=''),
+                l.Position2(relative_position=[1, 0, 0], reference='')
+            ],
+            couple_drive=[0, 0, 10]
+        )
+        expected = "couple: 1, absolute internal,\n\t1,\n\t\tposition, 0.0, 0.0, 0.0,\n\t2,\n\t\tposition, 1.0, 0.0, 0.0,\n\t\t0, 0, 10;\n"
+        self.assertEqual(str(couple), expected)
+
 class TestAngularAcceleration(unittest.TestCase):
 
     def test_valid_input(self):

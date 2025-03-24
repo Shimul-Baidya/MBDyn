@@ -699,7 +699,7 @@ class StaticDisplacementNode(DisplacementNode):
 # Change name to Node when all are moved
 class Node2(MBEntity):
     """This class isn't directly used to create instances, but it's child classes are."""
-    
+
     idx: Union[int, MBVar]
     position: Position2
     orientation: Position2
@@ -814,15 +814,7 @@ class Element2(MBEntity):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     idx: Union[MBVar, int]
-    output: Optional[Union[bool, str, int]] = 'yes'
-    @field_validator('output')
-    def validate_output(cls, v):
-        if isinstance(v, str):
-            if v not in {'yes', 'no'}:
-                raise ValueError("output must be 'yes', 'no', or a boolean value")
-        elif not isinstance(v, (bool, int)):
-            raise ValueError("output must be a boolean, integer, or one of 'yes'/'no'")
-        return v
+    output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
 
     @abstractmethod
     def element_type(self) -> str:
@@ -849,7 +841,188 @@ class Element2(MBEntity):
         if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
             raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
 
+class Body(Element2):
+    node: Node2
+    mass: Union[float, MBVar]
+    position: Position2
+    inertial_matrix: Position2
+    inertial: Optional[Position2] = None
+
+    def element_type(self):
+        return 'body'
     
+    def __str__(self):
+        s = f'{self.element_header()}, {self.node.idx}'
+        s += f',\n\t{self.mass}'
+        s += f',\n\t{self.position}'
+        s += f',\n\t{self.inertial_matrix}'
+        if self.inertial is not None:
+            s += f',\n\t{self.inertial}'
+        s += self.element_footer()
+        return s
+
+# Force Elements
+class StructuralForce(Element2):
+    node: Node2
+    ftype: Literal['absolute', 'follower', 'total']
+    position: Optional[Position2] = None
+    force_drive: Optional[List] = None # TODO: Needs TplDriveCaller
+    force_orientation: Optional[Position2] = None
+    moment_orientation: Optional[Position2] = None
+    moment_drive: Optional[List] = None # TODO: Needs TplDriveCaller
+    
+    @model_validator(mode='after')
+    def validate_fields_based_on_ftype(self):
+        if self.ftype in ['absolute', 'follower']:
+            # For 'absolute' or 'follower' types, position and force_drive are required
+            if self.position is None:
+                raise ValueError(f"{self.__class__.__name__}: position is required when ftype is {self.ftype}")
+            if self.force_drive is None:
+                raise ValueError(f"{self.__class__.__name__}: force_drive is required when ftype is {self.ftype}")
+        return self    
+
+    def element_type(self):
+        return 'force'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, {self.ftype}'
+        s += f',\n\t{self.node.idx}'
+        if self.ftype == 'absolute' or self.ftype == 'follower':
+            s += f',\n\t\tposition, {self.position}'
+            s += f',\n\t\t'
+            s += ', '.join(str(i) for i in self.force_drive)
+        elif self.ftype == 'total':
+            if self.position is not None:
+                s += f',\n\t\tposition, {self.position}'
+            if self.force_orientation is not None:
+                s += f',\n\t\tforce orientation, {self.force_orientation}'
+            if self.moment_orientation is not None:
+                s += f',\n\t\tmoment orientation, {self.moment_orientation}'
+            if self.force_drive is not None:
+                s += f',\n\t\tforce, '
+                s += ', '.join(str(i) for i in self.force_drive)
+            if self.moment_drive is not None:
+                s += f',\n\t\tmoment, '
+                s += ', '.join(str(i) for i in self.moment_drive)
+        s += self.element_footer()
+        return s
+
+class StructuralInternalForce(Element2):
+    nodes: List[Node2]
+    ftype: Literal['absolute', 'follower', 'total']
+    positions: Optional[List[Position2]] = None
+    force_drive: Optional[List] = None  # TODO: Needs TplDriveCaller
+    force_orientation: Optional[List[Position2]] = None
+    moment_orientation: Optional[List[Position2]] = None
+    moment_drive: Optional[List] = None  # TODO: Needs TplDriveCaller
+
+    @model_validator(mode='after')
+    def validate_fields_based_on_ftype(self):
+        if self.ftype in ['absolute', 'follower']:
+            if self.positions is None:
+                raise ValueError(f"{self.__class__.__name__}: positions is required when ftype is {self.ftype}")
+            if self.force_drive is None:
+                raise ValueError(f"{self.__class__.__name__}: force_drive is required when ftype is {self.ftype}")
+        elif self.ftype == 'total':
+            if self.force_orientation is None or self.moment_orientation is None:
+                raise ValueError(f"{self.__class__.__name__}: force_orientation and moment_orientation are required when ftype is total")
+        return self
+
+    @model_validator(mode='after')
+    def validate_length_of_lists(self):
+        if len(self.nodes) != 2:
+            raise ValueError(f"{self.__class__.__name__}: nodes must have length 2")
+        if self.positions is not None and len(self.positions) != 2:
+            raise ValueError(f"{self.__class__.__name__}: positions must have length 2")
+        if self.force_orientation is not None and len(self.force_orientation) != 2:
+            raise ValueError(f"{self.__class__.__name__}: force_orientation must have length 2")
+        if self.moment_orientation is not None and len(self.moment_orientation) != 2:
+            raise ValueError(f"{self.__class__.__name__}: moment_orientation must have length 2")
+        return self
+
+    def element_type(self):
+        return 'force'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, {self.ftype} internal'
+        s += f',\n\t{self.nodes[0].idx}'
+        if self.positions:
+            s += f',\n\t\tposition, {self.positions[0]}'
+        if self.ftype == 'total':
+            if self.force_orientation:
+                s += f',\n\t\tforce orientation, {self.force_orientation[0]}'
+            if self.moment_orientation:
+                s += f',\n\t\tmoment orientation, {self.moment_orientation[0]}'
+        s += f',\n\t{self.nodes[1].idx}'
+        if self.positions:
+            s += f',\n\t\tposition, {self.positions[1]}'
+        if self.ftype == 'total':
+            if self.force_orientation:
+                s += f',\n\t\tforce orientation, {self.force_orientation[1]}'
+            if self.moment_orientation:
+                s += f',\n\t\tmoment orientation, {self.moment_orientation[1]}'
+            if self.force_drive:
+                s += f',\n\t\tforce, '
+                s += ', '.join(str(i) for i in self.force_drive)
+            if self.moment_drive:
+                s += f',\n\t\tmoment, '
+                s += ', '.join(str(i) for i in self.moment_drive)
+        else:  # ftype = { absolute|follower }
+            s += f',\n\t\t'
+            s += ', '.join(str(i) for i in self.force_drive)
+        s += self.element_footer()
+        return s
+
+class StructuralCouple(Element2):
+    node: Node2
+    ctype: Literal['absolute', 'follower']
+    position: Optional[Position2] = None
+    couple_drive: List # TODO: Needs TplDriveCaller
+
+    def element_type(self):
+        return 'couple'
+
+    def __str__(self):
+        s = f'{self.element_header()}, {self.ctype}'
+        s += f',\n\t{self.node.idx}'
+        if self.position:
+            s += f',\n\t\tposition, {self.position}'
+        s += f',\n\t\t'
+        s += ', '.join(str(i) for i in self.couple_drive)
+        s += self.element_footer()
+        return s
+
+class StructuralInternalCouple(Element2):
+    nodes: List[Node2]
+    ctype: Literal['absolute', 'follower']
+    positions: Optional[List[Position2]] = None
+    couple_drive: List # TODO: Needs TplDriveCaller
+
+    def element_type(self):
+        return 'couple'
+    
+    @model_validator(mode='after')
+    def validate_length_of_lists(self):
+        if len(self.nodes) != 2:
+            raise ValueError(f"{self.__class__.__name__}: nodes must have length 2")
+        if self.positions is not None and len(self.positions) != 2:
+            raise ValueError(f"{self.__class__.__name__}: positions must have length 2")
+        return self
+    
+    def __str__(self):
+        s = f'{self.element_header()}, {self.ctype} internal'
+        s += f',\n\t{self.nodes[0].idx}'
+        if self.positions:
+            s += f',\n\t\tposition, {self.positions[0]}'
+        s += f',\n\t{self.nodes[1].idx}'
+        if self.positions:
+            s += f',\n\t\tposition, {self.positions[1]}'
+        s += f',\n\t\t'
+        s += ', '.join(str(i) for i in self.couple_drive)
+        s += self.element_footer()
+        return s
+
+# Joint Elements
 class AngularAcceleration(Element2):
     """
     This joint imposes the absolute angular acceleration of a node about a given axis.
@@ -857,7 +1030,7 @@ class AngularAcceleration(Element2):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    node_label: Union[int, MBVar]
+    node_label: Union[int, MBVar] # TODO: Take input as Node and use it's idx
     relative_direction: List[Union[float, MBVar]]
     acceleration: Union['DriveCaller', 'DriveCaller2']
 
@@ -2018,9 +2191,6 @@ class ViscousBody(Element2):
     a body, projected in the reference frame of the node itself. The force and moment are defined as a 6D
     viscous constitutive law.
     '''
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
 
     node_label: Union[int, MBVar]
     position: Optional[Position2] = None
@@ -2051,224 +2221,6 @@ class ViscousBody(Element2):
         s += f',\n\t{self.const_law}'
         s += self.element_footer()
         return s
-    
-class Body(Element):
-    def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
-            output = 'yes'):
-        assert isinstance(position, Position), (
-            '\n-------------------\nERROR:' +
-            ' in defining a body, the center of mass relative position ' + 
-            ' mass must be an instance of the Position class;' + 
-            '\n-------------------\n')
-        assert isinstance(inertial_matrix, list), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a body, the inertial matrix' + 
-            ' must be a list;' + 
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'body'
-        self.node = node
-        self.mass = mass
-        self.position = position
-        self.inertial_matrix = inertial_matrix
-        self.inertial = inertial
-        self.output = output
-    def __str__(self):
-        s = 'body: ' + str(self.idx) + ', ' + str(self.node) + ',\n'
-        s = s + '\t' + str(self.mass) + ',\n'
-        s = s + '\t' + str(self.position) + ',\n'
-        s = s + '\t' + ', '.join(str(i) for i in self.inertial_matrix) 
-        if self.inertial != null:
-            s = s + ',\n'
-            if isinstance(self.inertial, list):
-                s = s + ', '.join(str(i) for i in self.inertial)
-            else:
-                s = s + ', ' + self.inertial
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
-class StructuralForce(Element):
-    def __init__(self, idx, node, ftype, position, force_drive, 
-            force_orientation = [], moment_orientation = [],
-            moment_drive = [], output = 'yes'):
-        assert isinstance(position, Position), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a structural force, the relative arm must be' +
-            ' an instance of the Position class;' + 
-            '\n-------------------\n')
-        assert ftype in {'absolute', 'follower', 'total'}, (
-            '\n-------------------\nERROR:' + 
-            ' unrecognised type of structural force: ' + str(ftype) + 
-            '\n-------------------\n')
-        if ftype == 'total':
-            assert isinstance(force_orientation, Position), (
-                '\n-------------------\nERROR:' + 
-                ' in defining a structural total force, the force orientation ' +
-                ' must be an instance of the Position class;' + 
-                '\n-------------------\n')
-            assert isinstance(moment_orientation, Position), (
-                '\n-------------------\nERROR:' + 
-                ' in defining a structural total force, the moment orientation ' +
-                ' must be an instance of the Position class;' + 
-                '\n-------------------\n')
-        self.idx = idx
-        self.type = 'force'
-        self.node = node
-        self.ftype = ftype
-        self.position = position
-        self.force_drive = force_drive
-        self.force_orientation = force_orientation
-        self.moment_orientation = moment_orientation
-        self.moment_drive = moment_drive
-        self.output = output
-    def __str__(self):
-        s = 'force: ' + str(self.idx) + ', ' + self.ftype
-        s = s + ',\n\t' + str(self.node)
-        s = s + ',\n\t\tposition, ' + str(self.position)
-        if self.ftype == 'total':
-            s = s + ',\n\t\tforce orientation, ' + str(self.force_orientation)
-            s = s + ',\n\t\tmoment orientation, ' + str(self.moment_orientation)
-            s = s + ',\n\t\tforce, ' + ', '.join(str(i) for i in self.force_drive)
-            s = s + ',\n\t\tmoment, ' + ', '.join(str(i) for i in self.moment_drive)
-        else: # ftype = { absolute|follower }
-            s = s + ',\n\t\t' + ', '.join(str(i) for i in self.force_drive)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
-
-class StructuralInternalForce(Element):
-    def __init__(self, idx, nodes, ftype, positions, force_drive, 
-            force_orientation = [], moment_orientation = [],
-            moment_drive = [], output = 'yes'):
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' + 
-            ' defining a structural internal force with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert all(isinstance(pos, Position) for pos in positions) , (
-            '\n-------------------\nERROR:' + 
-            ' in defining a structural internal force all relative arms ' +
-            ' must be instances of the Position class;' + 
-            '\n-------------------\n')
-        assert ftype in {'absolute', 'follower', 'total'}, (
-            '\n-------------------\nERROR:' + 
-            ' unrecognised type of structural internal force: ' + str(ftype) + 
-            '\n-------------------\n')
-        if ftype == 'total':
-            assert all(isinstance(pos, Position) for pos in force_orientation), (
-                '\n-------------------\nERROR:' + 
-                ' in defining a structural total internal force all the ' +
-                ' force orientations must be instances of the Position class;' + 
-                '\n-------------------\n')
-            assert all(isinstance(pos, Position) for pos in moment_orientation), (
-                '\n-------------------\nERROR:' + 
-                ' in defining a structural total internal force all the ' +
-                ' moment orientations must be instances of the Position class;' + 
-                '\n-------------------\n')
-        self.idx = idx
-        self.type = 'force'
-        self.nodes = nodes
-        self.ftype = ftype
-        self.positions = positions
-        self.force_drive = force_drive
-        self.force_orientation = force_orientation
-        self.moment_orientation = moment_orientation
-        self.moment_drive = moment_drive
-        self.output = output
-    def __str__(self):
-        s = 'force: ' + str(self.idx) + ', ' + self.ftype + ' internal'
-        s = s + ',\n\t' + str(self.nodes[0])
-        s = s + ',\n\t\tposition, ' + str(self.positions[0])
-        if self.ftype == 'total':
-            s = s + ',\n\t\tforce orientation, ' + str(self.force_orientation[0])
-            s = s + ',\n\t\tmoment orientation, ' + str(self.moment_orientation[0])
-        s = s + ',\n\t' + str(self.nodes[1])
-        s = s + ',\n\t\tposition, ' + str(self.positions[1])
-        if self.ftype == 'total':
-            s = s + ',\n\t\tforce orientation, ' + str(self.force_orientation[1])
-            s = s + ',\n\t\tmoment orientation, ' + str(self.moment_orientation[1])
-            s = s + ',\n\t\tforce, ' + ', '.join(str(i) for i in self.force_drive)
-            s = s + ',\n\t\tmoment, ' + ', '.join(str(i) for i in self.moment_drive)
-        else: # ftype = { absolute|follower }
-            s = s + ',\n\t\t' + ', '.join(str(i) for i in self.force_drive)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
-
-class StructuralCouple(Element):
-    def __init__(self, idx, node, ctype, position, moment_drive, output = 'yes'):
-        assert isinstance(position, Position), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a structural couple, the relative arm must be' +
-            ' an instance of the Position class;' + 
-            '\n-------------------\n')
-        assert ctype in {'absolute', 'follower'}, (
-            '\n-------------------\nERROR:' + 
-            ' unrecognised type of structural couple: ' + str(ctype) + 
-            ';\n-------------------\n')
-        self.idx = idx
-        self.type = 'couple'
-        self.node = node
-        self.ctype = ctype
-        self.position = position
-        self.moment_drive = moment_drive
-        self.output = output
-    def __str__(self):
-        s = 'couple: ' + str(self.idx) + ', ' + self.ctype
-        s = s + ',\n\t' + str(self.node)
-        if len(self.position):
-            s = s + ',\n\t\tposition, ' + str(self.position)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.moment_drive)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
-
-class StructuralInternalCouple(Element):
-    def __init__(self, idx, nodes, ctype, positions, moment_drive, output = 'yes'):
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' + 
-            ' defining a structural internal couple with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert len(positions) == 2, (
-            '\n-------------------\nERROR:' + 
-            ' defining a structural internal couple with ' + str(len(positions)) + 
-            ' relative positions (!= 2);' +
-            '\n-------------------\n')
-        assert all(isinstance(pos, Position) for pos in positions), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a structural internal couple all the relative positions ' +
-            ' must be instances of the Position class;' + 
-            '\n-------------------\n')
-        assert ctype in {'absolute', 'follower'}, (
-            '\n-------------------\nERROR:' + 
-            ' unrecognised type of structural internal couple: ' + str(ctype) + 
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'couple'
-        self.nodes = nodes
-        self.ctype = ctype
-        self.positions = positions
-        self.moment_drive = moment_drive
-        self.output = output
-    def __str__(self):
-        s = 'couple: ' + str(self.idx) + ', ' + self.ctype + ' inernal'
-        s = s + ',\n\t' + str(self.nodes[0])
-        s = s + ',\n\t\tposition, ' + str(self.position[0])
-        s = s + ',\n\t' + str(self.nodes[1])
-        s = s + ',\n\t\tposition, ' + str(self.position[1])
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.moment_drive)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
 
 class Clamp(Element):
     def __init__(self, idx, node, pos = Position('', 'node'), 
