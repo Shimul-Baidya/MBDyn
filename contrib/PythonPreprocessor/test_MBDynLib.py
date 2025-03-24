@@ -4248,6 +4248,106 @@ class TestMultDriveCaller(unittest.TestCase):
         expected_str = "mult,\n\tmult,\n\tmult,\n\tconst, 3.0,\n\tconst, 4.0,\n\tarray, 2,\n\tconst, 3.0,\n\tconst, 4.0,\n\treference, 5"
         self.assertEqual(str(outer_mult), expected_str)
 
+class TestNodeDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create position object for nodes
+        self.null_position = l.Position2(relative_position=[l.null()], reference='')
+        
+        # Create different types of nodes
+        self.dynamic_node = l.DynamicNode2(
+            idx=1,
+            pos=self.null_position,
+            orient=self.null_position,
+            vel=self.null_position,
+            angular_vel=self.null_position
+        )
+        
+        self.static_node = l.StaticNode2(
+            idx=2,
+            pos=self.null_position,
+            orient=self.null_position,
+            vel=self.null_position,
+            angular_vel=self.null_position
+        )
+        
+        # Create drive callers to use with node drive caller
+        self.const_drive = l.ConstDriveCaller(const_value=5.0)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=10.0)
+
+    def test_node_drive_caller_creation_valid(self):
+        """Test that NodeDriveCaller works with valid input"""
+        # Create with dynamic node and drive without idx
+        node_drive = l.NodeDriveCaller(
+            node=self.dynamic_node,
+            private_data="x",
+            func_drive=self.const_drive
+        )
+        self.assertIsInstance(node_drive, l.NodeDriveCaller)
+        self.assertEqual(node_drive.node, self.dynamic_node)
+        self.assertEqual(node_drive.private_data, "x")
+        self.assertEqual(node_drive.func_drive, self.const_drive)
+        
+        # Create with static node and 'direct' func_drive
+        node_drive = l.NodeDriveCaller(
+            node=self.static_node,
+            private_data="y",
+            func_drive="direct"
+        )
+        self.assertIsInstance(node_drive, l.NodeDriveCaller)
+        self.assertEqual(node_drive.node, self.static_node)
+        self.assertEqual(node_drive.private_data, "y")
+        self.assertEqual(node_drive.func_drive, "direct")
+        
+        # Create with specific idx
+        node_drive = l.NodeDriveCaller(
+            idx=10,
+            node=self.dynamic_node,
+            private_data="x",
+            func_drive=self.const_drive
+        )
+        self.assertIsInstance(node_drive, l.NodeDriveCaller)
+        self.assertEqual(node_drive.idx, 10)
+        
+    def test_node_drive_caller_str_representation(self):
+        """Test the string representation of NodeDriveCaller"""
+        # Test with dynamic node and drive without idx
+        node_drive = l.NodeDriveCaller(
+            node=self.dynamic_node,
+            private_data="x",
+            func_drive=self.const_drive
+        )
+        expected_str = 'node, 1, dynamic, string, "x", const, 5.0'
+        self.assertEqual(str(node_drive), expected_str)
+        
+        # Test with idx
+        node_drive = l.NodeDriveCaller(
+            idx=10,
+            node=self.dynamic_node,
+            private_data="x",
+            func_drive=self.const_drive
+        )
+        expected_str = 'drive caller: 10, node, 1, dynamic, string, "x", const, 5.0'
+        self.assertEqual(str(node_drive), expected_str)
+        
+        # Test with 'direct' func_drive
+        node_drive = l.NodeDriveCaller(
+            node=self.dynamic_node,
+            private_data="z",
+            func_drive="direct"
+        )
+        expected_str = 'node, 1, dynamic, string, "z", direct'
+        self.assertEqual(str(node_drive), expected_str)
+        
+        # Test with drive with idx
+        node_drive = l.NodeDriveCaller(
+            node=self.dynamic_node,
+            private_data="x",
+            func_drive=self.const_drive_with_idx
+        )
+        expected_str = 'node, 1, dynamic, string, "x", reference, 5'
+        self.assertEqual(str(node_drive), expected_str)
+        
 class TestNullDriveCaller(unittest.TestCase):
     def test_null_drive_caller_creation_and_representation(self):
         """Test creating a NullDriveCaller and its string representation"""
@@ -6106,8 +6206,6 @@ class TestTanhDriveCaller(unittest.TestCase):
             initial_value=0.0
         )
         self.assertEqual(tanh_drive.drive_type(), "tanh")
-
-
 
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_tanh_drive_caller_missing_required_field(self):

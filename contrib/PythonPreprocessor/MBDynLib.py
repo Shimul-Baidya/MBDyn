@@ -698,6 +698,8 @@ class StaticDisplacementNode(DisplacementNode):
 
 # Change name to Node when all are moved
 class Node2(MBEntity):
+    """This class isn't directly used to create instances, but it's child classes are."""
+    
     idx: Union[int, MBVar]
     position: Position2
     orientation: Position2
@@ -3810,6 +3812,31 @@ class MultDriveCaller(DriveCaller2):
             s += f',\n\t{self.drive_2}'
         return s
     
+class NodeDriveCaller(DriveCaller2):
+    """    
+    The driver returns the value of the func_drive using the value of the node's private data
+    as input instead of the time. This can be used as a sort of explicit feedback, to implement
+    fancy springs (where a force is driven through a function by the rotation of a joint) or an
+    active control system.
+    """
+    
+    node: Node2        
+    private_data: str    
+    func_drive: Union[DriveCaller2, Literal['direct']]
+    
+    def drive_type(self) -> str:
+        return 'node'
+    
+    def __str__(self):
+        s = f'{self.drive_header()}'        
+        s += f', {self.node.idx}, {self.node.node_type}'
+        s += f', string, "{self.private_data}"'
+        if hasattr(self.func_drive, 'idx') and self.func_drive.idx is not None and self.func_drive.idx >= 0:
+            s += f', reference, {self.func_drive.idx}'
+        else:
+            s += f', {self.func_drive}'
+        return s
+    
 class NullDriveCaller(DriveCaller2):
     """Zero valued drive caller; the arglist is empty."""
     
@@ -3955,79 +3982,6 @@ class PostponedDriveCaller(DriveCaller2):
         s += f', {self.label}'
         return s
         
-class NodeDriveCaller(DriveCaller):
-    type = 'node'
-    def __init__(self, **kwargs):
-        try:
-            arg = 'idx'
-            assert isinstance(kwargs[arg], (Integral, MBVar)), (
-                '\n-------------------\nERROR:' +
-                ' NodeDriveCaller: <idx> must either be an integer value or an MBVar' +
-                '\n-------------------\n'
-            )
-            self.idx = kwargs[arg]
-        except KeyError:
-            pass
-        try:
-            arg = 'node'
-            assert isinstance(kwargs[arg], Node), (
-                '\n-------------------\nERROR:' +
-                ' NodeDriveCaller: <node> must be an instance of Node' +
-                '\n-------------------\n'
-            )
-            self.node = kwargs[arg]
-        except KeyError:
-            (
-                '\n-------------------\nERROR:' +
-                ' NodeDriveCaller: <node> not set' +
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'private_data'
-            assert isinstance(kwargs[arg], str), (
-                '\n-------------------\nERROR:' +
-                ' NodeDriveCaller: <private_data> must be a string' +
-                '\n-------------------\n'
-            )
-            self.private_data = kwargs[arg]
-        except KeyError:
-            (
-                '\n-------------------\nWARNING:' +
-                ' NodeDriveCaller: <private_data> is not set' +
-                '\n-------------------\n'
-            )
-        try:
-            arg = 'func_drive'
-            assert isinstance(kwargs[arg], (DriveCaller, str)), (
-                '\n-------------------\nERROR:' +
-                ' NodeDriveCaller: <func_drive> must either be a' +
-                ' DriveCaller or \'direct\'' +
-                '\n-------------------\n'
-            )
-            if isinstance(kwargs[arg], str) and kwargs[arg] != 'direct':
-                raise ValueError(
-                    '\n-------------------\nERROR:' +
-                    ' NodeDriveCaller: <func_drive> must either be a' +
-                    ' DriveCaller or \'direct\'' +
-                    '\n-------------------\n'
-                )
-            self.func_drive = kwargs[arg]
-        except KeyError:
-            (
-                '\n-------------------\nERROR:' +
-                ' NodeDriveCaller: <func_drive> is not set' +
-                '\n-------------------\n'
-            )
-    def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{}'.format(self.type)
-        s = s + ', {}, {}'.format(self.node.idx, self.node.type)
-        s = s + ', string, \"{}\"'.format(self.private_data)
-        s = s + ', {}'.format(self.func_drive)
-        return s
-    
 class RampDriveCaller(DriveCaller2):
     """
     The Ramp drive caller implements a ramp function with specified slope.
