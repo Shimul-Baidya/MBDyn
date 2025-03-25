@@ -1217,8 +1217,8 @@ class Brake(Element2):
         s += f''',\n\t{self.normal_force}'''
         s += self.element_footer()
         return s
-    
-class CardanoHinge2(Element2):
+        
+class CardanoHinge(Element2):
     '''
     This joint implements a Cardano's joint, also known as Hooke's joint or Universal joint, which is made
     of a sequence of two revolute hinges orthogonal to each other, one about relative axis 2 and one about
@@ -1233,25 +1233,23 @@ class CardanoHinge2(Element2):
     velocity about axis 1 for the other node.
     '''
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    node_1_label: Union[int, MBVar]
-    position_1: Position2  # Required according to manual
-    orientation_mat_1: Optional[Union[Position2, list]] = None
-    node_2_label: Union[int, MBVar]
-    position_2: Position2  # Required according to manual
-    orientation_mat_2: Optional[Union[Position2, list]] = None
+    node_1: Node2
+    position_1: Position2
+    orientation_mat_1: Optional[Position2] = None
+    node_2: Node2
+    position_2: Position2
+    orientation_mat_2: Optional[Position2] = None
 
     def element_type(self):
         return 'joint'
 
     def __str__(self):
         s = f'{self.element_header()}, cardano hinge'
-        s += f',\n\t{self.node_1_label}'
+        s += f',\n\t{self.node_1.idx}'
         s += f',\n\t\tposition, {self.position_1}'
         if self.orientation_mat_1 is not None:
             s += f',\n\t\torientation, {self.orientation_mat_1}'
-        s += f',\n\t{self.node_2_label}'
+        s += f',\n\t{self.node_2.idx}'
         s += f',\n\t\tposition, {self.position_2}'
         if self.orientation_mat_2 is not None:
             s += f',\n\t\torientation, {self.orientation_mat_2}'
@@ -1345,8 +1343,8 @@ class DeformableAxial(Element2):
         s += f',\n\t{self.const_law}'
         s += self.element_footer()
         return s
-    
-class DeformableHinge2(Element2):
+        
+class DeformableHinge(Element2):
     """
     This joint implements a configuration dependent moment that is exchanged between two nodes. The
     moment may depend, by way of a generic 3D constitutive law, on the relative orientation and angular
@@ -1356,30 +1354,44 @@ class DeformableHinge2(Element2):
         'arbitrary_types_allowed': True
     }
 
-    node_1_label: Union[int, MBVar]
+    node_1: Node2
     position_1: Optional[Position2] = None
     orientation_mat_1: Optional[Position2] = None
-    node_2_label: Union[int, MBVar]
+    node_2: Node2
     position_2: Optional[Position2] = None
     orientation_mat_2: Optional[Position2] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
+    orientation_desc: Optional[Literal['euler123', 'euler313', 'euler321', 'orientation vector', 'orientation matrix']] = None
+
+    @field_validator('const_law')
+    def validate_const_law(cls, v):
+        if isinstance(v, ConstitutiveLaw):
+            if v.law_type != ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW:
+                raise ValueError("const_law must be a 3D constitutive law with law_type 'D3_ISOTROPIC_LAW'")
+            return v
+        elif isinstance(v, NamedConstitutiveLaw):
+            return v
+        else:
+            raise TypeError("const_law must be an instance of ConstitutiveLaw or NamedConstitutiveLaw")
 
     def element_type(self):
         return 'joint'
     
     def __str__(self):
         s = f'{self.element_header()}, deformable hinge'
-        s += f',\n\t{self.node_1_label}'
+        s += f',\n\t{self.node_1.idx}'
         if self.position_1 is not None:
             s += f',\n\t\tposition, {self.position_1}'
         if self.orientation_mat_1 is not None:
             s += f',\n\t\torientation, {self.orientation_mat_1}'
-        s += f',\n\t{self.node_2_label}'
+        s += f',\n\t{self.node_2.idx}'
         if self.position_2 is not None:
             s += f',\n\t\tposition, {self.position_2}'
         if self.orientation_mat_2 is not None:
             s += f',\n\t\torientation, {self.orientation_mat_2}'
         s += f',\n\t{self.const_law}'
+        if self.orientation_desc is not None:
+            s += f''',\n\torientation description, {self.orientation_desc}'''
         s += self.element_footer()
         return s
 
@@ -1508,17 +1520,8 @@ class GimbalRotation(Element2):
     relative_orientation_mat_1: Optional[Union[Position2, List]] = None
     node_2_label: Union[int, MBVar]
     relative_orientation_mat_2: Optional[Union[Position2, List]] = None
-    orientation_description: Optional[str] = None
+    orientation_desc: Optional[Literal['euler123', 'euler313', 'euler321', 'orientation vector', 'orientation matrix']] = None
     """The type of orientation description"""
-
-    @field_validator('orientation_description')
-    def check_orientation_description(cls, v):
-        if v is None:
-            return v  # Field is optional and not provided; no validation needed
-        allowed_values = {"euler123", "euler313", "euler321", "orientation vector", "orientation matrix"}
-        if v not in allowed_values:
-            raise ValueError(f"Invalid orientation description. Must be one of: {', '.join(allowed_values)}")
-        return v
 
     def element_type(self):
         return 'joint'
@@ -1531,8 +1534,8 @@ class GimbalRotation(Element2):
         s += f''',\n\t{self.node_2_label}'''
         if self.relative_orientation_mat_2 is not None:
             s += f''', orientation, {self.relative_orientation_mat_2}'''
-        if self.orientation_description is not None:
-            s += f''',\n\torientation description, {self.orientation_description}'''
+        if self.orientation_desc is not None:
+            s += f''',\n\torientation description, {self.orientation_desc}'''
         s += self.element_footer()
         return s
 
@@ -1918,8 +1921,7 @@ class RevoluteRotation(Element2):
         s += self.element_footer()
         return s
 
-# Rename to Rod, Delete current Rod, when review of the code is done
-class Rod2(Element2):
+class Rod(Element2):
     '''
     The rod element represents a force between two nodes that depends on the relative position and velocity
     of two points, each rigidly attached to a structural node. The direction of the force is also based on
@@ -1930,25 +1932,16 @@ class Rod2(Element2):
         'arbitrary_types_allowed': True
     }
 
-    node_1_label: Union[int, MBVar]
+    node_1: Node2
     position_1: Optional[Position2] = None
-    node_2_label: Union[int, MBVar]
+    node_2: Node2
     position_2: Optional[Position2] = None
-    rod_length: Union[float, MBVar, str]  # Can be a float or 'from nodes'
+    rod_length: Union[float, MBVar, Literal['from nodes']]  # Can be a float or 'from nodes'
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
 
     def element_type(self):
         return 'joint'
-    
-    @field_validator('rod_length')
-    def validate_rod_length(cls, v):
-        if isinstance(v, str):
-            if v.lower() != 'from nodes':
-                raise ValueError("rod_length must be a float, MBVar or the string 'from nodes'")
-            return v.lower()
-        else:
-            return v
-    
+        
     @field_validator('const_law')
     def validate_const_law(cls, v):
         if isinstance(v, ConstitutiveLaw):
@@ -1962,10 +1955,10 @@ class Rod2(Element2):
 
     def __str__(self):
         s = f'{self.element_header()}, rod'
-        s += f',\n\t{self.node_1_label}'
+        s += f',\n\t{self.node_1.idx}'
         if self.position_1 is not None:
             s += f',\n\t\tposition, {self.position_1}'
-        s += f',\n\t{self.node_2_label}'
+        s += f',\n\t{self.node_2.idx}'
         if self.position_2 is not None:
             s += f',\n\t\tposition, {self.position_2}'
         s += f',\n\t{self.rod_length}'
@@ -2326,117 +2319,6 @@ class TotalJoint(Element2):
         s += self.element_footer()
         return s
 
-# class TotalJoint(Element):
-#     def __init__(self, idx, nodes, positions, \
-#             position_orientations, rotation_orientations, \
-#             position_constraints, orientation_constraints, \
-#             position_drive, orientation_drive,
-#             output = 'yes'):
-#         assert isinstance(nodes, list), (
-#             '\n-------------------\nERROR:' + 
-#             ' in defining a total joint, the' +
-#             ' nodes must be given in a list' + 
-#             '\n-------------------\n')
-#         assert len(nodes) == 2, (
-#             '\n-------------------\nERROR:' + 
-#             ' defining a total joint with ' + str(len(nodes)) +
-#             ' nodes' + '\n-------------------\n')
-#         assert isinstance(positions, list), (
-#             '\n-------------------\nERROR:' + 
-#             ' in defining a total joint, the' +
-#             ' relative positions must be given in a list' + 
-#             '\n-------------------\n')    
-#         assert len(nodes) == len(positions), (
-#             '\n-------------------\nERROR:' +
-#             ' defining a total joint with ' + str(len(nodes)) +
-#             ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-#             '\n-------------------\n')
-#         assert isinstance(position_orientations, list), (
-#             '\n-------------------\nERROR:' + 
-#             ' in defining a total joint, the' +
-#             ' relative position orientations must be given in a list' + 
-#             '\n-------------------\n')
-#         assert len(nodes) == len(position_orientations), (
-#             '\n-------------------\nERROR:' +
-#             ' defining a total joint with ' + str(len(nodes)) +
-#             ' nodes and ' + str(len(position_orientations)) + ' position orientations;\n' +
-#             '\n-------------------\n')
-#         assert isinstance(rotation_orientations, list), (
-#             '\n-------------------\nERROR:' + 
-#             ' in defining a total joint, the' +
-#             ' relative rotation orientations must be given in a list' + 
-#             '\n-------------------\n')
-#         assert len(nodes) == len(rotation_orientations), (
-#             '\n-------------------\nERROR:' +
-#             ' defining a total joint with ' + str(len(nodes)) +
-#             ' nodes and ' + str(len(rotation_orientations)) + ' rotation orientations;\n' +
-#             '\n-------------------\n')
-#         assert isinstance(position_constraints, list), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total joint, ' 
-#             ' position constraints must be given as a list;' + 
-#             '\n-------------------\n')
-#         assert len(position_constraints) == 3, (
-#             '\n-------------------\nERROR:' +
-#             ' defining a total joint with ' +
-#             str(len(position_constraints)) + ' position constraints;\n' +
-#             '\n-------------------\n')
-#         assert isinstance(orientation_constraints, list), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total joint, ' 
-#             ' orientation constraints must be given as a list;' + 
-#             '\n-------------------\n')    
-#         assert len(orientation_constraints) == 3, (
-#             '\n-------------------\nERROR:' +
-#             ' defining a total joint with ' +
-#             str(len(orientation_constraints)) + ' orientation constraints;\n' +
-#             '\n-------------------\n')
-#         assert all([isinstance(pos, Position) for pos in positions]), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total joint all offsets must be instances of ' + 
-#             ' the class Position;\n' +
-#             '\n-------------------\n')
-#         self.idx = idx
-#         self.type = 'joint'
-#         self.nodes = nodes
-#         self.positions = positions
-#         self.position_orientations = position_orientations
-#         self.rotation_orientations = rotation_orientations
-#         self.position_constraints = position_constraints
-#         self.orientation_constraints = orientation_constraints
-#         self.position_drive = position_drive
-#         self.orientation_drive = orientation_drive
-#         self.output = output
-#     def __str__(self):
-#         s = 'joint: ' + str(self.idx) + ', total joint'
-#         for (node, pos, pos_or, rot_or) in zip(self.nodes, self.positions,
-#                 self.position_orientations, self.rotation_orientations):
-#             s = s + ',\n\t' + str(node)
-#             if not(pos.isnull()):
-#                 s = s + ',\n\t\tposition, ' + str(pos)
-#             if not(pos_or.iseye()):
-#                 s = s + ',\n\t\tposition orientation, ' + str(pos_or)
-#             if not(rot_or.iseye()):
-#                 s = s + ',\n\t\trotation orientation, ' + str(rot_or)
-#         if sum(self.position_constraints):
-#             s = s + ',\n\tposition constraint, '\
-#                     + ', '.join(str(pc) for pc in self.position_constraints)
-#             if isinstance(self.position_drive, list):
-#                 s = s + ',\n\t\t' + ', '.join(str(i) for i in self.position_drive)
-#             else:
-#                 s = s + ',\n\t\t' + str(self.position_drive)
-#         if sum(self.orientation_constraints):
-#             s = s + ',\n\torientation constraint, '\
-#                     + ', '.join(str(oc) for oc in self.orientation_constraints)
-#             if isinstance(self.orientation_drive, list):
-#                 s = s + ',\n\t\t' + ', '.join(str(i) for i in self.orientation_drive)
-#             else:
-#                 s = s + ',\n\t\t', + str(self.orientation_drive)
-#         if self.output != 'yes':
-#             s = s + ',\n\toutput, ' + str(self.output)
-#         s = s + ';\n'
-#         return s
-
 class TotalPinJoint(Element2):
     node: Node2
     rel_position: Optional[Position2] = None
@@ -2510,94 +2392,6 @@ class TotalPinJoint(Element2):
         s += self.element_footer()
         return s
 
-# class TotalPinJoint(Element):
-#     def __init__(self, idx, node, 
-#             positions, position_orientations, rotation_orientations, 
-#             position_constraints, orientation_constraints, 
-#             position_drive, orientation_drive,
-#             output = 'yes'):
-#         if not isinstance(positions, list):
-#             positions = [positions]
-#         assert (len(positions) in [1, 2]) and all([isinstance(pos, Position) for pos in positions]), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total pin joint, ' + 
-#             ' relative positions must be given as a single instance' + 
-#             ' of the Position class or as a list of Position instances' + 
-#             '\n-------------------\n')
-#         if not isinstance(position_orientations, list):
-#             position_orientations = [position_orientations]
-#         assert ((len(position_orientations) in [1, 2]) and all([isinstance(pos, Position) for pos in position_orientations])), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total pin joint, ' + 
-#             ' relative position orientations must be given as a single instance' + 
-#             ' of the Position class or as a list of Position instances' + 
-#             '\n-------------------\n')
-#         if not isinstance(rotation_orientations, list):
-#             rotation_orientations = [rotation_orientations]
-#         assert ((len(rotation_orientations) in [1, 2]) and all([isinstance(pos, Position) for pos in rotation_orientations])), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total pin joint, ' + 
-#             ' relative rotation orientations must be given as a single instance' + 
-#             ' of the Position class or as a list of Position instances' + 
-#             '\n-------------------\n')
-#         assert isinstance(position_constraints, list), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total joint, ' 
-#             ' position constraints must be given as a list;' + 
-#             '\n-------------------\n')
-#         assert len(position_constraints) == 3, (
-#             '\n-------------------\nERROR:' +
-#             ' defining a total joint with ' + str(len(position_constraints)) + 
-#             ' position constraints;' + '\n-------------------\n')
-#         assert isinstance(orientation_constraints, list), (
-#             '\n-------------------\nERROR:' +
-#             ' in defining a total joint, ' 
-#             ' orientation constraints must be given as a list;' + 
-#             '\n-------------------\n')
-#         assert len(orientation_constraints) == 3, (
-#             '\n-------------------\nERROR:' +
-#             ' defining a total joint with ' + str(len(orientation_constraints)) + 
-#             ' orientation constraints;' + '\n-------------------\n')
-#         self.idx = idx
-#         self.type = 'joint'
-#         self.node = node
-#         self.positions = positions
-#         self.position_orientations = position_orientations
-#         self.rotation_orientations = rotation_orientations
-#         self.position_constraints = position_constraints
-#         self.orientation_constraints = orientation_constraints
-#         self.position_drive = position_drive
-#         self.orientation_drive = orientation_drive
-#         self.output = output
-#     def __str__(self):
-#         s = 'joint: ' + str(self.idx) + ', total pin joint'
-#         s = s + ',\n\t' + str(self.node)
-#         if not(self.positions[0].isnull()):
-#             s = s + ',\n\t\tposition, ' + str(self.positions[0])
-#         if not(self.position_orientations[0].iseye()):
-#             s = s + ',\n\t\tposition orientation, ' + str(self.position_orientations[0])
-#         if not(self.rotation_orientations[0].iseye()):
-#             s = s + ',\n\t\trotation orientation, ' + str(self.rotation_orientations[0])
-#         if len(self.positions) == 2 and not(self.positions[1].isnull()):
-#             s = s + ',\n\t# GROUND'
-#             s = s + '\n\t\tposition, ' + str(self.positions[1])
-#         if len(self.position_orientations) == 2 and not(self.position_orientations[1].iseye()):
-#             s = s + ',\n\t\tposition orientation, ' + str(self.position_orientations[1])
-#         if len(self.rotation_orientations) == 2 and not(self.rotation_orientations[1].iseye()):
-#             s = s + ',\n\t\trotation orientation, ' + str(self.rotation_orientations[1])
-#         if sum(self.position_constraints):
-#             s = s + ',\n\tposition constraint, '\
-#                     + ', '.join(str(pc) for pc in self.position_constraints)
-#             s = s + ',\n\t\t' + ', '.join(str(i) for i in self.position_drive)
-#         if sum(self.orientation_constraints):
-#             s = s + ',\n\torientation constraint, '\
-#                     + ', '.join(str(oc) for oc in self.orientation_constraints)
-#             s = s + ',\n\t\t' + ', '.join(str(i) for i in self.orientation_drive)
-#         if self.output != 'yes':
-#             s = s + ',\n\toutput, ' + str(self.output)
-#         s = s + ';\n'
-#         return s
-
 class JointRegularization(Element2):
     coefficients: Union[List[float], List[MBVar], float, MBVar]
 
@@ -2613,192 +2407,44 @@ class JointRegularization(Element2):
             s += f',\n\t{self.coefficients}'
         s += self.element_footer()
         return s
-
-class Rod(Element):
-    def __init__(self, idx, nodes, positions, const_law, length = 'from nodes', 
-            output = 'yes'):
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' + 
-            ' defining a rod with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert len(nodes) == len(positions), (
-            '\n-------------------\nERROR:' +
-            ' defining a rod with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-            '\n-------------------\n')
-        if not isinstance(positions, list):
-            positions = [positions]
-        assert all([isinstance(pos, Position) for pos in positions]), (
-            '\n-------------------\nERROR:' +
-            ' in defining a rod all offsets must be instances of ' + 
-            ' the class Position;\n' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.nodes = nodes
-        self.positions = positions
-        self.const_law = const_law
-        self.length = length
-        self.output = output
-    def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', rod'
-        for (node, position) in zip(self.nodes, self.positions):
-            s = s + ',\n\t' + str(node)
-            if not(position.isnull()):
-                s = s + ',\n\t\tposition, ' + str(position)
-        s = s + ',\n\t' + str(self.length) + ',\n'
-        s = s + '\t' + ', '.join(str(i) for i in self.const_law)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
     
-class CardanoHinge(Element):
-    def __init__(self, idx, nodes, positions, orientations, output = 'yes'):
-        assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a cardano hinge, the' +
-            ' nodes must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' +
-            ' defining a cardano hinge with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a cardano hinge, the' +
-            ' relative positions must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == len(positions), (
-            '\n-------------------\nERROR:' +
-            ' defining a cardano hinge with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-            '\n-------------------\n')
-        assert isinstance(orientations, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a cardano hinge, the' +
-            ' relative position orientations must be given in a list' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.nodes = nodes
-        self.positions = positions
-        self.orientations = orientations
-        self.output = output
-    def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', cardano hinge'
-        for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
-            s = s + ',\n\t' + str(node)
-            if not(pos.isnull()):
-                s = s + ',\n\t\tposition, ' + str(pos)
-            if not(orient.iseye()):
-                s = s + ',\n\t\torientation, ' + str(orient)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
+class DeformableDisplacement(Element2):
+    node_1: Node2
+    position_1: Position2
+    orientation_mat_1: Optional[Position2] = None
+    node_2: Node2
+    position_2: Position2
+    orientation_mat_2: Optional[Position2] = None
+    const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
 
-class DeformableDiaplacement(Element):
-    def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
-        assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable displacement joint, the' +
-            ' nodes must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' +
-            ' defining a deformable displacement joint with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable displacement joint, the' +
-            ' relative positions must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == len(positions), (
-            '\n-------------------\nERROR:' +
-            ' defining a deformable displacement joint with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-            '\n-------------------\n')
-        assert isinstance(orientations, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable displacement joint, the' +
-            ' relative position orientations must be given in a list' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.nodes = nodes
-        self.positions = positions
-        self.orientations = orientations
-        self.constitutive_law = const_law
-    def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', deformable displacement'
-        for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
-            s = s + ',\n\t' + str(node)
-            if not(pos.isnull()):
-                s = s + ',\n\t\tposition, ' + str(pos)
-            if not(self.pos_or.iseye()):
-                s = s + ',\n\t\torientation, ' + str(orient)
-        s = s + '\n\t'
-        if isinstance(self.constitutive_law, str):
-            s = s + self.constitutive_law
+    @field_validator('const_law')
+    def validate_const_law(cls, v):
+        if isinstance(v, ConstitutiveLaw):
+            if v.law_type != ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW:
+                raise ValueError("const_law must be a 3D constitutive law with law_type 'D3_ISOTROPIC_LAW'")
+            return v
+        elif isinstance(v, NamedConstitutiveLaw):
+            return v
         else:
-            s = s + ', '.join(str(i) for i in self.constitutive_law)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
-class DeformableHinge(Element):
-    def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
-        assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable hinge, the' +
-            ' nodes must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' +
-            ' defining a deformable hinge with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable hinge, the' +
-            ' relative positions must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == len(positions), (
-            '\n-------------------\nERROR:' +
-            ' defining a deformable hinge with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-            '\n-------------------\n')
-        assert isinstance(orientations, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable hinge, the' +
-            ' relative position orientations must be given in a list' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.nodes = nodes
-        self.positions = positions
-        self.orientations = orientations
-        self.constitutive_law = const_law
-        self.output = output
-    def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', deformable hinge'
-        for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
-            s = s + ',\n\t' + str(node)
-            if not(pos.isnull()):
-                s = s + ',\n\t\tposition, ' + str(pos)
-            if not(orient.iseye()):
-                s = s + ',\n\t\torientation, ' + str(orient)
-        s = s + ',\n\t'
-        if isinstance(self.constitutive_law, str):
-            s = s + self.constitutive_law
-        else:
-            s = s + ', '.join(str(i) for i in self.constitutive_law)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
+            raise TypeError("const_law must be an instance of ConstitutiveLaw or NamedConstitutiveLaw")
+                
+    def element_type(self):
+        return 'joint'
     
+    def __str__(self):
+        s = f'{self.element_header()}, deformable displacement' # According to the manual, 'deformable displacement joint' but in the previous implementation it was given as 'deformable displacement'
+        s += f',\n\t{self.node_1.idx}'
+        s += f',\n\t\tposition, {self.position_1}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2.idx}'
+        s += f',\n\t\tposition, {self.position_2}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
+        s += f',\n\t{self.const_law}'
+        s += self.element_footer()
+        return s
+        
 class DeformableJoint(Element):
     def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
         assert isinstance(nodes, list), (
@@ -5439,8 +5085,8 @@ class NamedConstitutiveLaw(MBEntity):
 
 if imported_pydantic:
     DeformableAxial.model_rebuild()
-    DeformableHinge2.model_rebuild()
-    Rod2.model_rebuild()
+    DeformableHinge.model_rebuild()
+    Rod.model_rebuild()
     RodWithOffset.model_rebuild()
     RodBezier.model_rebuild()
     ViscousBody.model_rebuild()

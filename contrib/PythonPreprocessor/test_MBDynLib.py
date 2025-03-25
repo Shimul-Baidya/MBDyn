@@ -7748,138 +7748,6 @@ class TestDeformableAxial(unittest.TestCase):
                 const_law=l.NamedConstitutiveLaw("Some const law")
             )
 
-class TestDeformableHinge2(unittest.TestCase):
-
-    def setUp(self):
-        self.node_1_label = 1
-        self.node_2_label = 2
-
-        # Optional values for testing with positions and orientations
-        self.position_1 = l.Position2(
-            relative_position=[1.0, 0.0, 0.0],
-            reference=''
-        )
-        self.orientation_mat_1 = l.Position2(
-            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-            reference='node'
-        )
-        self.position_2 = l.Position2(
-            relative_position=[0.0, 1.0, 0.0],
-            reference='global'
-        )
-        self.orientation_mat_2 = l.Position2(
-            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
-            reference='node'
-        )
-
-        # Example constitutive laws
-        self.linear_elastic = l.LinearElastic(
-            idx=1,
-            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
-            stiffness=2000
-        )
-        
-        self.named_const_law = l.NamedConstitutiveLaw("example_named_law")
-
-        # Initialize DeformableHinge2 with required fields
-        self.deformable_hinge2 = l.DeformableHinge2(
-            idx=1,
-            node_1_label=self.node_1_label,
-            node_2_label=self.node_2_label,
-            const_law=self.linear_elastic
-        )
-
-    def test_initialization(self):
-        # Test that the DeformableHinge2 initializes correctly with provided values
-        self.assertEqual(self.deformable_hinge2.node_1_label, self.node_1_label)
-        self.assertEqual(self.deformable_hinge2.node_2_label, self.node_2_label)
-        self.assertIsNone(self.deformable_hinge2.position_1)
-        self.assertIsNone(self.deformable_hinge2.orientation_mat_1)
-        self.assertIsNone(self.deformable_hinge2.position_2)
-        self.assertIsNone(self.deformable_hinge2.orientation_mat_2)
-        self.assertEqual(self.deformable_hinge2.const_law, self.linear_elastic)
-        self.assertEqual(self.deformable_hinge2.idx, 1)
-
-    def test_str_representation_without_optional(self):
-        # Test the string output when optional positions and orientations are not provided
-        expected_str = (
-            f'{self.deformable_hinge2.element_header()}, deformable hinge'
-            f',\n\t{self.node_1_label},'
-            f'\n\t{self.node_2_label},'
-            f'\n\t{self.linear_elastic}'
-            f'{self.deformable_hinge2.element_footer()}'
-        )
-        self.assertEqual(str(self.deformable_hinge2), expected_str)
-
-    def test_str_representation_with_optional(self):
-        # Initialize with optional positions and orientations
-        deformable_hinge2_with_optional = l.DeformableHinge2(
-            idx=2,
-            node_1_label=self.node_1_label,
-            position_1=self.position_1,
-            orientation_mat_1=self.orientation_mat_1,
-            node_2_label=self.node_2_label,
-            position_2=self.position_2,
-            orientation_mat_2=self.orientation_mat_2,
-            const_law=self.named_const_law
-        )
-
-        expected_str = (
-            f'{deformable_hinge2_with_optional.element_header()}, deformable hinge'
-            f',\n\t{self.node_1_label},'
-            f'\n\t\tposition, {self.position_1},'
-            f'\n\t\torientation, {self.orientation_mat_1},'
-            f'\n\t{self.node_2_label},'
-            f'\n\t\tposition, {self.position_2},'
-            f'\n\t\torientation, {self.orientation_mat_2},'
-            f'\n\t{self.named_const_law}'
-            f'{deformable_hinge2_with_optional.element_footer()}'
-        )
-        self.assertEqual(str(deformable_hinge2_with_optional), expected_str)
-
-    def test_optional_none_handling(self):
-        # Test to check that None is handled correctly for optional positions and orientations
-        deformable_hinge2_without_optional = l.DeformableHinge2(
-            idx=3,
-            node_1_label=self.node_1_label,
-            node_2_label=self.node_2_label,
-            const_law=self.named_const_law
-        )
-
-        # Assert that optional parameters remain None
-        self.assertIsNone(deformable_hinge2_without_optional.position_1)
-        self.assertIsNone(deformable_hinge2_without_optional.orientation_mat_1)
-        self.assertIsNone(deformable_hinge2_without_optional.position_2)
-        self.assertIsNone(deformable_hinge2_without_optional.orientation_mat_2)
-
-    def test_invalid_node_labels(self):
-        # Test that passing invalid node labels raises the appropriate error
-        with self.assertRaises(Exception):
-            l.DeformableHinge2(
-                idx=4,
-                node_1_label="invalid_label",  # Invalid type for node_1_label
-                node_2_label=self.node_2_label,
-                const_law=self.linear_elastic
-            )
-
-        with self.assertRaises(Exception):
-            l.DeformableHinge2(
-                idx=5,
-                node_1_label=self.node_1_label,
-                node_2_label="invalid_label",  # Invalid type for node_2_label
-                const_law=self.linear_elastic
-            )
-
-    def test_invalid_const_law(self):
-        # Test that passing an invalid const_law raises the appropriate error
-        with self.assertRaises(Exception):
-            l.DeformableHinge2(
-                idx=6,
-                node_1_label=self.node_1_label,
-                node_2_label=self.node_2_label,
-                const_law="invalid_const_law"  # Invalid type for const_law
-            )
-
 class TestNamedConstitutiveLaw(unittest.TestCase):
 
     def test_string_input(self):
@@ -9825,224 +9693,6 @@ class TestRevoluteRotation(unittest.TestCase):
         self.assertEqual(revolute_rotation.output, 'no')
         self.assertIn(',\n\toutput, no', str(revolute_rotation))
 
-class TestRod2(unittest.TestCase):
-    def setUp(self):
-        # Common variables used in tests
-        self.idx = 50
-        self.node_1_label = 1
-        self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
-        self.rod_length = 10.0
-        self.const_law_valid = l.LinearElastic(
-            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
-            stiffness=1e6
-        )
-        self.const_law_invalid = l.LinearElastic(
-            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
-            stiffness=1e6
-        )
-
-    def test_rod2_creation_valid(self):
-        # Test creating a Rod2 instance with all valid data
-        rod2 = l.Rod2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            position_1=self.position_1,
-            node_2_label=self.node_2_label,
-            position_2=self.position_2,
-            rod_length=self.rod_length,
-            const_law=self.const_law_valid
-        )
-        self.assertIsInstance(rod2, l.Rod2)
-        self.assertEqual(rod2.node_1_label, self.node_1_label)
-        self.assertEqual(rod2.position_1, self.position_1)
-        self.assertEqual(rod2.node_2_label, self.node_2_label)
-        self.assertEqual(rod2.position_2, self.position_2)
-        self.assertEqual(rod2.rod_length, self.rod_length)
-        self.assertEqual(rod2.const_law, self.const_law_valid)
-
-    def test_rod2_creation_without_optional_fields(self):
-        # Test creating a Rod2 instance without optional position fields
-        rod2 = l.Rod2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            node_2_label=self.node_2_label,
-            rod_length='from nodes',
-            const_law=self.const_law_valid
-        )
-        self.assertIsInstance(rod2, l.Rod2)
-        self.assertIsNone(rod2.position_1)
-        self.assertIsNone(rod2.position_2)
-        self.assertEqual(rod2.rod_length, 'from nodes')
-
-    @unittest.skipIf(pydantic is None, "Depends on Pydantic library")
-    def test_rod2_missing_required_fields(self):
-        # Missing node_1_label
-        with self.assertRaises(Exception):
-            l.Rod2(
-                idx=self.idx,
-                node_2_label=self.node_2_label,
-                rod_length=self.rod_length,
-                const_law=self.const_law_valid
-            )
-        # Missing node_2_label
-        with self.assertRaises(Exception):
-            l.Rod2(
-                idx=self.idx,
-                node_1_label=self.node_1_label,
-                rod_length=self.rod_length,
-                const_law=self.const_law_valid
-            )
-        # Missing rod_length
-        with self.assertRaises(Exception):
-            l.Rod2(
-                idx=self.idx,
-                node_1_label=self.node_1_label,
-                node_2_label=self.node_2_label,
-                const_law=self.const_law_valid
-            )
-        # Missing const_law
-        with self.assertRaises(Exception):
-            l.Rod2(
-                idx=self.idx,
-                node_1_label=self.node_1_label,
-                node_2_label=self.node_2_label,
-                rod_length=self.rod_length
-            )
-
-    def test_rod2_str_method(self):
-        # Test the __str__ method of Rod2
-        rod2 = l.Rod2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            position_1=self.position_1,
-            node_2_label=self.node_2_label,
-            position_2=self.position_2,
-            rod_length=self.rod_length,
-            const_law=self.const_law_valid
-        )
-        expected_str = (
-            f'{rod2.element_header()}, rod'
-            f',\n\t{self.node_1_label}'
-            f',\n\t\tposition, {self.position_1}'
-            f',\n\t{self.node_2_label}'
-            f',\n\t\tposition, {self.position_2}'
-            f',\n\t{self.rod_length}'
-            f',\n\t{self.const_law_valid}'
-            f'{rod2.element_footer()}'
-        )
-        self.maxDiff=None
-        self.assertEqual(str(rod2), expected_str)
-
-    def test_rod2_output_option(self):
-        # Test setting the output option to 'no'
-        rod2 = l.Rod2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            node_2_label=self.node_2_label,
-            rod_length='from nodes',
-            const_law=self.const_law_valid,
-            output='no'
-        )
-        self.assertEqual(rod2.output, 'no')
-        self.assertIn(',\n\toutput, no', str(rod2))
-
-    # # TODO: Check if MBVar class has errors
-    # def test_rod2_with_mbvar_node_labels(self):
-    #     # Test creating a Rod2 instance with MBVar as node labels
-    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
-    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
-    #     rod2 = l.Rod2(
-    #         idx=self.idx,
-    #         node_1_label=node_var_1,
-    #         node_2_label=node_var_2,
-    #         rod_length=self.rod_length,
-    #         const_law=self.const_law_valid
-    #     )
-    #     self.assertEqual(rod2.node_1_label, node_var_1)
-    #     self.assertEqual(rod2.node_2_label, node_var_2)
-
-    def test_rod2_rod_length_validation(self):
-        # Test the rod_length field validator
-        # Valid cases
-        try:
-            rod2_float_length = l.Rod2(
-                idx=self.idx,
-                node_1_label=self.node_1_label,
-                node_2_label=self.node_2_label,
-                rod_length=15.0,
-                const_law=self.const_law_valid
-            )
-            self.assertEqual(rod2_float_length.rod_length, 15.0)
-            rod2_str_length = l.Rod2(
-                idx=self.idx,
-                node_1_label=self.node_1_label,
-                node_2_label=self.node_2_label,
-                rod_length='from nodes',
-                const_law=self.const_law_valid
-            )
-            self.assertEqual(rod2_str_length.rod_length, 'from nodes')
-            # TODO: Check if MBVar class has errors
-            # rod2_mbvar_length = l.Rod2(
-            #     idx=self.idx,
-            #     node_1_label=self.node_1_label,
-            #     node_2_label=self.node_2_label,
-            #     rod_length=l.MBVar(name='rod_length_var', var_type='real', expression=20.0),
-            #     const_law=self.const_law_valid
-            # )
-            # self.assertIsInstance(rod2_mbvar_length.rod_length, l.MBVar)
-        except Exception as e:
-            self.fail(f"Unexpected exception occurred: {e}")
-        # Invalid case
-        if pydantic is None:
-            self.skipTest("Pydantic not available, skipping invalid input test")
-        else:
-            with self.assertRaises(Exception):
-                l.Rod2(
-                    idx=self.idx,
-                    node_1_label=self.node_1_label,
-                    node_2_label=self.node_2_label,
-                    rod_length='invalid string',
-                    const_law=self.const_law_valid
-                )
-
-    def test_rod2_const_law_validation(self):
-        # Test the const_law field validator
-        # Valid case
-        try:
-            rod2 = l.Rod2(
-                idx=self.idx,
-                node_1_label=self.node_1_label,
-                node_2_label=self.node_2_label,
-                rod_length=self.rod_length,
-                const_law=self.const_law_valid
-            )
-            self.assertEqual(rod2.const_law, self.const_law_valid)
-        except Exception as e:
-            self.fail(f"Unexpected exception occurred: {e}")
-        if pydantic is None:
-            self.skipTest("Pydantic not available, skipping invalid input test")
-        else:
-            # Invalid case: const_law is not a ConstitutiveLaw instance
-            with self.assertRaises(Exception):
-                l.Rod2(
-                    idx=self.idx,
-                    node_1_label=self.node_1_label,
-                    node_2_label=self.node_2_label,
-                    rod_length=self.rod_length,
-                    const_law='invalid_const_law'
-                )
-            # Invalid case: const_law with wrong law_type
-            with self.assertRaises(Exception):
-                l.Rod2(
-                    idx=self.idx,
-                    node_1_label=self.node_1_label,
-                    node_2_label=self.node_2_label,
-                    rod_length=self.rod_length,
-                    const_law=self.const_law_invalid
-                )
-
 class TestRodWithOffset(unittest.TestCase):
     def setUp(self):
         # Common variables used in tests
@@ -11466,6 +11116,895 @@ class TestTotalPinJoint(unittest.TestCase):
                 idx=1,
                 node=self.node,
                 position_status=['active', 'inactive', 'active']
+            )
+
+class TestCardanoHinge(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.StaticNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+
+    def test_cardano_hinge_creation(self):
+        """Check that CardanoHinge can be created with valid arguments"""
+        # Basic hinge without orientation matrices
+        hinge = l.CardanoHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2
+        )
+        self.assertEqual(hinge.idx, 1)
+        self.assertEqual(hinge.node_1, self.node1)
+        self.assertEqual(hinge.position_1, self.pos1)
+        self.assertEqual(hinge.node_2, self.node2)
+        self.assertEqual(hinge.position_2, self.pos2)
+        self.assertIsNone(hinge.orientation_mat_1)
+        self.assertIsNone(hinge.orientation_mat_2)
+        
+        # Hinge with orientation matrices
+        hinge = l.CardanoHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            orientation_mat_1=self.orient1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            orientation_mat_2=self.orient2
+        )
+        self.assertEqual(hinge.orientation_mat_1, self.orient1)
+        self.assertEqual(hinge.orientation_mat_2, self.orient2)
+
+    def test_cardano_hinge_str_representation(self):
+        """Test string representation of CardanoHinge"""
+        # Basic hinge without orientation matrices
+        hinge = l.CardanoHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2
+        )
+        expected_str = "joint: 1, cardano hinge,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        print(str(hinge))
+        
+        # Hinge with orientation matrices
+        hinge = l.CardanoHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            orientation_mat_1=self.orient1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            orientation_mat_2=self.orient2
+        )
+        expected_str = "joint: 1, cardano hinge,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t\torientation, reference, node, 0.0, 0.0, 1.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\t\torientation, reference, node, 0.0, 1.0, 0.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        
+        # Hinge with output option
+        hinge = l.CardanoHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            output='no'
+        )
+        expected_str = "joint: 1, cardano hinge,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\toutput, no;\n"
+        self.assertEqual(str(hinge), expected_str)
+
+
+class TestRod(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.StaticNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        
+        # Create constitutive law for testing
+        self.scalar_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        self.named_law = l.NamedConstitutiveLaw("linear elastic, 2000.0")
+
+    def test_rod_creation(self):
+        """Check that Rod can be created with valid arguments"""
+        # Basic rod with minimal arguments
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            rod_length=10.0,
+            const_law=self.scalar_law
+        )
+        self.assertEqual(rod.idx, 1)
+        self.assertEqual(rod.node_1, self.node1)
+        self.assertEqual(rod.node_2, self.node2)
+        self.assertEqual(rod.rod_length, 10.0)
+        self.assertEqual(rod.const_law, self.scalar_law)
+        self.assertIsNone(rod.position_1)
+        self.assertIsNone(rod.position_2)
+        
+        # Rod with positions
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            rod_length='from nodes',
+            const_law=self.scalar_law
+        )
+        self.assertEqual(rod.position_1, self.pos1)
+        self.assertEqual(rod.position_2, self.pos2)
+        self.assertEqual(rod.rod_length, 'from nodes')
+        
+        # Rod with named constitutive law
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            rod_length=10.0,
+            const_law=self.named_law
+        )
+        self.assertEqual(rod.const_law, self.named_law)
+
+    def test_rod_str_representation(self):
+        """Test string representation of Rod"""
+        # Basic rod without positions
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            rod_length=10.0,
+            const_law=self.scalar_law
+        )
+        expected_str = "joint: 1, rod,\n\t1,\n\t2,\n\t10.0,\n\tlinear elastic, 1000.0;\n"
+        self.assertEqual(str(rod), expected_str)
+        
+        # Rod with positions
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            rod_length='from nodes',
+            const_law=self.scalar_law
+        )
+        expected_str = "joint: 1, rod,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tfrom nodes,\n\tlinear elastic, 1000.0;\n"
+        self.assertEqual(str(rod), expected_str)
+        
+        # Rod with constitutive law that has an index
+        indexed_law = l.LinearElastic(
+            idx=3,
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            rod_length=10.0,
+            const_law=indexed_law
+        )
+        expected_str = "joint: 1, rod,\n\t1,\n\t2,\n\t10.0,\n\tconstitutive law: 3, name, \"scalar isotropic law\",\n\t1, linear elastic, 1000.0;\n"
+        self.assertEqual(str(rod), expected_str)
+        print(rod)
+        
+        # Rod with named constitutive law
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            rod_length=10.0,
+            const_law=self.named_law
+        )
+        expected_str = "joint: 1, rod,\n\t1,\n\t2,\n\t10.0,\n\tlinear elastic, 2000.0;\n"
+        self.assertEqual(str(rod), expected_str)
+        
+        # Rod with named constitutive law from list
+        list_law = l.NamedConstitutiveLaw(["linear elastic", "2500.0"])
+        rod = l.Rod(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            rod_length=10.0,
+            const_law=list_law
+        )
+        expected_str = "joint: 1, rod,\n\t1,\n\t2,\n\t10.0,\n\tlinear elastic, 2500.0;\n"
+        self.assertEqual(str(rod), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_rod_const_law_validation(self):
+        """Test validation of constitutive law type for Rod"""
+        # Create non-scalar constitutive law (3D)
+        d3_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        
+        # Test with wrong law type
+        with self.assertRaises(ValueError):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                rod_length=10.0,
+                const_law=d3_law  # Wrong type of law
+            )
+        
+        # Test with wrong object type
+        with self.assertRaises(pydantic.ValidationError):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                rod_length=10.0,
+                const_law="not a constitutive law"  # Wrong object type
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_rod_missing_required_fields(self):
+        """Test creating Rod with missing required fields"""
+        # Missing node_1
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_2=self.node2,
+                rod_length=10.0,
+                const_law=self.scalar_law
+            )
+        
+        # Missing node_2
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                rod_length=10.0,
+                const_law=self.scalar_law
+            )
+        
+        # Missing rod_length
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                const_law=self.scalar_law
+            )
+        
+        # Missing const_law
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                rod_length=10.0
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_rod_invalid_types(self):
+        """Test creating Rod with invalid field types"""
+        # Invalid node_1 type
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_1="not a node",  # Invalid type
+                node_2=self.node2,
+                rod_length=10.0,
+                const_law=self.scalar_law
+            )
+        
+        # Invalid node_2 type
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                node_2="not a node",  # Invalid type
+                rod_length=10.0,
+                const_law=self.scalar_law
+            )
+        
+        # Invalid rod_length type
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                rod_length='True',  # Invalid type
+                const_law=self.scalar_law
+            )
+        
+        # Invalid position_1 type
+        with self.assertRaises(Exception):
+            l.Rod(
+                idx=1,
+                node_1=self.node1,
+                position_1="not a position",  # Invalid type
+                node_2=self.node2,
+                rod_length=10.0,
+                const_law=self.scalar_law
+            )
+
+
+class TestDeformableHinge(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.StaticNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+        
+        # Create constitutive law for testing
+        self.d3_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        self.named_law = l.NamedConstitutiveLaw("linear elastic isotropic, 2000.0")
+
+    def test_deformable_hinge_creation(self):
+        """Check that DeformableHinge can be created with valid arguments"""
+        # Basic hinge with minimal arguments
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            const_law=self.d3_law
+        )
+        self.assertEqual(hinge.idx, 1)
+        self.assertEqual(hinge.node_1, self.node1)
+        self.assertEqual(hinge.node_2, self.node2)
+        self.assertEqual(hinge.const_law, self.d3_law)
+        self.assertIsNone(hinge.position_1)
+        self.assertIsNone(hinge.position_2)
+        self.assertIsNone(hinge.orientation_mat_1)
+        self.assertIsNone(hinge.orientation_mat_2)
+        self.assertIsNone(hinge.orientation_desc)
+        
+        # Hinge with all optional fields
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            orientation_mat_1=self.orient1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            orientation_mat_2=self.orient2,
+            const_law=self.d3_law,
+            orientation_desc='euler123'
+        )
+        self.assertEqual(hinge.position_1, self.pos1)
+        self.assertEqual(hinge.orientation_mat_1, self.orient1)
+        self.assertEqual(hinge.position_2, self.pos2)
+        self.assertEqual(hinge.orientation_mat_2, self.orient2)
+        self.assertEqual(hinge.orientation_desc, 'euler123')
+        
+        # Hinge with named constitutive law
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            const_law=self.named_law
+        )
+        self.assertEqual(hinge.const_law, self.named_law)
+
+    def test_deformable_hinge_str_representation(self):
+        """Test string representation of DeformableHinge"""
+        # Basic hinge with minimal arguments
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            const_law=self.d3_law
+        )
+        expected_str = "joint: 1, deformable hinge,\n\t1,\n\t2,\n\tlinear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        
+        # Hinge with positions
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=self.d3_law
+        )
+        expected_str = "joint: 1, deformable hinge,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tlinear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        
+        # Hinge with all optional fields
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            orientation_mat_1=self.orient1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            orientation_mat_2=self.orient2,
+            const_law=self.d3_law,
+            orientation_desc='euler123'
+        )
+        expected_str = "joint: 1, deformable hinge,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t\torientation, reference, node, 0.0, 0.0, 1.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\t\torientation, reference, node, 0.0, 1.0, 0.0,\n\tlinear elastic isotropic, 1000.0,\n\torientation description, euler123;\n"
+        self.assertEqual(str(hinge), expected_str)
+        
+        # Hinge with indexed constitutive law
+        indexed_law = l.LinearElastic(
+            idx=3,
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            const_law=indexed_law
+        )
+        expected_str = "joint: 1, deformable hinge,\n\t1,\n\t2,\n\tconstitutive law: 3, name, \"3D isotropic law\",\n\t3, linear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        print(hinge)
+        
+        # Hinge with named constitutive law
+        hinge = l.DeformableHinge(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            const_law=self.named_law
+        )
+        expected_str = "joint: 1, deformable hinge,\n\t1,\n\t2,\n\tlinear elastic isotropic, 2000.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_deformable_hinge_const_law_validation(self):
+        """Test validation of constitutive law type for DeformableHinge"""
+        # Create scalar constitutive law
+        scalar_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        
+        # Test with wrong law type
+        with self.assertRaises(ValueError):
+            l.DeformableHinge(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                const_law=scalar_law  # Wrong type of law
+            )
+        
+        # Test with wrong object type
+        with self.assertRaises(pydantic.ValidationError):
+            l.DeformableHinge(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                const_law="not a constitutive law"  # Wrong object type
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_deformable_hinge_missing_required_fields(self):
+        """Test creating DeformableHinge with missing required fields"""
+        # Missing node_1
+        with self.assertRaises(Exception):
+            l.DeformableHinge(
+                idx=1,
+                node_2=self.node2,
+                const_law=self.d3_law
+            )
+        
+        # Missing node_2
+        with self.assertRaises(Exception):
+            l.DeformableHinge(
+                idx=1,
+                node_1=self.node1,
+                const_law=self.d3_law
+            )
+        
+        # Missing const_law
+        with self.assertRaises(Exception):
+            l.DeformableHinge(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_deformable_hinge_invalid_types(self):
+        """Test creating DeformableHinge with invalid field types"""
+        # Invalid node_1 type
+        with self.assertRaises(Exception):
+            l.DeformableHinge(
+                idx=1,
+                node_1="not a node",  # Invalid type
+                node_2=self.node2,
+                const_law=self.d3_law
+            )
+        
+        # Invalid node_2 type
+        with self.assertRaises(Exception):
+            l.DeformableHinge(
+                idx=1,
+                node_1=self.node1,
+                node_2="not a node",  # Invalid type
+                const_law=self.d3_law
+            )
+        
+        # Invalid position_1 type
+        with self.assertRaises(Exception):
+            l.DeformableHinge(
+                idx=1,
+                node_1=self.node1,
+                position_1="not a position",  # Invalid type
+                node_2=self.node2,
+                const_law=self.d3_law
+            )
+        
+        # Invalid orientation_desc type
+        with self.assertRaises(Exception):
+            l.DeformableHinge(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                const_law=self.d3_law,
+                orientation_desc="invalid orientation"  # Not in allowed values
+            )
+
+class TestDeformableDisplacement(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.StaticNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+        
+        # Create constitutive law for testing
+        self.d3_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        self.named_law = l.NamedConstitutiveLaw("linear elastic isotropic, 2000.0")
+
+    def test_deformable_displacement_creation(self):
+        """Check that DeformableDisplacement can be created with valid arguments"""
+        # Basic displacement without orientation matrices
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=self.d3_law
+        )
+        self.assertEqual(displacement.idx, 1)
+        self.assertEqual(displacement.node_1, self.node1)
+        self.assertEqual(displacement.position_1, self.pos1)
+        self.assertEqual(displacement.node_2, self.node2)
+        self.assertEqual(displacement.position_2, self.pos2)
+        self.assertEqual(displacement.const_law, self.d3_law)
+        self.assertIsNone(displacement.orientation_mat_1)
+        self.assertIsNone(displacement.orientation_mat_2)
+        
+        # Displacement with orientation matrices
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            orientation_mat_1=self.orient1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            orientation_mat_2=self.orient2,
+            const_law=self.d3_law
+        )
+        self.assertEqual(displacement.orientation_mat_1, self.orient1)
+        self.assertEqual(displacement.orientation_mat_2, self.orient2)
+        
+        # Displacement with named constitutive law
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=self.named_law
+        )
+        self.assertEqual(displacement.const_law, self.named_law)
+
+    def test_deformable_displacement_str_representation(self):
+        """Test string representation of DeformableDisplacement"""
+        # Basic displacement without orientation matrices
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=self.d3_law
+        )
+        expected_str = "joint: 1, deformable displacement,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tlinear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(displacement), expected_str)
+        
+        # Displacement with orientation matrices
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            orientation_mat_1=self.orient1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            orientation_mat_2=self.orient2,
+            const_law=self.d3_law
+        )
+        expected_str = "joint: 1, deformable displacement,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t\torientation, reference, node, 0.0, 0.0, 1.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\t\torientation, reference, node, 0.0, 1.0, 0.0,\n\tlinear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(displacement), expected_str)
+        print(displacement)
+        
+        # Displacement with indexed constitutive law
+        indexed_law = l.LinearElastic(
+            idx=3,
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=indexed_law
+        )
+        expected_str = "joint: 1, deformable displacement,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tconstitutive law: 3, name, \"3D isotropic law\",\n\t3, linear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(displacement), expected_str)
+        
+        # Displacement with named constitutive law
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=self.named_law
+        )
+        expected_str = "joint: 1, deformable displacement,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tlinear elastic isotropic, 2000.0;\n"
+        self.assertEqual(str(displacement), expected_str)
+        
+        # Displacement with named constitutive law from list
+        list_law = l.NamedConstitutiveLaw(["linear elastic isotropic", "2500.0"])
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=list_law
+        )
+        expected_str = "joint: 1, deformable displacement,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tlinear elastic isotropic, 2500.0;\n"
+        self.assertEqual(str(displacement), expected_str)
+        
+        # Displacement with output option
+        displacement = l.DeformableDisplacement(
+            idx=1,
+            node_1=self.node1,
+            position_1=self.pos1,
+            node_2=self.node2,
+            position_2=self.pos2,
+            const_law=self.d3_law,
+            output='no'
+        )
+        expected_str = "joint: 1, deformable displacement,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tlinear elastic isotropic, 1000.0,\n\toutput, no;\n"
+        self.assertEqual(str(displacement), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_deformable_displacement_const_law_validation(self):
+        """Test validation of constitutive law type for DeformableDisplacement"""
+        # Create scalar constitutive law
+        scalar_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+        
+        # Test with wrong law type
+        with self.assertRaises(ValueError):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                node_2=self.node2,
+                position_2=self.pos2,
+                const_law=scalar_law  # Wrong type of law
+            )
+        
+        # Test with wrong object type
+        with self.assertRaises(pydantic.ValidationError):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                node_2=self.node2,
+                position_2=self.pos2,
+                const_law="not a constitutive law"  # Wrong object type
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_deformable_displacement_missing_required_fields(self):
+        """Test creating DeformableDisplacement with missing required fields"""
+        # Missing node_1
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                position_1=self.pos1,
+                node_2=self.node2,
+                position_2=self.pos2,
+                const_law=self.d3_law
+            )
+        
+        # Missing node_2
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                position_2=self.pos2,
+                const_law=self.d3_law
+            )
+        
+        # Missing position_1
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                position_2=self.pos2,
+                const_law=self.d3_law
+            )
+        
+        # Missing position_2
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                node_2=self.node2,
+                const_law=self.d3_law
+            )
+        
+        # Missing const_law
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                node_2=self.node2,
+                position_2=self.pos2
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_deformable_displacement_invalid_types(self):
+        """Test creating DeformableDisplacement with invalid field types"""
+        # Invalid node_1 type
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1="not a node",  # Invalid type
+                position_1=self.pos1,
+                node_2=self.node2,
+                position_2=self.pos2,
+                const_law=self.d3_law
+            )
+        
+        # Invalid node_2 type
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                node_2="not a node",  # Invalid type
+                position_2=self.pos2,
+                const_law=self.d3_law
+            )
+        
+        # Invalid position_1 type
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1="not a position",  # Invalid type
+                node_2=self.node2,
+                position_2=self.pos2,
+                const_law=self.d3_law
+            )
+        
+        # Invalid position_2 type
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                node_2=self.node2,
+                position_2="not a position",  # Invalid type
+                const_law=self.d3_law
+            )
+        
+        # Invalid orientation_mat_1 type
+        with self.assertRaises(Exception):
+            l.DeformableDisplacement(
+                idx=1,
+                node_1=self.node1,
+                position_1=self.pos1,
+                orientation_mat_1="not a position",  # Invalid type
+                node_2=self.node2,
+                position_2=self.pos2,
+                const_law=self.d3_law
             )
 
 if __name__ == '__main__':
