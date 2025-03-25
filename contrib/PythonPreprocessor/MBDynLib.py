@@ -845,7 +845,7 @@ class Body(Element2):
     node: Node2
     mass: Union[float, MBVar]
     position: Position2
-    inertial_matrix: Position2
+    inertial_matrix: Position2 # TODO: Needs to be a List
     inertial: Optional[Position2] = None
 
     def element_type(self):
@@ -2222,24 +2222,20 @@ class ViscousBody(Element2):
         s += self.element_footer()
         return s
 
-class Clamp(Element):
-    def __init__(self, idx, node, pos = Position('', 'node'), 
-            orient = Position('', 'node'), output = 'yes'):
-        self.idx = idx
-        self.type = 'joint'
-        self.node = node
-        self.position = pos
-        self.orientation = orient
-        self.output = output
-    def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', clamp, ' + str(self.node) + ',\n'
-        s = s + '\tposition, ' + str(self.position) + ',\n'
-        s = s + '\torientation, ' + str(self.orientation)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
+class Clamp(Element2):
+    node: Node2
+    position: Union[Position2, Literal['node']]
+    orientation_mat: Union[List, Literal['node']]
 
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, clamp, {self.node.idx}'
+        s += f',\n\tposition, {self.position}'
+        s += f',\n\torientation, {self.orientation_mat}'
+        s += self.element_footer()
+        return s
 
 class TotalJoint(Element):
     def __init__(self, idx, nodes, positions, \
@@ -2441,24 +2437,21 @@ class TotalPinJoint(Element):
         s = s + ';\n'
         return s
 
-class JointRegularization(Element):
-    def __init__(self, idx, coefficients):
-        assert (isinstance(coefficients, list) and len(coefficients) >= 1) or (isinstance(coefficients, Number)), (
-            '\n-------------------\nERROR:' + 
-            ' joint regularization needs at least one' +
-            ' coefficient ' + '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint regularization'
-        self.coefficients = coefficients
-    def __str__(self):
-        s = 'joint regularization: ' + str(self.idx) + ", tikhonov"
-        if isinstance(self.coefficients, list):
-            s = s + 'list, ' + ', '.join(str(co) for co in self.coefficients)
-        else:
-            s = s + ', ' + str(self.coefficients)
-        s = s + ';\n'
-        return s
+class JointRegularization(Element2):
+    coefficients: Union[List[float], List[MBVar], float, MBVar]
 
+    def element_type(self):
+        return 'joint regularization'
+
+    def __str__(self):
+        s = f'{self.element_header()}, tikhonov'
+        if isinstance(self.coefficients, list):
+            s += f',\n\tlist, '
+            s += ', '.join(str(co) for co in self.coefficients)
+        else:
+            s += f',\n\t{self.coefficients}'
+        s += self.element_footer()
+        return s
 
 class Rod(Element):
     def __init__(self, idx, nodes, positions, const_law, length = 'from nodes', 
@@ -2740,23 +2733,33 @@ class SphericalHinge(Element):
         s = s + ';\n'
         return s
 
-class Shell(Element):
-    def __init__(self, shell_type, idx, nodes, const_law, output = 'yes'):
-        self.idx = idx
-        self.type = shell_type
-        self.nodes = nodes
-        if isinstance(const_law, list):
-            self.const_law = const_law
-        else:
-            self.const_law = [const_law]
-        self.output = output
+class Shell(Element2):
+    shell_type: Literal['shell4eas', 'shell4easans']
+    nodes: List[Node2]
+    const_law_data: List
+
+    @field_validator('const_law_data', mode='before')
+    def validate_const_law(cls, v):
+        if isinstance(v, list):
+            return v
+        return [v]
+    
+    @field_validator('nodes')
+    def validate_nodes_count(cls, v):
+        if len(v) == 4:
+            return v
+        raise ValueError(f'{cls.__name__}: must have 4 nodes')
+    
+    def element_type(self):
+        return self.shell_type
+    
     def __str__(self):
-        s = str(self.type) + ': ' + str(self.idx) + ',\n'
-        s = s + '\t' + ', '.join(str(i) for i in self.nodes) + ',\n'
-        s = s + '\t' + ', '.join(str(i) for i in self.const_law)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
+        s = f'{self.element_header()}'
+        s += ',\n\t'
+        s += ', '.join(str(i.idx) for i in self.nodes)
+        s += ',\n\t'
+        s += ', '.join(str(i) for i in self.const_law_data)
+        s += self.element_footer()
         return s
         
 class Beam(Element):

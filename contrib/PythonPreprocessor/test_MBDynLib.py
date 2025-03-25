@@ -10952,5 +10952,163 @@ class TestViscousBody(unittest.TestCase):
                 # const_law is missing here
             )
 
+class TestClamp(unittest.TestCase):
+    def setUp(self):
+        self.node = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[l.null()], reference=''),
+            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+        )
+
+    def test_basic_clamp(self):
+        clamp = l.Clamp(
+            idx=1,
+            node=self.node,
+            position='node',
+            orientation_mat='node'
+        )
+        self.assertEqual(clamp.node.idx, 1)
+        self.assertEqual(clamp.position, 'node')
+        self.assertEqual(clamp.orientation_mat, 'node')
+
+    def test_clamp_with_position(self):
+        clamp = l.Clamp(
+            idx=1,
+            node=self.node,
+            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            orientation_mat=[[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        )
+        self.assertIsInstance(clamp.position, l.Position2)
+        self.assertIsInstance(clamp.orientation_mat, list)
+
+    def test_clamp_str_representation(self):
+        clamp = l.Clamp(
+            idx=1,
+            node=self.node,
+            position='node',
+            orientation_mat='node'
+        )
+        expected = "joint: 1, clamp, 1,\n\tposition, node,\n\torientation, node;\n"
+        self.assertEqual(str(clamp), expected)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_missing_required_fields(self):
+        with self.assertRaises(Exception):
+            l.Clamp(
+                idx=1,
+                node=self.node,
+                # Missing position and orientation_mat
+            )
+
+class TestJointRegularization(unittest.TestCase):
+    def test_single_coefficient(self):
+        reg = l.JointRegularization(
+            idx=1,
+            coefficients=0.1
+        )
+        self.assertEqual(reg.coefficients, 0.1)
+
+    def test_coefficient_list(self):
+        reg = l.JointRegularization(
+            idx=1,
+            coefficients=[0.1, 0.2, 0.3]
+        )
+        self.assertEqual(reg.coefficients, [0.1, 0.2, 0.3])
+
+    def test_str_representation_single(self):
+        reg = l.JointRegularization(
+            idx=1,
+            coefficients=0.1
+        )
+        expected = "joint regularization: 1, tikhonov,\n\t0.1;\n"
+        self.assertEqual(str(reg), expected)
+
+    def test_str_representation_list(self):
+        reg = l.JointRegularization(
+            idx=1,
+            coefficients=[0.1, 0.2]
+        )
+        expected = "joint regularization: 1, tikhonov,\n\tlist, 0.1, 0.2;\n"
+        self.assertEqual(str(reg), expected)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_missing_coefficients(self):
+        with self.assertRaises(Exception):
+            l.JointRegularization(idx=1)
+
+class TestShell(unittest.TestCase):
+    def setUp(self):
+        # Create 4 nodes for shell testing
+        self.nodes = [
+            l.DynamicNode2(
+                idx=i,
+                pos=l.Position2(relative_position=[i, 0, 0], reference='global'),
+                orient=l.Position2(relative_position=[ l.null()], reference=''),
+                vel=l.Position2(relative_position=[0, 0, 0], reference=''),
+                angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            ) for i in range(1, 5)
+        ]
+
+    def test_basic_shell(self):
+        shell = l.Shell(
+            idx=1,
+            shell_type='shell4eas',
+            nodes=self.nodes,
+            const_law_data=[1.0, 2.0, 3.0]
+        )
+        self.assertEqual(shell.shell_type, 'shell4eas')
+        self.assertEqual(len(shell.nodes), 4)
+        self.assertEqual(len(shell.const_law_data), 3)
+
+    def test_shell_with_single_const_law(self):
+        shell = l.Shell(
+            idx=1,
+            shell_type='shell4easans',
+            nodes=self.nodes,
+            const_law_data=1.0
+        )
+        self.assertEqual(len(shell.const_law_data), 1)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_shell_type(self):
+        with self.assertRaises(Exception):
+            l.Shell(
+                idx=1,
+                shell_type='invalid_type',  # Invalid shell type
+                nodes=self.nodes,
+                const_law_data=[1.0]
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_node_count(self):
+        with self.assertRaises(Exception):
+            l.Shell(
+                idx=1,
+                shell_type='shell4eas',
+                nodes=self.nodes[:-1],  # Only 3 nodes
+                const_law_data=[1.0]
+            )
+
+    def test_str_representation(self):
+        shell = l.Shell(
+            idx=1,
+            shell_type='shell4eas',
+            nodes=self.nodes,
+            const_law_data=[1.0, 2.0]
+        )
+        expected = "shell4eas: 1,\n\t1, 2, 3, 4,\n\t1.0, 2.0;\n"
+        self.assertEqual(str(shell), expected)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_missing_required_fields(self):
+        with self.assertRaises(Exception):
+            l.Shell(
+                idx=1,
+                shell_type='shell4eas',
+                # Missing nodes and const_law_data
+            )
+
 if __name__ == '__main__':
     unittest.main()
