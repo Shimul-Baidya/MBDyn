@@ -561,8 +561,7 @@ class Position:
 class Position2(MBEntity):
     """Position definition for MBDyn elements"""
         
-    relative_position: Union[List[Union[float, MBVar, null, eye]], 
-                           List[List[Union[float, MBVar, null, eye]]]]
+    relative_position: List[Union[float, MBVar, null, eye]]
     reference: Union['Reference2', Literal['global', 'node', 'other node', '']] # TODO: Make reference an optional field (remove '')
 
     @field_validator('relative_position', mode='before')
@@ -845,7 +844,7 @@ class Body(Element2):
     node: Node2
     mass: Union[float, MBVar]
     position: Position2
-    inertial_matrix: Position2 # TODO: Needs to be a List
+    inertial_matrix: Position2 
     inertial: Optional[Position2] = None
 
     def element_type(self):
@@ -2237,205 +2236,367 @@ class Clamp(Element2):
         s += self.element_footer()
         return s
 
-class TotalJoint(Element):
-    def __init__(self, idx, nodes, positions, \
-            position_orientations, rotation_orientations, \
-            position_constraints, orientation_constraints, \
-            position_drive, orientation_drive,
-            output = 'yes'):
-        assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a total joint, the' +
-            ' nodes must be given in a list' + 
-            '\n-------------------\n')
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' + 
-            ' defining a total joint with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a total joint, the' +
-            ' relative positions must be given in a list' + 
-            '\n-------------------\n')    
-        assert len(nodes) == len(positions), (
+class TotalJoint(Element2):
+    nodes: List[Node2]
+    positions: Optional[List[Position2]] = None
+    position_orientations: Optional[List[Position2]] = None
+    rotation_orientations: Optional[List[Position2]] = None
+    position_status: Optional[List[Union[Literal['active', 'inactive', 'position', 'velocity'], bool]]] = None
+    orientation_status: Optional[List[Union[Literal['active', 'inactive', 'rotation', 'angular velocity'], bool]]] = None
+    position_drive: Optional[List] = None # TODO: Needs tpl drive
+    orientation_drive: Optional[List] = None # TODO: Needs tpl drive
+
+    @model_validator(mode='after')
+    def validate_total_joint(self):
+        assert len(self.nodes) == 2, (
             '\n-------------------\nERROR:' +
-            ' defining a total joint with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
+            ' defining a total joint with ' + str(len(self.nodes)) +
+            ' nodes;\n' +
             '\n-------------------\n')
-        assert isinstance(position_orientations, list), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a total joint, the' +
-            ' relative position orientations must be given in a list' + 
-            '\n-------------------\n')
-        assert len(nodes) == len(position_orientations), (
-            '\n-------------------\nERROR:' +
-            ' defining a total joint with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(position_orientations)) + ' position orientations;\n' +
-            '\n-------------------\n')
-        assert isinstance(rotation_orientations, list), (
-            '\n-------------------\nERROR:' + 
-            ' in defining a total joint, the' +
-            ' relative rotation orientations must be given in a list' + 
-            '\n-------------------\n')
-        assert len(nodes) == len(rotation_orientations), (
-            '\n-------------------\nERROR:' +
-            ' defining a total joint with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(rotation_orientations)) + ' rotation orientations;\n' +
-            '\n-------------------\n')
-        assert isinstance(position_constraints, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total joint, ' 
-            ' position constraints must be given as a list;' + 
-            '\n-------------------\n')
-        assert len(position_constraints) == 3, (
-            '\n-------------------\nERROR:' +
-            ' defining a total joint with ' +
-            str(len(position_constraints)) + ' position constraints;\n' +
-            '\n-------------------\n')
-        assert isinstance(orientation_constraints, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total joint, ' 
-            ' orientation constraints must be given as a list;' + 
-            '\n-------------------\n')    
-        assert len(orientation_constraints) == 3, (
-            '\n-------------------\nERROR:' +
-            ' defining a total joint with ' +
-            str(len(orientation_constraints)) + ' orientation constraints;\n' +
-            '\n-------------------\n')
-        assert all([isinstance(pos, Position) for pos in positions]), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total joint all offsets must be instances of ' + 
-            ' the class Position;\n' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.nodes = nodes
-        self.positions = positions
-        self.position_orientations = position_orientations
-        self.rotation_orientations = rotation_orientations
-        self.position_constraints = position_constraints
-        self.orientation_constraints = orientation_constraints
-        self.position_drive = position_drive
-        self.orientation_drive = orientation_drive
-        self.output = output
+        
+        if self.positions is not None:
+            assert len(self.nodes) == len(self.positions), (  # either both or none must be given
+                '\n-------------------\nERROR:' +
+                ' defining a total joint with ' + str(len(self.nodes)) +
+                ' nodes and ' + str(len(self.positions)) + ' relative positions;\n' +
+                '\n-------------------\n')
+        else:
+            assert self.position_orientations is None and self.rotation_orientations is None, (
+                '\n-------------------\nERROR:' +
+                ' position orientations and rotation orientations cannot be given if positions is not given' +
+                '\n-------------------\n')
+            
+        if self.position_orientations is not None:
+            assert len(self.nodes) == len(self.position_orientations), (  # either both or none must be given
+                '\n-------------------\nERROR:' +
+                ' defining a total joint with ' + str(len(self.nodes)) +
+                ' nodes and ' + str(len(self.position_orientations)) + ' position orientations;\n' +
+                '\n-------------------\n')
+        if self.rotation_orientations is not None:
+            assert len(self.nodes) == len(self.rotation_orientations), (  # either both or none must be given
+                '\n-------------------\nERROR:' +
+                ' defining a total joint with ' + str(len(self.nodes)) +
+                ' nodes and ' + str(len(self.rotation_orientations)) + ' rotation orientations;\n' +
+                '\n-------------------\n')
+        if self.position_status is not None:
+            assert len(self.position_status) == 3, (
+                '\n-------------------\nERROR:' +
+                ' defining a total joint with ' + str(len(self.position_status)) +
+                ' position status;\n' +
+                '\n-------------------\n')
+        if self.orientation_status is not None:
+            assert len(self.orientation_status) == 3, (
+                '\n-------------------\nERROR:' +
+                ' defining a total joint with ' + str(len(self.orientation_status)) +
+                ' orientation status;\n' +
+                '\n-------------------\n')
+        return self
+
+    def element_type(self):
+        return 'joint'
+
     def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', total joint'
-        for (node, pos, pos_or, rot_or) in zip(self.nodes, self.positions,
-                self.position_orientations, self.rotation_orientations):
-            s = s + ',\n\t' + str(node)
-            if not(pos.isnull()):
-                s = s + ',\n\t\tposition, ' + str(pos)
-            if not(pos_or.iseye()):
-                s = s + ',\n\t\tposition orientation, ' + str(pos_or)
-            if not(rot_or.iseye()):
-                s = s + ',\n\t\trotation orientation, ' + str(rot_or)
-        if sum(self.position_constraints):
-            s = s + ',\n\tposition constraint, '\
-                    + ', '.join(str(pc) for pc in self.position_constraints)
-            if isinstance(self.position_drive, list):
-                s = s + ',\n\t\t' + ', '.join(str(i) for i in self.position_drive)
-            else:
-                s = s + ',\n\t\t' + str(self.position_drive)
-        if sum(self.orientation_constraints):
-            s = s + ',\n\torientation constraint, '\
-                    + ', '.join(str(oc) for oc in self.orientation_constraints)
-            if isinstance(self.orientation_drive, list):
-                s = s + ',\n\t\t' + ', '.join(str(i) for i in self.orientation_drive)
-            else:
-                s = s + ',\n\t\t', + str(self.orientation_drive)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
+        s = f'{self.element_header()}, total joint'
+        s += f',\n\t{self.nodes[0].idx}'
+        if self.positions is not None:
+            s += f',\n\t\tposition, {self.positions[0]}'
+        if self.position_orientations is not None:
+            s += f',\n\t\tposition orientation, {self.position_orientations[0]}'
+        if self.rotation_orientations is not None:
+            s += f',\n\t\trotation orientation, {self.rotation_orientations[0]}'
+        s += f',\n\t{self.nodes[1].idx}'
+        if self.positions is not None:
+            s += f',\n\t\tposition, {self.positions[1]}'
+        if self.position_orientations is not None:
+            s += f',\n\t\tposition orientation, {self.position_orientations[1]}'
+        if self.rotation_orientations is not None:
+            s += f',\n\t\trotation orientation, {self.rotation_orientations[1]}'
+        if self.position_status is not None:
+            s += f',\n\tposition constraint, '
+            s += ', '.join(str(ps) for ps in self.position_status)
+            if self.position_drive is not None:
+                s += f',\n\t\t'
+                s += ', '.join(str(i) for i in self.position_drive)
+        if self.orientation_status is not None:
+            s += f',\n\torientation constraint, '
+            s += ', '.join(str(os) for os in self.orientation_status)
+            if self.orientation_drive is not None:
+                s += f',\n\t\t'
+                s += ', '.join(str(i) for i in self.orientation_drive)
+        s += self.element_footer()
         return s
 
+# class TotalJoint(Element):
+#     def __init__(self, idx, nodes, positions, \
+#             position_orientations, rotation_orientations, \
+#             position_constraints, orientation_constraints, \
+#             position_drive, orientation_drive,
+#             output = 'yes'):
+#         assert isinstance(nodes, list), (
+#             '\n-------------------\nERROR:' + 
+#             ' in defining a total joint, the' +
+#             ' nodes must be given in a list' + 
+#             '\n-------------------\n')
+#         assert len(nodes) == 2, (
+#             '\n-------------------\nERROR:' + 
+#             ' defining a total joint with ' + str(len(nodes)) +
+#             ' nodes' + '\n-------------------\n')
+#         assert isinstance(positions, list), (
+#             '\n-------------------\nERROR:' + 
+#             ' in defining a total joint, the' +
+#             ' relative positions must be given in a list' + 
+#             '\n-------------------\n')    
+#         assert len(nodes) == len(positions), (
+#             '\n-------------------\nERROR:' +
+#             ' defining a total joint with ' + str(len(nodes)) +
+#             ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
+#             '\n-------------------\n')
+#         assert isinstance(position_orientations, list), (
+#             '\n-------------------\nERROR:' + 
+#             ' in defining a total joint, the' +
+#             ' relative position orientations must be given in a list' + 
+#             '\n-------------------\n')
+#         assert len(nodes) == len(position_orientations), (
+#             '\n-------------------\nERROR:' +
+#             ' defining a total joint with ' + str(len(nodes)) +
+#             ' nodes and ' + str(len(position_orientations)) + ' position orientations;\n' +
+#             '\n-------------------\n')
+#         assert isinstance(rotation_orientations, list), (
+#             '\n-------------------\nERROR:' + 
+#             ' in defining a total joint, the' +
+#             ' relative rotation orientations must be given in a list' + 
+#             '\n-------------------\n')
+#         assert len(nodes) == len(rotation_orientations), (
+#             '\n-------------------\nERROR:' +
+#             ' defining a total joint with ' + str(len(nodes)) +
+#             ' nodes and ' + str(len(rotation_orientations)) + ' rotation orientations;\n' +
+#             '\n-------------------\n')
+#         assert isinstance(position_constraints, list), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total joint, ' 
+#             ' position constraints must be given as a list;' + 
+#             '\n-------------------\n')
+#         assert len(position_constraints) == 3, (
+#             '\n-------------------\nERROR:' +
+#             ' defining a total joint with ' +
+#             str(len(position_constraints)) + ' position constraints;\n' +
+#             '\n-------------------\n')
+#         assert isinstance(orientation_constraints, list), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total joint, ' 
+#             ' orientation constraints must be given as a list;' + 
+#             '\n-------------------\n')    
+#         assert len(orientation_constraints) == 3, (
+#             '\n-------------------\nERROR:' +
+#             ' defining a total joint with ' +
+#             str(len(orientation_constraints)) + ' orientation constraints;\n' +
+#             '\n-------------------\n')
+#         assert all([isinstance(pos, Position) for pos in positions]), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total joint all offsets must be instances of ' + 
+#             ' the class Position;\n' +
+#             '\n-------------------\n')
+#         self.idx = idx
+#         self.type = 'joint'
+#         self.nodes = nodes
+#         self.positions = positions
+#         self.position_orientations = position_orientations
+#         self.rotation_orientations = rotation_orientations
+#         self.position_constraints = position_constraints
+#         self.orientation_constraints = orientation_constraints
+#         self.position_drive = position_drive
+#         self.orientation_drive = orientation_drive
+#         self.output = output
+#     def __str__(self):
+#         s = 'joint: ' + str(self.idx) + ', total joint'
+#         for (node, pos, pos_or, rot_or) in zip(self.nodes, self.positions,
+#                 self.position_orientations, self.rotation_orientations):
+#             s = s + ',\n\t' + str(node)
+#             if not(pos.isnull()):
+#                 s = s + ',\n\t\tposition, ' + str(pos)
+#             if not(pos_or.iseye()):
+#                 s = s + ',\n\t\tposition orientation, ' + str(pos_or)
+#             if not(rot_or.iseye()):
+#                 s = s + ',\n\t\trotation orientation, ' + str(rot_or)
+#         if sum(self.position_constraints):
+#             s = s + ',\n\tposition constraint, '\
+#                     + ', '.join(str(pc) for pc in self.position_constraints)
+#             if isinstance(self.position_drive, list):
+#                 s = s + ',\n\t\t' + ', '.join(str(i) for i in self.position_drive)
+#             else:
+#                 s = s + ',\n\t\t' + str(self.position_drive)
+#         if sum(self.orientation_constraints):
+#             s = s + ',\n\torientation constraint, '\
+#                     + ', '.join(str(oc) for oc in self.orientation_constraints)
+#             if isinstance(self.orientation_drive, list):
+#                 s = s + ',\n\t\t' + ', '.join(str(i) for i in self.orientation_drive)
+#             else:
+#                 s = s + ',\n\t\t', + str(self.orientation_drive)
+#         if self.output != 'yes':
+#             s = s + ',\n\toutput, ' + str(self.output)
+#         s = s + ';\n'
+#         return s
 
-class TotalPinJoint(Element):
-    def __init__(self, idx, node, 
-            positions, position_orientations, rotation_orientations, 
-            position_constraints, orientation_constraints, 
-            position_drive, orientation_drive,
-            output = 'yes'):
-        if not isinstance(positions, list):
-            positions = [positions]
-        assert (len(positions) in [1, 2]) and all([isinstance(pos, Position) for pos in positions]), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total pin joint, ' + 
-            ' relative positions must be given as a single instance' + 
-            ' of the Position class or as a list of Position instances' + 
-            '\n-------------------\n')
-        if not isinstance(position_orientations, list):
-            position_orientations = [position_orientations]
-        assert ((len(position_orientations) in [1, 2]) and all([isinstance(pos, Position) for pos in position_orientations])), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total pin joint, ' + 
-            ' relative position orientations must be given as a single instance' + 
-            ' of the Position class or as a list of Position instances' + 
-            '\n-------------------\n')
-        if not isinstance(rotation_orientations, list):
-            rotation_orientations = [rotation_orientations]
-        assert ((len(rotation_orientations) in [1, 2]) and all([isinstance(pos, Position) for pos in rotation_orientations])), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total pin joint, ' + 
-            ' relative rotation orientations must be given as a single instance' + 
-            ' of the Position class or as a list of Position instances' + 
-            '\n-------------------\n')
-        assert isinstance(position_constraints, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total joint, ' 
-            ' position constraints must be given as a list;' + 
-            '\n-------------------\n')
-        assert len(position_constraints) == 3, (
-            '\n-------------------\nERROR:' +
-            ' defining a total joint with ' + str(len(position_constraints)) + 
-            ' position constraints;' + '\n-------------------\n')
-        assert isinstance(orientation_constraints, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a total joint, ' 
-            ' orientation constraints must be given as a list;' + 
-            '\n-------------------\n')
-        assert len(orientation_constraints) == 3, (
-            '\n-------------------\nERROR:' +
-            ' defining a total joint with ' + str(len(orientation_constraints)) + 
-            ' orientation constraints;' + '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.node = node
-        self.positions = positions
-        self.position_orientations = position_orientations
-        self.rotation_orientations = rotation_orientations
-        self.position_constraints = position_constraints
-        self.orientation_constraints = orientation_constraints
-        self.position_drive = position_drive
-        self.orientation_drive = orientation_drive
-        self.output = output
+class TotalPinJoint(Element2):
+    node: Node2
+    rel_position: Optional[Position2] = None
+    rel_position_orientation: Optional[Position2] = None
+    rel_rotation_orientation: Optional[Position2] = None
+    abs_position: Optional[Position2] = None
+    abs_position_orientation: Optional[Position2] = None
+    abs_rotation_orientation: Optional[Position2] = None
+    position_status: Optional[List[bool]] = None
+    orientation_constraints: Optional[List[bool]] = None
+    position_status: Optional[List[Union[Literal['active', 'inactive', 'position', 'velocity'], bool]]] = None
+    orientation_status: Optional[List[Union[Literal['active', 'inactive', 'rotation', 'angular velocity'], bool]]] = None
+    position_drive: Optional[List] = None # TODO: Needs tpl drive
+    orientation_drive: Optional[List] = None # TODO: Needs tpl drive
+
+    @model_validator(mode='after')
+    def validate_total_pin_joint(self):
+        if self.rel_position is None:
+            assert self.rel_position_orientation is None and self.rel_rotation_orientation is None, (
+                f'\n-------------------\nERROR:' +
+                f' {self.__class__.__name__}: relative position orientation and rotation ' +
+                f'orientation cannot be given if relative position is not given' +
+                f'\n-------------------\n')
+        if self.abs_position is None:
+            assert self.abs_position_orientation is None and self.abs_rotation_orientation is None, (
+                f'\n-------------------\nERROR:' +
+                f' {self.__class__.__name__}: absolute position orientation and rotation ' +
+                f'orientation cannot be given if absolute position is not given' +
+                f'\n-------------------\n')
+        assert len(self.position_status) == 3, (
+            f'\n-------------------\nERROR:' +
+            f' {self.__class__.__name__}: position status must be given as a list of 3 statuses' +
+            f'\n-------------------\n')
+        assert len(self.orientation_status) == 3, (
+            f'\n-------------------\nERROR:' +
+            f' {self.__class__.__name__}: orientation status must be given as a list of 3 statuses' +
+            f'\n-------------------\n')
+        return self
+
+    def element_type(self):
+        return 'joint'
+    
     def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', total pin joint'
-        s = s + ',\n\t' + str(self.node)
-        if not(self.positions[0].isnull()):
-            s = s + ',\n\t\tposition, ' + str(self.positions[0])
-        if not(self.position_orientations[0].iseye()):
-            s = s + ',\n\t\tposition orientation, ' + str(self.position_orientations[0])
-        if not(self.rotation_orientations[0].iseye()):
-            s = s + ',\n\t\trotation orientation, ' + str(self.rotation_orientations[0])
-        if len(self.positions) == 2 and not(self.positions[1].isnull()):
-            s = s + ',\n\t# GROUND'
-            s = s + '\n\t\tposition, ' + str(self.positions[1])
-        if len(self.position_orientations) == 2 and not(self.position_orientations[1].iseye()):
-            s = s + ',\n\t\tposition orientation, ' + str(self.position_orientations[1])
-        if len(self.rotation_orientations) == 2 and not(self.rotation_orientations[1].iseye()):
-            s = s + ',\n\t\trotation orientation, ' + str(self.rotation_orientations[1])
-        if sum(self.position_constraints):
-            s = s + ',\n\tposition constraint, '\
-                    + ', '.join(str(pc) for pc in self.position_constraints)
-            s = s + ',\n\t\t' + ', '.join(str(i) for i in self.position_drive)
-        if sum(self.orientation_constraints):
-            s = s + ',\n\torientation constraint, '\
-                    + ', '.join(str(oc) for oc in self.orientation_constraints)
-            s = s + ',\n\t\t' + ', '.join(str(i) for i in self.orientation_drive)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
+        s = f'{self.element_header()}, total pin joint'
+        s += f',\n\t{self.node.idx}'
+        if self.rel_position is not None:
+            s += f',\n\t\tposition, {self.rel_position}'
+        if self.rel_position_orientation is not None:
+            s += f',\n\t\tposition orientation, {self.rel_position_orientation}'
+        if self.rel_rotation_orientation is not None:
+            s += f',\n\t\trotation orientation, {self.rel_rotation_orientation}'
+        if self.abs_position is not None:
+            s += f',\n\t# GROUND'
+            s += f',\n\tposition, {self.abs_position}'
+        if self.abs_position_orientation is not None:
+            s += f',\n\tposition orientation, {self.abs_position_orientation}'
+        if self.abs_rotation_orientation is not None:
+            s += f',\n\trotation orientation, {self.abs_rotation_orientation}'
+        if self.position_status is not None:
+            s += f',\n\tposition constraint, '
+            s += ', '.join(str(ps) for ps in self.position_status)
+            if self.position_drive is not None:
+                s += f',\n\t\t'
+                s += ', '.join(str(i) for i in self.position_drive)
+        if self.orientation_status is not None:
+            s += f',\n\torientation constraint, '
+            s += ', '.join(str(os) for os in self.orientation_status)
+            if self.orientation_drive is not None:
+                s += f',\n\t\t'
+                s += ', '.join(str(i) for i in self.orientation_drive)
+        s += self.element_footer()
         return s
+
+# class TotalPinJoint(Element):
+#     def __init__(self, idx, node, 
+#             positions, position_orientations, rotation_orientations, 
+#             position_constraints, orientation_constraints, 
+#             position_drive, orientation_drive,
+#             output = 'yes'):
+#         if not isinstance(positions, list):
+#             positions = [positions]
+#         assert (len(positions) in [1, 2]) and all([isinstance(pos, Position) for pos in positions]), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total pin joint, ' + 
+#             ' relative positions must be given as a single instance' + 
+#             ' of the Position class or as a list of Position instances' + 
+#             '\n-------------------\n')
+#         if not isinstance(position_orientations, list):
+#             position_orientations = [position_orientations]
+#         assert ((len(position_orientations) in [1, 2]) and all([isinstance(pos, Position) for pos in position_orientations])), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total pin joint, ' + 
+#             ' relative position orientations must be given as a single instance' + 
+#             ' of the Position class or as a list of Position instances' + 
+#             '\n-------------------\n')
+#         if not isinstance(rotation_orientations, list):
+#             rotation_orientations = [rotation_orientations]
+#         assert ((len(rotation_orientations) in [1, 2]) and all([isinstance(pos, Position) for pos in rotation_orientations])), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total pin joint, ' + 
+#             ' relative rotation orientations must be given as a single instance' + 
+#             ' of the Position class or as a list of Position instances' + 
+#             '\n-------------------\n')
+#         assert isinstance(position_constraints, list), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total joint, ' 
+#             ' position constraints must be given as a list;' + 
+#             '\n-------------------\n')
+#         assert len(position_constraints) == 3, (
+#             '\n-------------------\nERROR:' +
+#             ' defining a total joint with ' + str(len(position_constraints)) + 
+#             ' position constraints;' + '\n-------------------\n')
+#         assert isinstance(orientation_constraints, list), (
+#             '\n-------------------\nERROR:' +
+#             ' in defining a total joint, ' 
+#             ' orientation constraints must be given as a list;' + 
+#             '\n-------------------\n')
+#         assert len(orientation_constraints) == 3, (
+#             '\n-------------------\nERROR:' +
+#             ' defining a total joint with ' + str(len(orientation_constraints)) + 
+#             ' orientation constraints;' + '\n-------------------\n')
+#         self.idx = idx
+#         self.type = 'joint'
+#         self.node = node
+#         self.positions = positions
+#         self.position_orientations = position_orientations
+#         self.rotation_orientations = rotation_orientations
+#         self.position_constraints = position_constraints
+#         self.orientation_constraints = orientation_constraints
+#         self.position_drive = position_drive
+#         self.orientation_drive = orientation_drive
+#         self.output = output
+#     def __str__(self):
+#         s = 'joint: ' + str(self.idx) + ', total pin joint'
+#         s = s + ',\n\t' + str(self.node)
+#         if not(self.positions[0].isnull()):
+#             s = s + ',\n\t\tposition, ' + str(self.positions[0])
+#         if not(self.position_orientations[0].iseye()):
+#             s = s + ',\n\t\tposition orientation, ' + str(self.position_orientations[0])
+#         if not(self.rotation_orientations[0].iseye()):
+#             s = s + ',\n\t\trotation orientation, ' + str(self.rotation_orientations[0])
+#         if len(self.positions) == 2 and not(self.positions[1].isnull()):
+#             s = s + ',\n\t# GROUND'
+#             s = s + '\n\t\tposition, ' + str(self.positions[1])
+#         if len(self.position_orientations) == 2 and not(self.position_orientations[1].iseye()):
+#             s = s + ',\n\t\tposition orientation, ' + str(self.position_orientations[1])
+#         if len(self.rotation_orientations) == 2 and not(self.rotation_orientations[1].iseye()):
+#             s = s + ',\n\t\trotation orientation, ' + str(self.rotation_orientations[1])
+#         if sum(self.position_constraints):
+#             s = s + ',\n\tposition constraint, '\
+#                     + ', '.join(str(pc) for pc in self.position_constraints)
+#             s = s + ',\n\t\t' + ', '.join(str(i) for i in self.position_drive)
+#         if sum(self.orientation_constraints):
+#             s = s + ',\n\torientation constraint, '\
+#                     + ', '.join(str(oc) for oc in self.orientation_constraints)
+#             s = s + ',\n\t\t' + ', '.join(str(i) for i in self.orientation_drive)
+#         if self.output != 'yes':
+#             s = s + ',\n\toutput, ' + str(self.output)
+#         s = s + ';\n'
+#         return s
 
 class JointRegularization(Element2):
     coefficients: Union[List[float], List[MBVar], float, MBVar]

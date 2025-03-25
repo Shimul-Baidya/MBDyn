@@ -11110,5 +11110,363 @@ class TestShell(unittest.TestCase):
                 # Missing nodes and const_law_data
             )
 
+class TestTotalJoint(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.StaticNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+
+    def test_total_joint_creation(self):
+        """Check that TotalJoint can be created with minimum required arguments"""
+        # Basic joint with only nodes
+        joint = l.TotalJoint(idx=1, nodes=[self.node1, self.node2])
+        self.assertEqual(joint.idx, 1)
+        self.assertEqual(joint.nodes[0], self.node1)
+        self.assertEqual(joint.nodes[1], self.node2)
+        self.assertIsNone(joint.positions)
+        self.assertIsNone(joint.position_orientations)
+        self.assertIsNone(joint.rotation_orientations)
+        self.assertIsNone(joint.position_status)
+        self.assertIsNone(joint.orientation_status)
+        
+        # Joint with positions
+        joint = l.TotalJoint(
+            idx=1, 
+            nodes=[self.node1, self.node2],
+            positions=[self.pos1, self.pos2]
+        )
+        self.assertEqual(joint.positions[0], self.pos1)
+        self.assertEqual(joint.positions[1], self.pos2)
+        
+        # Joint with all orientation options
+        joint = l.TotalJoint(
+            idx=1, 
+            nodes=[self.node1, self.node2],
+            positions=[self.pos1, self.pos2],
+            position_orientations=[self.orient1, self.orient2],
+            rotation_orientations=[self.orient2, self.orient1]
+        )
+        self.assertEqual(joint.position_orientations[0], self.orient1)
+        self.assertEqual(joint.rotation_orientations[1], self.orient1)
+        
+        # Joint with constraints
+        joint = l.TotalJoint(
+            idx=1, 
+            nodes=[self.node1, self.node2],
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        self.assertEqual(joint.position_status, ['active', 'inactive', 'active'])
+        self.assertEqual(joint.orientation_status, ['active', 'active', 'inactive'])
+
+    def test_total_joint_str_representation(self):
+        """Test string representation of TotalJoint"""
+        # Basic joint
+        joint = l.TotalJoint(idx=1, nodes=[self.node1, self.node2])
+        joint_str = str(joint)
+        print(joint_str)
+        self.assertIn('joint: 1, total joint', joint_str)
+        self.assertIn('1', joint_str)  # First node idx
+        self.assertIn('2', joint_str)  # Second node idx
+        
+        # Joint with positions and orientations
+        joint = l.TotalJoint(
+            idx=1, 
+            nodes=[self.node1, self.node2],
+            positions=[self.pos1, self.pos2],
+            position_orientations=[self.orient1, self.orient2],
+            rotation_orientations=[self.orient2, self.orient1]
+        )
+        joint_str = str(joint)
+        print(joint_str)
+        self.assertIn('position, reference, node, 0.5, 0.0, 0.0', joint_str)
+        self.assertIn('position orientation, reference, node, 0.0, 0.0, 1.0', joint_str)
+        self.assertIn('rotation orientation, reference, node, 0.0, 1.0, 0.0', joint_str)
+        
+        # Joint with constraints
+        joint = l.TotalJoint(
+            idx=1, 
+            nodes=[self.node1, self.node2],
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        joint_str = str(joint)
+        print(joint_str)
+        self.assertIn('position constraint, active, inactive, active', joint_str)
+        self.assertIn('orientation constraint, active, active, inactive', joint_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_total_joint_node_validation(self):
+        """Test that TotalJoint validates nodes correctly"""
+        # Test with less than 2 nodes
+        with self.assertRaises(Exception):
+            l.TotalJoint(idx=1, nodes=[self.node1])
+        
+        # Test with more than 2 nodes
+        with self.assertRaises(Exception):
+            l.TotalJoint(idx=1, nodes=[self.node1, self.node2, self.node1])
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_total_joint_position_validation(self):
+        """Test position and orientation validation"""
+        # Position orientations without positions
+        with self.assertRaises(Exception):
+            l.TotalJoint(
+                idx=1,
+                nodes=[self.node1, self.node2],
+                position_orientations=[self.orient1, self.orient2]
+            )
+        
+        # Rotation orientations without positions
+        with self.assertRaises(Exception):
+            l.TotalJoint(
+                idx=1,
+                nodes=[self.node1, self.node2],
+                rotation_orientations=[self.orient1, self.orient2]
+            )
+        
+        # Positions with wrong count
+        with self.assertRaises(Exception):
+            l.TotalJoint(
+                idx=1,
+                nodes=[self.node1, self.node2],
+                positions=[self.pos1]  # Only one position for two nodes
+            )
+        
+        # Position orientations with wrong count
+        with self.assertRaises(Exception):
+            l.TotalJoint(
+                idx=1,
+                nodes=[self.node1, self.node2],
+                positions=[self.pos1, self.pos2],
+                position_orientations=[self.orient1]  # Only one for two nodes
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_total_joint_status_validation(self):
+        """Test status list validation"""
+        # Position status with wrong count
+        with self.assertRaises(Exception):
+            l.TotalJoint(
+                idx=1,
+                nodes=[self.node1, self.node2],
+                position_status=['active', 'inactive']  # Need 3 values
+            )
+        
+        # Orientation status with wrong count
+        with self.assertRaises(Exception):
+            l.TotalJoint(
+                idx=1,
+                nodes=[self.node1, self.node2],
+                orientation_status=['active', 'inactive', 'active', 'inactive']  # Too many values
+            )
+
+class TestTotalPinJoint(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create node for testing
+        self.node = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.rel_pos = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.abs_pos = l.Position2(relative_position=[1, 1, 1], reference='global')
+        self.orient = l.Position2(relative_position=[0, 0, 1], reference='node')
+
+    def test_total_pin_joint_creation(self):
+        """Check that TotalPinJoint can be created with valid arguments"""
+        # Basic joint with minimum required fields
+        joint = l.TotalPinJoint(
+            idx=1,
+            node=self.node,
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        self.assertEqual(joint.idx, 1)
+        self.assertEqual(joint.node, self.node)
+        self.assertIsNone(joint.rel_position)
+        self.assertIsNone(joint.abs_position)
+        self.assertEqual(joint.position_status, ['active', 'inactive', 'active'])
+        self.assertEqual(joint.orientation_status, ['active', 'active', 'inactive'])
+        
+        # Joint with relative position
+        joint = l.TotalPinJoint(
+            idx=1,
+            node=self.node,
+            rel_position=self.rel_pos,
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        self.assertEqual(joint.rel_position, self.rel_pos)
+        
+        # Joint with absolute position
+        joint = l.TotalPinJoint(
+            idx=1,
+            node=self.node,
+            abs_position=self.abs_pos,
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        self.assertEqual(joint.abs_position, self.abs_pos)
+        
+        # Joint with all orientation options
+        joint = l.TotalPinJoint(
+            idx=1,
+            node=self.node,
+            rel_position=self.rel_pos,
+            rel_position_orientation=self.orient,
+            rel_rotation_orientation=self.orient,
+            abs_position=self.abs_pos,
+            abs_position_orientation=self.orient,
+            abs_rotation_orientation=self.orient,
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        self.assertEqual(joint.rel_position_orientation, self.orient)
+        self.assertEqual(joint.abs_rotation_orientation, self.orient)
+
+    def test_total_pin_joint_str_representation(self):
+        """Test string representation of TotalPinJoint"""
+        # Basic joint
+        joint = l.TotalPinJoint(
+            idx=1,
+            node=self.node,
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        joint_str = str(joint)
+        print(joint_str)
+        self.assertIn('joint: 1, total pin joint', joint_str)
+        self.assertIn('position constraint, active, inactive, active', joint_str)
+        self.assertIn('orientation constraint, active, active, inactive', joint_str)
+        
+        # Joint with relative position
+        joint = l.TotalPinJoint(
+            idx=1,
+            node=self.node,
+            rel_position=self.rel_pos,
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        joint_str = str(joint)
+        print(joint_str)
+        self.assertIn('position, reference, node, 0.5, 0.0, 0.0', joint_str)
+        
+        # Joint with absolute position
+        joint = l.TotalPinJoint(
+            idx=1,
+            node=self.node,
+            abs_position=self.abs_pos,
+            position_status=['active', 'inactive', 'active'],
+            orientation_status=['active', 'active', 'inactive']
+        )
+        joint_str = str(joint)
+        print(joint_str)
+        self.assertIn('position, reference, global, 1.0, 1.0, 1.0', joint_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_total_pin_joint_orientation_validation(self):
+        """Test orientation validation"""
+        # Relative position orientation without position
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                rel_position_orientation=self.orient,
+                position_status=['active', 'inactive', 'active'],
+                orientation_status=['active', 'active', 'inactive']
+            )
+        
+        # Relative rotation orientation without position
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                rel_rotation_orientation=self.orient,
+                position_status=['active', 'inactive', 'active'],
+                orientation_status=['active', 'active', 'inactive']
+            )
+        
+        # Absolute position orientation without position
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                abs_position_orientation=self.orient,
+                position_status=['active', 'inactive', 'active'],
+                orientation_status=['active', 'active', 'inactive']
+            )
+        
+        # Absolute rotation orientation without position
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                abs_rotation_orientation=self.orient,
+                position_status=['active', 'inactive', 'active'],
+                orientation_status=['active', 'active', 'inactive']
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_total_pin_joint_status_validation(self):
+        """Test status lists validation"""
+        # Position status with wrong length
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                position_status=['active', 'inactive'], # Need 3 values
+                orientation_status=['active', 'active', 'inactive']
+            )
+        
+        # Orientation status with wrong length
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                position_status=['active', 'inactive', 'active'],
+                orientation_status=['active'] # Need 3 values
+            )
+        
+        # Missing position status
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                orientation_status=['active', 'active', 'inactive']
+            )
+        
+        # Missing orientation status
+        with self.assertRaises(Exception):
+            l.TotalPinJoint(
+                idx=1,
+                node=self.node,
+                position_status=['active', 'inactive', 'active']
+            )
+
 if __name__ == '__main__':
     unittest.main()
