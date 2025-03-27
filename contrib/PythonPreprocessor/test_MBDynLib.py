@@ -12076,5 +12076,531 @@ class TestBeam(unittest.TestCase):
                 const_laws_orientations=self.orient
             )
 
+class TestAerodynamicBody(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create a node for testing
+        position = l.Position2(relative_position=[0, 0, 0], reference='global')
+        orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
+        angular_velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
+        
+        self.node = l.DynamicNode2(
+            idx=1, 
+            pos=position, 
+            orient=orientation, 
+            vel=velocity, 
+            angular_vel=angular_velocity
+        )
+        
+        # Create basic parameters for AerodynamicBody
+        self.position = l.Position2(relative_position=[0, 0, 0], reference='global')
+        self.orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        self.span = 2.0
+        self.chord = [1.0, 1.0]
+        self.aero_center = [0.25, 0.25]
+        self.b_c_point = [0.0, 0.0]
+        self.twist = [0.0, 0.0]
+        self.integration_points = 10
+
+    def test_aerodynamic_body_creation(self):
+        """Test basic creation of AerodynamicBody."""
+        # Create with minimum required parameters
+        aero_body = l.AerodynamicBody(
+            idx=1,
+            node=self.node,
+            position=self.position,
+            orientation=self.orientation,
+            span=self.span,
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points
+        )
+        
+        self.assertIsInstance(aero_body, l.AerodynamicBody)
+        self.assertEqual(aero_body.idx, 1)
+        self.assertEqual(aero_body.node, self.node)
+        self.assertEqual(aero_body.span, self.span)
+        self.assertEqual(aero_body.integration_points, self.integration_points)
+        
+        # Create with optional parameters
+        aero_body = l.AerodynamicBody(
+            idx=2,
+            node=self.node,
+            position=self.position,
+            orientation=self.orientation,
+            span=self.span,
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points,
+            induced_velocity=1,
+            tip_loss=[0.95, 0.95],
+            jacobian='yes',
+            output='no'
+        )
+        
+        self.assertIsInstance(aero_body, l.AerodynamicBody)
+        self.assertEqual(aero_body.idx, 2)
+        self.assertEqual(aero_body.induced_velocity, 1)
+        self.assertEqual(aero_body.jacobian, 'yes')
+        self.assertEqual(aero_body.output, 'no')
+
+    def test_aerodynamic_body_str_representation(self):
+        """Test the string representation of AerodynamicBody."""
+        # Create with minimum required parameters
+        aero_body = l.AerodynamicBody(
+            idx=1,
+            node=self.node,
+            position=self.position,
+            orientation=self.orientation,
+            span=self.span,
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points
+        )
+        
+        expected_str = (
+            "aerodynamic body: 1\n"
+            "\t1,\n"
+            "\t\treference, global, 0.0, 0.0, 0.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,\n"
+            "\t\t2.0,\n"
+            "\t\t1.0, 1.0,\n"
+            "\t\t0.25, 0.25,\n"
+            "\t\t0.0, 0.0,\n"
+            "\t\t0.0, 0.0\n"
+            "\t\t10,\n"
+            "\t\tjacobian, no;\n"
+        )
+        
+        self.assertEqual(str(aero_body), expected_str)
+        
+        # Create with optional parameters
+        aero_body = l.AerodynamicBody(
+            idx=2,
+            node=self.node,
+            position=self.position,
+            orientation=self.orientation,
+            span=self.span,
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points,
+            induced_velocity=1,
+            tip_loss=[0.95, 0.95],
+            jacobian='yes',
+            output='no'
+        )
+        
+        expected_str = (
+            "aerodynamic body: 2\n"
+            "\t1,\n"
+            "\t\tinduced velocity, 1,\n"
+            "\t\treference, global, 0.0, 0.0, 0.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,\n"
+            "\t\t2.0,\n"
+            "\t\t1.0, 1.0,\n"
+            "\t\t0.25, 0.25,\n"
+            "\t\t0.0, 0.0,\n"
+            "\t\t0.0, 0.0,\n"
+            "\t\ttip loss, 0.95, 0.95\n"
+            "\t\t10,\n"
+            "\t\tjacobian, yes,\n"
+            "\toutput, no;\n"
+        )
+        print(aero_body)
+        self.assertEqual(str(aero_body), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_aerodynamic_body_missing_required_fields(self):
+        """Test validation of required fields."""
+        # Missing node
+        with self.assertRaises(Exception):
+            l.AerodynamicBody(
+                idx=1,
+                position=self.position,
+                orientation=self.orientation,
+                span=self.span,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+        
+        # Missing span
+        with self.assertRaises(Exception):
+            l.AerodynamicBody(
+                idx=1,
+                node=self.node,
+                position=self.position,
+                orientation=self.orientation,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+            
+        # Missing integration_points
+        with self.assertRaises(Exception):
+            l.AerodynamicBody(
+                idx=1,
+                node=self.node,
+                position=self.position,
+                orientation=self.orientation,
+                span=self.span,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_aerodynamic_body_invalid_types(self):
+        """Test validation of field types."""
+        # Invalid span (string instead of numeric)
+        with self.assertRaises(ValueError):
+            l.AerodynamicBody(
+                idx=1,
+                node=self.node,
+                position=self.position,
+                orientation=self.orientation,
+                span="not a number",
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+        
+        # Invalid integration_points (negative number)
+        with self.assertRaises(ValueError):
+            l.AerodynamicBody(
+                idx=1,
+                node=self.node,
+                position=self.position,
+                orientation=self.orientation,
+                span=self.span,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=-5
+            )
+        
+        # Invalid jacobian value
+        with self.assertRaises(Exception):
+            l.AerodynamicBody(
+                idx=1,
+                node=self.node,
+                position=self.position,
+                orientation=self.orientation,
+                span=self.span,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points,
+                jacobian="invalid" # should be 'yes' or 'no' or boolean
+            )
+
+
+class TestAerodynamicBeam(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create a beam element for testing
+        position = l.Position2(relative_position=[0, 0, 0], reference='global')
+        orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
+        angular_velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
+        
+        node1 = l.DynamicNode2(
+            idx=1, 
+            pos=position, 
+            orient=orientation, 
+            vel=velocity, 
+            angular_vel=angular_velocity
+        )
+        
+        node2 = l.DynamicNode2(
+            idx=2, 
+            pos=position, 
+            orient=orientation, 
+            vel=velocity, 
+            angular_vel=angular_velocity
+        )
+        
+        # Create a beam using a NamedConstitutiveLaw for simplicity
+        self.beam = l.Beam(
+            idx=1,
+            nodes=[node1, node2],
+            positions=[position, position],
+            orientations=[orientation, orientation],
+            const_laws_orientations=[position],
+            const_laws=[l.NamedConstitutiveLaw("linear elastic isotropic, 1.0e9, 0.3, 7850.0, eye")]
+        )
+        
+        # Create basic parameters for AerodynamicBeam
+        self.positions = [
+            l.Position2(relative_position=[0, 0, 0], reference='global'),
+            l.Position2(relative_position=[1, 0, 0], reference='global')
+        ]
+        
+        self.orientations = [
+            l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global'),
+            l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        ]
+        
+        self.chord = [1.0, 1.0]
+        self.aero_center = [0.25, 0.25]
+        self.b_c_point = [0.0, 0.0]
+        self.twist = [0.0, 0.0]
+        self.integration_points = 10
+
+    def test_aerodynamic_beam_creation(self):
+        """Test basic creation of AerodynamicBeam."""
+        # Create with minimum required parameters
+        aero_beam = l.AerodynamicBeam(
+            idx=1,
+            beam=self.beam,
+            positions=self.positions,
+            orientations=self.orientations,
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points
+        )
+        
+        self.assertIsInstance(aero_beam, l.AerodynamicBeam)
+        self.assertEqual(aero_beam.idx, 1)
+        self.assertEqual(aero_beam.beam, self.beam)
+        self.assertEqual(len(aero_beam.positions), 2)
+        self.assertEqual(len(aero_beam.orientations), 2)
+        self.assertEqual(aero_beam.integration_points, self.integration_points)
+        
+        # Create with optional parameters
+        aero_beam = l.AerodynamicBeam(
+            idx=2,
+            beam=self.beam,
+            positions=self.positions,
+            orientations=self.orientations,
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points,
+            induced_velocity=1,
+            tip_loss=[0.95, 0.95],
+            jacobian='yes',
+            output='no'
+        )
+        
+        self.assertIsInstance(aero_beam, l.AerodynamicBeam)
+        self.assertEqual(aero_beam.idx, 2)
+        self.assertEqual(aero_beam.induced_velocity, 1)
+        self.assertEqual(aero_beam.jacobian, 'yes')
+        self.assertEqual(aero_beam.output, 'no')
+
+    def test_aerodynamic_beam_str_representation(self):
+        """Test the string representation of AerodynamicBeam."""
+        # Create with minimum required parameters
+        aero_beam = l.AerodynamicBeam(
+            idx=1,
+            beam=self.beam,
+            positions=self.positions,
+            orientations=self.orientations,
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points
+        )
+        
+        expected_str = (
+            "aerodynamic beam2: 1\n"
+            "\t 1,\n"
+            "\t\treference, global, 0.0, 0.0, 0.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,\n"
+            "\t\t1.0, 1.0,\n"
+            "\t\t0.25, 0.25,\n"
+            "\t\t0.0, 0.0,\n"
+            "\t\t0.0, 0.0,\n"
+            "\t\t10,\n"
+            "\t\tjacobian, no;\n"
+        )
+        
+        self.assertEqual(str(aero_beam), expected_str)
+        
+        # Create with three positions/orientations and optional parameters
+        third_position = l.Position2(relative_position=[2, 0, 0], reference='global')
+        third_orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        
+        aero_beam = l.AerodynamicBeam(
+            idx=2,
+            beam=self.beam,
+            positions=self.positions + [third_position],
+            orientations=self.orientations + [third_orientation],
+            chord=self.chord,
+            aero_center=self.aero_center,
+            b_c_point=self.b_c_point,
+            twist=self.twist,
+            integration_points=self.integration_points,
+            induced_velocity=1,
+            tip_loss=[0.95, 0.95],
+            jacobian='yes',
+            output='no'
+        )
+        
+        expected_str = (
+            "aerodynamic beam3: 2\n"
+            "\t 1,\n"
+            "\t\tinduced velocity 1,\n"
+            "\t\treference, global, 0.0, 0.0, 0.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,\n"
+            "\t\treference, global, 2.0, 0.0, 0.0,\n"
+            "\t\treference, global, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,\n"
+            "\t\t1.0, 1.0,\n"
+            "\t\t0.25, 0.25,\n"
+            "\t\t0.0, 0.0,\n"
+            "\t\t0.0, 0.0,\n"
+            "\t\ttip loss, 0.95, 0.95,\n"
+            "\t\t10,\n"
+            "\t\tjacobian, yes,\n"
+            "\toutput, no;\n"
+        )
+        print(aero_beam)
+        self.assertEqual(str(aero_beam), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_aerodynamic_beam_missing_required_fields(self):
+        """Test validation of required fields."""
+        # Missing beam
+        with self.assertRaises(Exception):
+            l.AerodynamicBeam(
+                idx=1,
+                positions=self.positions,
+                orientations=self.orientations,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+        
+        # Missing positions
+        with self.assertRaises(Exception):
+            l.AerodynamicBeam(
+                idx=1,
+                beam=self.beam,
+                orientations=self.orientations,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+            
+        # Missing orientations
+        with self.assertRaises(Exception):
+            l.AerodynamicBeam(
+                idx=1,
+                beam=self.beam,
+                positions=self.positions,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_aerodynamic_beam_position_orientation_validation(self):
+        """Test validation of positions and orientations."""
+        # Different number of positions and orientations
+        with self.assertRaises(ValueError):
+            l.AerodynamicBeam(
+                idx=1,
+                beam=self.beam,
+                positions=self.positions,
+                orientations=self.orientations[:1],  # Only one orientation
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+        
+        # Invalid number of positions (1 is not allowed, must be 2 or 3)
+        with self.assertRaises(ValueError):
+            l.AerodynamicBeam(
+                idx=1,
+                beam=self.beam,
+                positions=self.positions[:1],  # Only one position
+                orientations=self.orientations[:1],  # Only one orientation
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+            
+        # Invalid number of positions (4 is not allowed, must be 2 or 3)
+        with self.assertRaises(ValueError):
+            l.AerodynamicBeam(
+                idx=1,
+                beam=self.beam,
+                positions=self.positions + self.positions,  # 4 positions
+                orientations=self.orientations + self.orientations,  # 4 orientations
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=self.integration_points
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_aerodynamic_beam_integration_points_validation(self):
+        """Test validation of integration_points."""
+        # Invalid integration_points (string instead of integer)
+        with self.assertRaises(ValueError):
+            l.AerodynamicBeam(
+                idx=1,
+                beam=self.beam,
+                positions=self.positions,
+                orientations=self.orientations,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points="not an integer"
+            )
+        
+        # Invalid integration_points (negative value)
+        with self.assertRaises(ValueError):
+            l.AerodynamicBeam(
+                idx=1,
+                beam=self.beam,
+                positions=self.positions,
+                orientations=self.orientations,
+                chord=self.chord,
+                aero_center=self.aero_center,
+                b_c_point=self.b_c_point,
+                twist=self.twist,
+                integration_points=-5
+            )
+
 if __name__ == '__main__':
     unittest.main()

@@ -1183,9 +1183,6 @@ class BeamSlider(Element2):
     """
     This joint implements a slider, e.g. it constrains a structural node on a string of three-node beams.
     """
-    model_config = {
-        'arbitrary_types_allowed': True  # Allow arbitrary types such as Beam
-    }
 
     slider_node_label: Union[int, MBVar]
     position: Position2
@@ -1199,7 +1196,7 @@ class BeamSlider(Element2):
     mid_node_orientation: Optional[Union[str, Position2]]
     end_node_offset: Position2
     end_node_orientation: Optional[Union[str, Position2]]
-    initial_beam: Optional['Beam']
+    initial_beam: Optional[Beam]
     initial_node: Optional[Union[Node2, Node]]
     smearing_factor: Optional[Union[float, MBVar, int]]
 
@@ -2002,9 +1999,6 @@ class Rod(Element2):
     the relative position of the points: it is the line that passes through them. If no offset is defined, the
     points are the nodes themselves.
     '''
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
 
     node_1: Node2
     position_1: Optional[Position2] = None
@@ -2044,9 +2038,6 @@ class RodWithOffset(Element2):
     '''
     Analogous to the rod joint with the optional offsets.
     '''
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
 
     node_1_label: Union[int, MBVar]
     position_1: Position2  # Required
@@ -2579,189 +2570,136 @@ class Shell(Element2):
         s += ', '.join(str(i) for i in self.const_law_data)
         s += self.element_footer()
         return s
+
+class AerodynamicBody(Element2):
+    node: Node2
+    position: Position2
+    orientation: Position2
+    span: Union[float, MBVar]
+    chord: List 
+    aero_center: List
+    b_c_point: List
+    twist: List
+    integration_points: Union[int, MBVar]
+    induced_velocity: Optional[Union[int, MBVar]] = None
+    tip_loss: Optional[List] = None
+    control: Optional['DriveCaller2'] = None
+    airfoil_data: Optional[List] = []
+    unsteady: Optional[Literal['bielawa']] = None
+    jacobian: Optional[Union[Literal['yes', 'no'], bool]] = 'no'
+    custom_output: Optional[List] = None
     
-class AerodynamicBody(Element):
-    def __init__(self, idx, node, 
-            position, orientation, span,
-            chord, aero_center, b_c_point, twist, integration_points,
-            induced_velocity = [], tip_loss = [], control = [], 
-            airfoil_data = [], unsteady = [], 
-            jacobian = 'no', custom_output = [], output = 'yes'):
-        assert isinstance(position, Position), (
-            '\n-------------------\nERROR:' + 
-            ' in defining an aerodynamic body the' + 
-            ' relative surface offset must be an instance of the' + 
-            ' Position class;' + '\n-------------------\n')
-        assert isinstance(orientation, Position), (
-            '\n-------------------\nERROR:' + 
-            ' in defining an aerodynamic body the '
-            ' relative surface orientation must be an instance of the' 
-            ' Position class;' + '\n-------------------\n')
-        assert isinstance(span, (Number)) or (isinstance(span, MBVar) and (span.var_type in ('real', 'const real'))), (
-            '\n-------------------\nERROR:' + 
-            ' in defining an aerodynamic body, the' + 
-            ' surface span must be numeric' + 
-            '\n-------------------\n')
-        assert (isinstance(integration_points, Integral) and (integration_points > 0)) \
-                or (isinstance(integration_points, MBVar) and integration_points.var_type in ('integer', 'const integer')), (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic body with ' + str(integration_points) +
-            ' integration_points' + '\n-------------------\n')
-        assert (induced_velocity == []) or isinstance(induced_velocity, (Integral, MBVar)), (
-            '\n-------------------\nERROR:' + 
-            ' in defining an aerodynamic body the '
-            ' induced velocity elment tag must be an integer or MBVar;' 
-            '\n-------------------\n')
-        assert not(len(unsteady)) or ((len(unsteady) > 0)*'bielawa' == 'bielawa'), (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic body with unrecognised unsteady flag'
-            '\n-------------------\n')
-        assert (jacobian in {'yes', 'no'}) or isinstance(jacobian, bool), (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic body with unrecognised jacobian flag'
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'aerodynamic body'
-        self.node = node
-        self.position = position
-        self.orientation = orientation
-        self.span = span
-        self.chord = chord
-        self.aero_center = aero_center
-        self.b_c_point = b_c_point
-        self.twist = twist
-        self.integration_points = integration_points
-        self.induced_velocity = induced_velocity
-        self.tip_loss = tip_loss
-        self.control = control
-        self.airfoil_data = airfoil_data
-        self.unsteady = unsteady
-        self.jacobian = jacobian
-        self.custom_output = custom_output
-        self.output = output
+    @model_validator(mode='after')
+    def validate_aerodynamic_body(self):
+        # Validate span
+        if not (isinstance(self.span, float) or 
+                (isinstance(self.span, MBVar) and self.span.var_type in ('real', 'const real'))):
+            raise ValueError(f'{self.__class__.__name__}: Surface span must be numeric or a real MBVar')
+        
+        # Validate integration_points
+        if not ((isinstance(self.integration_points, int) and self.integration_points > 0) or 
+                (isinstance(self.integration_points, MBVar) and self.integration_points.var_type in ('integer', 'const integer'))):
+            raise ValueError(f'{self.__class__.__name__}: Integration points must be a positive integer or an integer MBVar')
+                                
+        return self
+    
+    def element_type(self):
+        return "aerodynamic body"
+    
     def __str__(self):
-        s = 'aerodynamic body: ' + str(self.idx)
-        s = s + ',\n\t ' + str(self.node)
+        s = f"{self.element_header()}\n\t{self.node.idx}"
         if self.induced_velocity:
-            s = s + ',\n\t\tinduced velocity ' + str(self.induced_velocity)
-        s = s + ',\n\t\t' + str(self.position)
-        s = s + ',\n\t\t' + str(self.orientation)
-        s = s + ',\n\t\t' + str(self.span)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.chord)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.aero_center)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.b_c_point)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.twist)
-        if len(self.tip_loss):
-            s = s + ',\n\t\ttip loss, ' + ', '.join(str(i) for i in self.tip_loss)
-        s = s + '\n\t\t' + str(self.integration_points)
-        if len(self.control):
-            s = s + ',\n\t\tcontrol, ' + ', '.join(str(i) for i in self.control)
-        if len(self.airfoil_data):
-            s = s + ',\n\t\t' + ', '.join(str(i) for i in self.airfoil_data)
-        if len(self.unsteady):
-            s = s + ',\n\t\tunsteady, ' + str(self.unsteady)
-        if len(self.jacobian):
-            s = s + ',\n\t\tjacobian, ' + str(self.jacobian)
+            s += f",\n\t\tinduced velocity, {self.induced_velocity}"
+        s += f",\n\t\t{self.position}"
+        s += f",\n\t\t{self.orientation}"
+        s += f",\n\t\t{self.span}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.chord)}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.aero_center)}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.b_c_point)}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.twist)}"
+        if self.tip_loss:
+            s += f",\n\t\ttip loss, {', '.join(str(i) for i in self.tip_loss)}"
+        s += f"\n\t\t{self.integration_points}"
+        if self.control:
+            s += f",\n\t\tcontrol, {self.control}"
+        if self.airfoil_data:
+            s += f",\n\t\t{', '.join(str(i) for i in self.airfoil_data)}"
+        if self.unsteady:
+            s += f",\n\t\tunsteady, {self.unsteady}"
+        s += f",\n\t\tjacobian, {self.jacobian}"
         if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        if len(self.custom_output):
-            s = s + ',\n\tcustom output, ' + ', '.join(str(i) for i in self.custom_output)
-        s = s + ';\n'
+            s += f",\n\toutput, {self.output}"
+        if self.custom_output:
+            s += f",\n\tcustom output, {', '.join(str(i) for i in self.custom_output)}"
+        s += f";\n"
         return s
 
 
-class AerodynamicBeam(Element):
-    def __init__(self, idx, beam, 
-            positions, orientations,
-            chord, aero_center, b_c_point, twist, integration_points, 
-            induced_velocity = [], tip_loss = [], control = [], 
-            airfoil_data = [], unsteady = [], 
-            jacobian = 'no', custom_output = [], output = 'yes'):
-        assert len(positions) in {2,3}, (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic beam with ' + str(len(positions)) +
-            ' relative surface offsets (not in [2,3])' + '\n-------------------\n')
-        assert all(isinstance(pos, Position) for pos in positions), (
-            ' in defining an aerodynamic beam the' + 
-            ' relative surface offsets must be instances of the' + 
-            ' Position class;' + '\n-------------------\n')
-        assert len(orientations) in {2,3}, (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic beam with ' + str(len(orientations)) +
-            ' relative surface orientations (not in [2,3])' + '\n-------------------\n')
-        assert all(isinstance(pos, Position) for pos in orientations), (
-            ' in defining an aerodynamic beam the' + 
-            ' relative surface orientations must be instances of the' + 
-            ' Position class;' + '\n-------------------\n')
-        assert len(positions) == len(orientations), (
-            '\n-------------------\nERROR:' + 
-            ' definining an aerodynamic beam with ' + str(len(positions)) + 
-            ' relative surface offsets and ' + str(len(orientations)) + 
-            ' relative surface orientations' + '\n-------------------\n')
-        assert (isinstance(integration_points, Integral) and (integration_points > 0))\
-                or (isinstance(integration_points, MBVar) and integration_points.var_type in ('integer', 'const integer')), (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic beam with ' + str(integration_points) +
-            ' integration_points' + '\n-------------------\n')
-        assert (induced_velocity == []) or isinstance(induced_velocity, (Integral, MBVar)), (
-            '\n-------------------\nERROR:' + 
-            ' in defining an aerodynamic body the '
-            ' induced velocity elment tag must be an integer or an MBVar;' 
-            '\n-------------------\n')
-        assert not(len(unsteady)) or ((len(unsteady) > 0)*'bielawa' == 'bielawa'), (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic beam with unrecognised unsteady flag'
-            '\n-------------------\n')
-        assert (jacobian in {'yes', 'no'}) or isinstance(jacobian, bool), (
-            '\n-------------------\nERROR:' + 
-            ' defining an aerodynamic beam with unrecognised jacobian flag'
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'aerodynamic beam' + str(len(self.positions))
-        self.beam = beam
-        self.positions = positions
-        self.orientations = orientations
-        self.chord = chord
-        self.aero_center = aero_center
-        self.b_c_point = b_c_point
-        self.twist = twist
-        self.integration_points = integration_points
-        self.induced_velocity = induced_velocity
-        self.tip_loss = tip_loss
-        self.control = control
-        self.airfoil_data = airfoil_data
-        self.unsteady = unsteady
-        self.jacobian = jacobian
-        self.custom_output = custom_output
-        self.output = output
+class AerodynamicBeam(Element2):   
+    beam: Beam
+    positions: List[Position2]
+    orientations: List[Position2]
+    chord: List 
+    aero_center: List
+    b_c_point: List
+    twist: List
+    integration_points: Union[int, MBVar]
+    induced_velocity: Optional[Union[int, MBVar]] = None
+    tip_loss: Optional[List] = None
+    control: Optional['DriveCaller2'] = None
+    airfoil_data: Optional[List] = []
+    unsteady: Optional[Literal['bielawa']] = None
+    jacobian: Optional[Union[Literal['yes', 'no'], bool]] = 'no'
+    custom_output: Optional[List] = None # TODO: Add custom output class
+    
+    @model_validator(mode='after')
+    def validate_aerodynamic_beam(self):
+        # Validate positions and orientations
+        if len(self.positions) not in {2, 3}:
+            raise ValueError(f'{self.__class__.__name__}: must have 2 or 3 relative surface offsets')
+        
+        if len(self.orientations) not in {2, 3}:
+            raise ValueError(f'{self.__class__.__name__}: must have 2 or 3 relative surface orientations')
+        
+        if len(self.positions) != len(self.orientations):
+            raise ValueError(f'{self.__class__.__name__}: Number of positions ({len(self.positions)}) must match number of orientations ({len(self.orientations)})')
+        
+        # Validate integration_points
+        if not ((isinstance(self.integration_points, int) and self.integration_points > 0) or 
+                (isinstance(self.integration_points, MBVar) and self.integration_points.var_type in ('integer', 'const integer'))):
+            raise ValueError(f'{self.__class__.__name__}: Integration points must be a positive integer or an integer MBVar')
+                
+        return self
+
+    def element_type(self):
+        return f"aerodynamic beam{len(self.positions)}"
+    
     def __str__(self):
-        s = 'aerodynamic beam' + str(len(self.positions)) + ': ' + str(self.idx)
-        s = s + ',\n\t ' + str(self.beam)
+        s = f"{self.element_header()}\n\t {self.beam.idx}"
         if self.induced_velocity:
-            s = s + ',\n\t\tinduced velocity ' + str(self.induced_velocity)
-        for (pos, ori) in zip(self.positions, self.orientations):
-            s = s + ',\n\t\t' + str(pos)
-            s = s + ',\n\t\t' + str(ori)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.chord)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.aero_center)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.b_c_point)
-        s = s + ',\n\t\t' + ', '.join(str(i) for i in self.twist)
-        if len(self.tip_loss):
-            s = s + ',\n\t\ttip loss, ' + ', '.join(str(i) for i in self.tip_loss)
-        s = s + ',\n\t\t' + str(self.integration_points)
-        if len(self.control):
-            s = s + ',\n\t\tcontrol, ' + ', '.join(str(i) for i in self.control)
-        if len(self.airfoil_data):
-            s = s + ',\n\t\t' + ', '.join(str(i) for i in self.airfoil_data)
-        if len(self.unsteady):
-            s = s + ',\n\t\tunsteady, ' + str(self.unsteady)
-        if self.jacobian == 'yes':
-            s = s + ',\n\t\tjacobian, ' + str(self.jacobian)
+            s += f",\n\t\tinduced velocity {self.induced_velocity}"
+        for pos, ori in zip(self.positions, self.orientations):
+            s += f",\n\t\t{pos}"
+            s += f",\n\t\t{ori}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.chord)}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.aero_center)}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.b_c_point)}"
+        s += f",\n\t\t{', '.join(str(i) for i in self.twist)}"
+        if self.tip_loss:
+            s += f",\n\t\ttip loss, {', '.join(str(i) for i in self.tip_loss)}"
+        s += f",\n\t\t{self.integration_points}"
+        if self.control:
+            s += f",\n\t\tcontrol, {', '.join(str(i) for i in self.control)}"
+        if self.airfoil_data:
+            s += f",\n\t\t{', '.join(str(i) for i in self.airfoil_data)}"
+        if self.unsteady:
+            s += f",\n\t\tunsteady, {self.unsteady[0]}"
+        s += f",\n\t\tjacobian, {self.jacobian}"
         if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        if len(self.custom_output):
-            s = s + ',\n\tcustom output, ' + ', '.join(str(i) for i in self.custom_output)
-        s = s + ';\n'
+            s += f",\n\toutput, {self.output}"
+        if self.custom_output:
+            s += f",\n\tcustom output, {', '.join(str(i) for i in self.custom_output)}"
+        s += f";\n"
         return s
 
 # General stuff
@@ -4143,7 +4081,6 @@ if imported_pydantic:
     ImposedDisplacement.model_rebuild()
     ImposedDisplacement.model_rebuild()
 
-
 class ConstitutiveLaw(MBEntity):
     """
     Abstract class for C++ type `ConstitutiveLaw`. Every time a "deformable"
@@ -5049,6 +4986,9 @@ if imported_pydantic:
     DeformableDisplacement.model_rebuild()
     DeformableJoint.model_rebuild()
     Beam.model_rebuild()
+    AerodynamicBeam.model_rebuild()
+    AerodynamicBody.model_rebuild()
+
 
 class FileDriver(MBEntity):
     """
