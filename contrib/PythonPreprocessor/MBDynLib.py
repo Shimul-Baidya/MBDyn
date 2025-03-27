@@ -1104,7 +1104,81 @@ class AxialRotation(Element2):
         s += f''',\n\t{self.angular_velocity}'''
         s += self.element_footer()
         return s
+    
+class Beam(Element2):
+    nodes: List[Node2]
+    positions: List[Position2]
+    orientations: List[Position2]
+    const_laws_orientations: List[Union[Position2, Literal['same']]]
+    const_laws: List[Union['ConstitutiveLaw', 'NamedConstitutiveLaw', Literal['same']]]
+    custom_output: Optional[List] = None # TODO: Add custom output class
 
+    @model_validator(mode='after')
+    def validate_const_laws(self):
+        assert self.const_laws_orientations[0] != 'same', (
+            f'\n-------------------\nERROR:' + 
+            f'{self.__class__.__name__}: the first constitutive law orientation must not be "same";\n' +
+            f'\n-------------------\n')
+        assert self.const_laws[0] != 'same', (
+            f'\n-------------------\nERROR:' + 
+            f'{self.__class__.__name__}: the first constitutive law must not be "same";\n' +
+            f'\n-------------------\n')
+        return self
+
+    @model_validator(mode='after')
+    def validate_lengths(self):
+        assert len(self.nodes) == 3 or len(self.nodes) == 2, (
+            '\n-------------------\nERROR:' + 
+            ' defining a beam with ' + str(len(self.nodes)) +
+            ' nodes' + '\n-------------------\n')
+        assert len(self.nodes) == len(self.positions), (
+            '\n-------------------\nERROR:' +
+            ' defining a beam with ' + str(len(self.nodes)) +
+            ' nodes and ' + str(len(self.positions)) + ' relative positions;\n' +
+            '\n-------------------\n')
+        assert len(self.nodes) == len(self.orientations), (
+            '\n-------------------\nERROR:' +
+            ' defining a beam with ' + str(len(self.nodes)) +
+            ' nodes and ' + str(len(self.orientations)) + ' relative orientations;\n' +
+            '\n-------------------\n')
+        assert len(self.const_laws) == len(self.const_laws_orientations), (
+            '\n-------------------\nERROR:' +
+            ' defining a beam with ' + str(len(self.const_laws)) +
+            ' constitutive laws and ' + str(len(self.const_laws_orientations)) + ' constitutive law orientations;\n' +
+            '\n-------------------\n')
+        return self
+    
+    @model_validator(mode='before')
+    def adjust_const_laws_for_two_nodes(cls, values):
+        if len(values['nodes']) == 2:
+            # Convert single instance to list for two-node beams
+            if 'const_laws' in values and not isinstance(values['const_laws'], list):
+                values['const_laws'] = [values['const_laws']]
+            if 'const_laws_orientations' in values and not isinstance(values['const_laws_orientations'], list):
+                values['const_laws_orientations'] = [values['const_laws_orientations']]
+        return values
+    
+    def element_type(self):
+        if len(self.nodes) == 3:
+            return 'beam3'
+        else:
+            return 'beam2'
+        
+    def __str__(self):
+        s = f'{self.element_header()}'
+        for (node, position, orientation) in zip(self.nodes, self.positions, self.orientations):
+            s += f',\n\t{node.idx}'
+            s += f',\n\t\tposition, {position}'
+            s += f',\n\t\torientation, {orientation}'
+        for (cl_or, cl) in zip(self.const_laws_orientations, self.const_laws):
+            s += f',\n\t{cl_or}'
+            s += f',\n\t{cl}'
+        if self.custom_output is not None:
+            s += f',\n\tcustom output, ' 
+            s += f', '.join(str(i) for i in self.custom_output)
+        s += self.element_footer()
+        return s
+        
 class BeamSlider(Element2):
     """
     This joint implements a slider, e.g. it constrains a structural node on a string of three-node beams.
@@ -1343,7 +1417,7 @@ class DeformableAxial(Element2):
         s += f',\n\t{self.const_law}'
         s += self.element_footer()
         return s
-        
+
 class DeformableHinge(Element2):
     """
     This joint implements a configuration dependent moment that is exchanged between two nodes. The
@@ -2111,44 +2185,6 @@ class RodBezier(Element2):
         s += self.element_footer()
         return s
     
-class SphericalHinge2(Element2):
-    '''
-    This joint constrains the relative position of two nodes; the relative orientation is not constrained.
-
-    The joint is defined by two nodes and optional position and orientation offsets. The positions are defined
-    by the `position` keyword and the orientations by the `orientation` keyword. If not specified, default
-    values are assumed (zero offset for position and identity matrix for orientation).
-
-    Note: The orientation matrices are used for output purposes only.
-    '''
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    node_1_label: Union[int, MBVar]
-    position_1: Optional[Position2] = None
-    orientation_mat_1: Optional[Union[Position2, list]] = None
-    node_2_label: Union[int, MBVar]
-    position_2: Optional[Position2] = None
-    orientation_mat_2: Optional[Union[Position2, list]] = None
-
-    def element_type(self):
-        return 'joint'
-
-    def __str__(self):
-        s = f'{self.element_header()}, spherical hinge'
-        s += f',\n\t{self.node_1_label}'
-        if self.position_1 is not None:
-            s += f',\n\t\tposition, {self.position_1}'
-        if self.orientation_mat_1 is not None:
-            s += f',\n\t\torientation, {self.orientation_mat_1}'
-        s += f',\n\t{self.node_2_label}'
-        if self.position_2 is not None:
-            s += f',\n\t\tposition, {self.position_2}'
-        if self.orientation_mat_2 is not None:
-            s += f',\n\t\torientation, {self.orientation_mat_2}'
-        s += self.element_footer()
-        return s
-
 class SphericalPin(Element2):
     '''
     This joint constrains the absolute position of a node; the relative orientation is not constrained.
@@ -2444,100 +2480,75 @@ class DeformableDisplacement(Element2):
         s += f',\n\t{self.const_law}'
         s += self.element_footer()
         return s
-        
-class DeformableJoint(Element):
-    def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
-        assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable joint, the' +
-            ' nodes must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' +
-            ' defining a deformable joint with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable joint, the' +
-            ' relative positions must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == len(positions), (
-            '\n-------------------\nERROR:' +
-            ' defining a deformable joint with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-            '\n-------------------\n')
-        assert isinstance(orientations, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a deformable joint, the' +
-            ' relative position orientations must be given in a list' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.nodes = nodes
-        self.positions = positions
-        self.orientations = orientations
-        self.constitutive_law = const_law
-    def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', deformable joint'
-        for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
-            s = s + ',\n\t' + str(node)
-            if not(pos.isnull()):
-                s = s + ',\n\t\tposition, ' + str(pos)
-            if not(self.pos_or.iseye()):
-                s = s + ',\n\t\torientation, ' + str(orient)
-        s = s + '\n\t'
-        if isinstance(self.constitutive_law, str):
-            s = s + self.constitutive_law
+
+class DeformableJoint(Element2):
+    node_1: Node2
+    position_1: Position2
+    orientation_mat_1: Optional[Position2] = None
+    node_2: Node2
+    position_2: Position2
+    orientation_mat_2: Optional[Position2] = None
+    const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
+    orientation_desc: Optional[Literal['euler123', 'euler313', 'euler321', 'orientation vector', 'orientation matrix']] = None
+
+    @field_validator('const_law')
+    def validate_const_law(cls, v):
+        if isinstance(v, ConstitutiveLaw):
+            if v.law_type != ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW:
+                raise ValueError("const_law must be a 6D constitutive law with law_type 'D6_ISOTROPIC_LAW'")
+            return v
+        elif isinstance(v, NamedConstitutiveLaw):
+            return v
         else:
-            s = s + ', '.join(str(i) for i in self.constitutive_law)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
+            raise TypeError("const_law must be an instance of ConstitutiveLaw or NamedConstitutiveLaw")
+                
+    def element_type(self):
+        return 'joint'
     
-class SphericalHinge(Element):
-    def __init__(self, idx, nodes, positions, orientations, output = 'yes'):
-        assert isinstance(nodes, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a spherical hinge, the' +
-            ' nodes must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == 2, (
-            '\n-------------------\nERROR:' +
-            ' defining a spherical hinge with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert isinstance(positions, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a spherical hinge, the' +
-            ' relative positions must be given in a list' +
-            '\n-------------------\n')
-        assert len(nodes) == len(positions), (
-            '\n-------------------\nERROR:' +
-            ' defining a spherical hinge with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-            '\n-------------------\n')
-        assert isinstance(orientations, list), (
-            '\n-------------------\nERROR:' +
-            ' in defining a spherical hinge, the' +
-            ' relative position orientations must be given in a list' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.type = 'joint'
-        self.nodes = nodes
-        self.positions = positions
-        self.orientations = orientations
-        self.output = output
     def __str__(self):
-        s = 'joint: ' + str(self.idx) + ', spherical hinge'
-        for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
-            s = s + ',\n\t' + str(node)
-            if not(pos.isnull()):
-                s = s + ',\n\t\tposition, ' + str(pos)
-            if not(orient.iseye()):
-                s = s + ',\n\t\torientation, ' + str(orient)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
+        s = f'{self.element_header()}, deformable joint'
+        s += f',\n\t{self.node_1.idx}'
+        s += f',\n\t\tposition, {self.position_1}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2.idx}'
+        s += f',\n\t\tposition, {self.position_2}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
+        s += f',\n\t{self.const_law}'
+        if self.orientation_desc is not None:
+            s += f',\n\t{self.orientation_desc}'
+        s += self.element_footer()
+        return s
+        
+class SphericalHinge(Element2):
+    '''
+    This joint constrains the relative position of two nodes; the relative orientation is not constrained.
+    '''
+
+    node_1: Node2
+    position_1: Optional[Position2] = None
+    orientation_mat_1: Optional[Position2] = None
+    node_2: Node2
+    position_2: Optional[Position2] = None
+    orientation_mat_2: Optional[Position2] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, spherical hinge'
+        s += f',\n\t{self.node_1.idx}'
+        if self.position_1 is not None:
+            s += f',\n\t\tposition, {self.position_1}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2.idx}'
+        if self.position_2 is not None:
+            s += f',\n\t\tposition, {self.position_2}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
+        s += self.element_footer()
         return s
 
 class Shell(Element2):
@@ -2568,62 +2579,7 @@ class Shell(Element2):
         s += ', '.join(str(i) for i in self.const_law_data)
         s += self.element_footer()
         return s
-        
-class Beam(Element):
-    def __init__(self, idx, nodes, positions, orientations, const_laws_orientations,
-            const_laws, output = 'yes'):
-        assert len(nodes) == 3 or len(nodes) == 2, (
-            '\n-------------------\nERROR:' + 
-            ' defining a beam with ' + str(len(nodes)) +
-            ' nodes' + '\n-------------------\n')
-        assert len(nodes) == len(positions), (
-            '\n-------------------\nERROR:' +
-            ' defining a beam with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
-            '\n-------------------\n')
-        assert len(nodes) == len(orientations), (
-            '\n-------------------\nERROR:' +
-            ' defining a beam with ' + str(len(nodes)) +
-            ' nodes and ' + str(len(orientations)) + ' relative orientations;\n' +
-            '\n-------------------\n')
-        assert len(const_laws_orientations) == len(const_laws), (
-            '\n-------------------\nERROR:' +
-            ' defining a beam with ' + str(len(const_laws)) +
-            ' coonstitutive laws and ' + str(len(const_laws_orientations)) + ' constitutive law orientations;' +
-            '\n-------------------\n')
-        if len(nodes) == 2:
-            self.type = 'beam2'
-        else:
-            self.type = 'beam3'
-        self.idx = idx
-        self.nodes = nodes
-        self.positions = positions
-        self.orientations = orientations
-        self.const_laws_orientations = const_laws_orientations
-        self.const_laws = const_laws
-        self.output = output
-
-    def format_const_law(self, cl):
-        """Helper method to format constitutive law lists"""
-        if isinstance(cl, list):
-            return ', '.join(str(x) for x in cl)
-        return str(cl)
-
-    def __str__(self):
-        s = str(self.type) + ': ' + str(self.idx)
-        for (node, position, orientation) in zip(self.nodes, self.positions, self.orientations):
-            s = s + ',\n\t' + str(node) + ',\n\t\tposition, ' + str(position) + ',\n\t\torientation, ' + str(orientation)
-        for (cl_or, cl) in zip(self.const_laws_orientations, self.const_laws):
-            s = s + ',\n\t' + str(cl_or) + ',\n\t'
-            s += self.format_const_law(cl)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
     
-if imported_pydantic:
-    BeamSlider.model_rebuild()
-
 class AerodynamicBody(Element):
     def __init__(self, idx, node, 
             position, orientation, span,
@@ -5090,6 +5046,9 @@ if imported_pydantic:
     RodWithOffset.model_rebuild()
     RodBezier.model_rebuild()
     ViscousBody.model_rebuild()
+    DeformableDisplacement.model_rebuild()
+    DeformableJoint.model_rebuild()
+    Beam.model_rebuild()
 
 class FileDriver(MBEntity):
     """

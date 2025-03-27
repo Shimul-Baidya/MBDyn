@@ -10282,111 +10282,6 @@ class TestRodBezier(unittest.TestCase):
         self.assertEqual(rod_bezier.output, 'no')
         self.assertIn(',\n\toutput, no', str(rod_bezier))
         
-class TestSphericalHinge2(unittest.TestCase):
-    def setUp(self):
-        # Common variables used in tests
-        self.idx = 100
-        self.node_1_label = 1
-        self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='global')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
-        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
-
-    def test_spherical_hinge_creation_valid(self):
-        # Test creating a SphericalHinge instance with all valid data
-        spherical_hinge = l.SphericalHinge2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            position_1=self.position_1,
-            orientation_mat_1=self.orientation_mat_1,
-            node_2_label=self.node_2_label,
-            position_2=self.position_2,
-            orientation_mat_2=self.orientation_mat_2
-        )
-        self.assertIsInstance(spherical_hinge, l.SphericalHinge2)
-        self.assertEqual(spherical_hinge.node_1_label, self.node_1_label)
-        self.assertEqual(spherical_hinge.position_1, self.position_1)
-        self.assertEqual(spherical_hinge.orientation_mat_1, self.orientation_mat_1)
-        self.assertEqual(spherical_hinge.node_2_label, self.node_2_label)
-        self.assertEqual(spherical_hinge.position_2, self.position_2)
-        self.assertEqual(spherical_hinge.orientation_mat_2, self.orientation_mat_2)
-
-    def test_spherical_hinge_creation_without_optional_fields(self):
-        # Test creating a SphericalHinge instance without optional fields
-        spherical_hinge = l.SphericalHinge2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            node_2_label=self.node_2_label
-        )
-        self.assertIsInstance(spherical_hinge, l.SphericalHinge2)
-        self.assertIsNone(spherical_hinge.position_1)
-        self.assertIsNone(spherical_hinge.orientation_mat_1)
-        self.assertIsNone(spherical_hinge.position_2)
-        self.assertIsNone(spherical_hinge.orientation_mat_2)
-
-    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
-    def test_spherical_hinge_missing_required_fields(self):
-        # Missing node_1_label
-        with self.assertRaises(Exception):
-            l.SphericalHinge2(
-                idx=self.idx,
-                node_2_label=self.node_2_label
-            )
-        # Missing node_2_label
-        with self.assertRaises(Exception):
-            l.SphericalHinge2(
-                idx=self.idx,
-                node_1_label=self.node_1_label
-            )
-
-    def test_spherical_hinge_str_method(self):
-        # Test the __str__ method of SphericalHinge
-        spherical_hinge = l.SphericalHinge2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            position_1=self.position_1,
-            orientation_mat_1=self.orientation_mat_1,
-            node_2_label=self.node_2_label,
-            position_2=self.position_2,
-            orientation_mat_2=self.orientation_mat_2
-        )
-        expected_str = (
-            f'{spherical_hinge.element_header()}, spherical hinge'
-            f',\n\t{self.node_1_label}'
-            f',\n\t\tposition, {self.position_1}'
-            f',\n\t\torientation, {self.orientation_mat_1}'
-            f',\n\t{self.node_2_label}'
-            f',\n\t\tposition, {self.position_2}'
-            f',\n\t\torientation, {self.orientation_mat_2}'
-            f'{spherical_hinge.element_footer()}'
-        )
-        self.assertEqual(str(spherical_hinge), expected_str)
-
-    # # TODO: Check if MBVar class has errors
-    # def test_spherical_hinge_with_mbvar_node_labels(self):
-    #     # Test creating a SphericalHinge instance with MBVar as node labels
-    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
-    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
-    #     spherical_hinge = l.SphericalHinge2(
-    #         idx=self.idx,
-    #         node_1_label=node_var_1,
-    #         node_2_label=node_var_2
-    #     )
-    #     self.assertEqual(spherical_hinge.node_1_label, node_var_1)
-    #     self.assertEqual(spherical_hinge.node_2_label, node_var_2)
-
-    def test_spherical_hinge_output_option(self):
-        # Test setting the output option to 'no'
-        spherical_hinge = l.SphericalHinge2(
-            idx=self.idx,
-            node_1_label=self.node_1_label,
-            node_2_label=self.node_2_label,
-            output='no'
-        )
-        self.assertEqual(spherical_hinge.output, 'no')
-        self.assertIn(',\n\toutput, no', str(spherical_hinge))
-
 class TestSphericalPin(unittest.TestCase):
 
     def setUp(self):
@@ -12005,6 +11900,180 @@ class TestDeformableDisplacement(unittest.TestCase):
                 node_2=self.node2,
                 position_2=self.pos2,
                 const_law=self.d3_law
+            )
+
+class TestSphericalHinge(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.DynamicNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+
+    def test_spherical_hinge_str_representation(self):
+        """Test string representation of SphericalHinge"""
+        # Basic hinge without positions
+        hinge = l.SphericalHinge(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2
+        )
+        expected_str = "joint: 1, spherical hinge,\n\t1,\n\t2;\n"
+        self.assertEqual(str(hinge), expected_str)
+        
+        # Hinge with positions
+        hinge = l.SphericalHinge(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            position_1=self.pos1,
+            position_2=self.pos2
+        )
+        expected_str = "joint: 1, spherical hinge,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        print(hinge)
+
+    @unittest.skipIf(pydantic is None, "depends on library")
+    def test_spherical_hinge_missing_required_fields(self):
+        """Test creating SphericalHinge with missing required fields"""
+        # Missing node_1
+        with self.assertRaises(Exception):
+            l.SphericalHinge(
+                idx=1,
+                node_2=self.node2
+            )
+        
+        # Missing node_2
+        with self.assertRaises(Exception):
+            l.SphericalHinge(
+                idx=1,
+                node_1=self.node1
+            )
+
+class TestDeformableJoint(unittest.TestCase):
+    def setUp(self):
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.DynamicNode2(idx=2,
+            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.const_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+
+    def test_deformable_joint_str_representation(self):
+        """Test string representation of DeformableJoint"""
+        joint = l.DeformableJoint(
+            idx=1,
+            node_1=self.node1,
+            node_2=self.node2,
+            position_1=self.pos1,
+            position_2=self.pos2,
+            const_law=self.const_law
+        )
+        expected_str = "joint: 1, deformable joint,\n\t1,\n\t\tposition, reference, node, 0.5, 0.0, 0.0,\n\t2,\n\t\tposition, reference, node, 0.0, 0.5, 0.0,\n\tlinear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(joint), expected_str)
+        print(joint)
+
+    @unittest.skipIf(pydantic is None, "depends on library")
+    def test_deformable_joint_missing_required_fields(self):
+        """Test creating DeformableJoint with missing required fields"""
+        # Missing const_law
+        with self.assertRaises(Exception):
+            l.DeformableJoint(
+                idx=1,
+                node_1=self.node1,
+                node_2=self.node2,
+                position_1=self.pos1,
+                position_2=self.pos2
+            )
+
+class TestBeam(unittest.TestCase):
+    def setUp(self):
+        self.node1 = l.DynamicNode2(
+            idx=1,
+            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.DynamicNode2(
+            idx=2,
+            pos=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        self.pos = l.Position2(relative_position=[0, 0, 0], reference='global')
+        self.orient = l.Position2(relative_position=[1, 0, 0], reference='global')
+        self.const_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW,
+            stiffness=1000.0
+        )
+
+    def test_beam_str_representation(self):
+        """Test string representation of Beam"""
+        beam = l.Beam(
+            idx=1,
+            nodes=[self.node1, self.node2],
+            positions=[self.pos, self.pos],
+            orientations=[self.orient, self.orient],
+            const_laws=self.const_law,
+            const_laws_orientations=self.orient
+        )
+        expected_str = "beam2: 1,\n\t1,\n\t\tposition, reference, global, 0.0, 0.0, 0.0,\n\t\torientation, reference, global, 1.0, 0.0, 0.0,\n\t2,\n\t\tposition, reference, global, 0.0, 0.0, 0.0,\n\t\torientation, reference, global, 1.0, 0.0, 0.0,\n\treference, global, 1.0, 0.0, 0.0,\n\tlinear elastic isotropic, 1000.0;\n"
+        self.assertEqual(str(beam), expected_str)
+        print(beam)
+    @unittest.skipIf(pydantic is None, "depends on library")
+    def test_beam_validation(self):
+        """Test Beam validation rules"""
+        # Test invalid number of nodes
+        with self.assertRaises(Exception):
+            l.Beam(
+                idx=1,
+                nodes=[self.node1],  # Only one node
+                positions=[self.pos],
+                orientations=[self.orient],
+                const_laws=self.const_law,
+                const_laws_orientations=self.orient
+            )
+
+        # Test mismatched lengths
+        with self.assertRaises(Exception):
+            l.Beam(
+                idx=1,
+                nodes=[self.node1, self.node2],
+                positions=[self.pos],  # Only one position
+                orientations=[self.orient, self.orient],
+                const_laws=self.const_law,
+                const_laws_orientations=self.orient
             )
 
 if __name__ == '__main__':
