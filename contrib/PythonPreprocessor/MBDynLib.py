@@ -555,92 +555,8 @@ class Reference(MBEntity):
 if imported_pydantic:
     Position.model_rebuild()
 
-class Node:
-    def __init__(self, idx, pos, orient, vel, angular_vel, node_type = 'dynamic',
-            scale = 'default', output = 'yes'):
-        assert isinstance(pos, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the initial position of a node must be ' +  
-            ' an instance of the Position class;' + 
-            '\n-------------------\n')
-        assert isinstance(orient, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the initial orientation of a node must be ' +  
-            ' an instance of the Position class;' + 
-            '\n-------------------\n')
-        assert isinstance(vel, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the initial velocity of a node must be ' +  
-            ' an instance of the Position class;' + 
-            '\n-------------------\n')
-        assert isinstance(angular_vel, Position), (
-            '\n-------------------\nERROR:' + 
-            ' the initial angular velocity of a node must be ' +  
-            ' an instance of the Position class;' + 
-            '\n-------------------\n')
-        assert node_type in ('dynamic', 'static',), (
-            '\n-------------------\nERROR:' + 
-            ' unrecognised or unsupported node type;' + 
-            '\n-------------------\n')
-        self.idx = idx
-        self.position = pos
-        self.orientation = orient
-        self.velocity = vel
-        self.angular_velocity = angular_vel
-        self.node_type = node_type
-        self.scale = scale
-        self.output = output
-    def __str__(self):
-        s = 'structural: ' + str(self.idx) + ', ' + str(self.node_type) + ',\n'
-        s = s + '\t' + str(self.position) + ',\n'
-        s = s + '\t' + str(self.orientation) + ',\n'
-        s = s + '\t' + str(self.velocity) + ',\n'
-        s = s + '\t' + str(self.angular_velocity)
-        if self.scale != 'default':
-            s = s + ',\n\tscale, ' + str(self.scale)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
-class DynamicNode(Node):
-    def __init__(self, idx, pos, orient, vel, angular_vel):
-        Node.__init__(self, idx, pos, orient, vel, angular_vel, 'dynamic')
-
-class StaticNode(Node):
-    def __init__(self, idx, pos, orient, vel, angular_vel):
-        Node.__init__(self, idx, pos, orient, vel, angular_vel, 'static')
-
-class DisplacementNode():
-    def __init__(self, idx, pos, vel, node_type = 'dynamic',
-            scale = 'default', output = 'yes'):
-        self.idx = idx
-        self.position = pos
-        self.velocity = vel
-        self.node_type = node_type
-        self.scale = scale
-        self.output = output
-    def __str__(self):
-        s = 'structural: ' + str(self.idx) + ', ' + str(self.node_type) + ' displacement,\n'
-        s = s + '\t' + str(self.position) + ',\n'
-        s = s + '\t' + str(self.velocity)
-        if self.scale != 'default':
-            s = s + ',\n\t scale, ' + str(self.scale)
-        if self.output != 'yes':
-            s = s + ',\n\toutput, ' + str(self.output)
-        s = s + ';\n'
-        return s
-
-class DynamicDisplacementNode(DisplacementNode):
-    def __init__(self, idx, pos, vel):
-        DisplacementNode.__init__(self, idx, pos, vel, 'dynamic')
-
-class StaticDisplacementNode(DisplacementNode):
-    def __init__(self, idx, pos, vel):
-        DisplacementNode.__init__(self, idx, pos, vel, 'static')
-
 # Change name to Node when all are moved
-class Node2(MBEntity):
+class Node(MBEntity):
     """This class isn't directly used to create instances, but it's child classes are."""
 
     idx: Union[int, MBVar]
@@ -663,7 +579,7 @@ class Node2(MBEntity):
             s += f",\n\toutput, {self.output}"
         return s
     
-class DynamicNode2(Node2):
+class DynamicNode(Node):
     accelerations: Optional[Union[Literal['yes', 'no'], int, bool]] = None
     def __init__(self, idx, pos, orient, vel, angular_vel, accelerations=None):
         super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='dynamic')
@@ -675,13 +591,13 @@ class DynamicNode2(Node2):
         s += ';\n'
         return s
 
-class StaticNode2(Node2):
+class StaticNode(Node):
     def __init__(self, idx, pos, orient, vel, angular_vel):
         super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='static')
     def __str__(self):
         return super().__str__() + ';\n'
 
-class ModalNode(Node2):
+class ModalNode(Node):
     """
     The modal node is basically a regular dynamic node that must be used to describe the rigid reference
     motion of a modal joint.
@@ -698,7 +614,7 @@ class ModalNode(Node2):
         s += ';\n'
         return s
 
-class DisplacementNode2(MBEntity):
+class DisplacementNode(MBEntity):
     idx: Union[int, MBVar]
     position: Position
     velocity: Position
@@ -715,7 +631,7 @@ class DisplacementNode2(MBEntity):
             s += f",\n\toutput, {self.output}"
         return s
 
-class DynamicDisplacementNode2(DisplacementNode2):
+class DynamicDisplacementNode(DisplacementNode):
     accelerations: Optional[Union[Literal['yes', 'no'], int, bool]] = None
     def __init__(self, idx, pos, vel, accelerations=None):
         super().__init__(idx=idx, position=pos, velocity=vel, node_type='dynamic')
@@ -726,7 +642,7 @@ class DynamicDisplacementNode2(DisplacementNode2):
             s += f",\n\taccelerations, {self.accelerations}"
         return s + ';\n'
 
-class StaticDisplacementNode2(DisplacementNode2):
+class StaticDisplacementNode(DisplacementNode):
     def __init__(self, idx, pos, vel):
         super().__init__(idx=idx, position=pos, velocity=vel, node_type='static')
     def __str__(self):
@@ -734,7 +650,7 @@ class StaticDisplacementNode2(DisplacementNode2):
 
 class PointMass(MBEntity):
     idx: Union[int, MBVar]
-    node: Node2
+    node: Node
     mass: Union[float, MBVar]
     output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
     
@@ -785,7 +701,7 @@ class Element2(MBEntity):
             raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
 
 class Body(Element2):
-    node: Node2
+    node: Node
     mass: Union[float, MBVar]
     position: Position
     inertial_matrix: Position 
@@ -806,7 +722,7 @@ class Body(Element2):
 
 # Force Elements
 class StructuralForce(Element2):
-    node: Node2
+    node: Node
     ftype: Literal['absolute', 'follower', 'total']
     position: Optional[Position] = None
     force_drive: Optional[List] = None # TODO: Needs TplDriveCaller
@@ -851,7 +767,7 @@ class StructuralForce(Element2):
         return s
 
 class StructuralInternalForce(Element2):
-    nodes: List[Node2]
+    nodes: List[Node]
     ftype: Literal['absolute', 'follower', 'total']
     positions: Optional[List[Position]] = None
     force_drive: Optional[List] = None  # TODO: Needs TplDriveCaller
@@ -917,7 +833,7 @@ class StructuralInternalForce(Element2):
         return s
 
 class StructuralCouple(Element2):
-    node: Node2
+    node: Node
     ctype: Literal['absolute', 'follower']
     position: Optional[Position] = None
     couple_drive: List # TODO: Needs TplDriveCaller
@@ -936,7 +852,7 @@ class StructuralCouple(Element2):
         return s
 
 class StructuralInternalCouple(Element2):
-    nodes: List[Node2]
+    nodes: List[Node]
     ctype: Literal['absolute', 'follower']
     positions: Optional[List[Position]] = None
     couple_drive: List # TODO: Needs TplDriveCaller
@@ -1050,7 +966,7 @@ class AxialRotation(Element2):
         return s
     
 class Beam(Element2):
-    nodes: List[Node2]
+    nodes: List[Node]
     positions: List[Position]
     orientations: List[Position]
     const_laws_orientations: List[Union[Position, Literal['same']]]
@@ -1141,7 +1057,7 @@ class BeamSlider(Element2):
     end_node_offset: Position
     end_node_orientation: Optional[Union[str, Position]]
     initial_beam: Optional[Beam]
-    initial_node: Optional[Union[Node2, Node]]
+    initial_node: Optional[Node]
     smearing_factor: Optional[Union[float, MBVar, int]]
 
     def element_type(self):
@@ -1248,10 +1164,10 @@ class CardanoHinge(Element2):
     velocity about axis 1 for the other node.
     '''
 
-    node_1: Node2
+    node_1: Node
     position_1: Position
     orientation_mat_1: Optional[Position] = None
-    node_2: Node2
+    node_2: Node
     position_2: Position
     orientation_mat_2: Optional[Position] = None
 
@@ -1366,10 +1282,10 @@ class DeformableHinge(Element2):
         'arbitrary_types_allowed': True
     }
 
-    node_1: Node2
+    node_1: Node
     position_1: Optional[Position] = None
     orientation_mat_1: Optional[Position] = None
-    node_2: Node2
+    node_2: Node
     position_2: Optional[Position] = None
     orientation_mat_2: Optional[Position] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
@@ -1941,9 +1857,9 @@ class Rod(Element2):
     points are the nodes themselves.
     '''
 
-    node_1: Node2
+    node_1: Node
     position_1: Optional[Position] = None
-    node_2: Node2
+    node_2: Node
     position_2: Optional[Position] = None
     rod_length: Union[float, MBVar, Literal['from nodes']]  # Can be a float or 'from nodes'
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
@@ -2183,7 +2099,7 @@ class ViscousBody(Element2):
         return s
 
 class Clamp(Element2):
-    node: Node2
+    node: Node
     position: Union[Position, Literal['node']]
     orientation_mat: Union[List, Literal['node']]
 
@@ -2198,7 +2114,7 @@ class Clamp(Element2):
         return s
 
 class TotalJoint(Element2):
-    nodes: List[Node2]
+    nodes: List[Node]
     positions: Optional[List[Position]] = None
     position_orientations: Optional[List[Position]] = None
     rotation_orientations: Optional[List[Position]] = None
@@ -2288,7 +2204,7 @@ class TotalJoint(Element2):
         return s
 
 class TotalPinJoint(Element2):
-    node: Node2
+    node: Node
     rel_position: Optional[Position] = None
     rel_position_orientation: Optional[Position] = None
     rel_rotation_orientation: Optional[Position] = None
@@ -2377,10 +2293,10 @@ class JointRegularization(Element2):
         return s
     
 class DeformableDisplacement(Element2):
-    node_1: Node2
+    node_1: Node
     position_1: Position
     orientation_mat_1: Optional[Position] = None
-    node_2: Node2
+    node_2: Node
     position_2: Position
     orientation_mat_2: Optional[Position] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
@@ -2414,10 +2330,10 @@ class DeformableDisplacement(Element2):
         return s
 
 class DeformableJoint(Element2):
-    node_1: Node2
+    node_1: Node
     position_1: Position
     orientation_mat_1: Optional[Position] = None
-    node_2: Node2
+    node_2: Node
     position_2: Position
     orientation_mat_2: Optional[Position] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
@@ -2458,10 +2374,10 @@ class SphericalHinge(Element2):
     This joint constrains the relative position of two nodes; the relative orientation is not constrained.
     '''
 
-    node_1: Node2
+    node_1: Node
     position_1: Optional[Position] = None
     orientation_mat_1: Optional[Position] = None
-    node_2: Node2
+    node_2: Node
     position_2: Optional[Position] = None
     orientation_mat_2: Optional[Position] = None
 
@@ -2485,7 +2401,7 @@ class SphericalHinge(Element2):
 
 class Shell(Element2):
     shell_type: Literal['shell4eas', 'shell4easans']
-    nodes: List[Node2]
+    nodes: List[Node]
     const_law_data: List
 
     @field_validator('const_law_data', mode='before')
@@ -2513,7 +2429,7 @@ class Shell(Element2):
         return s
 
 class AerodynamicBody(Element2):
-    node: Node2
+    node: Node
     position: Position
     orientation: Position
     span: Union[float, MBVar]
@@ -3417,7 +3333,7 @@ class NodeDriveCaller(DriveCaller2):
     active control system.
     """
     
-    node: Node2        
+    node: Node        
     private_data: str    
     func_drive: Union[DriveCaller2, Literal['direct']]
     
