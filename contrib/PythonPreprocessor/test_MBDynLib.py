@@ -6860,7 +6860,7 @@ class TestAngularVelocity(unittest.TestCase):
             velocity=const_drive
         )
         
-        expected_output = '''joint: 1, angular velocity,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0;\n'''
+        expected_output = '''joint: 1, angular velocity,\n\t1, 1.0, 0.0, 0.0,\n\tconst, 5.0;\n'''
         self.assertEqual(str(angular_vel), expected_output)
 
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
@@ -6902,21 +6902,6 @@ class TestAngularVelocity(unittest.TestCase):
                 velocity=5  # Invalid type, should be DriveCaller or its subclass
             )
 
-    def test_optional_output(self):
-        """Test that the 'output' field is optional and defaults to 'yes'"""
-        const_drive = l.ConstDriveCaller(const_value=5.0)
-
-        # Create AngularVelocity without specifying output
-        angular_vel = l.AngularVelocity(
-            idx=1,
-            node_label=1,
-            relative_direction=[1, 0, 0],
-            velocity=const_drive
-        )
-        
-        expected_output = '''joint: 1, angular velocity,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0;\n'''
-        self.assertEqual(str(angular_vel), expected_output)
-
     def test_custom_output(self):
         """Test that the 'output' field is properly set when customized"""
         const_drive = l.ConstDriveCaller(const_value=5.0)
@@ -6930,7 +6915,7 @@ class TestAngularVelocity(unittest.TestCase):
             output='no'
         )
         
-        expected_output = '''joint: 1, angular velocity,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0,\n\toutput, no;\n'''
+        expected_output = '''joint: 1, angular velocity,\n\t1, 1.0, 0.0, 0.0,\n\tconst, 5.0,\n\toutput, no;\n'''
         self.assertEqual(str(angular_vel), expected_output)
 
 class TestAxialRotation(unittest.TestCase):
@@ -7109,15 +7094,15 @@ class TestBeamSlider(unittest.TestCase):
     def setUp(self):
         # Define Position2 instances
         self.position1 = l.Position2(
-            relative_position=[[0.0, 0.0, 0.0]], 
+            relative_position=[0.0, 0.0, 0.0], 
             reference='global'
         )
         self.position2 = l.Position2(
-            relative_position=[[1.0, 0.0, 0.0]], 
+            relative_position=[1.0, 0.0, 0.0], 
             reference='node'
         )
         self.position3 = l.Position2(
-            relative_position=[[0.0, 1.0, 0.0]], 
+            relative_position=[0.0, 1.0, 0.0], 
             reference='other node'
         )
 
@@ -7127,15 +7112,28 @@ class TestBeamSlider(unittest.TestCase):
             stiffness=2000.0
         )
 
+        # create Nodes
+        self.pos = l.Position2(relative_position=[1.0, 2.0, 3.0], reference='global')
+        self.orient = l.Position2(relative_position=[l.eye()], reference='')
+        self.vel = l.Position2(relative_position=[0.1, 0.2, 0.3], reference='global')
+        self.ang_vel = l.Position2(relative_position=[l.null()], reference='')
+        self.node1 = l.Node2(idx=1, position=self.pos, orientation=self.orient, 
+                    velocity=self.vel, angular_velocity=self.ang_vel)
+        self.node2 = l.Node2(idx=2, position=self.pos, orientation=self.orient, 
+                    velocity=self.vel, angular_velocity=self.ang_vel)
+        self.node3 = l.Node2(idx=3, position=self.pos, orientation=self.orient, 
+                    velocity=self.vel, angular_velocity=self.ang_vel)
+
         # Define Beams
         self.beam = l.Beam(
             idx=1,
-            nodes=[1, 2, 3],
+            nodes=[self.node1, self.node2, self.node3],
             positions=[self.position1, self.position2, self.position3],
             orientations=[self.position1, self.position2, self.position3],
             const_laws_orientations=[self.position1, self.position2],
             const_laws=[self.elastic_law, self.elastic_law],
         )
+        
     
     def test_valid_input(self):
         beam_slider = l.BeamSlider(
@@ -7295,8 +7293,8 @@ class TestBeamSlider(unittest.TestCase):
 
 class TestBrake(unittest.TestCase):
     def setUp(self):
-        self.position1 = l.Position2(relative_position=[[0.0, 0.0, 0.0]], reference='global')
-        self.position2 = l.Position2(relative_position=[[1.0, 0.0, 0.0]], reference='node')
+        self.position1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position2 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
         self.normal_force = l.ConstDriveCaller(const_value=1000.0)
 
     def test_valid_brake(self):
@@ -7327,8 +7325,8 @@ class TestBrake(unittest.TestCase):
         )
         expected_str = (
             "joint: 1, brake,\n"
-            "\t1, reference, global, [0.0, 0.0, 0.0],\n"
-            "\t2, reference, node, [1.0, 0.0, 0.0],\n"
+            "\t1, reference, global, 0.0, 0.0, 0.0,\n"
+            "\t2, reference, node, 1.0, 0.0, 0.0,\n"
             "\tfriction, 0.5,\n"
             "\t\tmodlugre,\n"
             "\t\ttanh,\n"
@@ -7368,11 +7366,11 @@ class TestCardanoPin(unittest.TestCase):
 
         # Optional values for testing with orientations
         self.relative_orientation_matrix = l.Position2(
-            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            relative_position=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
             reference=''
         )
         self.absolute_orientation_matrix = l.Position2(
-            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            relative_position=[0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
 
@@ -7481,11 +7479,11 @@ class TestCardanoRotation(unittest.TestCase):
 
         # Optional values for testing with orientations
         self.orientation_matrix_1 = l.Position2(
-            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            relative_position=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
             reference=''
         )
         self.orientation_matrix_2 = l.Position2(
-            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            relative_position=[0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
 
@@ -7575,7 +7573,7 @@ class TestDeformableAxial(unittest.TestCase):
             reference=''
         )
         self.orientation_mat_1 = l.Position2(
-            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            relative_position=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
         self.position_2 = l.Position2(
@@ -7583,7 +7581,7 @@ class TestDeformableAxial(unittest.TestCase):
             reference='global'
         )
         self.orientation_mat_2 = l.Position2(
-            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            relative_position=[0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
 
@@ -7601,7 +7599,7 @@ class TestDeformableAxial(unittest.TestCase):
         )
         
         self.named_const_law = l.NamedConstitutiveLaw("example_named_law")
-        self.named_const_law2 = l.NamedConstitutiveLaw(["example_named_law", 1000.0])
+        self.named_const_law2 = l.NamedConstitutiveLaw("example_named_law, 1000.0")
 
         # Initialize DeformableAxial with required fields
         self.deformable_axial = l.DeformableAxial(
@@ -7870,18 +7868,19 @@ class TestDistance(unittest.TestCase):
                 node_2_label=self.node_2_label,
                 distance=123  # Invalid type, should be DriveCaller2 or 'from nodes'
             )
-    # TODO: First check if the <MBVar> class definition has any errors 
-    # def test_distance_with_mbvar_nodes(self):
-    # # Test creating a Distance instance with MBVar as node labels
-    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
-    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
-    #     distance_joint = l.Distance(
-    #         node_1_label=node_var_1,
-    #         node_2_label=node_var_2,
-    #         distance=self.distance_drive
-    #     )
-    #     self.assertEqual(distance_joint.node_1_label, node_var_1)
-    #     self.assertEqual(distance_joint.node_2_label, node_var_2)
+
+    def test_distance_with_mbvar_nodes(self):
+    # Test creating a Distance instance with MBVar as node labels
+        node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+        node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+        distance_joint = l.Distance(
+            idx=10,
+            node_1_label=node_var_1,
+            node_2_label=node_var_2,
+            distance=self.distance_drive
+        )
+        self.assertEqual(distance_joint.node_1_label, node_var_1)
+        self.assertEqual(distance_joint.node_2_label, node_var_2)
 
 class TestDriveDisplacement(unittest.TestCase):
     # TODO: Implement 'TplDriveCaller' first
@@ -7902,7 +7901,7 @@ class TestGimbalRotation(unittest.TestCase):
         self.node_2_label = 2
         self.relative_orientation_mat_1 = l.Position2(relative_position=[0.0, 0.0, 1.0], reference='global')
         self.relative_orientation_mat_2 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='global')
-        self.orientation_description = "euler123"
+        self.orientation_desc = "euler123"
 
     def test_gimbal_rotation_creation_valid(self):
         # Test creating a GimbalRotation instance with valid data
@@ -7911,13 +7910,13 @@ class TestGimbalRotation(unittest.TestCase):
             relative_orientation_mat_1=self.relative_orientation_mat_1,
             node_2_label=self.node_2_label,
             relative_orientation_mat_2=self.relative_orientation_mat_2,
-            orientation_description=self.orientation_description,
+            orientation_desc=self.orientation_desc,
             idx=10,
             output='yes'
         )
         self.assertIsInstance(gimbal_rotation, l.GimbalRotation)
         self.assertEqual(gimbal_rotation.node_1_label, self.node_1_label)
-        self.assertEqual(gimbal_rotation.orientation_description, self.orientation_description)
+        self.assertEqual(gimbal_rotation.orientation_desc, self.orientation_desc)
 
     def test_gimbal_rotation_creation_without_optional_fields(self):
         # Test creating a GimbalRotation instance without optional fields
@@ -7929,17 +7928,18 @@ class TestGimbalRotation(unittest.TestCase):
         self.assertIsInstance(gimbal_rotation, l.GimbalRotation)
         self.assertEqual(gimbal_rotation.node_1_label, self.node_1_label)
         self.assertIsNone(gimbal_rotation.relative_orientation_mat_1)
-        self.assertIsNone(gimbal_rotation.orientation_description)
+        self.assertIsNone(gimbal_rotation.orientation_desc)
 
-    def test_gimbal_rotation_invalid_orientation_description(self):
-        # Test creating a GimbalRotation instance with invalid orientation_description
+    def test_gimbal_rotation_invalid_orientation_desc(self):
+        # Test creating a GimbalRotation instance with invalid orientation_desc
         with self.assertRaises(ValueError) as context:
             l.GimbalRotation(
+                idx=10,
                 node_1_label=self.node_1_label,
                 node_2_label=self.node_2_label,
-                orientation_description="invalid_description"
+                orientation_desc="invalid_description"
             )
-        self.assertIn("Invalid orientation description", str(context.exception))
+        self.assertIn("Input should be 'euler123', 'euler313', 'euler321', 'orientation vector' or 'orientation matrix'", str(context.exception))
 
     def test_gimbal_rotation_str_method(self):
         # Test the __str__ method of GimbalRotation
@@ -7948,7 +7948,7 @@ class TestGimbalRotation(unittest.TestCase):
             relative_orientation_mat_1=self.relative_orientation_mat_1,
             node_2_label=self.node_2_label,
             relative_orientation_mat_2=self.relative_orientation_mat_2,
-            orientation_description=self.orientation_description,
+            orientation_desc=self.orientation_desc,
             idx=10
         )
         expected_str = (
@@ -7957,7 +7957,7 @@ class TestGimbalRotation(unittest.TestCase):
             f', orientation, {self.relative_orientation_mat_1}'
             f',\n\t{self.node_2_label}'
             f', orientation, {self.relative_orientation_mat_2}'
-            f',\n\torientation description, {self.orientation_description}'
+            f',\n\torientation description, {self.orientation_desc}'
             f'{gimbal_rotation.element_footer()}'
         )
         self.assertEqual(str(gimbal_rotation), expected_str)
@@ -8004,15 +8004,15 @@ class TestGimbalRotation(unittest.TestCase):
                 node_2_label=self.node_2_label
             )
 
-    def test_gimbal_rotation_orientation_description_none(self):
-        # Test creating a GimbalRotation instance with orientation_description as None
+    def test_gimbal_rotation_orientation_desc_none(self):
+        # Test creating a GimbalRotation instance with orientation_desc as None
         gimbal_rotation = l.GimbalRotation(
             idx=10,
             node_1_label=self.node_1_label,
             node_2_label=self.node_2_label,
-            orientation_description=None
+            orientation_desc=None
         )
-        self.assertIsNone(gimbal_rotation.orientation_description)
+        self.assertIsNone(gimbal_rotation.orientation_desc)
         self.assertNotIn('orientation description', str(gimbal_rotation))
 
 class TestImposedDisplacement(unittest.TestCase):

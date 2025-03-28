@@ -1384,9 +1384,6 @@ class DeformableAxial(Element2):
     This joint implements a configuration dependent moment that is exchanged between two nodes about
     an axis rigidly attached to the first node. 
     """
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
 
     node_1_label: Union[int, MBVar]
     position_1: Optional[Position2] = None
@@ -1588,9 +1585,9 @@ class GimbalRotation(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    relative_orientation_mat_1: Optional[Union[Position2, List]] = None
+    relative_orientation_mat_1: Optional[Union[Position2]] = None
     node_2_label: Union[int, MBVar]
-    relative_orientation_mat_2: Optional[Union[Position2, List]] = None
+    relative_orientation_mat_2: Optional[Union[Position2]] = None
     orientation_desc: Optional[Literal['euler123', 'euler313', 'euler321', 'orientation vector', 'orientation matrix']] = None
     """The type of orientation description"""
 
