@@ -503,66 +503,11 @@ class eye(MBEntity):
     def __str__(self):
         return 'eye'
 
-class Reference:
-    def __init__(self, idx, pos, orient, vel, angvel):
-        assert isinstance(pos, Position), (
-            '\n-------------------\nERROR:'+
-            ' the position of a reference must be ' +
-            ' an instance of the Position class;' +
-            '\n-------------------\n')
-        assert isinstance(orient, Position), (
-            '\n-------------------\nERROR:' +
-            ' the orientation of a reference must be ' +
-            ' an instance of the Position class;' +
-            '\n-------------------\n')
-        assert isinstance(vel, Position), (
-            '\n-------------------\nERROR:' +
-            ' the velocity of a reference must be ' +
-            ' an instance of the Position class;' +
-            '\n-------------------\n')
-        assert isinstance(angvel, Position), (
-            '\n-------------------\nERROR:' +
-            ' the angulare velocity of a reference must be ' +
-            ' an instance of the Position class;' +
-            '\n-------------------\n')
-        self.idx = idx
-        self.position = pos
-        self.orientation = orient
-        self.velocity = vel
-        self.angular_velocity = angvel
-    def __str__(self):
-        s = 'reference: '
-        s = s + str(self.idx) + ', \n'
-        s = s + '\t' + str(self.position) + ',\n'
-        s = s + '\t' + str(self.orientation) + ',\n'
-        s = s + '\t' + str(self.velocity) + ',\n'
-        s = s + '\t' + str(self.angular_velocity) + ';\n'
-        return s
-
-class Position:
-    def __init__(self, ref, rel_pos):
-        self.reference = ref
-        if isinstance(rel_pos, list):
-            self.relative_position = rel_pos
-        else:
-            self.relative_position = [rel_pos]
-    def __str__(self):
-        s = ''
-        if self.reference != '':
-            s = 'reference, ' + str(self.reference) + ', '
-        s = s + ', '.join(str(i) for i in self.relative_position)
-        return s
-    def isnull(self):
-        return (self.reference == '') and isinstance(self.relative_position[0], null)
-    def iseye(self):
-        return (self.reference == '') and isinstance(self.relative_position[0], eye)
-
-# TODO: Rename to Position when all are moved
-class Position2(MBEntity):
+class Position(MBEntity):
     """Position definition for MBDyn elements"""
         
     relative_position: List[Union[float, MBVar, null, eye]]
-    reference: Union['Reference2', Literal['global', 'node', 'other node', '']] # TODO: Make reference an optional field (remove '')
+    reference: Union['Reference', Literal['global', 'node', 'other node', '']] # TODO: Make reference an optional field (remove '')
 
     @field_validator('relative_position', mode='before')
     def ensure_list(cls, v):
@@ -575,8 +520,8 @@ class Position2(MBEntity):
         if isinstance(v, str):
             if v not in {'global', 'node', 'other node', ''}:
                 raise ValueError("Invalid literal for reference")
-        elif not isinstance(v, Reference2):
-            raise ValueError("reference must be either a Reference2 instance or one of the specified strings")
+        elif not isinstance(v, Reference):
+            raise ValueError("reference must be either a Reference instance or one of the specified strings")
         return v
 
     def __str__(self):
@@ -592,13 +537,12 @@ class Position2(MBEntity):
     def iseye(self) -> bool:
         return (self.reference == '') and isinstance(self.relative_position[0], eye)
     
-# TODO: Rename to Reference when all are moved
-class Reference2(MBEntity):
+class Reference(MBEntity):
     idx: Union[int, MBVar]
-    position: Position2
-    orientation: Position2
-    velocity: Position2
-    angular_velocity: Position2    
+    position: Position
+    orientation: Position
+    velocity: Position
+    angular_velocity: Position    
     def __str__(self):
         s = 'reference: '
         s = s + str(self.idx) + ', \n'
@@ -609,7 +553,7 @@ class Reference2(MBEntity):
         return s
 
 if imported_pydantic:
-    Position2.model_rebuild()
+    Position.model_rebuild()
 
 class Node:
     def __init__(self, idx, pos, orient, vel, angular_vel, node_type = 'dynamic',
@@ -700,10 +644,10 @@ class Node2(MBEntity):
     """This class isn't directly used to create instances, but it's child classes are."""
 
     idx: Union[int, MBVar]
-    position: Position2
-    orientation: Position2
-    velocity: Position2
-    angular_velocity: Position2
+    position: Position
+    orientation: Position
+    velocity: Position
+    angular_velocity: Position
     node_type: Literal['dynamic', 'static', 'modal'] = 'dynamic'
     scale: Optional[Union[Literal['default'], float, MBVar]] = 'default'
     output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
@@ -756,8 +700,8 @@ class ModalNode(Node2):
 
 class DisplacementNode2(MBEntity):
     idx: Union[int, MBVar]
-    position: Position2
-    velocity: Position2
+    position: Position
+    velocity: Position
     node_type: Literal['dynamic', 'static'] = 'dynamic'
     scale: Optional[Union[Literal['default'], float, MBVar]] = 'default'
     output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
@@ -843,9 +787,9 @@ class Element2(MBEntity):
 class Body(Element2):
     node: Node2
     mass: Union[float, MBVar]
-    position: Position2
-    inertial_matrix: Position2 
-    inertial: Optional[Position2] = None
+    position: Position
+    inertial_matrix: Position 
+    inertial: Optional[Position] = None
 
     def element_type(self):
         return 'body'
@@ -864,10 +808,10 @@ class Body(Element2):
 class StructuralForce(Element2):
     node: Node2
     ftype: Literal['absolute', 'follower', 'total']
-    position: Optional[Position2] = None
+    position: Optional[Position] = None
     force_drive: Optional[List] = None # TODO: Needs TplDriveCaller
-    force_orientation: Optional[Position2] = None
-    moment_orientation: Optional[Position2] = None
+    force_orientation: Optional[Position] = None
+    moment_orientation: Optional[Position] = None
     moment_drive: Optional[List] = None # TODO: Needs TplDriveCaller
     
     @model_validator(mode='after')
@@ -909,10 +853,10 @@ class StructuralForce(Element2):
 class StructuralInternalForce(Element2):
     nodes: List[Node2]
     ftype: Literal['absolute', 'follower', 'total']
-    positions: Optional[List[Position2]] = None
+    positions: Optional[List[Position]] = None
     force_drive: Optional[List] = None  # TODO: Needs TplDriveCaller
-    force_orientation: Optional[List[Position2]] = None
-    moment_orientation: Optional[List[Position2]] = None
+    force_orientation: Optional[List[Position]] = None
+    moment_orientation: Optional[List[Position]] = None
     moment_drive: Optional[List] = None  # TODO: Needs TplDriveCaller
 
     @model_validator(mode='after')
@@ -975,7 +919,7 @@ class StructuralInternalForce(Element2):
 class StructuralCouple(Element2):
     node: Node2
     ctype: Literal['absolute', 'follower']
-    position: Optional[Position2] = None
+    position: Optional[Position] = None
     couple_drive: List # TODO: Needs TplDriveCaller
 
     def element_type(self):
@@ -994,7 +938,7 @@ class StructuralCouple(Element2):
 class StructuralInternalCouple(Element2):
     nodes: List[Node2]
     ctype: Literal['absolute', 'follower']
-    positions: Optional[List[Position2]] = None
+    positions: Optional[List[Position]] = None
     couple_drive: List # TODO: Needs TplDriveCaller
 
     def element_type(self):
@@ -1083,11 +1027,11 @@ class AxialRotation(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2
-    orientation_mat_1: Position2
+    position_1: Position
+    orientation_mat_1: Position
     node_2_label: Union[int, MBVar]
-    position_2: Position2
-    orientation_mat_2: Position2
+    position_2: Position
+    orientation_mat_2: Position
     angular_velocity: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
@@ -1107,9 +1051,9 @@ class AxialRotation(Element2):
     
 class Beam(Element2):
     nodes: List[Node2]
-    positions: List[Position2]
-    orientations: List[Position2]
-    const_laws_orientations: List[Union[Position2, Literal['same']]]
+    positions: List[Position]
+    orientations: List[Position]
+    const_laws_orientations: List[Union[Position, Literal['same']]]
     const_laws: List[Union['ConstitutiveLaw', 'NamedConstitutiveLaw', Literal['same']]]
     custom_output: Optional[List] = None # TODO: Add custom output class
 
@@ -1185,17 +1129,17 @@ class BeamSlider(Element2):
     """
 
     slider_node_label: Union[int, MBVar]
-    position: Position2
-    orientation: Optional[Position2]
+    position: Position
+    orientation: Optional[Position]
     slider_type: Optional[str] = None  # should be one of 'spherical', 'classic', or 'spline'
     beam_number: Union[int, MBVar]
     three_node_beam: 'Beam'
-    first_node_offset: Union[str, Position2]
-    first_node_orientation: Optional[Union[str, Position2]]
-    mid_node_offset: Position2
-    mid_node_orientation: Optional[Union[str, Position2]]
-    end_node_offset: Position2
-    end_node_orientation: Optional[Union[str, Position2]]
+    first_node_offset: Union[str, Position]
+    first_node_orientation: Optional[Union[str, Position]]
+    mid_node_offset: Position
+    mid_node_orientation: Optional[Union[str, Position]]
+    end_node_offset: Position
+    end_node_orientation: Optional[Union[str, Position]]
     initial_beam: Optional[Beam]
     initial_node: Optional[Union[Node2, Node]]
     smearing_factor: Optional[Union[float, MBVar, int]]
@@ -1258,11 +1202,11 @@ class Brake(Element2):
     }
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Position
+    orientation_mat_1: Optional[Position] = None
     node_2_label: Union[int, MBVar]
-    position_2: Position2
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Position
+    orientation_mat_2: Optional[Position] = None
     average_radius: Union[float, MBVar]
     preload: Optional[Union[float, MBVar, int]] = None
     friction_model: str  # TODO: Implement FrictionModel class
@@ -1305,11 +1249,11 @@ class CardanoHinge(Element2):
     '''
 
     node_1: Node2
-    position_1: Position2
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Position
+    orientation_mat_1: Optional[Position] = None
     node_2: Node2
-    position_2: Position2
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Position
+    orientation_mat_2: Optional[Position] = None
 
     def element_type(self):
         return 'joint'
@@ -1334,10 +1278,10 @@ class CardanoPin(Element2):
     """
 
     node_label: Union[int, MBVar]
-    position: Position2
-    orientation_mat: Optional[Position2] = None
-    absolute_pin_position: Position2
-    absolute_pin_orientation_mat: Optional[Position2] = None
+    position: Position
+    orientation_mat: Optional[Position] = None
+    absolute_pin_position: Position
+    absolute_pin_orientation_mat: Optional[Position] = None
 
     def element_type(self):
         return 'joint'
@@ -1361,9 +1305,9 @@ class CardanoRotation(Element2):
     """
 
     node_1_label: Union[int, MBVar]
-    orientation_mat_1: Optional[Position2] = None
+    orientation_mat_1: Optional[Position] = None
     node_2_label: Union[int, MBVar]
-    orientation_mat_2: Optional[Position2] = None
+    orientation_mat_2: Optional[Position] = None
 
     def element_type(self):
         return 'joint'
@@ -1386,11 +1330,11 @@ class DeformableAxial(Element2):
     """
 
     node_1_label: Union[int, MBVar]
-    position_1: Optional[Position2] = None
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Optional[Position] = None
+    orientation_mat_1: Optional[Position] = None
     node_2_label: Union[int, MBVar]
-    position_2: Optional[Position2] = None
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Optional[Position] = None
+    orientation_mat_2: Optional[Position] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
 
     def element_type(self):
@@ -1423,11 +1367,11 @@ class DeformableHinge(Element2):
     }
 
     node_1: Node2
-    position_1: Optional[Position2] = None
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Optional[Position] = None
+    orientation_mat_1: Optional[Position] = None
     node_2: Node2
-    position_2: Optional[Position2] = None
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Optional[Position] = None
+    orientation_mat_2: Optional[Position] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
     orientation_desc: Optional[Literal['euler123', 'euler313', 'euler321', 'orientation vector', 'orientation matrix']] = None
 
@@ -1471,9 +1415,9 @@ class Distance(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
-    position_1: Optional[Position2] = None
+    position_1: Optional[Position] = None
     node_2_label: Union[int, MBVar]
-    position_2: Optional[Position2] = None
+    position_2: Optional[Position] = None
     distance: Union['DriveCaller', 'DriveCaller2', str]
 
     @field_validator('distance')
@@ -1508,9 +1452,9 @@ class DriveDisplacement(Element2):
 
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2
+    position_1: Position
     node_2_label: Union[int, MBVar]
-    position_2: Position2
+    position_2: Position
     relative_position: 'TplDriveCaller'
 
     def element_type(self):
@@ -1533,8 +1477,8 @@ class DriveDisplacementPin(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
-    node_offset: Position2
-    offset: Position2
+    node_offset: Position
+    offset: Position
     position: 'TplDriveCaller'
 
     def element_type(self):
@@ -1556,9 +1500,9 @@ class DriveHinge(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
-    relative_orientation_mat_1: Optional[Position2]
+    relative_orientation_mat_1: Optional[Position]
     node_2_label: Union[int, MBVar]
-    relative_orientation_mat_2: Optional[Position2]
+    relative_orientation_mat_2: Optional[Position]
     hinge_orientation: 'TplDriveCaller'
 
     def element_type(self):
@@ -1585,9 +1529,9 @@ class GimbalRotation(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    relative_orientation_mat_1: Optional[Union[Position2]] = None
+    relative_orientation_mat_1: Optional[Union[Position]] = None
     node_2_label: Union[int, MBVar]
-    relative_orientation_mat_2: Optional[Union[Position2]] = None
+    relative_orientation_mat_2: Optional[Union[Position]] = None
     orientation_desc: Optional[Literal['euler123', 'euler313', 'euler321', 'orientation vector', 'orientation matrix']] = None
     """The type of orientation description"""
 
@@ -1616,9 +1560,9 @@ class ImposedDisplacement(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2
+    position_1: Position
     node_2_label: Union[int, MBVar]
-    position_2: Position2
+    position_2: Position
     direction: List[Union[float, MBVar]]
     relative_position: Union['DriveCaller', 'DriveCaller2']
 
@@ -1648,8 +1592,8 @@ class ImposedDisplacementPin(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
-    node_offset: Position2
-    offset: Position2
+    node_offset: Position
+    offset: Position
     direction: List[Union[float, MBVar]]
     position: Union['DriveCaller', 'DriveCaller2']
 
@@ -1679,10 +1623,10 @@ class InLine(Element2):
     '''
     
     node_1_label: Union[int, MBVar]
-    position: Optional[Position2] = None
-    orientation: Optional[Union[Position2, List]] = None
+    position: Optional[Position] = None
+    orientation: Optional[Union[Position, List]] = None
     node_2_label: Union[int, MBVar]
-    offset: Optional[Position2] = None
+    offset: Optional[Position] = None
 
     def element_type(self):
         return 'joint'
@@ -1706,10 +1650,10 @@ class InPlane(Element2):
     '''
     
     node_1_label: Union[int, MBVar]
-    position: Optional[Position2] = None
+    position: Optional[Position] = None
     relative_direction: List[Union[float, MBVar]]
     node_2_label: Union[int, MBVar]
-    offset: Optional[Position2] = None
+    offset: Optional[Position] = None
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
@@ -1799,11 +1743,11 @@ class PlaneDisplacement(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2
-    orientation_mat_1: Optional[Union[Position2, List]] = None
+    position_1: Position
+    orientation_mat_1: Optional[Union[Position, List]] = None
     node_2_label: Union[int, MBVar]
-    position_2: Position2
-    orientation_mat_2: Optional[Union[Position2, List]] = None
+    position_2: Position
+    orientation_mat_2: Optional[Union[Position, List]] = None
 
     def element_type(self):
         return 'joint'
@@ -1826,10 +1770,10 @@ class PlaneDisplacementPin(Element2):
     '''
 
     node_label: Union[int, MBVar]
-    relative_offset: Position2
-    relative_orientation_mat: Optional[Union[Position2, List]] = None
-    absolute_pin_position: Position2
-    absolute_pin_orientation_mat: Optional[Union[Position2, List]] = None
+    relative_offset: Position
+    relative_orientation_mat: Optional[Union[Position, List]] = None
+    absolute_pin_position: Position
+    absolute_pin_orientation_mat: Optional[Union[Position, List]] = None
 
     def element_type(self):
         return 'joint'
@@ -1854,9 +1798,9 @@ class Prismatic(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    relative_orientation_mat_1: Optional[Union[Position2, List]] = None
+    relative_orientation_mat_1: Optional[Union[Position, List]] = None
     node_2_label: Union[int, MBVar]
-    relative_orientation_mat_2: Optional[Union[Position2, List]] = None
+    relative_orientation_mat_2: Optional[Union[Position, List]] = None
 
     def element_type(self):
         return 'joint'
@@ -1879,11 +1823,11 @@ class RevoluteHinge(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Position
+    orientation_mat_1: Optional[Position] = None
     node_2_label: Union[int, MBVar]
-    position_2: Position2
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Position
+    orientation_mat_2: Optional[Position] = None
     initial_theta: Optional[Union[float, MBVar]] = None
     friction: Optional[Union[float, MBVar]] = None
     preload: Optional[Union[float, MBVar]] = None
@@ -1935,10 +1879,10 @@ class RevolutePin(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
-    relative_offset: Position2
-    relative_orientation_mat: Optional[Union[Position2, list]] = None
-    absolute_pin_position: Position2
-    absolute_pin_orientation_mat: Optional[Union[Position2, list]] = None
+    relative_offset: Position
+    relative_orientation_mat: Optional[Union[Position, list]] = None
+    absolute_pin_position: Position
+    absolute_pin_orientation_mat: Optional[Union[Position, list]] = None
     initial_theta: Optional[Union[float, MBVar, expression]] = None
 
     def element_type(self):
@@ -1965,11 +1909,11 @@ class RevoluteRotation(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    position_1: Optional[Position2] = None
-    orientation_mat_1: Optional[Union[Position2, list]] = None
+    position_1: Optional[Position] = None
+    orientation_mat_1: Optional[Union[Position, list]] = None
     node_2_label: Union[int, MBVar]
-    position_2: Optional[Position2] = None
-    orientation_mat_2: Optional[Union[Position2, list]] = None
+    position_2: Optional[Position] = None
+    orientation_mat_2: Optional[Union[Position, list]] = None
 
     def element_type(self):
         return 'joint'
@@ -1998,9 +1942,9 @@ class Rod(Element2):
     '''
 
     node_1: Node2
-    position_1: Optional[Position2] = None
+    position_1: Optional[Position] = None
     node_2: Node2
-    position_2: Optional[Position2] = None
+    position_2: Optional[Position] = None
     rod_length: Union[float, MBVar, Literal['from nodes']]  # Can be a float or 'from nodes'
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
 
@@ -2037,9 +1981,9 @@ class RodWithOffset(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2  # Required
+    position_1: Position  # Required
     node_2_label: Union[int, MBVar]
-    position_2: Position2  # Required
+    position_2: Position  # Required
     rod_length: Union[float, MBVar, str]  # Can be a float, MBVar or 'from nodes'
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']  # Should be a 1D constitutive law
 
@@ -2102,11 +2046,11 @@ class RodBezier(Element2):
     }
 
     node_1_label: Union[int, MBVar]
-    position_1: Position2
-    position_2: Position2
+    position_1: Position
+    position_2: Position
     node_2_label: Union[int, MBVar]
-    position_3: Position2
-    position_4: Position2
+    position_3: Position
+    position_4: Position
     rod_length: Union[float, MBVar, str]  # Can be a float or 'from nodes'
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']  # Should be a 1D constitutive law
     integration_order: int = 2  # Defaults to 2
@@ -2180,10 +2124,10 @@ class SphericalPin(Element2):
     '''
 
     node_label: Union[int, 'MBVar']
-    position: Optional[Position2] = None
-    orientation_mat: Optional[Union[Position2, list]] = None
-    absolute_pin_position: Position2
-    absolute_orientation_mat: Optional[Union[Position2]] = None
+    position: Optional[Position] = None
+    orientation_mat: Optional[Union[Position, list]] = None
+    absolute_pin_position: Position
+    absolute_orientation_mat: Optional[Union[Position]] = None
 
     def element_type(self):
         return 'joint'
@@ -2209,8 +2153,8 @@ class ViscousBody(Element2):
     '''
 
     node_label: Union[int, MBVar]
-    position: Optional[Position2] = None
-    orientation_mat: Optional[Union[Position2, list]] = None
+    position: Optional[Position] = None
+    orientation_mat: Optional[Union[Position, list]] = None
     const_law: Union['ConstitutiveLaw','NamedConstitutiveLaw']  # Should be a 6D constitutive law
 
     def element_type(self):
@@ -2240,7 +2184,7 @@ class ViscousBody(Element2):
 
 class Clamp(Element2):
     node: Node2
-    position: Union[Position2, Literal['node']]
+    position: Union[Position, Literal['node']]
     orientation_mat: Union[List, Literal['node']]
 
     def element_type(self):
@@ -2255,9 +2199,9 @@ class Clamp(Element2):
 
 class TotalJoint(Element2):
     nodes: List[Node2]
-    positions: Optional[List[Position2]] = None
-    position_orientations: Optional[List[Position2]] = None
-    rotation_orientations: Optional[List[Position2]] = None
+    positions: Optional[List[Position]] = None
+    position_orientations: Optional[List[Position]] = None
+    rotation_orientations: Optional[List[Position]] = None
     position_status: Optional[List[Union[Literal['active', 'inactive', 'position', 'velocity'], bool]]] = None
     orientation_status: Optional[List[Union[Literal['active', 'inactive', 'rotation', 'angular velocity'], bool]]] = None
     position_drive: Optional[List] = None # TODO: Needs tpl drive
@@ -2345,12 +2289,12 @@ class TotalJoint(Element2):
 
 class TotalPinJoint(Element2):
     node: Node2
-    rel_position: Optional[Position2] = None
-    rel_position_orientation: Optional[Position2] = None
-    rel_rotation_orientation: Optional[Position2] = None
-    abs_position: Optional[Position2] = None
-    abs_position_orientation: Optional[Position2] = None
-    abs_rotation_orientation: Optional[Position2] = None
+    rel_position: Optional[Position] = None
+    rel_position_orientation: Optional[Position] = None
+    rel_rotation_orientation: Optional[Position] = None
+    abs_position: Optional[Position] = None
+    abs_position_orientation: Optional[Position] = None
+    abs_rotation_orientation: Optional[Position] = None
     position_status: Optional[List[bool]] = None
     orientation_constraints: Optional[List[bool]] = None
     position_status: Optional[List[Union[Literal['active', 'inactive', 'position', 'velocity'], bool]]] = None
@@ -2434,11 +2378,11 @@ class JointRegularization(Element2):
     
 class DeformableDisplacement(Element2):
     node_1: Node2
-    position_1: Position2
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Position
+    orientation_mat_1: Optional[Position] = None
     node_2: Node2
-    position_2: Position2
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Position
+    orientation_mat_2: Optional[Position] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
 
     @field_validator('const_law')
@@ -2471,11 +2415,11 @@ class DeformableDisplacement(Element2):
 
 class DeformableJoint(Element2):
     node_1: Node2
-    position_1: Position2
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Position
+    orientation_mat_1: Optional[Position] = None
     node_2: Node2
-    position_2: Position2
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Position
+    orientation_mat_2: Optional[Position] = None
     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
     orientation_desc: Optional[Literal['euler123', 'euler313', 'euler321', 'orientation vector', 'orientation matrix']] = None
 
@@ -2515,11 +2459,11 @@ class SphericalHinge(Element2):
     '''
 
     node_1: Node2
-    position_1: Optional[Position2] = None
-    orientation_mat_1: Optional[Position2] = None
+    position_1: Optional[Position] = None
+    orientation_mat_1: Optional[Position] = None
     node_2: Node2
-    position_2: Optional[Position2] = None
-    orientation_mat_2: Optional[Position2] = None
+    position_2: Optional[Position] = None
+    orientation_mat_2: Optional[Position] = None
 
     def element_type(self):
         return 'joint'
@@ -2570,8 +2514,8 @@ class Shell(Element2):
 
 class AerodynamicBody(Element2):
     node: Node2
-    position: Position2
-    orientation: Position2
+    position: Position
+    orientation: Position
     span: Union[float, MBVar]
     chord: List 
     aero_center: List
@@ -2634,8 +2578,8 @@ class AerodynamicBody(Element2):
 
 class AerodynamicBeam(Element2):   
     beam: Beam
-    positions: List[Position2]
-    orientations: List[Position2]
+    positions: List[Position]
+    orientations: List[Position]
     chord: List 
     aero_center: List
     b_c_point: List
@@ -5861,12 +5805,12 @@ class OutputResults(MBEntity):
         return s
     
 class ConstRBK(MBEntity):
-    position: Optional[Position2] = None
-    orientation: Optional[Position2] = None
-    velocity: Optional[Position2] = None
-    angular_velocity: Optional[Position2] = None
-    acceleration: Optional[Position2] = None
-    angular_acceleration: Optional[Position2] = None
+    position: Optional[Position] = None
+    orientation: Optional[Position] = None
+    velocity: Optional[Position] = None
+    angular_velocity: Optional[Position] = None
+    acceleration: Optional[Position] = None
+    angular_acceleration: Optional[Position] = None
 
     def __str__(self):
         s = 'const'

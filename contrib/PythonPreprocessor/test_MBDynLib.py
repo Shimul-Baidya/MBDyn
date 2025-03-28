@@ -26,78 +26,80 @@ def patched_errprint(*args, **kwargs):
 l.errprint = patched_errprint
 
 
-class TestPosition2(unittest.TestCase):
+# Previous 'Reference' and 'Position' class is removed
+class TestPosition(unittest.TestCase):
     def test_initialization_with_list(self):
-        pos = l.Position('', [1.0, 2.0, 3.0])
-        self.assertEqual(pos.relative_position, [1.0, 2.0, 3.0])
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        # pos = l.Position('', [1.0, 2.0, 3.0])
+        # self.assertEqual(pos.relative_position, [1.0, 2.0, 3.0])
+        pos2 = l.Position(reference='', relative_position=[1.0, 2.0, 3.0])
         self.assertEqual(pos2.relative_position, [1.0, 2.0, 3.0])
-        self.assertEqual(pos.relative_position, pos2.relative_position)
+        # self.assertEqual(pos.relative_position, pos2.relative_position)
 
     def test_initialization_with_non_list(self):
-        pos = l.Position('', 1.0)
-        self.assertEqual(pos.relative_position, [1.0])
-        pos2 = l.Position2(reference='', relative_position=1.0)
+        # pos = l.Position('', 1.0)
+        # self.assertEqual(pos.relative_position, [1.0])
+        pos2 = l.Position(reference='', relative_position=1.0)
         self.assertEqual(pos2.relative_position, [1.0])
-        self.assertEqual(pos.relative_position, pos2.relative_position)
+        # self.assertEqual(pos.relative_position, pos2.relative_position)
 
     def test_string_representation_with_empty_reference(self):
-        pos = l.Position('', [1.0, 2.0, 3.0])
-        self.assertEqual(str(pos), '1.0, 2.0, 3.0')
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        # pos = l.Position('', [1.0, 2.0, 3.0])
+        # self.assertEqual(str(pos), '1.0, 2.0, 3.0')
+        pos2 = l.Position(reference='', relative_position=[1.0, 2.0, 3.0])
         self.assertEqual(str(pos2), '1.0, 2.0, 3.0')
-        self.assertEqual(str(pos), str(pos2))
+        # self.assertEqual(str(pos), str(pos2))
 
     def test_string_representation_with_non_empty_reference(self):
-        pos = l.Position('global', [1.0, 2.0, 3.0])
-        self.assertEqual(str(pos), 'reference, global, 1.0, 2.0, 3.0')
-        pos2 = l.Position2(reference='global', relative_position=[1.0, 2.0, 3.0])
+        # pos = l.Position('global', [1.0, 2.0, 3.0])
+        # self.assertEqual(str(pos), 'reference, global, 1.0, 2.0, 3.0')
+        pos2 = l.Position(reference='global', relative_position=[1.0, 2.0, 3.0])
         self.assertEqual(str(pos2), 'reference, global, 1.0, 2.0, 3.0')
-        self.assertEqual(str(pos), str(pos2))
+        # self.assertEqual(str(pos), str(pos2))
 
     def test_isnull(self):
-        pos = l.Position('', [ l.null()])
-        self.assertTrue(pos.isnull())
-        pos2 = l.Position2(reference='', relative_position=[l.null()])
+        # pos = l.Position('', [ l.null()])
+        # self.assertTrue(pos.isnull())
+        pos2 = l.Position(reference='', relative_position=[l.null()])
         self.assertTrue(pos2.isnull())
-        self.assertEqual(str(pos), str(pos2))
+        # self.assertEqual(str(pos), str(pos2))
 
     def test_iseye(self):
-        pos = l.Position('', [l.eye()])
-        self.assertTrue(pos.iseye())
-        pos2 = l.Position2(reference='', relative_position=[l.eye()])
+        # pos = l.Position('', [l.eye()])
+        # self.assertTrue(pos.iseye())
+        pos2 = l.Position(reference='', relative_position=[l.eye()])
         self.assertTrue(pos2.iseye())
-        self.assertEqual(str(pos), str(pos2))
+        # self.assertEqual(str(pos), str(pos2))
 
-class TestReference2(unittest.TestCase):
+class TestReference(unittest.TestCase):
     def test_initialization(self):
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
-        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
-        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
-        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
-        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
+        pos2 = l.Position(reference='', relative_position=[1.0, 2.0, 3.0])
+        orient2 = l.Position(reference='', relative_position=[0.0, 0.0, 1.0])
+        vel2 = l.Position(reference='', relative_position=[0.0, 0.0, 0.0])
+        angvel2 = l.Position(reference='', relative_position=[0.1, 0.1, 0.1])
+        ref2 = l.Reference(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
         self.assertEqual(str(ref2), 'reference: 1, \n\t1.0, 2.0, 3.0,\n\t0.0, 0.0, 1.0,\n\t0.0, 0.0, 0.0,\n\t0.1, 0.1, 0.1;\n')
 
-    def test_against_Reference(self):
-        pos = l.Position('', [1.0, 2.0, 3.0])
-        orient = l.Position('', [0.0, 0.0, 1.0])
-        vel = l.Position('', [0.0, 0.0, 0.0])
-        angvel = l.Position('', [0.1, 0.1, 0.1])
-        ref = l.Reference(1, pos, orient, vel, angvel)
-        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
-        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
-        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
-        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
-        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
-        self.assertEqual(str(ref), str(ref2))
+    # Previous 'Reference' and 'Position' class is removed
+    # def test_against_Reference(self):
+    #     pos = l.Position('', [1.0, 2.0, 3.0])
+    #     orient = l.Position('', [0.0, 0.0, 1.0])
+    #     vel = l.Position('', [0.0, 0.0, 0.0])
+    #     angvel = l.Position('', [0.1, 0.1, 0.1])
+    #     ref = l.Reference(1, pos, orient, vel, angvel)
+    #     pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+    #     orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
+    #     vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
+    #     angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
+    #     ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
+    #     self.assertEqual(str(ref), str(ref2))
 
 class TestNodeClasses(unittest.TestCase):
     def setUp(self):
-        # Create Position2 instances for testing correctly
-        self.pos = l.Position2(relative_position=[1.0, 2.0, 3.0], reference='global')
-        self.orient = l.Position2(relative_position=[l.eye()], reference='')
-        self.vel = l.Position2(relative_position=[0.1, 0.2, 0.3], reference='global')
-        self.ang_vel = l.Position2(relative_position=[l.null()], reference='')
+        # Create Position instances for testing correctly
+        self.pos = l.Position(relative_position=[1.0, 2.0, 3.0], reference='global')
+        self.orient = l.Position(relative_position=[l.eye()], reference='')
+        self.vel = l.Position(relative_position=[0.1, 0.2, 0.3], reference='global')
+        self.ang_vel = l.Position(relative_position=[l.null()], reference='')
     
     def test_node2_initialization(self):
         """Test that Node2 initializes correctly with default values"""
@@ -187,11 +189,11 @@ class TestNodeClasses(unittest.TestCase):
 
 class TestPointMass(unittest.TestCase):
     def setUp(self):
-        # Create Position2 instances for testing
-        self.pos = l.Position2(relative_position=[1.0, 2.0, 3.0], reference='global')
-        self.orient = l.Position2(relative_position=[l.eye()], reference='')
-        self.vel = l.Position2(relative_position=[0.1, 0.2, 0.3], reference='global')
-        self.ang_vel = l.Position2(relative_position=[l.null()], reference='')
+        # Create Position instances for testing
+        self.pos = l.Position(relative_position=[1.0, 2.0, 3.0], reference='global')
+        self.orient = l.Position(relative_position=[l.eye()], reference='')
+        self.vel = l.Position(relative_position=[0.1, 0.2, 0.3], reference='global')
+        self.ang_vel = l.Position(relative_position=[l.null()], reference='')
     
     def test_point_mass_with_dynamic_node(self):
         """Test PointMass with a DynamicNode2"""
@@ -4252,7 +4254,7 @@ class TestNodeDriveCaller(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         # Create position object for nodes
-        self.null_position = l.Position2(relative_position=[l.null()], reference='')
+        self.null_position = l.Position(relative_position=[l.null()], reference='')
         
         # Create different types of nodes
         self.dynamic_node = l.DynamicNode2(
@@ -6524,10 +6526,10 @@ class TestBody(unittest.TestCase):
     def setUp(self):
         self.node = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
 
     def test_basic_body(self):
@@ -6535,8 +6537,8 @@ class TestBody(unittest.TestCase):
             idx=1,
             node=self.node,
             mass=10.0,
-            position=l.Position2(relative_position=[0, 0, 0], reference=''),
-            inertial_matrix=l.Position2(relative_position=[1, 1, 1], reference='')
+            position=l.Position(relative_position=[0, 0, 0], reference=''),
+            inertial_matrix=l.Position(relative_position=[1, 1, 1], reference='')
         )
         self.assertEqual(body.mass, 10.0)
         self.assertEqual(body.node.idx, 1)
@@ -6546,9 +6548,9 @@ class TestBody(unittest.TestCase):
             idx=1,
             node=self.node,
             mass=10.0,
-            position=l.Position2(relative_position=[0, 0, 0], reference=''),
-            inertial_matrix=l.Position2(relative_position=[1, 1, 1], reference=''),
-            inertial=l.Position2(relative_position=[0.1, 0.1, 0.1], reference='')
+            position=l.Position(relative_position=[0, 0, 0], reference=''),
+            inertial_matrix=l.Position(relative_position=[1, 1, 1], reference=''),
+            inertial=l.Position(relative_position=[0.1, 0.1, 0.1], reference='')
         )
         self.assertIsNotNone(body.inertial)
 
@@ -6557,8 +6559,8 @@ class TestBody(unittest.TestCase):
             idx=1,
             node=self.node,
             mass=10.0,
-            position=l.Position2(relative_position=[0, 0, 0], reference=''),
-            inertial_matrix=l.Position2(relative_position=[1, 1, 1], reference='')
+            position=l.Position(relative_position=[0, 0, 0], reference=''),
+            inertial_matrix=l.Position(relative_position=[1, 1, 1], reference='')
         )
         expected = "body: 1, 1,\n\t10.0,\n\t0.0, 0.0, 0.0,\n\t1.0, 1.0, 1.0;\n"
         self.assertEqual(str(body), expected)
@@ -6567,10 +6569,10 @@ class TestStructuralForce(unittest.TestCase):
     def setUp(self):
         self.node = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
 
     def test_absolute_force(self):
@@ -6578,7 +6580,7 @@ class TestStructuralForce(unittest.TestCase):
             idx=1,
             node=self.node,
             ftype='absolute',
-            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            position=l.Position(relative_position=[0, 0, 0], reference=''),
             force_drive=[10, 0, 0]
         )
         self.assertEqual(force.ftype, 'absolute')
@@ -6589,8 +6591,8 @@ class TestStructuralForce(unittest.TestCase):
             idx=1,
             node=self.node,
             ftype='total',
-            force_orientation=l.Position2(relative_position=[1, 0, 0], reference=''),
-            moment_orientation=l.Position2(relative_position=[0, 1, 0], reference=''),
+            force_orientation=l.Position(relative_position=[1, 0, 0], reference=''),
+            moment_orientation=l.Position(relative_position=[0, 1, 0], reference=''),
             force_drive=[10, 0, 0],
             moment_drive=[0, 10, 0]
         )
@@ -6601,7 +6603,7 @@ class TestStructuralForce(unittest.TestCase):
             idx=1,
             node=self.node,
             ftype='absolute',
-            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            position=l.Position(relative_position=[0, 0, 0], reference=''),
             force_drive=[10, 0, 0]
         )
         expected = "force: 1, absolute,\n\t1,\n\t\tposition, 0.0, 0.0, 0.0,\n\t\t10, 0, 0;\n"
@@ -6611,17 +6613,17 @@ class TestStructuralInternalForce(unittest.TestCase):
     def setUp(self):
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
         self.node2 = l.DynamicNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[1, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
 
     def test_absolute_internal_force(self):
@@ -6630,8 +6632,8 @@ class TestStructuralInternalForce(unittest.TestCase):
             nodes=[self.node1, self.node2],
             ftype='absolute',
             positions=[
-                l.Position2(relative_position=[0, 0, 0], reference=''),
-                l.Position2(relative_position=[1, 0, 0], reference='')
+                l.Position(relative_position=[0, 0, 0], reference=''),
+                l.Position(relative_position=[1, 0, 0], reference='')
             ],
             force_drive=[100, 0, 0]
         )
@@ -6644,7 +6646,7 @@ class TestStructuralInternalForce(unittest.TestCase):
                 idx=1,
                 nodes=[self.node1],
                 ftype='absolute',
-                positions=[l.Position2(relative_position=[0, 0, 0], reference='')],
+                positions=[l.Position(relative_position=[0, 0, 0], reference='')],
                 force_drive=[100, 0, 0]
             )
 
@@ -6654,8 +6656,8 @@ class TestStructuralInternalForce(unittest.TestCase):
             nodes=[self.node1, self.node2],
             ftype='absolute',
             positions=[
-                l.Position2(relative_position=[0, 0, 0], reference=''),
-                l.Position2(relative_position=[1, 0, 0], reference='')
+                l.Position(relative_position=[0, 0, 0], reference=''),
+                l.Position(relative_position=[1, 0, 0], reference='')
             ],
             force_drive=[100, 0, 0]
         )
@@ -6666,10 +6668,10 @@ class TestStructuralCouple(unittest.TestCase):
     def setUp(self):
         self.node = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
 
     def test_absolute_couple(self):
@@ -6687,7 +6689,7 @@ class TestStructuralCouple(unittest.TestCase):
             idx=1,
             node=self.node,
             ctype='absolute',
-            position=l.Position2(relative_position=[1, 1, 1], reference=''),
+            position=l.Position(relative_position=[1, 1, 1], reference=''),
             couple_drive=[0, 0, 10]
         )
         self.assertIsNotNone(couple.position)
@@ -6697,7 +6699,7 @@ class TestStructuralCouple(unittest.TestCase):
             idx=1,
             node=self.node,
             ctype='absolute',
-            position=l.Position2(relative_position=[1, 1, 1], reference=''),
+            position=l.Position(relative_position=[1, 1, 1], reference=''),
             couple_drive=[0, 0, 10]
         )
         expected = "couple: 1, absolute,\n\t1,\n\t\tposition, 1.0, 1.0, 1.0,\n\t\t0, 0, 10;\n"
@@ -6707,17 +6709,17 @@ class TestStructuralInternalCouple(unittest.TestCase):
     def setUp(self):
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
         self.node2 = l.DynamicNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[1, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
 
     def test_basic_internal_couple(self):
@@ -6736,8 +6738,8 @@ class TestStructuralInternalCouple(unittest.TestCase):
             nodes=[self.node1, self.node2],
             ctype='absolute',
             positions=[
-                l.Position2(relative_position=[0, 0, 0], reference=''),
-                l.Position2(relative_position=[1, 0, 0], reference='')
+                l.Position(relative_position=[0, 0, 0], reference=''),
+                l.Position(relative_position=[1, 0, 0], reference='')
             ],
             couple_drive=[0, 0, 10]
         )
@@ -6749,8 +6751,8 @@ class TestStructuralInternalCouple(unittest.TestCase):
             nodes=[self.node1, self.node2],
             ctype='absolute',
             positions=[
-                l.Position2(relative_position=[0, 0, 0], reference=''),
-                l.Position2(relative_position=[1, 0, 0], reference='')
+                l.Position(relative_position=[0, 0, 0], reference=''),
+                l.Position(relative_position=[1, 0, 0], reference='')
             ],
             couple_drive=[0, 0, 10]
         )
@@ -6922,11 +6924,11 @@ class TestAxialRotation(unittest.TestCase):
 
     def test_valid_input(self):
         """Test that AxialRotation works with valid input"""
-        # Valid instances of Position2 and DriveCaller
-        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
-        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
-        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
-        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        # Valid instances of Position and DriveCaller
+        position1 = l.Position(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position(reference='global', relative_position=[0, 1, 0])
         drive_caller = l.ConstDriveCaller(const_value=5.0)
         
         # Create an AxialRotation instance with valid inputs
@@ -6958,13 +6960,13 @@ class TestAxialRotation(unittest.TestCase):
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_invalid_position_type(self):
         """Test that AxialRotation raises an error for invalid position type"""
-        # Valid instances of Position2 and DriveCaller
-        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
-        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
-        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        # Valid instances of Position and DriveCaller
+        orientation1 = l.Position(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position(reference='global', relative_position=[0, 1, 0])
         drive_caller = l.ConstDriveCaller(const_value=5.0)
 
-        # position_1 must be of type Position2
+        # position_1 must be of type Position
         with self.assertRaises(Exception):
             l.AxialRotation(
                 idx=1,
@@ -6980,12 +6982,12 @@ class TestAxialRotation(unittest.TestCase):
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_invalid_orientation_type(self):
         """Test that AxialRotation raises an error for invalid orientation type"""
-        # Valid instances of Position2 and DriveCaller
-        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
-        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
+        # Valid instances of Position and DriveCaller
+        position1 = l.Position(reference='global', relative_position=[0, 0, 0])
+        position2 = l.Position(reference='global', relative_position=[1, 1, 1])
         drive_caller = l.ConstDriveCaller(const_value=5.0)
 
-        # orientation_mat_1 must be of type Position2
+        # orientation_mat_1 must be of type Position
         with self.assertRaises(Exception):
             l.AxialRotation(
                 idx=1,
@@ -6994,18 +6996,18 @@ class TestAxialRotation(unittest.TestCase):
                 orientation_mat_1='invalid_orientation',  # Invalid type
                 node_2_label=2,
                 position_2=position2,
-                orientation_mat_2=l.Position2(reference='global', relative_position=[0, 1, 0]),
+                orientation_mat_2=l.Position(reference='global', relative_position=[0, 1, 0]),
                 angular_velocity=drive_caller
             )
 
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_invalid_angular_velocity_type(self):
         """Test that AxialRotation raises an error for invalid angular_velocity type"""
-        # Valid instances of Position2
-        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
-        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
-        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
-        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        # Valid instances of Position
+        position1 = l.Position(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position(reference='global', relative_position=[0, 1, 0])
 
         # angular_velocity must be of type DriveCaller or DriveCaller2
         with self.assertRaises(Exception):
@@ -7022,11 +7024,11 @@ class TestAxialRotation(unittest.TestCase):
 
     def test_optional_output(self):
         """Test that the 'output' field is optional and defaults to 'yes'"""
-        # Valid instances of Position2 and DriveCaller
-        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
-        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
-        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
-        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        # Valid instances of Position and DriveCaller
+        position1 = l.Position(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position(reference='global', relative_position=[0, 1, 0])
         drive_caller = l.ConstDriveCaller(const_value=5.0)
 
         # Create AxialRotation without specifying output
@@ -7056,11 +7058,11 @@ class TestAxialRotation(unittest.TestCase):
 
     def test_custom_output(self):
         """Test that the 'output' field is properly set when customized"""
-        # Valid instances of Position2 and DriveCaller
-        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
-        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
-        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
-        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        # Valid instances of Position and DriveCaller
+        position1 = l.Position(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position(reference='global', relative_position=[0, 1, 0])
         drive_caller = l.ConstDriveCaller(const_value=5.0)
 
         # Create AxialRotation with custom output
@@ -7092,16 +7094,16 @@ class TestAxialRotation(unittest.TestCase):
 
 class TestBeamSlider(unittest.TestCase):
     def setUp(self):
-        # Define Position2 instances
-        self.position1 = l.Position2(
+        # Define Position instances
+        self.position1 = l.Position(
             relative_position=[0.0, 0.0, 0.0], 
             reference='global'
         )
-        self.position2 = l.Position2(
+        self.position2 = l.Position(
             relative_position=[1.0, 0.0, 0.0], 
             reference='node'
         )
-        self.position3 = l.Position2(
+        self.position3 = l.Position(
             relative_position=[0.0, 1.0, 0.0], 
             reference='other node'
         )
@@ -7113,10 +7115,10 @@ class TestBeamSlider(unittest.TestCase):
         )
 
         # create Nodes
-        self.pos = l.Position2(relative_position=[1.0, 2.0, 3.0], reference='global')
-        self.orient = l.Position2(relative_position=[l.eye()], reference='')
-        self.vel = l.Position2(relative_position=[0.1, 0.2, 0.3], reference='global')
-        self.ang_vel = l.Position2(relative_position=[l.null()], reference='')
+        self.pos = l.Position(relative_position=[1.0, 2.0, 3.0], reference='global')
+        self.orient = l.Position(relative_position=[l.eye()], reference='')
+        self.vel = l.Position(relative_position=[0.1, 0.2, 0.3], reference='global')
+        self.ang_vel = l.Position(relative_position=[l.null()], reference='')
         self.node1 = l.Node2(idx=1, position=self.pos, orientation=self.orient, 
                     velocity=self.vel, angular_velocity=self.ang_vel)
         self.node2 = l.Node2(idx=2, position=self.pos, orientation=self.orient, 
@@ -7293,8 +7295,8 @@ class TestBeamSlider(unittest.TestCase):
 
 class TestBrake(unittest.TestCase):
     def setUp(self):
-        self.position1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.position2 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.position1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position2 = l.Position(relative_position=[1.0, 0.0, 0.0], reference='node')
         self.normal_force = l.ConstDriveCaller(const_value=1000.0)
 
     def test_valid_brake(self):
@@ -7362,14 +7364,14 @@ class TestCardanoPin(unittest.TestCase):
     def setUp(self):
         self.node_label = 5
         self.relative_position = [0.0, 1.0, 2.0]
-        self.absolute_pin_position = l.Position2(reference='global', relative_position=[3.0, 4.0, 5.0])
+        self.absolute_pin_position = l.Position(reference='global', relative_position=[3.0, 4.0, 5.0])
 
         # Optional values for testing with orientations
-        self.relative_orientation_matrix = l.Position2(
+        self.relative_orientation_matrix = l.Position(
             relative_position=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
             reference=''
         )
-        self.absolute_orientation_matrix = l.Position2(
+        self.absolute_orientation_matrix = l.Position(
             relative_position=[0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
@@ -7379,14 +7381,14 @@ class TestCardanoPin(unittest.TestCase):
             idx=1,
             output='yes',
             node_label=self.node_label,
-            position=l.Position2(relative_position=self.relative_position, reference='global'),
+            position=l.Position(relative_position=self.relative_position, reference='global'),
             absolute_pin_position=self.absolute_pin_position
         )
 
     def test_initialization(self):
         # Test that the CardanoPin initializes correctly with provided values
         self.assertEqual(self.cardano_pin.node_label, self.node_label)
-        self.assertIsInstance(self.cardano_pin.position, l.Position2)
+        self.assertIsInstance(self.cardano_pin.position, l.Position)
         self.assertEqual(self.cardano_pin.position.relative_position, self.relative_position)
         self.assertEqual(self.cardano_pin.position.reference, 'global')
         self.assertEqual(self.cardano_pin.absolute_pin_position, self.absolute_pin_position)
@@ -7411,7 +7413,7 @@ class TestCardanoPin(unittest.TestCase):
             idx=2,
             output='no',
             node_label=self.node_label,
-            position=l.Position2(relative_position=self.relative_position, reference='global'),
+            position=l.Position(relative_position=self.relative_position, reference='global'),
             orientation_mat=self.relative_orientation_matrix,
             absolute_pin_position=self.absolute_pin_position,
             absolute_pin_orientation_mat=self.absolute_orientation_matrix
@@ -7432,7 +7434,7 @@ class TestCardanoPin(unittest.TestCase):
         cardano_pin_without_orientation = l.CardanoPin(
             idx=3,
             node_label=self.node_label,
-            position=l.Position2(relative_position=self.relative_position, reference=''),
+            position=l.Position(relative_position=self.relative_position, reference=''),
             absolute_pin_position=self.absolute_pin_position
         )
 
@@ -7447,28 +7449,28 @@ class TestCardanoPin(unittest.TestCase):
             l.CardanoPin(
                 idx=4,
                 node_label="invalid_label",  # Invalid type for node_label
-                position=l.Position2(relative_position=self.relative_position, reference='global'),
+                position=l.Position(relative_position=self.relative_position, reference='global'),
                 absolute_pin_position=self.absolute_pin_position
             )
 
     def test_invalid_position(self):
-        # Test invalid Position2 for position and absolute_pin_position
+        # Test invalid Position for position and absolute_pin_position
         with self.assertRaises(ValueError):
             l.CardanoPin(
                 idx=5,
                 node_label=self.node_label,
-                position=l.Position2(relative_position='invalid_value', reference='global'),
+                position=l.Position(relative_position='invalid_value', reference='global'),
                 absolute_pin_position=self.absolute_pin_position
             )
 
     def test_isnull_function(self):
-        # Test if the `isnull()` function works correctly in Position2
-        null_position = l.Position2(relative_position=[l.null()], reference='')
+        # Test if the `isnull()` function works correctly in Position
+        null_position = l.Position(relative_position=[l.null()], reference='')
         self.assertTrue(null_position.isnull())
 
     def test_iseye_function(self):
-        # Test if the `iseye()` function works correctly in Position2
-        eye_position = l.Position2(relative_position=[l.eye()], reference='')
+        # Test if the `iseye()` function works correctly in Position
+        eye_position = l.Position(relative_position=[l.eye()], reference='')
         self.assertTrue(eye_position.iseye())
 
 class TestCardanoRotation(unittest.TestCase):
@@ -7478,11 +7480,11 @@ class TestCardanoRotation(unittest.TestCase):
         self.node_2_label = 2
 
         # Optional values for testing with orientations
-        self.orientation_matrix_1 = l.Position2(
+        self.orientation_matrix_1 = l.Position(
             relative_position=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
             reference=''
         )
-        self.orientation_matrix_2 = l.Position2(
+        self.orientation_matrix_2 = l.Position(
             relative_position=[0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
@@ -7568,19 +7570,19 @@ class TestDeformableAxial(unittest.TestCase):
         self.node_2_label = 2
 
         # Optional values for testing with positions and orientations
-        self.position_1 = l.Position2(
+        self.position_1 = l.Position(
             relative_position=[1.0, 0.0, 0.0],
             reference=''
         )
-        self.orientation_mat_1 = l.Position2(
+        self.orientation_mat_1 = l.Position(
             relative_position=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
-        self.position_2 = l.Position2(
+        self.position_2 = l.Position(
             relative_position=[0.0, 1.0, 0.0],
             reference='global'
         )
-        self.orientation_mat_2 = l.Position2(
+        self.orientation_mat_2 = l.Position(
             relative_position=[0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
             reference='node'
         )
@@ -7765,8 +7767,8 @@ class TestDistance(unittest.TestCase):
         # Common variables used in tests
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.position_1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position_2 = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
         self.distance_drive = l.ConstDriveCaller(const_value=5.0)
 
     def test_distance_creation_valid(self):
@@ -7899,8 +7901,8 @@ class TestGimbalRotation(unittest.TestCase):
         # Common variables used in tests
         self.node_1_label = 1
         self.node_2_label = 2
-        self.relative_orientation_mat_1 = l.Position2(relative_position=[0.0, 0.0, 1.0], reference='global')
-        self.relative_orientation_mat_2 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='global')
+        self.relative_orientation_mat_1 = l.Position(relative_position=[0.0, 0.0, 1.0], reference='global')
+        self.relative_orientation_mat_2 = l.Position(relative_position=[1.0, 0.0, 0.0], reference='global')
         self.orientation_desc = "euler123"
 
     def test_gimbal_rotation_creation_valid(self):
@@ -8000,7 +8002,7 @@ class TestGimbalRotation(unittest.TestCase):
         with self.assertRaises(Exception):
             l.GimbalRotation(
                 node_1_label=self.node_1_label,
-                relative_orientation_mat_1=123,  # Invalid type, should be Position2
+                relative_orientation_mat_1=123,  # Invalid type, should be Position
                 node_2_label=self.node_2_label
             )
 
@@ -8020,8 +8022,8 @@ class TestImposedDisplacement(unittest.TestCase):
         # Common variables used in tests
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.position_1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position_2 = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
         self.direction = [1.0, 0.0, 0.0]
         self.relative_position_drive = l.ConstDriveCaller(const_value=5.0)
 
@@ -8151,8 +8153,8 @@ class TestImposedDisplacementPin(unittest.TestCase):
     def setUp(self):
         # Common variables used in tests
         self.node_label = 1
-        self.node_offset = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.offset = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.node_offset = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.offset = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
         self.direction = [1.0, 0.0, 0.0]
         self.position_drive = l.ConstDriveCaller(const_value=5.0)
         self.position_drive_with_idx = l.ConstDriveCaller(const_value=5.0, idx=10)
@@ -8333,9 +8335,9 @@ class TestInLine(unittest.TestCase):
         # Common variables used in tests
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.orientation = l.Position2(relative_position=[0.0, 0.0, 1.0], reference='global')
-        self.offset = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.position = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.orientation = l.Position(relative_position=[0.0, 0.0, 1.0], reference='global')
+        self.offset = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
         self.idx = 10
 
     def test_inline_creation_valid(self):
@@ -8453,7 +8455,7 @@ class TestInLine(unittest.TestCase):
             l.InLine(
                 idx=self.idx,
                 node_1_label=self.node_1_label,
-                position="invalid_position",  # Should be Position2 or None
+                position="invalid_position",  # Should be Position or None
                 node_2_label=self.node_2_label
             )
 
@@ -8470,8 +8472,8 @@ class TestInPlane(unittest.TestCase):
         # Common variables used in tests
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.offset = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.position = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.offset = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
         self.relative_direction_unit = [1.0, 0.0, 0.0]  # Unit vector
         self.relative_direction_non_unit = [2.0, 0.0, 0.0]  # Non-unit vector
         self.idx = 10
@@ -8611,7 +8613,7 @@ class TestInPlane(unittest.TestCase):
             l.InPlane(
                 idx=self.idx,
                 node_1_label=self.node_1_label,
-                position="invalid_position",  # Should be Position2 or None
+                position="invalid_position",  # Should be Position or None
                 relative_direction=self.relative_direction_unit,
                 node_2_label=self.node_2_label
             )
@@ -8933,10 +8935,10 @@ class TestPlaneDisplacement(unittest.TestCase):
         self.idx = 10
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
-        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
-        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='node')
+        self.position_1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position_2 = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.orientation_mat_1 = l.Position(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.orientation_mat_2 = l.Position(relative_position=[0.0, 1.0, 0.0], reference='node')
 
     def test_plane_displacement_creation_valid(self):
         # Test creating a PlaneDisplacement instance with all valid data
@@ -9043,10 +9045,10 @@ class TestPlaneDisplacementPin(unittest.TestCase):
         # Common variables used in tests
         self.idx = 20
         self.node_label = 1
-        self.relative_offset = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.absolute_pin_position = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
-        self.relative_orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
-        self.absolute_pin_orientation_mat = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
+        self.relative_offset = l.Position(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.absolute_pin_position = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.relative_orientation_mat = l.Position(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.absolute_pin_orientation_mat = l.Position(relative_position=[0.0, 1.0, 0.0], reference='global')
 
     def test_plane_displacement_pin_creation_valid(self):
         # Test creating a PlaneDisplacementPin instance with all valid data
@@ -9145,8 +9147,8 @@ class TestPrismatic(unittest.TestCase):
         self.idx = 30
         self.node_1_label = 1
         self.node_2_label = 2
-        self.relative_orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='other node')
-        self.relative_orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='other node')
+        self.relative_orientation_mat_1 = l.Position(relative_position=[1.0, 0.0, 0.0], reference='other node')
+        self.relative_orientation_mat_2 = l.Position(relative_position=[0.0, 1.0, 0.0], reference='other node')
 
     def test_prismatic_creation_valid(self):
         # Test creating a Prismatic instance with all valid data
@@ -9236,10 +9238,10 @@ class TestRevoluteHinge(unittest.TestCase):
         self.idx = 10
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
-        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='other node')
-        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='other node')
+        self.position_1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.orientation_mat_1 = l.Position(relative_position=[1.0, 0.0, 0.0], reference='other node')
+        self.orientation_mat_2 = l.Position(relative_position=[0.0, 1.0, 0.0], reference='other node')
         self.initial_theta = 0.0
         self.friction = 0.5
         self.preload = 100.0
@@ -9431,10 +9433,10 @@ class TestRevolutePin(unittest.TestCase):
         # Common variables used in tests
         self.idx = 20
         self.node_label = 1
-        self.relative_offset = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.relative_orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='other node')
-        self.absolute_pin_position = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
-        self.absolute_pin_orientation_mat = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
+        self.relative_offset = l.Position(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.relative_orientation_mat = l.Position(relative_position=[1.0, 0.0, 0.0], reference='other node')
+        self.absolute_pin_position = l.Position(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.absolute_pin_orientation_mat = l.Position(relative_position=[0.0, 1.0, 0.0], reference='global')
         self.initial_theta = 0.0
 
     def test_revolute_pin_creation_valid(self):
@@ -9546,10 +9548,10 @@ class TestRevoluteRotation(unittest.TestCase):
         self.idx = 40
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
-        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='global')
-        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
+        self.position_1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.orientation_mat_1 = l.Position(relative_position=[1.0, 0.0, 0.0], reference='global')
+        self.orientation_mat_2 = l.Position(relative_position=[0.0, 1.0, 0.0], reference='global')
 
     def test_revolute_rotation_creation_valid(self):
         # Test creating a RevoluteRotation instance with all valid data
@@ -9699,8 +9701,8 @@ class TestRodWithOffset(unittest.TestCase):
         self.idx = 60
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.position_1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position(relative_position=[1.0, 1.0, 1.0], reference='node')
         self.rod_length = 10.0
         self.const_law_valid = l.LinearElastic(
             law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
@@ -9948,10 +9950,10 @@ class TestRodBezier(unittest.TestCase):
         self.idx = 70
         self.node_1_label = 1
         self.node_2_label = 2
-        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
-        self.position_2 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
-        self.position_3 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='node')
-        self.position_4 = l.Position2(relative_position=[1.0, 1.0, 0.0], reference='node')
+        self.position_1 = l.Position(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.position_3 = l.Position(relative_position=[0.0, 1.0, 0.0], reference='node')
+        self.position_4 = l.Position(relative_position=[1.0, 1.0, 0.0], reference='node')
         self.rod_length = 10.0
         self.const_law_valid = l.LinearElastic(
             law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
@@ -10288,10 +10290,10 @@ class TestSphericalPin(unittest.TestCase):
         # Common variables used in tests
         self.idx = 100
         self.node_label = 1
-        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
-        self.absolute_pin_position = l.Position2(relative_position=[2.0, 2.0, 2.0], reference='global')
-        self.absolute_orientation_mat = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='node')
+        self.position = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.orientation_mat = l.Position(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.absolute_pin_position = l.Position(relative_position=[2.0, 2.0, 2.0], reference='global')
+        self.absolute_orientation_mat = l.Position(relative_position=[0.0, 1.0, 0.0], reference='node')
 
     def test_spherical_pin_creation_valid(self):
         # Test creating a SphericalPin instance with all valid data
@@ -10394,8 +10396,8 @@ class TestViscousBody(unittest.TestCase):
         # Common variables used in tests
         self.idx = 100
         self.node_label = 1
-        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
-        self.orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.position = l.Position(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.orientation_mat = l.Position(relative_position=[1.0, 0.0, 0.0], reference='node')
         self.const_law_valid = l.LinearViscous(viscosity=5.0, law_type=l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW)
         self.const_law_invalid = l.LinearViscous(viscosity=5.0, law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW)
         self.named_const_law = l.NamedConstitutiveLaw("linear viscous generic")
@@ -10501,10 +10503,10 @@ class TestClamp(unittest.TestCase):
     def setUp(self):
         self.node = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[l.null()], reference=''),
-            vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[l.null()], reference=''),
+            vel=l.Position(relative_position=[0, 0, 0], reference=''),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
         )
 
     def test_basic_clamp(self):
@@ -10522,10 +10524,10 @@ class TestClamp(unittest.TestCase):
         clamp = l.Clamp(
             idx=1,
             node=self.node,
-            position=l.Position2(relative_position=[0, 0, 0], reference=''),
+            position=l.Position(relative_position=[0, 0, 0], reference=''),
             orientation_mat=[[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         )
-        self.assertIsInstance(clamp.position, l.Position2)
+        self.assertIsInstance(clamp.position, l.Position)
         self.assertIsInstance(clamp.orientation_mat, list)
 
     def test_clamp_str_representation(self):
@@ -10589,10 +10591,10 @@ class TestShell(unittest.TestCase):
         self.nodes = [
             l.DynamicNode2(
                 idx=i,
-                pos=l.Position2(relative_position=[i, 0, 0], reference='global'),
-                orient=l.Position2(relative_position=[ l.null()], reference=''),
-                vel=l.Position2(relative_position=[0, 0, 0], reference=''),
-                angular_vel=l.Position2(relative_position=[0, 0, 0], reference='')
+                pos=l.Position(relative_position=[i, 0, 0], reference='global'),
+                orient=l.Position(relative_position=[ l.null()], reference=''),
+                vel=l.Position(relative_position=[0, 0, 0], reference=''),
+                angular_vel=l.Position(relative_position=[0, 0, 0], reference='')
             ) for i in range(1, 5)
         ]
 
@@ -10661,24 +10663,24 @@ class TestTotalJoint(unittest.TestCase):
         # Create nodes for testing
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.StaticNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
         # Create positions for testing
-        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
-        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
-        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position(relative_position=[0, 1, 0], reference='node')
 
     def test_total_joint_creation(self):
         """Check that TotalJoint can be created with minimum required arguments"""
@@ -10831,16 +10833,16 @@ class TestTotalPinJoint(unittest.TestCase):
         # Create node for testing
         self.node = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
         # Create positions for testing
-        self.rel_pos = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.abs_pos = l.Position2(relative_position=[1, 1, 1], reference='global')
-        self.orient = l.Position2(relative_position=[0, 0, 1], reference='node')
+        self.rel_pos = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.abs_pos = l.Position(relative_position=[1, 1, 1], reference='global')
+        self.orient = l.Position(relative_position=[0, 0, 1], reference='node')
 
     def test_total_pin_joint_creation(self):
         """Check that TotalPinJoint can be created with valid arguments"""
@@ -11019,24 +11021,24 @@ class TestCardanoHinge(unittest.TestCase):
         # Create nodes for testing
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.StaticNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
         # Create positions for testing
-        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
-        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
-        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position(relative_position=[0, 1, 0], reference='node')
 
     def test_cardano_hinge_creation(self):
         """Check that CardanoHinge can be created with valid arguments"""
@@ -11115,22 +11117,22 @@ class TestRod(unittest.TestCase):
         # Create nodes for testing
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.StaticNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
         # Create positions for testing
-        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
         
         # Create constitutive law for testing
         self.scalar_law = l.LinearElastic(
@@ -11366,24 +11368,24 @@ class TestDeformableHinge(unittest.TestCase):
         # Create nodes for testing
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.StaticNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
         # Create positions for testing
-        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
-        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
-        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position(relative_position=[0, 1, 0], reference='node')
         
         # Create constitutive law for testing
         self.d3_law = l.LinearElastic(
@@ -11604,24 +11606,24 @@ class TestDeformableDisplacement(unittest.TestCase):
         # Create nodes for testing
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.StaticNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
         # Create positions for testing
-        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
-        self.orient1 = l.Position2(relative_position=[0, 0, 1], reference='node')
-        self.orient2 = l.Position2(relative_position=[0, 1, 0], reference='node')
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
+        self.orient1 = l.Position(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position(relative_position=[0, 1, 0], reference='node')
         
         # Create constitutive law for testing
         self.d3_law = l.LinearElastic(
@@ -11908,21 +11910,21 @@ class TestSphericalHinge(unittest.TestCase):
         # Create nodes for testing
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.DynamicNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
-        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
 
     def test_spherical_hinge_str_representation(self):
         """Test string representation of SphericalHinge"""
@@ -11968,20 +11970,20 @@ class TestDeformableJoint(unittest.TestCase):
     def setUp(self):
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.DynamicNode2(idx=2,
-            pos=l.Position2(relative_position=[1, 1, 1], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
-        self.pos1 = l.Position2(relative_position=[0.5, 0, 0], reference='node')
-        self.pos2 = l.Position2(relative_position=[0, 0.5, 0], reference='node')
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
         self.const_law = l.LinearElastic(
             law_type=l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW,
             stiffness=1000.0
@@ -12018,21 +12020,21 @@ class TestBeam(unittest.TestCase):
     def setUp(self):
         self.node1 = l.DynamicNode2(
             idx=1,
-            pos=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         self.node2 = l.DynamicNode2(
             idx=2,
-            pos=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            orient=l.Position2(relative_position=[1, 0, 0], reference='global'),
-            vel=l.Position2(relative_position=[0, 0, 0], reference='global'),
-            angular_vel=l.Position2(relative_position=[0, 0, 0], reference='global')
+            pos=l.Position(relative_position=[1, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
         )
         
-        self.pos = l.Position2(relative_position=[0, 0, 0], reference='global')
-        self.orient = l.Position2(relative_position=[1, 0, 0], reference='global')
+        self.pos = l.Position(relative_position=[0, 0, 0], reference='global')
+        self.orient = l.Position(relative_position=[1, 0, 0], reference='global')
         self.const_law = l.LinearElastic(
             law_type=l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW,
             stiffness=1000.0
@@ -12080,10 +12082,10 @@ class TestAerodynamicBody(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         # Create a node for testing
-        position = l.Position2(relative_position=[0, 0, 0], reference='global')
-        orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
-        velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
-        angular_velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
+        position = l.Position(relative_position=[0, 0, 0], reference='global')
+        orientation = l.Position(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        velocity = l.Position(relative_position=[0, 0, 0], reference='global')
+        angular_velocity = l.Position(relative_position=[0, 0, 0], reference='global')
         
         self.node = l.DynamicNode2(
             idx=1, 
@@ -12094,8 +12096,8 @@ class TestAerodynamicBody(unittest.TestCase):
         )
         
         # Create basic parameters for AerodynamicBody
-        self.position = l.Position2(relative_position=[0, 0, 0], reference='global')
-        self.orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        self.position = l.Position(relative_position=[0, 0, 0], reference='global')
+        self.orientation = l.Position(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
         self.span = 2.0
         self.chord = [1.0, 1.0]
         self.aero_center = [0.25, 0.25]
@@ -12317,10 +12319,10 @@ class TestAerodynamicBeam(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         # Create a beam element for testing
-        position = l.Position2(relative_position=[0, 0, 0], reference='global')
-        orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
-        velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
-        angular_velocity = l.Position2(relative_position=[0, 0, 0], reference='global')
+        position = l.Position(relative_position=[0, 0, 0], reference='global')
+        orientation = l.Position(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        velocity = l.Position(relative_position=[0, 0, 0], reference='global')
+        angular_velocity = l.Position(relative_position=[0, 0, 0], reference='global')
         
         node1 = l.DynamicNode2(
             idx=1, 
@@ -12350,13 +12352,13 @@ class TestAerodynamicBeam(unittest.TestCase):
         
         # Create basic parameters for AerodynamicBeam
         self.positions = [
-            l.Position2(relative_position=[0, 0, 0], reference='global'),
-            l.Position2(relative_position=[1, 0, 0], reference='global')
+            l.Position(relative_position=[0, 0, 0], reference='global'),
+            l.Position(relative_position=[1, 0, 0], reference='global')
         ]
         
         self.orientations = [
-            l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global'),
-            l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+            l.Position(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global'),
+            l.Position(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
         ]
         
         self.chord = [1.0, 1.0]
@@ -12443,8 +12445,8 @@ class TestAerodynamicBeam(unittest.TestCase):
         self.assertEqual(str(aero_beam), expected_str)
         
         # Create with three positions/orientations and optional parameters
-        third_position = l.Position2(relative_position=[2, 0, 0], reference='global')
-        third_orientation = l.Position2(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
+        third_position = l.Position(relative_position=[2, 0, 0], reference='global')
+        third_orientation = l.Position(relative_position=[1, 0, 0, 0, 1, 0, 0, 0, 1], reference='global')
         
         aero_beam = l.AerodynamicBeam(
             idx=2,
