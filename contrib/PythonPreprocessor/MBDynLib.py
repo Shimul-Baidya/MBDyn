@@ -401,8 +401,6 @@ class MBVar(MBEntity, terminal_expression):
                                   [f'{MBVarModifiers.CONST} {t.value}' for t in MBVarType] +\
                                   [f'{MBVarModifiers.DEFINE} {t.value}' for t in MBVarType])
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     @field_validator('var_type')
     def validate_var_type(cls, v):
         assert v in cls.var_types, (
@@ -672,8 +670,6 @@ class Element(MBEntity):
     """
     Abstract base class for all elements
     """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     idx: Union[MBVar, int]
     output: Optional[Union[Literal['yes', 'no'], int, bool]] = 'yes'
@@ -1272,9 +1268,6 @@ class DeformableHinge(Element):
     moment may depend, by way of a generic 3D constitutive law, on the relative orientation and angular
     velocity of the two nodes, expressed in the reference frame of node 1.
     """
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
 
     node_1: Node
     position_1: Optional[Position] = None
@@ -1381,7 +1374,6 @@ class DriveDisplacementPin(Element):
     in the form of a vector that expresses the direction of the displacement in the reference frame of node 1,
     whose amplitude is defined by a drive.
     '''
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
     node_offset: Position
@@ -1778,14 +1770,12 @@ class RevolutePin(Element):
     systems defined by the two orientation statements.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     node_label: Union[int, MBVar]
     relative_offset: Position
     relative_orientation_mat: Optional[Union[Position, list]] = None
     absolute_pin_position: Position
     absolute_pin_orientation_mat: Optional[Union[Position, list]] = None
-    initial_theta: Optional[Union[float, MBVar, expression]] = None
+    initial_theta: Optional[Union[float, MBVar]] = None
 
     def element_type(self):
         return 'joint'
@@ -1943,9 +1933,6 @@ class RodBezier(Element):
     The absolute value of the force depends on the strain and strain rate of the curve as in the standard rod
     element as determined by the ConstitutiveLaw<1D> <const_law>.
     '''
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
 
     node_1_label: Union[int, MBVar]
     position_1: Position
@@ -2596,7 +2583,7 @@ class DriveCaller(MBEntity):
     The family of the `DriveCaller` object is very large.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    # model_config = ConfigDict(arbitrary_types_allowed=True)
 
     idx: Optional[Union[MBVar, int]] = None
     """Index of this drive to reuse with references"""
@@ -3651,8 +3638,8 @@ class SineDriveCaller(DriveCaller):
     """
     
     initial_time: Union[float, MBVar]  
-    angular_velocity: Union[float, MBVar, expression]    
-    amplitude: Union[float, MBVar, expression]    
+    angular_velocity: Union[float, MBVar]    
+    amplitude: Union[float, MBVar]    
     number_of_cycles: Union[int, MBVar, Literal['half', 'one', 'forever']]    
     initial_value: Union[float, MBVar]
     
@@ -3935,9 +3922,6 @@ class ConstitutiveLaw(MBEntity):
     uses it. In general, the user should refer to the element the constitutive law is being instantiated for in
     order to understand what the input and the output parameters are supposed to be.
     """
-
-    # class Config:
-    #     arbitrary_types_allowed = True
 
     class LawType(Enum):
         SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
@@ -4514,9 +4498,6 @@ class LinearViscoelasticBistop(ConstitutiveLaw):
     Linear viscoelastic bistop constitutive law
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
     stiffness: Union[float, MBVar]
     viscosity: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]] = None
@@ -4843,9 +4824,6 @@ class FixedStep(FileDriver):
     """
     Fixed Step file driver
     """
-
-    # class Config:
-    #     arbitrary_types_allowed = True
     
     class InterpolationType(Enum):
         LINEAR = "linear"
