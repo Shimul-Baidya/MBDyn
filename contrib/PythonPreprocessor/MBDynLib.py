@@ -160,6 +160,14 @@ def simplify_neutral_element(l, r, op, ne):
 class expression:
     def __init__(self):
         pass
+    def __float__(self):
+        return float(self.__get__())
+    def __int__(self):
+        return int(self.__get__())
+    def __eq__(self, other):
+        if isinstance(other, (int, float)):
+            return self.__get__() == other
+        return NotImplemented
     def __neg__(self):
         return negative(self)
     def __add__(self, other):
@@ -555,7 +563,6 @@ class Reference(MBEntity):
 if imported_pydantic:
     Position.model_rebuild()
 
-# Change name to Node when all are moved
 class Node(MBEntity):
     """This class isn't directly used to create instances, but it's child classes are."""
 
