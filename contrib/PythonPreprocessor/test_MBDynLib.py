@@ -644,7 +644,7 @@ class TestConstDrive(unittest.TestCase):
         with self.assertRaises(TypeError):
             e = l.MBEntity()
         with self.assertRaises(TypeError):
-            dc = l.DriveCaller2()
+            dc = l.DriveCaller()
 
 
 class TestClosestNextDriveCaller(unittest.TestCase):
@@ -2299,7 +2299,7 @@ class TestElementDriveCaller(unittest.TestCase):
         self.const_drive = l.ConstDriveCaller(const_value=1.5)
         self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=2.0)
         
-        # Create concrete Element2 instances for testing
+        # Create concrete Element instances for testing
         self.angular_acceleration = l.AngularAcceleration(
             idx=1,
             node_label=101,
@@ -7009,7 +7009,7 @@ class TestAxialRotation(unittest.TestCase):
         position2 = l.Position(reference='global', relative_position=[1, 1, 1])
         orientation2 = l.Position(reference='global', relative_position=[0, 1, 0])
 
-        # angular_velocity must be of type DriveCaller or DriveCaller2
+        # angular_velocity must be of type DriveCaller
         with self.assertRaises(Exception):
             l.AxialRotation(
                 idx=1,
@@ -7359,7 +7359,7 @@ class TestCardanoPin(unittest.TestCase):
     def test_abstract_class(self):
         """Check that user can't create abstract classes, which are used only to share functionality (can't be part of MBDyn output)"""
         with self.assertRaises(TypeError):
-            e = l.Element2()
+            e = l.Element()
 
     def setUp(self):
         self.node_label = 5
@@ -7868,7 +7868,7 @@ class TestDistance(unittest.TestCase):
             l.Distance(
                 node_1_label=self.node_1_label,
                 node_2_label=self.node_2_label,
-                distance=123  # Invalid type, should be DriveCaller2 or 'from nodes'
+                distance=123  # Invalid type, should be DriveCaller or 'from nodes'
             )
 
     def test_distance_with_mbvar_nodes(self):
@@ -8767,7 +8767,7 @@ class TestLinearAcceleration(unittest.TestCase):
                 idx=self.idx,
                 node_label=self.node_label,
                 relative_direction=self.relative_direction_unit,
-                acceleration=123  # Invalid type, should be DriveCaller or DriveCaller2
+                acceleration=123  # Invalid type, should be DriveCaller
             )
 
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
@@ -8916,7 +8916,7 @@ class TestLinearVelocity(unittest.TestCase):
                 idx=self.idx,
                 node_label=self.node_label,
                 relative_direction=self.relative_direction_unit,
-                velocity=123  # Invalid type, should be DriveCaller or DriveCaller2
+                velocity=123  # Invalid type, should be DriveCaller
             )
 
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")

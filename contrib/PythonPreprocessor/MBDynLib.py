@@ -668,11 +668,7 @@ class PointMass(MBEntity):
         s += ";\n"
         return s
     
-class Element:
-    idx = -1
-
-# TODO: Rename to Element when all are moved
-class Element2(MBEntity):
+class Element(MBEntity):
     """
     Abstract base class for all elements
     """
@@ -707,7 +703,7 @@ class Element2(MBEntity):
         if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
             raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
 
-class Body(Element2):
+class Body(Element):
     node: Node
     mass: Union[float, MBVar]
     position: Position
@@ -728,7 +724,7 @@ class Body(Element2):
         return s
 
 # Force Elements
-class StructuralForce(Element2):
+class StructuralForce(Element):
     node: Node
     ftype: Literal['absolute', 'follower', 'total']
     position: Optional[Position] = None
@@ -773,7 +769,7 @@ class StructuralForce(Element2):
         s += self.element_footer()
         return s
 
-class StructuralInternalForce(Element2):
+class StructuralInternalForce(Element):
     nodes: List[Node]
     ftype: Literal['absolute', 'follower', 'total']
     positions: Optional[List[Position]] = None
@@ -839,7 +835,7 @@ class StructuralInternalForce(Element2):
         s += self.element_footer()
         return s
 
-class StructuralCouple(Element2):
+class StructuralCouple(Element):
     node: Node
     ctype: Literal['absolute', 'follower']
     position: Optional[Position] = None
@@ -858,7 +854,7 @@ class StructuralCouple(Element2):
         s += self.element_footer()
         return s
 
-class StructuralInternalCouple(Element2):
+class StructuralInternalCouple(Element):
     nodes: List[Node]
     ctype: Literal['absolute', 'follower']
     positions: Optional[List[Position]] = None
@@ -889,23 +885,21 @@ class StructuralInternalCouple(Element2):
         return s
 
 # Joint Elements
-class AngularAcceleration(Element2):
+class AngularAcceleration(Element):
     """
     This joint imposes the absolute angular acceleration of a node about a given axis.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     node_label: Union[int, MBVar] # TODO: Take input as Node and use it's idx
     relative_direction: List[Union[float, MBVar]]
-    acceleration: Union['DriveCaller', 'DriveCaller2']
+    acceleration: 'DriveCaller'
 
     def element_type(self):
         return 'joint'
     
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        Element2.check_unit_vector3(v)
+        Element.check_unit_vector3(v)
         return v
     
     def __str__(self):
@@ -915,23 +909,21 @@ class AngularAcceleration(Element2):
         s += self.element_footer()
         return s
 
-class AngularVelocity(Element2):
+class AngularVelocity(Element):
     """
     Represents a joint imposing the absolute angular velocity of a node about a given axis.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     node_label: Union[int, MBVar]
     relative_direction: List[Union[float, MBVar]]
-    velocity: Union['DriveCaller', 'DriveCaller2']
+    velocity: 'DriveCaller'
 
     def element_type(self):
         return 'joint'
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        Element2.check_unit_vector3(v)
+        Element.check_unit_vector3(v)
         return v
     
     def __str__(self):
@@ -942,12 +934,10 @@ class AngularVelocity(Element2):
         s += self.element_footer()
         return s
     
-class AxialRotation(Element2):
+class AxialRotation(Element):
     """
     This joint is equivalent to a revolute hinge, but the angular velocity about axis 3 is imposed by means of the driver.
     """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     position_1: Position
@@ -955,7 +945,7 @@ class AxialRotation(Element2):
     node_2_label: Union[int, MBVar]
     position_2: Position
     orientation_mat_2: Position
-    angular_velocity: Union['DriveCaller', 'DriveCaller2']
+    angular_velocity: 'DriveCaller'
 
     def element_type(self):
         return 'joint'
@@ -972,7 +962,7 @@ class AxialRotation(Element2):
         s += self.element_footer()
         return s
     
-class Beam(Element2):
+class Beam(Element):
     nodes: List[Node]
     positions: List[Position]
     orientations: List[Position]
@@ -1046,7 +1036,7 @@ class Beam(Element2):
         s += self.element_footer()
         return s
         
-class BeamSlider(Element2):
+class BeamSlider(Element):
     """
     This joint implements a slider, e.g. it constrains a structural node on a string of three-node beams.
     """
@@ -1114,15 +1104,12 @@ class BeamSlider(Element2):
         s += self.element_footer()
         return s
 
-class Brake(Element2):
+class Brake(Element):
     """
     This element models a wheel brake, i.e., a constraint that applies a frictional internal torque between two
     nodes about an axis. The frictional torque depends on the normal force that is applied as an external
     input by means of the same friction models implemented for regular joints.
     """
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
 
     node_1_label: Union[int, MBVar]
     position_1: Position
@@ -1134,7 +1121,7 @@ class Brake(Element2):
     preload: Optional[Union[float, MBVar, int]] = None
     friction_model: str  # TODO: Implement FrictionModel class
     shape_function: str  # TODO: Implement ShapeFunction class
-    normal_force: Union['DriveCaller', 'DriveCaller2']
+    normal_force: 'DriveCaller'
 
     def element_type(self):
         return 'joint'
@@ -1156,7 +1143,7 @@ class Brake(Element2):
         s += self.element_footer()
         return s
         
-class CardanoHinge(Element2):
+class CardanoHinge(Element):
     '''
     This joint implements a Cardano's joint, also known as Hooke's joint or Universal joint, which is made
     of a sequence of two revolute hinges orthogonal to each other, one about relative axis 2 and one about
@@ -1194,7 +1181,7 @@ class CardanoHinge(Element2):
         s += self.element_footer()
         return s
     
-class CardanoPin(Element2):
+class CardanoPin(Element):
     """
     This joint implements a 'Cardano' joint between a node and the ground.
     The absolute position is also constrained.
@@ -1221,7 +1208,7 @@ class CardanoPin(Element2):
         s += self.element_footer()
         return s
 
-class CardanoRotation(Element2):
+class CardanoRotation(Element):
     """
     This joint implements a 'Cardano' joint, which is made of a sequence of two orthogonal revolute hinges.
     The relative position is not constrained.
@@ -1246,7 +1233,7 @@ class CardanoRotation(Element2):
         s += self.element_footer()
         return s
 
-class DeformableAxial(Element2):
+class DeformableAxial(Element):
     """
     This joint implements a configuration dependent moment that is exchanged between two nodes about
     an axis rigidly attached to the first node. 
@@ -1279,7 +1266,7 @@ class DeformableAxial(Element2):
         s += self.element_footer()
         return s
 
-class DeformableHinge(Element2):
+class DeformableHinge(Element):
     """
     This joint implements a configuration dependent moment that is exchanged between two nodes. The
     moment may depend, by way of a generic 3D constitutive law, on the relative orientation and angular
@@ -1330,18 +1317,17 @@ class DeformableHinge(Element2):
         s += self.element_footer()
         return s
 
-class Distance(Element2):
+class Distance(Element):
     """
     This joint forces the distance between two points, each relative to a node, to assume the value indicated
     by the drive. If no offset is given, the points are coincident with the node themselves.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     position_1: Optional[Position] = None
     node_2_label: Union[int, MBVar]
     position_2: Optional[Position] = None
-    distance: Union['DriveCaller', 'DriveCaller2', str]
+    distance: Union['DriveCaller', str]
 
     @field_validator('distance')
     def validate_distance(cls, value):
@@ -1365,14 +1351,12 @@ class Distance(Element2):
         s += self.element_footer()
         return s
 
-class DriveDisplacement(Element2):
+class DriveDisplacement(Element):
     '''
     This joint imposes the relative position between two points optionally offset from two structural nodes,
     in the form of a vector that expresses the direction of the displacement in the reference frame of node 1,
     whose amplitude is defined by a drive.
     '''
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
 
     node_1_label: Union[int, MBVar]
     position_1: Position
@@ -1391,7 +1375,7 @@ class DriveDisplacement(Element2):
         s += self.element_footer()
         return s
     
-class DriveDisplacementPin(Element2):
+class DriveDisplacementPin(Element):
     '''
     This joint imposes the relative position between two points optionally offset from two structural nodes,
     in the form of a vector that expresses the direction of the displacement in the reference frame of node 1,
@@ -1415,12 +1399,11 @@ class DriveDisplacementPin(Element2):
         s += self.element_footer()
         return s
 
-class DriveHinge(Element2):
+class DriveHinge(Element):
     '''
     This joint imposes the relative orientation between two nodes, in the form of a rotation about an axis
     whose amplitude is defined by a drive.
     '''
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     relative_orientation_mat_1: Optional[Position]
@@ -1443,7 +1426,7 @@ class DriveHinge(Element2):
         s += self.element_footer()
         return s
     
-class GimbalRotation(Element2):
+class GimbalRotation(Element):
     '''
     A homokinetic joint without position constraints; this joint, in conjunction with a spherical hinge 
     joint, should be used to implement an ideal tiltrotor gimbal instead of a cardano
@@ -1474,24 +1457,23 @@ class GimbalRotation(Element2):
         s += self.element_footer()
         return s
 
-class ImposedDisplacement(Element2):
+class ImposedDisplacement(Element):
     '''
     This joint imposes the relative position between two points, optionally offset from two structural nodes,
     along a given direction that is rigidly attached to the first node. The amplitude of the displacement is
     defined by a drive.
     '''
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     position_1: Position
     node_2_label: Union[int, MBVar]
     position_2: Position
     direction: List[Union[float, MBVar]]
-    relative_position: Union['DriveCaller', 'DriveCaller2']
+    relative_position: 'DriveCaller'
 
     @field_validator('direction')
     def validate_direction(cls, v):
-        Element2.check_unit_vector3(v)
+        Element.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -1506,23 +1488,22 @@ class ImposedDisplacement(Element2):
         s += self.element_footer()
         return s
 
-class ImposedDisplacementPin(Element2):
+class ImposedDisplacementPin(Element):
     '''
     This joint imposes the absolute displacement of a point optionally offset from a structural node, along
     a direction defined in the absolute reference frame. The amplitude of the displacement is defined by a
     drive.
     '''
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
     node_offset: Position
     offset: Position
     direction: List[Union[float, MBVar]]
-    position: Union['DriveCaller', 'DriveCaller2']
+    position: 'DriveCaller'
 
     @field_validator('direction')
     def validate_direction(cls, v):
-        Element2.check_unit_vector3(v)
+        Element.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -1540,7 +1521,7 @@ class ImposedDisplacementPin(Element2):
         s += self.element_footer()
         return s
     
-class InLine(Element2):
+class InLine(Element):
     '''
     This joint forces a point relative to the second node to move along a line attached to the first node.
     '''
@@ -1567,7 +1548,7 @@ class InLine(Element2):
         s += self.element_footer()
         return s
     
-class InPlane(Element2):
+class InPlane(Element):
     '''
     This joint forces a point relative to the second node to move in a plane attached to the first node.
     '''
@@ -1580,7 +1561,7 @@ class InPlane(Element2):
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        Element2.check_unit_vector3(v)
+        Element.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -1598,19 +1579,18 @@ class InPlane(Element2):
         s += self.element_footer()
         return s
     
-class LinearAcceleration(Element2):
+class LinearAcceleration(Element):
     '''
     This joint imposes the absolute linear acceleration of a node along a given axis.
     '''
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     
     node_label: Union[int, MBVar]
     relative_direction: List[Union[float, MBVar]]
-    acceleration: Union['DriveCaller', 'DriveCaller2']
+    acceleration: 'DriveCaller'
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        Element2.check_unit_vector3(v)
+        Element.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -1627,19 +1607,18 @@ class LinearAcceleration(Element2):
         s += self.element_footer()
         return s
     
-class LinearVelocity(Element2):
+class LinearVelocity(Element):
     '''
     This joint imposes the absolute linear velocity of a node along a given axis.
     '''
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     
     node_label: Union[int, MBVar]
     relative_direction: List[Union[float, MBVar]]
-    velocity: Union['DriveCaller', 'DriveCaller2']
+    velocity: 'DriveCaller'
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        Element2.check_unit_vector3(v)
+        Element.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -1656,10 +1635,10 @@ class LinearVelocity(Element2):
         s += self.element_footer()
         return s
     
-class Modal(Element2):
+class Modal(Element):
     pass
 
-class PlaneDisplacement(Element2):
+class PlaneDisplacement(Element):
     '''
     This joint allows two nodes to move in the common relative 1–2 plane and to rotate about the common
     relative axis 3.
@@ -1686,7 +1665,7 @@ class PlaneDisplacement(Element2):
         s += self.element_footer()
         return s
     
-class PlaneDisplacementPin(Element2):
+class PlaneDisplacementPin(Element):
     '''
     This joint allows a node to move in the relative 1–2 plane and to rotate about the relative axis 3 with
     respect to an absolute point and plane.
@@ -1713,7 +1692,7 @@ class PlaneDisplacementPin(Element2):
         s += self.element_footer()
         return s
 
-class Prismatic(Element2):
+class Prismatic(Element):
     '''
     This joints constrains the relative orientation of two nodes, so that their orientations remain parallel.
     The relative position is not constrained. The initial orientation of the joint must be compatible: use the
@@ -1739,7 +1718,7 @@ class Prismatic(Element2):
         s += self.element_footer()
         return s
 
-class RevoluteHinge(Element2):
+class RevoluteHinge(Element):
     '''
     This joint only allows the relative rotation of two nodes about a given axis, which is axis 3 in the reference
     systems defined by the two orientation statements.
@@ -1793,7 +1772,7 @@ class RevoluteHinge(Element2):
         s += self.element_footer()
         return s
 
-class RevolutePin(Element2):
+class RevolutePin(Element):
     """
     This joint only allows the absolute rotation of a node about a given axis, which is axis 3 in the reference
     systems defined by the two orientation statements.
@@ -1825,7 +1804,7 @@ class RevolutePin(Element2):
         s += self.element_footer()
         return s
     
-class RevoluteRotation(Element2):
+class RevoluteRotation(Element):
     '''
     This joint allows the relative rotation of two nodes about a given axis, which is axis 3 in the reference
     systems defined by the two orientation statements. The relative position is not constrained.
@@ -1856,7 +1835,7 @@ class RevoluteRotation(Element2):
         s += self.element_footer()
         return s
 
-class Rod(Element2):
+class Rod(Element):
     '''
     The rod element represents a force between two nodes that depends on the relative position and velocity
     of two points, each rigidly attached to a structural node. The direction of the force is also based on
@@ -1898,7 +1877,7 @@ class Rod(Element2):
         s += self.element_footer()
         return s
     
-class RodWithOffset(Element2):
+class RodWithOffset(Element):
     '''
     Analogous to the rod joint with the optional offsets.
     '''
@@ -1947,7 +1926,7 @@ class RodWithOffset(Element2):
         s += self.element_footer()
         return s
 
-class RodBezier(Element2):
+class RodBezier(Element):
     '''
     This joint, in analogy with the rod joint, represents a force that acts between two points each rigidly
     attached to a structural node.
@@ -2040,7 +2019,7 @@ class RodBezier(Element2):
         s += self.element_footer()
         return s
     
-class SphericalPin(Element2):
+class SphericalPin(Element):
     '''
     This joint constrains the absolute position of a node; the relative orientation is not constrained.
     **Note**: This joint is equivalent to a spherical hinge when one node is grounded.
@@ -2068,7 +2047,7 @@ class SphericalPin(Element2):
         s += self.element_footer()
         return s
     
-class ViscousBody(Element2):
+class ViscousBody(Element):
     '''
     This element defines a force and a moment that depend on the absolute linear and angular velocity of
     a body, projected in the reference frame of the node itself. The force and moment are defined as a 6D
@@ -2105,7 +2084,7 @@ class ViscousBody(Element2):
         s += self.element_footer()
         return s
 
-class Clamp(Element2):
+class Clamp(Element):
     node: Node
     position: Union[Position, Literal['node']]
     orientation_mat: Union[List, Literal['node']]
@@ -2120,7 +2099,7 @@ class Clamp(Element2):
         s += self.element_footer()
         return s
 
-class TotalJoint(Element2):
+class TotalJoint(Element):
     nodes: List[Node]
     positions: Optional[List[Position]] = None
     position_orientations: Optional[List[Position]] = None
@@ -2210,7 +2189,7 @@ class TotalJoint(Element2):
         s += self.element_footer()
         return s
 
-class TotalPinJoint(Element2):
+class TotalPinJoint(Element):
     node: Node
     rel_position: Optional[Position] = None
     rel_position_orientation: Optional[Position] = None
@@ -2283,7 +2262,7 @@ class TotalPinJoint(Element2):
         s += self.element_footer()
         return s
 
-class JointRegularization(Element2):
+class JointRegularization(Element):
     coefficients: Union[List[float], List[MBVar], float, MBVar]
 
     def element_type(self):
@@ -2299,7 +2278,7 @@ class JointRegularization(Element2):
         s += self.element_footer()
         return s
     
-class DeformableDisplacement(Element2):
+class DeformableDisplacement(Element):
     node_1: Node
     position_1: Position
     orientation_mat_1: Optional[Position] = None
@@ -2336,7 +2315,7 @@ class DeformableDisplacement(Element2):
         s += self.element_footer()
         return s
 
-class DeformableJoint(Element2):
+class DeformableJoint(Element):
     node_1: Node
     position_1: Position
     orientation_mat_1: Optional[Position] = None
@@ -2376,7 +2355,7 @@ class DeformableJoint(Element2):
         s += self.element_footer()
         return s
         
-class SphericalHinge(Element2):
+class SphericalHinge(Element):
     '''
     This joint constrains the relative position of two nodes; the relative orientation is not constrained.
     '''
@@ -2406,7 +2385,7 @@ class SphericalHinge(Element2):
         s += self.element_footer()
         return s
 
-class Shell(Element2):
+class Shell(Element):
     shell_type: Literal['shell4eas', 'shell4easans']
     nodes: List[Node]
     const_law_data: List
@@ -2435,7 +2414,7 @@ class Shell(Element2):
         s += self.element_footer()
         return s
 
-class AerodynamicBody(Element2):
+class AerodynamicBody(Element):
     node: Node
     position: Position
     orientation: Position
@@ -2447,7 +2426,7 @@ class AerodynamicBody(Element2):
     integration_points: Union[int, MBVar]
     induced_velocity: Optional[Union[int, MBVar]] = None
     tip_loss: Optional[List] = None
-    control: Optional['DriveCaller2'] = None
+    control: Optional['DriveCaller'] = None
     airfoil_data: Optional[List] = []
     unsteady: Optional[Literal['bielawa']] = None
     jacobian: Optional[Union[Literal['yes', 'no'], bool]] = 'no'
@@ -2499,7 +2478,7 @@ class AerodynamicBody(Element2):
         return s
 
 
-class AerodynamicBeam(Element2):   
+class AerodynamicBeam(Element):   
     beam: Beam
     positions: List[Position]
     orientations: List[Position]
@@ -2510,7 +2489,7 @@ class AerodynamicBeam(Element2):
     integration_points: Union[int, MBVar]
     induced_velocity: Optional[Union[int, MBVar]] = None
     tip_loss: Optional[List] = None
-    control: Optional['DriveCaller2'] = None
+    control: Optional['DriveCaller'] = None
     airfoil_data: Optional[List] = []
     unsteady: Optional[Literal['bielawa']] = None
     jacobian: Optional[Union[Literal['yes', 'no'], bool]] = 'no'
@@ -2598,11 +2577,7 @@ class NodeDof(MBEntity):
     
 
 # Drives
-class DriveCaller():
-    idx = -1
-
-# TODO: Rename to DriveCaller when all are moved
-class DriveCaller2(MBEntity):
+class DriveCaller(MBEntity):
     """
     Abstract class for C++ type `DriveCaller`. Every time some entity can be driven, i.e. a value can be expressed
     as dependent on some external input, an object of the class  `DriveCaller` is used.
@@ -2640,14 +2615,14 @@ class DriveCaller2(MBEntity):
         else:
             return self.drive_type()
 
-class ArrayDriveCaller(DriveCaller2):
+class ArrayDriveCaller(DriveCaller):
     '''
     this is simply a front-end for the linear combination of <len(drives)> normal drives. <len(drives)> must be
     at least 1, in which case a simple drive caller is created, otherwise an array of drive callers is created and
     at every call their value is added to give the ﬁnal value of the array drive
     '''
 
-    drives: List[Union[DriveCaller, DriveCaller2]]  #TODO: Remove DriveCaller2 when all are moved
+    drives: List[DriveCaller]
     """List of drive callers to be used in the array"""
 
     @field_validator('drives')
@@ -2684,7 +2659,7 @@ class ArrayDriveCaller(DriveCaller2):
                 s += f",\n{indent}\t{drive}"
         return s
 
-class BistopDriveCaller(DriveCaller2):
+class BistopDriveCaller(DriveCaller):
     '''
     This drive caller returns 1.0 (TRUE) when its status is active and 0.0 (FALSE) when it is inactive.
     When in inactive status, it turns to active if the activation_condition is TRUE. When in active
@@ -2693,8 +2668,8 @@ class BistopDriveCaller(DriveCaller2):
     '''
     
     initial_status: Optional[Literal['active', 'inactive']] = 'active'
-    activation_condition: DriveCaller2 
-    deactivation_condition: DriveCaller2
+    activation_condition: DriveCaller 
+    deactivation_condition: DriveCaller
     
     def drive_type(self) -> str:
         return 'bistop'
@@ -2714,7 +2689,7 @@ class BistopDriveCaller(DriveCaller2):
             s += f'\n\t{self.deactivation_condition}'
         return s
 
-class ConstDriveCaller(DriveCaller2):
+class ConstDriveCaller(DriveCaller):
     """An example of `DriveCaller` that always returns the same constant value"""
 
     # Note that method docstrings are inherited correctly (unlike dataclass fields)
@@ -2727,7 +2702,7 @@ class ConstDriveCaller(DriveCaller2):
     def __str__(self):
         return f'''{self.drive_header()}, {self.const_value}'''
     
-class ClosestNextDriveCaller(DriveCaller2):
+class ClosestNextDriveCaller(DriveCaller):
     '''
     This drive returns a non-zero value when called for the ﬁrst time with an argument greater that or equal
     to the current threshold value, which is computed starting from initial_time and incrementing it each
@@ -2739,7 +2714,7 @@ class ClosestNextDriveCaller(DriveCaller2):
 
     initial_time: Union[float, MBVar] = 0.
     final_time: Union[float, MBVar, Literal['forever']]
-    increment: Union[DriveCaller2]
+    increment: Union[DriveCaller]
     
     def drive_type(self) -> str:
         return 'closest next'
@@ -2754,7 +2729,7 @@ class ClosestNextDriveCaller(DriveCaller2):
             s += f'\n\t{self.increment}'
         return s
 
-class CosineDriveCaller(DriveCaller2):    
+class CosineDriveCaller(DriveCaller):    
     initial_time: Union[float, MBVar] = 0.0    
     angular_velocity: Union[float, MBVar]    
     amplitude: Union[float, MBVar]
@@ -2769,7 +2744,7 @@ class CosineDriveCaller(DriveCaller2):
         s += f',\n\t{self.initial_time}, {self.angular_velocity}, {self.amplitude}, {self.number_of_cycles}, {self.initial_value}'
         return s
 
-class CubicDriveCaller(DriveCaller2):
+class CubicDriveCaller(DriveCaller):
     const_coef: Union[MBVar, float]
     linear_coef: Union[MBVar, float]
     parabolic_coef: Union[MBVar, float]
@@ -2783,7 +2758,7 @@ class CubicDriveCaller(DriveCaller2):
         s += f', {self.const_coef}, {self.linear_coef}, {self.parabolic_coef}, {self.cubic_coef}'
         return s
 
-class DirectDriveCaller(DriveCaller2):
+class DirectDriveCaller(DriveCaller):
     '''
     Transparently returns the input value; the arglist is empty. It is useful in conjunction with those drive
     callers that require their output to be fed into another drive caller, like the dof, node and element drive
@@ -2796,7 +2771,7 @@ class DirectDriveCaller(DriveCaller2):
     def __str__(self):
         return f'{self.drive_header()}'
 
-class DiscreteFilterDriveCaller(DriveCaller2):
+class DiscreteFilterDriveCaller(DriveCaller):
     """
     Filters the output of the ancillary drive caller <input_drive> according to the discrete ﬁlter coeﬃcients
     """
@@ -2816,7 +2791,7 @@ class DiscreteFilterDriveCaller(DriveCaller2):
     b: List[Union[float, MBVar]]    
     """list of input coeﬃcients"""
 
-    input_drive: DriveCaller2
+    input_drive: DriveCaller
     """ancillary drive caller"""
 
     @field_validator('a')
@@ -2851,7 +2826,7 @@ class DiscreteFilterDriveCaller(DriveCaller2):
             s += f',\n\t{self.input_drive}'
         return s
 
-class DofDriveCaller(DriveCaller2):
+class DofDriveCaller(DriveCaller):
     '''
     a NodeDof, namely the reference to a degree of freedom of a node, is read. Then a recursive call to a
     drive data is read. The driver returns the value of the <func_drive> using the value of the NodeDof
@@ -2861,7 +2836,7 @@ class DofDriveCaller(DriveCaller2):
     '''
     
     driving_dof: NodeDof    
-    func_drive: DriveCaller2
+    func_drive: DriveCaller
     
     def drive_type(self) -> str:
         return 'dof'
@@ -2875,7 +2850,7 @@ class DofDriveCaller(DriveCaller2):
             s += f',\n\t{self.func_drive}'
         return s
 
-class DoubleRampDriveCaller(DriveCaller2):
+class DoubleRampDriveCaller(DriveCaller):
     a_slope: Union[float, MBVar]    
     a_initial_time: Union[float, MBVar]
     a_final_time: Union[float, MBVar]    
@@ -2904,7 +2879,7 @@ class DoubleRampDriveCaller(DriveCaller2):
         s += f',\n\t{self.initial_value}'
         return s
 
-class DoubleStepDriveCaller(DriveCaller2):
+class DoubleStepDriveCaller(DriveCaller):
     initial_time: Union[float, MBVar]
     final_time: Union[float, MBVar]
     step_value: Union[float, MBVar]
@@ -2938,9 +2913,9 @@ class DoubleStepDriveCaller(DriveCaller2):
         s += f',\n\t{self.step_value}, {self.initial_value}'
         return s
 
-class DriveDriveCaller(DriveCaller2):    
-    drive_caller1: DriveCaller2
-    drive_caller2: DriveCaller2
+class DriveDriveCaller(DriveCaller):    
+    drive_caller1: DriveCaller
+    drive_caller2: DriveCaller
     
     def drive_type(self) -> str:
         return 'drive'
@@ -2957,10 +2932,10 @@ class DriveDriveCaller(DriveCaller2):
             s += f',\n\t{self.drive_caller2}'
         return s
 
-class ElementDriveCaller(DriveCaller2):    
-    element: Element2    
+class ElementDriveCaller(DriveCaller):    
+    element: Element    
     private_data: str    
-    func_drive: Union[DriveCaller2, Literal['direct']]
+    func_drive: Union[DriveCaller, Literal['direct']]
     
     def drive_type(self) -> str:
         return 'element'
@@ -2977,7 +2952,7 @@ class ElementDriveCaller(DriveCaller2):
             s += f', {self.func_drive}'
         return s
 
-class ExponentialDriveCaller(DriveCaller2):
+class ExponentialDriveCaller(DriveCaller):
     """
     This drive yields a function that resembles the response of a ﬁrst-order system to a step input. Its
     value corresponds to initial_value for t < initial_time. For t ≥ initial_time, it grows to
@@ -3016,11 +2991,11 @@ class ExponentialDriveCaller(DriveCaller2):
         s += f', {self.amplitude_value}, {self.time_constant_value}, {self.initial_time}, {self.initial_value}'
         return s
 
-class FileDriveDrive(DriveCaller2):
+class FileDriveDrive(DriveCaller):
     # TODO: needs FileDrive before
     pass
 
-class FourierSeriesDriveCaller(DriveCaller2):
+class FourierSeriesDriveCaller(DriveCaller):
     """
     This drive corresponds to a Fourier series of fundamental angular velocity ω, truncated after n terms,
     over a given number of cycles P and starting at a given initial time
@@ -3119,15 +3094,15 @@ class FourierSeriesDriveCaller(DriveCaller2):
         s += f',\n\t{self.number_of_cycles}, {self.initial_value}'
         return s
     
-class FrequencySweepDriveCaller(DriveCaller2):
+class FrequencySweepDriveCaller(DriveCaller):
     """
     this drive recursively calls two other drives that supply the angular velocity and the amplitude of the
     oscillation
     """
     
     initial_time: Union[float, MBVar]    
-    angular_velocity_drive: DriveCaller2    
-    amplitude_drive: DriveCaller2    
+    angular_velocity_drive: DriveCaller    
+    amplitude_drive: DriveCaller    
     initial_value: Union[float, MBVar]    
     final_time: Union[float, MBVar, Literal['forever']]    
     final_value: Union[float, MBVar]
@@ -3178,7 +3153,7 @@ class FrequencySweepDriveCaller(DriveCaller2):
         s += f'\n\t{self.initial_value}, {self.final_time}, {self.final_value}'
         return s
     
-class GiNaCDriveCaller(DriveCaller2):
+class GiNaCDriveCaller(DriveCaller):
     """
     The GiNaC drive caller evaluates mathematical expressions.
     The function expression is evaluated and differentiated, if needed, as a function of the variable 
@@ -3224,7 +3199,7 @@ class GiNaCDriveCaller(DriveCaller2):
             s += f', "{self.expression}"'            
         return s
 
-class LinearDriveCaller(DriveCaller2):
+class LinearDriveCaller(DriveCaller):
     """
     The Linear drive caller implements a linear function of time:
     f(t) = const_coef + slope_coef · t
@@ -3251,7 +3226,7 @@ class LinearDriveCaller(DriveCaller2):
         s += f', {self.const_coef}, {self.slope_coef}'
         return s
 
-class MeterDriveCaller(DriveCaller2):
+class MeterDriveCaller(DriveCaller):
     """
     The Meter drive caller has value zero except for every 'steps_between_spikes' steps, 
     where it assumes unit value.
@@ -3309,13 +3284,13 @@ class MeterDriveCaller(DriveCaller2):
             s += f', steps, {self.steps_between_spikes}'
         return s
             
-class MultDriveCaller(DriveCaller2):
+class MultDriveCaller(DriveCaller):
     """
     The Mult drive caller multiplies the value of two subordinate drives.
     """
     
-    drive_1: DriveCaller2    
-    drive_2: DriveCaller2
+    drive_1: DriveCaller    
+    drive_2: DriveCaller
         
     def drive_type(self) -> str:
         return 'mult'
@@ -3332,7 +3307,7 @@ class MultDriveCaller(DriveCaller2):
             s += f',\n\t{self.drive_2}'
         return s
     
-class NodeDriveCaller(DriveCaller2):
+class NodeDriveCaller(DriveCaller):
     """    
     The driver returns the value of the func_drive using the value of the node's private data
     as input instead of the time. This can be used as a sort of explicit feedback, to implement
@@ -3342,7 +3317,7 @@ class NodeDriveCaller(DriveCaller2):
     
     node: Node        
     private_data: str    
-    func_drive: Union[DriveCaller2, Literal['direct']]
+    func_drive: Union[DriveCaller, Literal['direct']]
     
     def drive_type(self) -> str:
         return 'node'
@@ -3357,7 +3332,7 @@ class NodeDriveCaller(DriveCaller2):
             s += f', {self.func_drive}'
         return s
     
-class NullDriveCaller(DriveCaller2):
+class NullDriveCaller(DriveCaller):
     """Zero valued drive caller; the arglist is empty."""
     
     def drive_type(self) -> str:
@@ -3366,7 +3341,7 @@ class NullDriveCaller(DriveCaller2):
     def __str__(self):
         return f'{self.drive_header()}'
     
-class ParabolicDriveCaller(DriveCaller2):
+class ParabolicDriveCaller(DriveCaller):
     """
     The Parabolic drive caller implements a quadratic function of time:
     f(t) = const_coef + linear_coef · t + parabolic_coef · t²
@@ -3394,7 +3369,7 @@ class ParabolicDriveCaller(DriveCaller2):
         s += f', {self.const_coef}, {self.linear_coef}, {self.parabolic_coef}'
         return s
     
-class PeriodicDriveCaller(DriveCaller2):
+class PeriodicDriveCaller(DriveCaller):
     """
     Represents a periodic drive function that is zero before the initial time and follows 
     f(t) = func_drive(t - initial_time - period * floor((t - initial_time) / period)) for t ≥ initial_time.
@@ -3402,7 +3377,7 @@ class PeriodicDriveCaller(DriveCaller2):
 
     initial_time: Union[float, MBVar]
     period: Union[float, MBVar]
-    func_drive: DriveCaller2
+    func_drive: DriveCaller
     
     @field_validator('initial_time', 'period')
     def validate_time_params(cls, v):
@@ -3436,7 +3411,7 @@ class PeriodicDriveCaller(DriveCaller2):
             s += f',\n\t{self.func_drive}'
         return s
     
-class PiecewiseLinearDriveCaller(DriveCaller2):
+class PiecewiseLinearDriveCaller(DriveCaller):
     """    
     The function performs linear interpolation between defined (point, value) pairs.
     The first and last point/value pairs are extrapolated if a value beyond the extremes is required.
@@ -3484,7 +3459,7 @@ class PiecewiseLinearDriveCaller(DriveCaller2):
             s += f',\n\t{point}, {value}'
         return s
     
-class PostponedDriveCaller(DriveCaller2):
+class PostponedDriveCaller(DriveCaller):
     """    
     This drive is a stub for a drive that cannot be defined early in the input file 
     because it occurs when the data manager is not yet available.
@@ -3502,7 +3477,7 @@ class PostponedDriveCaller(DriveCaller2):
         s += f', {self.label}'
         return s
         
-class RampDriveCaller(DriveCaller2):
+class RampDriveCaller(DriveCaller):
     """
     The Ramp drive caller implements a ramp function with specified slope.
     
@@ -3553,7 +3528,7 @@ class RampDriveCaller(DriveCaller2):
         s += f', {self.slope}, {self.initial_time}, {self.final_time}, {self.initial_value}'
         return s
 
-class RandomDriveCaller(DriveCaller2):
+class RandomDriveCaller(DriveCaller):
     """
     The Random drive caller generates pseudo-random numbers.
     Numbers are uniformly distributed in the interval [mean_value - amplitude_value, mean_value + amplitude_value).
@@ -3627,7 +3602,7 @@ class RandomDriveCaller(DriveCaller2):
             s += f', seed, {self.seed_value}'
         return s
         
-class SampleAndHoldDriveCaller(DriveCaller2):
+class SampleAndHoldDriveCaller(DriveCaller):
     """    
     When trigger is non-zero, the value of function is recorded after convergence at the end of the time
     step, and returned whenever the drive is called afterwards. When trigger is zero, the last recorded value
@@ -3635,8 +3610,8 @@ class SampleAndHoldDriveCaller(DriveCaller2):
     until trigger becomes non-zero.
     """
     
-    function: DriveCaller2    
-    trigger: DriveCaller2    
+    function: DriveCaller    
+    trigger: DriveCaller    
     initial_value: Optional[Union[float, MBVar]] = None
     
     @field_validator('initial_value')
@@ -3666,10 +3641,10 @@ class SampleAndHoldDriveCaller(DriveCaller2):
             s += f', initial value, {self.initial_value}'
         return s
 
-class ScalarFunctionDriveCaller(DriveCaller2):
+class ScalarFunctionDriveCaller(DriveCaller):
     pass
         
-class SineDriveCaller(DriveCaller2):
+class SineDriveCaller(DriveCaller):
     """
     The Sine drive caller implements a sinusoidal function:
     f(t) = initial_value + amplitude · sin(angular_velocity · (t - initial_time))
@@ -3737,7 +3712,7 @@ class SineDriveCaller(DriveCaller2):
         s += f', {self.number_of_cycles}, {self.initial_value}'
         return s
 
-class StepDriveCaller(DriveCaller2):
+class StepDriveCaller(DriveCaller):
     """    
     f(t) = 0              if t < initial_time
            step_value     if t >= initial_time
@@ -3784,7 +3759,7 @@ class StepDriveCaller(DriveCaller2):
         s += f', {self.initial_time}, {self.step_value}, {self.initial_value}'
         return s
 
-class Step5DriveCaller(DriveCaller2):
+class Step5DriveCaller(DriveCaller):
     initial_time: Union[float, MBVar]
     initial_value: Union[float, MBVar]
     final_time: Union[float, MBVar]
@@ -3827,7 +3802,7 @@ class Step5DriveCaller(DriveCaller2):
         s += f', {self.initial_time}, {self.initial_value}, {self.final_time}, {self.final_value}'
         return s
 
-class StringDriveCaller(DriveCaller2):    
+class StringDriveCaller(DriveCaller):    
     expression: Union[str, MBVar]
     
     @field_validator('expression')
@@ -3851,7 +3826,7 @@ class StringDriveCaller(DriveCaller2):
             s += f', "{self.expression}"'
         return s
     
-class TanhDriveCaller(DriveCaller2):
+class TanhDriveCaller(DriveCaller):
     """    
     f(t) = initial_value + amplitude · tanh(nd_slope · (t - initial_time))
     """
@@ -3898,7 +3873,7 @@ class TanhDriveCaller(DriveCaller2):
         s += f', {self.initial_time}, {self.amplitude}, {self.nd_slope}, {self.initial_value}'
         return s
 
-class TimeDriveCaller(DriveCaller2):
+class TimeDriveCaller(DriveCaller):
     """
     Yields the current time.
     """
@@ -3910,7 +3885,7 @@ class TimeDriveCaller(DriveCaller2):
         s = f'{self.drive_header()}'
         return s
 
-class TimestepDriveCaller(DriveCaller2):
+class TimestepDriveCaller(DriveCaller):
     """
     Yields the current timestep.
     """
@@ -3921,7 +3896,7 @@ class TimestepDriveCaller(DriveCaller2):
     def __str__(self):
         return f'{self.drive_header()}'
     
-class UnitDriveCaller(DriveCaller2):
+class UnitDriveCaller(DriveCaller):
     """Always 1"""
     
     def drive_type(self) -> str:
@@ -3930,7 +3905,7 @@ class UnitDriveCaller(DriveCaller2):
     def __str__(self):
         return f'{self.drive_header()}'
                 
-class TplDriveCaller(DriveCaller2):
+class TplDriveCaller(DriveCaller):
     pass
 
 if imported_pydantic:
@@ -4130,13 +4105,10 @@ class LinearElasticBistop(ConstitutiveLaw):
     Linear elastic bistop constitutive law
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
     stiffness: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]]
-    activating_condition: Union[DriveCaller, DriveCaller2] 
-    deactivating_condition: Union[DriveCaller, DriveCaller2]
+    activating_condition: DriveCaller
+    deactivating_condition: DriveCaller
 
     def const_law_name(self) -> str:
         return 'linear elastic bistop'
@@ -4350,14 +4322,11 @@ class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
     Linear time variant viscoelastic generic constitutive law
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
     stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
-    stiffness_scale: Union[DriveCaller, DriveCaller2]
+    stiffness_scale: DriveCaller
     viscosity: Optional[Union[float, MBVar, List[List[Union[float, MBVar]]]]] = None
     factor: Optional[Union[float, MBVar]] = None
-    viscosity_scale: Union[DriveCaller, DriveCaller2]
+    viscosity_scale: DriveCaller
 
     def const_law_name(self) -> str:
         return 'linear time variant viscoelastic generic'
@@ -4551,8 +4520,8 @@ class LinearViscoelasticBistop(ConstitutiveLaw):
     stiffness: Union[float, MBVar]
     viscosity: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]] = None
-    activating_condition: Union[DriveCaller, DriveCaller2]
-    deactivating_condition: Union[DriveCaller, DriveCaller2]
+    activating_condition: DriveCaller
+    deactivating_condition: DriveCaller
 
     def const_law_name(self) -> str:
         return 'linear viscoelastic bistop'
@@ -4766,12 +4735,9 @@ class BistopConstitutiveLaw(ConstitutiveLaw):
     Bistop wrapper applies the logic of the bistop to a generic underlying constitutive law.
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
     initial_status: Optional[Union[bool, str]]
-    activating_condition: Union[DriveCaller, DriveCaller2]
-    deactivating_condition: Union[DriveCaller, DriveCaller2]
+    activating_condition: DriveCaller
+    deactivating_condition: DriveCaller
     wrapped_const_law: ConstitutiveLaw
 
     def const_law_name(self) -> str:
@@ -5038,11 +5004,7 @@ class StrategyFactor(Strategy):
         return s
 
 class StrategyChange(Strategy):
-    # TODO: Remove this relaxed config when all DriveCallers are refactored
-    class Config:
-        arbitrary_types_allowed = True
-
-    time_step_pattern: Union[DriveCaller, DriveCaller2]
+    time_step_pattern: DriveCaller
 
     def __str__(self):
         s = f'{self.strategy_header()}, {self.time_step_pattern}'
@@ -5113,12 +5075,8 @@ class CrankNicolson(Method):
         return 'method: crank nicolson'
 
 class MethodWithRadius(Method):
-    # TODO: Remove this relaxed config when all DriveCallers are refactored
-    class Config:
-        arbitrary_types_allowed = True
-
-    differential_radius: Union[DriveCaller, DriveCaller2]
-    algebraic_radius: Optional[Union[DriveCaller, DriveCaller2]] = None
+    differential_radius: DriveCaller
+    algebraic_radius: Optional[DriveCaller] = None
     
     def __str__(self):
         s = f'method: {self.__class__.__name__.lower()}, {self.differential_radius}'
@@ -5606,9 +5564,6 @@ class InitialValue(MBEntity):
     Kutta-like schemes
     '''
 
-    # TODO: Remove this relaxed config when all DriveCallers are refactored
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     initial_time: Union[float, MBVar]
     final_time: Union[float, MBVar, Literal["forever"]]
     strategy: Optional[Union[StrategyChange, StrategyFactor, StrategyNoChange]] = None
@@ -5626,7 +5581,7 @@ class InitialValue(MBEntity):
     derivatives_max_iterations: Optional[Union[int, MBVar]] = None
     derivatives_coefficient: Optional[DerivativesCoefficient] = None
     output_settings: Optional[OutputSettings] = None
-    output_meter: Optional[Union[DriveCaller, DriveCaller2]] = None
+    output_meter: Optional[DriveCaller] = None
 
     @field_validator('modify_residual_test')
     def set_modify_residual_test(cls, v):
@@ -5752,10 +5707,6 @@ class ConstRBK(MBEntity):
         return s
 
 class DriveRBK(MBEntity):
-    # TODO: Remove this relaxed config when all DriveCallers are refactored
-    class Config:
-        arbitrary_types_allowed = True
-
     position: Optional[TplDriveCaller] = None
     orientation: Optional[TplDriveCaller] = None
     velocity: Optional[TplDriveCaller] = None
@@ -5791,16 +5742,12 @@ class ControlData(MBEntity):
     reliable since it allows a sort of double-check on the entities that are inserted.
     '''
 
-    # TODO: Remove this relaxed config when all DriveCallers are refactored
-    class Config:
-        arbitrary_types_allowed = True
-
     use_auto_differentiation: Optional[Union[bool, int]] = False    # 0 / 1 / True / False
     skip_initial_joint_assembly: Optional[Union[bool, int]] = False    # 0 / 1 / True / False
     simulation_title: Optional[str] = None
     print: Optional[Print] = None
     output_frequency: Optional[Union[int, MBVar]] = None
-    output_meter: Optional[Union[DriveCaller, DriveCaller2]] = None
+    output_meter: Optional[DriveCaller] = None
     output_results: Optional[OutputResults] = None
     default_orientation: Union[Literal["euler123", "euler313", "euler321", "orientation vector", "orientation matrix"]] = "euler123"
     model: Literal["static"] = "static"
