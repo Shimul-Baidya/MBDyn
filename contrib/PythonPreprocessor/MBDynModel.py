@@ -35,13 +35,13 @@ class MBDynModel(MBEntity):
     drivers: Optional[List[FileDriver]] = []
     elements: Annotated[List, Field(arbitrary_type_allowed=True)] #TODO: Replace with proper typing once migration to Element2 is complete
     
-    def add_node(self, node: Union[Node, Node2]) -> None:
+    def add_node(self, node: Node) -> None:
         self.nodes.append(node)
 
     def add_driver(self, driver: FileDriver) -> None:
         self.drivers.append(driver)
 
-    def add_element(self, element: Union[Element, Element2]) -> None:
+    def add_element(self, element: Element) -> None:
         self.elements.append(element)
 
     def __str__(self) -> str:
