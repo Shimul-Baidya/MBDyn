@@ -1632,7 +1632,7 @@ class Modal(Element):
 
 class PlaneDisplacement(Element):
     '''
-    This joint allows two nodes to move in the common relative 1–2 plane and to rotate about the common
+    This joint allows two nodes to move in the common relative 1-2 plane and to rotate about the common
     relative axis 3.
     '''
 
@@ -5301,7 +5301,7 @@ class Eigenanalysis(MBEntity):
         
         return s
 
-        # TODO: Delete these lines of code after review of the new approach
+        # TODO: Delete these lines of code after testing of the new approach
         # if self.suffix_width is not None:
         #     s += f',\n\tsuffix width, {self.suffix_width}'
         # if self.suffix_format is not None:

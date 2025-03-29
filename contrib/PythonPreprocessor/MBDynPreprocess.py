@@ -58,6 +58,7 @@ if sys.version_info[0] < 3:
 else:
         import builtins
 from MBDynLib import *
+from MBDynModel import *
 
 echo = True
 filename = ''

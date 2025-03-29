@@ -31,9 +31,9 @@ class MBDynModel(MBEntity):
     data: Data
     problem: InitialValue  
     control_data: ControlData
-    nodes: Annotated[List, Field(arbitrary_type_allowed=True)] #TODO: Replace with proper typing once migration to Node2 is complete
+    nodes: List[Node]
     drivers: Optional[List[FileDriver]] = []
-    elements: Annotated[List, Field(arbitrary_type_allowed=True)] #TODO: Replace with proper typing once migration to Element2 is complete
+    elements: List[Element]
     
     def add_node(self, node: Node) -> None:
         self.nodes.append(node)
