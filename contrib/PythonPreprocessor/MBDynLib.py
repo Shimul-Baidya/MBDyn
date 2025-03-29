@@ -1355,7 +1355,7 @@ class DriveDisplacement(Element):
     position_1: Position
     node_2_label: Union[int, MBVar]
     position_2: Position
-    relative_position: 'TplDriveCaller'
+    relative_position: 'List'
 
     def element_type(self):
         return 'joint'
@@ -1364,7 +1364,7 @@ class DriveDisplacement(Element):
         s = f'{self.element_header()}, drive displacement'
         s += f''',\n\t{self.node_1_label}, {self.position_1}'''
         s += f''',\n\t{self.node_2_label}, {self.position_2}'''
-        s += f''',\n\t{self.relative_position}'''
+        s += f''',\n\t{", ".join(str(i) for i in self.relative_position)}'''
         s += self.element_footer()
         return s
     
@@ -1378,7 +1378,7 @@ class DriveDisplacementPin(Element):
     node_label: Union[int, MBVar]
     node_offset: Position
     offset: Position
-    position: 'TplDriveCaller'
+    position: 'List'
 
     def element_type(self):
         return 'joint'
@@ -1387,7 +1387,7 @@ class DriveDisplacementPin(Element):
         s = f'{self.element_header()}, drive displacement pin'
         s += f''',\n\t{self.node_label}, {self.node_offset}'''
         s += f''',\n\t{self.offset}'''
-        s += f''',\n\t{self.position}'''
+        s += f''',\n\t{", ".join(str(i) for i in self.position)}'''
         s += self.element_footer()
         return s
 
@@ -1398,10 +1398,10 @@ class DriveHinge(Element):
     '''
 
     node_1_label: Union[int, MBVar]
-    relative_orientation_mat_1: Optional[Position]
+    relative_orientation_mat_1: Optional[Position] = None
     node_2_label: Union[int, MBVar]
-    relative_orientation_mat_2: Optional[Position]
-    hinge_orientation: 'TplDriveCaller'
+    relative_orientation_mat_2: Optional[Position] = None
+    hinge_orientation: 'List'
 
     def element_type(self):
         return 'joint'
@@ -1414,7 +1414,7 @@ class DriveHinge(Element):
         s += f''',\n\t{self.node_2_label}'''
         if self.relative_orientation_mat_2 is not None:
             s += f''', orientation, {self.relative_orientation_mat_2}'''
-        s += f''',\n\t{self.hinge_orientation}'''
+        s += f''',\n\t{", ".join(str(i) for i in self.hinge_orientation)}'''
         s += self.element_footer()
         return s
     
@@ -5639,27 +5639,27 @@ class ConstRBK(MBEntity):
         return s
 
 class DriveRBK(MBEntity):
-    position: Optional[TplDriveCaller] = None
-    orientation: Optional[TplDriveCaller] = None
-    velocity: Optional[TplDriveCaller] = None
-    angular_velocity: Optional[TplDriveCaller] = None
-    acceleration: Optional[TplDriveCaller] = None
-    angular_acceleration: Optional[TplDriveCaller] = None
+    position: Optional[List] = None
+    orientation: Optional[List] = None
+    velocity: Optional[List] = None
+    angular_velocity: Optional[List] = None
+    acceleration: Optional[List] = None
+    angular_acceleration: Optional[List] = None
 
     def __str__(self):
         s = 'drive'
         if self.position:
-            s += f',\n\tposition, {self.position}'
+            s += f',\n\tposition, {", ".join(str(i) for i in self.position)}'
         if self.orientation:
-            s += f',\n\torientation, {self.orientation}'
+            s += f',\n\torientation, {", ".join(str(i) for i in self.orientation)}'
         if self.velocity:
-            s += f',\n\tvelocity, {self.velocity}'
+            s += f',\n\tvelocity, {", ".join(str(i) for i in self.velocity)}'
         if self.angular_velocity:
-            s += f',\n\tangular velocity, {self.angular_velocity}'
+            s += f',\n\tangular velocity, {", ".join(str(i) for i in self.angular_velocity)}'
         if self.acceleration:
-            s += f',\n\tacceleration, {self.acceleration}'
+            s += f',\n\tacceleration, {", ".join(str(i) for i in self.acceleration)}'
         if self.angular_acceleration:
-            s += f',\n\tangular acceleration, {self.angular_acceleration}'
+            s += f',\n\tangular acceleration, {", ".join(str(i) for i in self.angular_acceleration)}'
         return s
 
 

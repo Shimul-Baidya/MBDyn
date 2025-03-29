@@ -7884,17 +7884,432 @@ class TestDistance(unittest.TestCase):
         self.assertEqual(distance_joint.node_1_label, node_var_1)
         self.assertEqual(distance_joint.node_2_label, node_var_2)
 
+
 class TestDriveDisplacement(unittest.TestCase):
-    # TODO: Implement 'TplDriveCaller' first
-    pass
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode(
+            idx=1,
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.StaticNode(
+            idx=2,
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.pos1 = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.pos2 = l.Position(relative_position=[0, 0.5, 0], reference='node')
+        
+        # Create relative position
+        self.relative_position = [1.0, 0.0, 0.0]
+
+    def test_drive_displacement_creation(self):
+        """Check that DriveDisplacement can be created with valid arguments"""
+        # Basic displacement with minimal arguments
+        displacement = l.DriveDisplacement(
+            idx=1,
+            node_1_label=self.node1.idx,
+            position_1=self.pos1,
+            node_2_label=self.node2.idx,
+            position_2=self.pos2,
+            relative_position=self.relative_position
+        )
+        self.assertEqual(displacement.idx, 1)
+        self.assertEqual(displacement.node_1_label, self.node1.idx)
+        self.assertEqual(displacement.position_1, self.pos1)
+        self.assertEqual(displacement.node_2_label, self.node2.idx)
+        self.assertEqual(displacement.position_2, self.pos2)
+        self.assertEqual(displacement.relative_position, self.relative_position)
+
+    def test_drive_displacement_str_representation(self):
+        """Test string representation of DriveDisplacement"""
+        displacement = l.DriveDisplacement(
+            idx=1,
+            node_1_label=self.node1.idx,
+            position_1=self.pos1,
+            node_2_label=self.node2.idx,
+            position_2=self.pos2,
+            relative_position=self.relative_position
+        )
+        expected_str = "joint: 1, drive displacement,\n\t1, reference, node, 0.5, 0.0, 0.0,\n\t2, reference, node, 0.0, 0.5, 0.0,\n\t1.0, 0.0, 0.0;\n"
+        self.assertEqual(str(displacement), expected_str)
+        print(displacement)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_drive_displacement_missing_required_fields(self):
+        """Test creating DriveDisplacement with missing required fields"""
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                position_1=self.pos1,
+                node_2_label=self.node2.idx,
+                position_2=self.pos2,
+                relative_position=self.relative_position
+            )
+        
+        # Missing position_1
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                node_1_label=self.node1.idx,
+                node_2_label=self.node2.idx,
+                position_2=self.pos2,
+                relative_position=self.relative_position
+            )
+        
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                node_1_label=self.node1.idx,
+                position_1=self.pos1,
+                position_2=self.pos2,
+                relative_position=self.relative_position
+            )
+        
+        # Missing position_2
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                node_1_label=self.node1.idx,
+                position_1=self.pos1,
+                node_2_label=self.node2.idx,
+                relative_position=self.relative_position
+            )
+        
+        # Missing relative_position
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                node_1_label=self.node1.idx,
+                position_1=self.pos1,
+                node_2_label=self.node2.idx,
+                position_2=self.pos2
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_drive_displacement_invalid_types(self):
+        """Test creating DriveDisplacement with invalid field types"""
+        # Invalid node_1_label type
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                node_1_label="not a node label",  # Invalid type
+                position_1=self.pos1,
+                node_2_label=self.node2.idx,
+                position_2=self.pos2,
+                relative_position=self.relative_position
+            )
+        
+        # Invalid position_1 type
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                node_1_label=self.node1.idx,
+                position_1="not a position",  # Invalid type
+                node_2_label=self.node2.idx,
+                position_2=self.pos2,
+                relative_position=self.relative_position
+            )
+        
+        # Invalid relative_position type
+        with self.assertRaises(Exception):
+            l.DriveDisplacement(
+                idx=1,
+                node_1_label=self.node1.idx,
+                position_1=self.pos1,
+                node_2_label=self.node2.idx,
+                position_2=self.pos2,
+                relative_position="not a list"  # Invalid type
+            )
+
 
 class TestDriveDisplacementPin(unittest.TestCase):
-    # TODO: Implement 'TplDriveCaller' first
-    pass
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node = l.DynamicNode(
+            idx=1,
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create positions for testing
+        self.node_offset = l.Position(relative_position=[0.5, 0, 0], reference='node')
+        self.offset = l.Position(relative_position=[0, 0.5, 0], reference='node')
+        
+        # Create position vector
+        self.position = [1.0, 0.0, 0.0]
+
+    def test_drive_displacement_pin_creation(self):
+        """Check that DriveDisplacementPin can be created with valid arguments"""
+        # Basic pin with minimal arguments
+        pin = l.DriveDisplacementPin(
+            idx=1,
+            node_label=self.node.idx,
+            node_offset=self.node_offset,
+            offset=self.offset,
+            position=self.position
+        )
+        self.assertEqual(pin.idx, 1)
+        self.assertEqual(pin.node_label, self.node.idx)
+        self.assertEqual(pin.node_offset, self.node_offset)
+        self.assertEqual(pin.offset, self.offset)
+        self.assertEqual(pin.position, self.position)
+
+    def test_drive_displacement_pin_str_representation(self):
+        """Test string representation of DriveDisplacementPin"""
+        pin = l.DriveDisplacementPin(
+            idx=1,
+            node_label=self.node.idx,
+            node_offset=self.node_offset,
+            offset=self.offset,
+            position=self.position
+        )
+        expected_str = "joint: 1, drive displacement pin,\n\t1, reference, node, 0.5, 0.0, 0.0,\n\treference, node, 0.0, 0.5, 0.0,\n\t1.0, 0.0, 0.0;\n"
+        self.assertEqual(str(pin), expected_str)
+        print(pin)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_drive_displacement_pin_missing_required_fields(self):
+        """Test creating DriveDisplacementPin with missing required fields"""
+        # Missing node_label
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_offset=self.node_offset,
+                offset=self.offset,
+                position=self.position
+            )
+        
+        # Missing node_offset
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_label=self.node.idx,
+                offset=self.offset,
+                position=self.position
+            )
+        
+        # Missing offset
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_label=self.node.idx,
+                node_offset=self.node_offset,
+                position=self.position
+            )
+        
+        # Missing position
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_label=self.node.idx,
+                node_offset=self.node_offset,
+                offset=self.offset
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_drive_displacement_pin_invalid_types(self):
+        """Test creating DriveDisplacementPin with invalid field types"""
+        # Invalid node_label type
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_label="not a node label",  # Invalid type
+                node_offset=self.node_offset,
+                offset=self.offset,
+                position=self.position
+            )
+        
+        # Invalid node_offset type
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_label=self.node.idx,
+                node_offset="not a position",  # Invalid type
+                offset=self.offset,
+                position=self.position
+            )
+        
+        # Invalid offset type
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_label=self.node.idx,
+                node_offset=self.node_offset,
+                offset="not a position",  # Invalid type
+                position=self.position
+            )
+        
+        # Invalid position type
+        with self.assertRaises(Exception):
+            l.DriveDisplacementPin(
+                idx=1,
+                node_label=self.node.idx,
+                node_offset=self.node_offset,
+                offset=self.offset,
+                position="not a list"  # Invalid type
+            )
+
 
 class TestDriveHinge(unittest.TestCase):
-    # TODO: Implement 'TplDriveCaller' first
-    pass
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create nodes for testing
+        self.node1 = l.DynamicNode(
+            idx=1,
+            pos=l.Position(relative_position=[0, 0, 0], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
+        )
+        self.node2 = l.StaticNode(
+            idx=2,
+            pos=l.Position(relative_position=[1, 1, 1], reference='global'),
+            orient=l.Position(relative_position=[1, 0, 0], reference='global'),
+            vel=l.Position(relative_position=[0, 0, 0], reference='global'),
+            angular_vel=l.Position(relative_position=[0, 0, 0], reference='global')
+        )
+        
+        # Create orientations for testing
+        self.orient1 = l.Position(relative_position=[0, 0, 1], reference='node')
+        self.orient2 = l.Position(relative_position=[0, 1, 0], reference='node')
+        
+        # Create hinge orientation
+        self.hinge_orientation = [1.0, 0.0, 0.0]
+
+    def test_drive_hinge_creation(self):
+        """Check that DriveHinge can be created with valid arguments"""
+        # Basic hinge with minimal arguments
+        hinge = l.DriveHinge(
+            idx=1,
+            node_1_label=self.node1.idx,
+            node_2_label=self.node2.idx,
+            hinge_orientation=self.hinge_orientation
+        )
+        self.assertEqual(hinge.idx, 1)
+        self.assertEqual(hinge.node_1_label, self.node1.idx)
+        self.assertEqual(hinge.node_2_label, self.node2.idx)
+        self.assertEqual(hinge.hinge_orientation, self.hinge_orientation)
+        self.assertIsNone(hinge.relative_orientation_mat_1)
+        self.assertIsNone(hinge.relative_orientation_mat_2)
+        
+        # Hinge with orientation matrices
+        hinge = l.DriveHinge(
+            idx=1,
+            node_1_label=self.node1.idx,
+            relative_orientation_mat_1=self.orient1,
+            node_2_label=self.node2.idx,
+            relative_orientation_mat_2=self.orient2,
+            hinge_orientation=self.hinge_orientation
+        )
+        self.assertEqual(hinge.relative_orientation_mat_1, self.orient1)
+        self.assertEqual(hinge.relative_orientation_mat_2, self.orient2)
+
+    def test_drive_hinge_str_representation(self):
+        """Test string representation of DriveHinge"""
+        # Basic hinge without orientation matrices
+        hinge = l.DriveHinge(
+            idx=1,
+            node_1_label=self.node1.idx,
+            node_2_label=self.node2.idx,
+            hinge_orientation=self.hinge_orientation
+        )
+        expected_str = "joint: 1, drive hinge,\n\t1,\n\t2,\n\t1.0, 0.0, 0.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        
+        # Hinge with orientation matrices
+        hinge = l.DriveHinge(
+            idx=1,
+            node_1_label=self.node1.idx,
+            relative_orientation_mat_1=self.orient1,
+            node_2_label=self.node2.idx,
+            relative_orientation_mat_2=self.orient2,
+            hinge_orientation=self.hinge_orientation
+        )
+        expected_str = "joint: 1, drive hinge,\n\t1, orientation, reference, node, 0.0, 0.0, 1.0,\n\t2, orientation, reference, node, 0.0, 1.0, 0.0,\n\t1.0, 0.0, 0.0;\n"
+        self.assertEqual(str(hinge), expected_str)
+        print(hinge)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_drive_hinge_missing_required_fields(self):
+        """Test creating DriveHinge with missing required fields"""
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.DriveHinge(
+                idx=1,
+                node_2_label=self.node2.idx,
+                hinge_orientation=self.hinge_orientation
+            )
+        
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.DriveHinge(
+                idx=1,
+                node_1_label=self.node1.idx,
+                hinge_orientation=self.hinge_orientation
+            )
+        
+        # Missing hinge_orientation
+        with self.assertRaises(Exception):
+            l.DriveHinge(
+                idx=1,
+                node_1_label=self.node1.idx,
+                node_2_label=self.node2.idx
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_drive_hinge_invalid_types(self):
+        """Test creating DriveHinge with invalid field types"""
+        # Invalid node_1_label type
+        with self.assertRaises(Exception):
+            l.DriveHinge(
+                idx=1,
+                node_1_label="not a node label",  # Invalid type
+                node_2_label=self.node2.idx,
+                hinge_orientation=self.hinge_orientation
+            )
+        
+        # Invalid node_2_label type
+        with self.assertRaises(Exception):
+            l.DriveHinge(
+                idx=1,
+                node_1_label=self.node1.idx,
+                node_2_label="not a node label",  # Invalid type
+                hinge_orientation=self.hinge_orientation
+            )
+        
+        # Invalid orientation_mat_1 type
+        with self.assertRaises(Exception):
+            l.DriveHinge(
+                idx=1,
+                node_1_label=self.node1.idx,
+                relative_orientation_mat_1="not a position",  # Invalid type
+                node_2_label=self.node2.idx,
+                hinge_orientation=self.hinge_orientation
+            )
+        
+        # Invalid hinge_orientation type
+        with self.assertRaises(Exception):
+            l.DriveHinge(
+                idx=1,
+                node_1_label=self.node1.idx,
+                node_2_label=self.node2.idx,
+                hinge_orientation="not a list"  # Invalid type
+            )
+
 
 class TestGimbalRotation(unittest.TestCase):
     def setUp(self):
