@@ -3932,6 +3932,8 @@ class ConstitutiveLaw(MBEntity):
     """Index of this constitutive law to reuse with references"""
 
     law_type: LawType
+    prestress: Optional[List] = None
+    prestrain: Optional[List] = None
 
     @abstractmethod
     def const_law_name(self) -> str:
@@ -3957,6 +3959,15 @@ class ConstitutiveLaw(MBEntity):
                    f'\n\t{self.dim}, {self.const_law_name()}'
         else:
             return self.const_law_name()
+        
+    def const_law_footer(self) -> str:
+        """Common syntax for end of any constitutive law"""
+        s = ''
+        if self.prestress is not None:
+            s += f',\n\tprestress, {", ".join(str(i) for i in self.prestress)}'
+        if self.prestrain is not None:
+            s += f',\n\tprestrain, {", ".join(str(i) for i in self.prestrain)}'
+        return s
     
 class LinearElastic(ConstitutiveLaw):
     """
@@ -3973,7 +3984,9 @@ class LinearElastic(ConstitutiveLaw):
     """The isotropic stiffness coefficient"""
     
     def __str__(self):
-        return f'{self.const_law_header()}, {self.stiffness}'
+        s = f'{self.const_law_header()}, {self.stiffness}'
+        s += self.const_law_footer()
+        return s
 
 class LinearElasticGeneric(ConstitutiveLaw):
     """
@@ -3987,21 +4000,27 @@ class LinearElasticGeneric(ConstitutiveLaw):
 
     def __str__(self):
         if isinstance(self.stiffness, (float, MBVar)):
-            return f'{self.const_law_header()}, {self.stiffness}'
+            s = f'{self.const_law_header()}, {self.stiffness}'
+            s += self.const_law_footer()
+            return s
         elif isinstance(self.stiffness, list):
             N = len(self.stiffness)
             if N == 1:
-                return f'{self.const_law_header()}, {self.stiffness[0][0]}'
+                s = f'{self.const_law_header()}, {self.stiffness[0][0]}'
+                s += self.const_law_footer()
+                return s
             elif N == 3 or N == 6:
                 matrix_str = ''
                 for i in range(N):
                     row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
                     matrix_str += f',\n\t{row_str}'
-                return f'{self.const_law_header()}{matrix_str}'
+                s = f'{self.const_law_header()}{matrix_str}'
+                s += self.const_law_footer()
+                return s
             else:
-                raise ValueError("Unsupported size of stiffness matrix")
+                raise ValueError(f"{self.__class__.__name__}: Unsupported size of stiffness matrix")
         else:
-            raise TypeError("Invalid type for stiffness matrix")        
+            raise TypeError(f"{self.__class__.__name__}: Invalid type for stiffness matrix")        
 
 class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
     """
@@ -4023,6 +4042,7 @@ class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
             matrix_str += f',\n\t{row_str}'
 
         base_str = f'{base_str}{matrix_str},\n\t{self.coupling_coef}'
+        base_str += self.const_law_footer()
         return base_str
     
 class CubicElasticGeneric(ConstitutiveLaw):
@@ -4051,9 +4071,10 @@ class CubicElasticGeneric(ConstitutiveLaw):
                 stiffness_3_str = ', '.join(str(self.stiffness_3[i]) for i in range(N))
                 base_str += f',\n\t{stiffness_1_str},\n\t{stiffness_2_str},\n\t{stiffness_3_str}'
             else:
-                raise ValueError("Unsupported size of stiffness vector")
+                raise ValueError(f"{self.__class__.__name__}: Unsupported size of stiffness vector")
         else:
-            raise TypeError("Invalid type for stiffness values")
+            raise TypeError(f"{self.__class__.__name__}: Invalid type for stiffness values")
+        base_str += self.const_law_footer()
         return base_str
 
 
@@ -4069,7 +4090,9 @@ class InverseSquareElastic(ConstitutiveLaw):
         return 'inverse square elastic'
     
     def __str__(self):
-        return f'{self.const_law_header()}, {self.stiffness}, {self.ref_length}'
+        s = f'{self.const_law_header()}, {self.stiffness}, {self.ref_length}'
+        s += self.const_law_footer()
+        return s
     
 class LogElastic(ConstitutiveLaw):
     """
@@ -4082,7 +4105,9 @@ class LogElastic(ConstitutiveLaw):
         return 'log elastic'
 
     def __str__(self):
-        return f'{self.const_law_header()}, {self.stiffness}'
+        s = f'{self.const_law_header()}, {self.stiffness}'
+        s += self.const_law_footer()
+        return s
 
 class LinearElasticBistop(ConstitutiveLaw):
     """
@@ -4114,7 +4139,7 @@ class LinearElasticBistop(ConstitutiveLaw):
             base_str += f'\n\t{self.deactivating_condition},'
         else:
             base_str += f'\n\treference, {self.deactivating_condition.idx}'
-
+        base_str += self.const_law_footer()
         return base_str
 
 class DoubleLinearElastic(ConstitutiveLaw):
@@ -4131,7 +4156,9 @@ class DoubleLinearElastic(ConstitutiveLaw):
         return 'double linear elastic'
     
     def __str__(self):
-        return f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}'
+        s = f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}'
+        s += self.const_law_footer()
+        return s
 
 class IsotropicHardeningElastic(ConstitutiveLaw):
     """
@@ -4147,9 +4174,13 @@ class IsotropicHardeningElastic(ConstitutiveLaw):
     
     def __str__(self):
         if self.linear_stiffness is not None:
-            return f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}, linear stiffness, {self.linear_stiffness}'
+            s = f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}, linear stiffness, {self.linear_stiffness}'
+            s += self.const_law_footer()
+            return s
         else:
-            return f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}'
+            s = f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}'
+            s += self.const_law_footer()
+            return s
         
 class LinearViscous(ConstitutiveLaw):
     """
@@ -4165,7 +4196,9 @@ class LinearViscous(ConstitutiveLaw):
             return 'linear viscous isotropic'
 
     def __str__(self):
-        return f'{self.const_law_header()}, {self.viscosity}'
+        s = f'{self.const_law_header()}, {self.viscosity}'
+        s += self.const_law_footer()
+        return s
 
 class LinearViscousGeneric(ConstitutiveLaw):
     """
@@ -4179,21 +4212,27 @@ class LinearViscousGeneric(ConstitutiveLaw):
 
     def __str__(self):
         if isinstance(self.viscosity, (float, MBVar)):
-            return f'{self.const_law_header()}, {self.viscosity}'
+            s = f'{self.const_law_header()}, {self.viscosity}'
+            s += self.const_law_footer()
+            return s
         elif isinstance(self.viscosity, list):
             N = len(self.viscosity)
             if N == 1:
-                return f'{self.const_law_header()}, {self.viscosity[0][0]}'
+                s = f'{self.const_law_header()}, {self.viscosity[0][0]}'
+                s += self.const_law_footer()
+                return s
             elif N == 3 or N == 6:
                 matrix_str = ''
                 for i in range(N):
                     row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
                     matrix_str += f',\n\t{row_str}'
-                return f'{self.const_law_header()}{matrix_str}'
+                s = f'{self.const_law_header()}{matrix_str}'
+                s += self.const_law_footer()
+                return s
             else:
-                raise ValueError("Unsupported size of viscosity matrix")
+                raise ValueError(f"{self.__class__.__name__}: Unsupported size of viscosity matrix")
         else:
-            raise TypeError("Invalid type for viscosity matrix")
+            raise TypeError(f"{self.__class__.__name__}: Invalid type for viscosity matrix")
  
 class LinearViscoelastic(ConstitutiveLaw):
     """
@@ -4216,11 +4255,15 @@ class LinearViscoelastic(ConstitutiveLaw):
 
     def __str__(self):
         if self.viscosity is not None:
-            return f'{self.const_law_header()}, {self.stiffness}, {self.viscosity}'
+            s = f'{self.const_law_header()}, {self.stiffness}, {self.viscosity}'
+            s += self.const_law_footer()
+            return s
         elif self.factor is not None:
-            return f'{self.const_law_header()}, {self.stiffness}, proportional, {self.factor}'
+            s = f'{self.const_law_header()}, {self.stiffness}, proportional, {self.factor}'
+            s += self.const_law_footer()
+            return s
         else:
-            raise ValueError("Either viscosity or factor must be provided for Linear viscoelastic law")
+            raise ValueError(f"{self.__class__.__name__}: Either viscosity or factor must be provided for Linear viscoelastic law")
         
 class LinearViscoelasticGeneric(ConstitutiveLaw):
     """
@@ -4299,6 +4342,7 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
                 raise TypeError("Invalid type for viscosity matrix")
         elif self.factor is not None:
             base_str += f', proportional, {self.factor}'
+        base_str += self.const_law_footer()
         return base_str
    
 class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
@@ -4370,7 +4414,7 @@ class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
             base_str += f',\n\t{self.viscosity_scale}'
         else:
             base_str += f',\n\treference, {self.viscosity_scale.idx}'
-
+        base_str += self.const_law_footer()
         return base_str
 
 class LinearViscoelasticGenericAxialTorsionCoupling(ConstitutiveLaw):
@@ -4416,7 +4460,7 @@ class LinearViscoelasticGenericAxialTorsionCoupling(ConstitutiveLaw):
 
         # Adding the coupling coefficient
         base_str += f',\n\t{self.coupling_coef}'
-
+        base_str += self.const_law_footer()
         return base_str
 
 class CubicViscoelasticGeneric(ConstitutiveLaw):
@@ -4448,6 +4492,7 @@ class CubicViscoelasticGeneric(ConstitutiveLaw):
                 raise ValueError("Unsupported size of stiffness and viscosity vectors")
         else:
             raise TypeError("Invalid type for stiffness and viscosity values")
+        base_str += self.const_law_footer()
         return base_str
     
 class DoubleLinearViscoelastic(ConstitutiveLaw):
@@ -4468,9 +4513,9 @@ class DoubleLinearViscoelastic(ConstitutiveLaw):
     def __str__(self):
         base_str = f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}, {self.viscosity}'
         if self.viscosity_2 is not None:
-            return f'{base_str}, second damping, {self.viscosity_2}'
-        else:
-            return base_str
+            base_str += f', second damping, {self.viscosity_2}'
+        base_str += self.const_law_footer()
+        return base_str
         
 class TurbulentViscoelastic(ConstitutiveLaw):
     """
@@ -4491,6 +4536,7 @@ class TurbulentViscoelastic(ConstitutiveLaw):
             base_str += f', {self.threshold}'
             if self.linear_viscosity is not None:
                 base_str += f', {self.linear_viscosity}'
+        base_str += self.const_law_footer()
         return base_str
 
 class LinearViscoelasticBistop(ConstitutiveLaw):
@@ -4521,6 +4567,7 @@ class LinearViscoelasticBistop(ConstitutiveLaw):
             base_str += f'\n\t{self.deactivating_condition}'
         else:
             base_str += f'\n\treference, {self.deactivating_condition.idx}'
+        base_str += self.const_law_footer()
         return base_str
 
 class SymbolicElastic(ConstitutiveLaw):
@@ -4552,6 +4599,7 @@ class SymbolicElastic(ConstitutiveLaw):
         base_str += f',\n\tepsilon, {epsilon_str}'
         expression_str = ', '.join(f'"{expression}"' for expression in expression_list)
         base_str += f',\n\texpression, {expression_str}'
+        base_str += self.const_law_footer()
         return base_str
 
 class SymbolicViscous(ConstitutiveLaw):
@@ -4583,6 +4631,7 @@ class SymbolicViscous(ConstitutiveLaw):
         base_str += f',\n\tepsilon prime, {epsilon_prime_str}'
         expression_str = ', '.join(f'"{expression}"' for expression in expression_list)
         base_str += f',\n\texpression, {expression_str}'
+        base_str += self.const_law_footer()
         return base_str
     
 class SymbolicViscoelastic(ConstitutiveLaw):
@@ -4621,6 +4670,7 @@ class SymbolicViscoelastic(ConstitutiveLaw):
         base_str += f',\n\tepsilon, {epsilon_str}'
         base_str += f',\n\tepsilon prime, {epsilon_prime_str}'
         base_str += f',\n\texpression, {expression_str}'
+        base_str += self.const_law_footer()
         return base_str
     
 class SymbolicViscoelastic(ConstitutiveLaw):
@@ -4659,6 +4709,7 @@ class SymbolicViscoelastic(ConstitutiveLaw):
         base_str += f',\n\tepsilon, {epsilon_str}'
         base_str += f',\n\tepsilon prime, {epsilon_prime_str}'
         base_str += f',\n\texpression, {expression_str}'
+        base_str += self.const_law_footer()
         return base_str
     
 class AnnElastic(ConstitutiveLaw):
@@ -4674,6 +4725,7 @@ class AnnElastic(ConstitutiveLaw):
     def __str__(self):
         base_str = f'{self.const_law_header()}'
         base_str += f',\n\t"{self.file_name}"'
+        base_str += self.const_law_footer()
         return base_str
 
 class AnnViscoelastic(ConstitutiveLaw):
@@ -4689,6 +4741,7 @@ class AnnViscoelastic(ConstitutiveLaw):
     def __str__(self):
         base_str = f'{self.const_law_header()}'
         base_str += f',\n\t"{self.file_name}"'
+        base_str += self.const_law_footer()
         return base_str
 
 class ArrayConstitutiveLaw(ConstitutiveLaw):
@@ -4709,6 +4762,7 @@ class ArrayConstitutiveLaw(ConstitutiveLaw):
         base_str = f'{self.const_law_header()}, {self.number}'
         for law in self.wrapped_const_laws:
             base_str += f',\n\t{str(law)}'
+        base_str += self.const_law_footer()
         return base_str
 
 class BistopConstitutiveLaw(ConstitutiveLaw):
@@ -4741,6 +4795,7 @@ class BistopConstitutiveLaw(ConstitutiveLaw):
             base_str += f'\n\treference, {self.deactivating_condition.idx},'
 
         base_str += f'\n\t{str(self.wrapped_const_law)}'
+        base_str += self.const_law_footer()
         return base_str
 
 class InvariantAngularWrapper(ConstitutiveLaw):
@@ -4758,6 +4813,7 @@ class InvariantAngularWrapper(ConstitutiveLaw):
         base_str = f'{self.const_law_header()}'
         base_str += f',\n\t{self.xi}'
         base_str += f',\n\t{str(self.wrapped_const_law)}'
+        base_str += self.const_law_footer()
         return base_str
     
 class NamedConstitutiveLaw(MBEntity):

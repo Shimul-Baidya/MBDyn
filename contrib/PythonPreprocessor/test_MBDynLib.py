@@ -6378,6 +6378,24 @@ class TestLinearElastic(unittest.TestCase):
         self.assertEqual(str(large_stiffness), f'{large_stiffness.const_law_header()}, 1000000000000.0')
         self.assertEqual(str(zero_stiffness), f'{zero_stiffness.const_law_header()}, 0.0')
 
+    def test_const_law_footer(self):
+        # Test with prestress
+        law_with_prestress = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, 
+            stiffness=1e9,
+            prestress=[1.0, 2.0, 3.0]
+        )
+        self.assertEqual(str(law_with_prestress), f'{law_with_prestress.const_law_header()}, 1000000000.0,\n\tprestress, 1.0, 2.0, 3.0')
+        
+        # Test with prestrain
+        law_with_prestrain = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, 
+            stiffness=1e9,
+            prestrain=[0.1, 0.2, 0.3]
+        )
+        print(law_with_prestrain)
+        self.assertEqual(str(law_with_prestrain), f'{law_with_prestrain.const_law_header()}, 1000000000.0,\n\tprestrain, 0.1, 0.2, 0.3')
+
 class TestLinearViscousGeneric(unittest.TestCase):
     def setUp(self):
         self.scalar_law = l.LinearViscousGeneric(law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, viscosity=1e9)
@@ -6438,6 +6456,17 @@ class TestLinearViscousGeneric(unittest.TestCase):
         self.assertEqual(str(small_viscosity), f'{small_viscosity.const_law_header()}, 1e-09')
         self.assertEqual(str(large_viscosity), f'{large_viscosity.const_law_header()}, 1000000000000.0')
         self.assertEqual(str(zero_viscosity), f'{zero_viscosity.const_law_header()}, 0.0')
+
+    def test_const_law_footer(self):
+        # Test with prestress and prestrain
+        law = l.LinearViscousGeneric(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW, 
+            viscosity=1e9,
+            prestress=[1.0, 2.0, 3.0],
+            prestrain=[0.1, 0.2, 0.3]
+        )
+        self.assertEqual(str(law), f'{law.const_law_header()}, 1000000000.0,\n\tprestress, 1.0, 2.0, 3.0,\n\tprestrain, 0.1, 0.2, 0.3')
+        print(law)
 
 class TestLinearViscoelasticGeneric(unittest.TestCase):
     def test_valid_initialization_with_viscosity(self):
