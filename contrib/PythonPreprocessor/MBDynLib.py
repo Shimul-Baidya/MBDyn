@@ -5182,7 +5182,7 @@ class MethodforEigenanalysis(MBEntity):
         pass
 
 class UseLapack(MethodforEigenanalysis):
-    balance: Optional[Literal['no', 'sclae', 'permute', 'all']] = None
+    balance: Optional[Literal['no', 'scale', 'permute', 'all']] = None
 
     def __str__(self):
         s = 'use lapack'
