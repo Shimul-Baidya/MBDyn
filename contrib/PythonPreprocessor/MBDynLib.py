@@ -404,7 +404,7 @@ class MBVar(MBEntity, terminal_expression):
 
     @field_validator('var_type')
     def validate_var_type(cls, v):
-        assert v in cls.var_types, (
+        assert v.strip('const ') in cls.var_types, (
             f'\n-------------------\nERROR: MBVar: unknown variable type {v}\n\t' +
             '\n-------------------\n'
         )
