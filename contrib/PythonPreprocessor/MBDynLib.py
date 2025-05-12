@@ -55,6 +55,7 @@ from enum import Enum
 from numbers import Number, Integral
 import sys
 from typing import Optional, Tuple, Union, List, Literal, Any, ClassVar, Tuple
+from typing_extensions import Self
 import warnings
 
 
@@ -5261,10 +5262,10 @@ class Eigenanalysis(MBEntity):
     upper_frequency_limit: Optional[Union[float, MBVar]] = None
     method: Optional[MethodforEigenanalysis] = None
 
-    @model_validator(mode='after')
-    def check_when_and_num_times(cls, values):
-        when = values.get('when')
-        num_times = values.get('num_times')
+    @model_validator(mode='after') -> Self
+    def check_when_and_num_times(cls, self):
+        when = self.when
+        num_times = self.num_times
         if isinstance(when, list) and num_times is None:
             raise ValueError("If 'when' is given as a list, 'num_times' must also be provided.")
         return values
