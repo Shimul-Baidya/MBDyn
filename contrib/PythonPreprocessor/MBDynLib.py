@@ -5262,13 +5262,13 @@ class Eigenanalysis(MBEntity):
     upper_frequency_limit: Optional[Union[float, MBVar]] = None
     method: Optional[MethodforEigenanalysis] = None
 
-    @model_validator(mode='after') -> Self
+    @model_validator(mode='after')
     def check_when_and_num_times(cls, self):
         when = self.when
         num_times = self.num_times
         if isinstance(when, list) and num_times is None:
             raise ValueError("If 'when' is given as a list, 'num_times' must also be provided.")
-        return values
+        return self
 
     def add_optional_field(self, s, field_name, field_value):
         if field_value is True:
