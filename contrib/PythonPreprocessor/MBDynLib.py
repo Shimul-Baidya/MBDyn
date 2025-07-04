@@ -4062,37 +4062,42 @@ class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
         return base_str
     
 class CubicElasticGeneric(ConstitutiveLaw):
-    """
-    Cubic elastic generic constitutive law
-    """
-
-    ### TODO: Ensure this is the correct data type
     stiffness_1: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_2: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_3: Union[float, MBVar, List[Union[float, MBVar]]]
-    
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_stiffness_forms(cls, values):
+        s1, s2, s3 = values.get('stiffness_1'), values.get('stiffness_2'), values.get('stiffness_3')
+        is_s1_list = isinstance(s1, list)
+        is_s2_list = isinstance(s2, list)
+        is_s3_list = isinstance(s3, list)
+        # Ensure all three stiffnesses are of the same type (all scalars or all lists)
+        if not (is_s1_list == is_s2_list == is_s3_list):
+            raise TypeError("stiffness_1, stiffness_2, and stiffness_3 must all be scalars (for 1D) or all lists (for 3D).")
+        # If they are lists (3D vector case), validate that they are all vectors of length 3
+        if is_s1_list:
+            if not (len(s1) == 3 and len(s2) == 3 and len(s3) == 3):
+                raise ValueError("For 3D vector form, stiffness_1, stiffness_2, and stiffness_3 must each be a list of 3 elements.")
+        return values
+
     def const_law_name(self) -> str:
         return 'cubic elastic generic'
 
-    ### TODO: Ensure this is the correct string representation
     def __str__(self):
         base_str = f'{self.const_law_header()}'
         if isinstance(self.stiffness_1, (float, MBVar)):
+            # Scalar case
             base_str += f', {self.stiffness_1}, {self.stiffness_2}, {self.stiffness_3}'
-        elif isinstance(self.stiffness_1, list):
-            N = len(self.stiffness_1)
-            if N == 3:
-                stiffness_1_str = ', '.join(str(self.stiffness_1[i]) for i in range(N))
-                stiffness_2_str = ', '.join(str(self.stiffness_2[i]) for i in range(N))
-                stiffness_3_str = ', '.join(str(self.stiffness_3[i]) for i in range(N))
-                base_str += f',\n\t{stiffness_1_str},\n\t{stiffness_2_str},\n\t{stiffness_3_str}'
-            else:
-                raise ValueError(f"{self.__class__.__name__}: Unsupported size of stiffness vector")
         else:
-            raise TypeError(f"{self.__class__.__name__}: Invalid type for stiffness values")
+            # 3x1 Vector case
+            s1_str = ', '.join(map(str, self.stiffness_1))
+            s2_str = ', '.join(map(str, self.stiffness_2))
+            s3_str = ', '.join(map(str, self.stiffness_3))
+            base_str += f',\n\t{s1_str},\n\t{s2_str},\n\t{s3_str}'
         base_str += self.const_law_footer()
         return base_str
-
 
 class InverseSquareElastic(ConstitutiveLaw):
     """
