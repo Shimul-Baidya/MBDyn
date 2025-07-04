@@ -4036,27 +4036,26 @@ class LinearElasticGeneric(ConstitutiveLaw):
         return s
 
 class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
-    stiffness: List[List[Union[float, MBVar]]]
+    stiffness: List[Union[float, MBVar]]
     coupling_coef: Union[float, MBVar]
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_stiffness_vector(cls, values):
+        stiffness = values.get('stiffness')
+        if not isinstance(stiffness, list):
+            raise TypeError("Stiffness must be a list (a 6x1 vector) for this law.")
+        if len(stiffness) != 6:
+            raise ValueError(f"Stiffness vector must have 6 elements, but got {len(stiffness)}.")
+        return values
 
     def const_law_name(self) -> str:
         return 'linear elastic generic axial torsion coupling'
 
-    @model_validator(mode='before')
-    @classmethod
-    def validate_stiffness_matrix(cls, values):
-        stiffness = values.get('stiffness')
-        if isinstance(stiffness, list):
-            cls.validate_matrix(stiffness, 'stiffness', supported_dims={6})
-        return values
-
     def __str__(self):
         base_str = f'{self.const_law_header()}'
-        matrix_str = ''
-        for row in self.stiffness:
-            row_str = ', '.join(map(str, row))
-            matrix_str += f',\n\t{row_str}'
-        base_str += matrix_str
+        stiffness_str = ', '.join(map(str, self.stiffness))
+        base_str += f',\n\t{stiffness_str}'
         base_str += f',\n\t{self.coupling_coef}'
         base_str += self.const_law_footer()
         return base_str
@@ -4076,7 +4075,7 @@ class CubicElasticGeneric(ConstitutiveLaw):
         # Ensure all three stiffnesses are of the same type (all scalars or all lists)
         if not (is_s1_list == is_s2_list == is_s3_list):
             raise TypeError("stiffness_1, stiffness_2, and stiffness_3 must all be scalars (for 1D) or all lists (for 3D).")
-        # If they are lists (3D vector case), validate that they are all vectors of length 3
+        # If they are lists (3D vector case)
         if is_s1_list:
             if not (len(s1) == 3 and len(s2) == 3 and len(s3) == 3):
                 raise ValueError("For 3D vector form, stiffness_1, stiffness_2, and stiffness_3 must each be a list of 3 elements.")
@@ -4099,11 +4098,7 @@ class CubicElasticGeneric(ConstitutiveLaw):
         base_str += self.const_law_footer()
         return base_str
 
-class InverseSquareElastic(ConstitutiveLaw):
-    """
-    Inverse square elastic constitutive law
-    """
-    
+class InverseSquareElastic(ConstitutiveLaw):    
     stiffness: Union[MBVar, float]
     ref_length: Union[MBVar, float]
     
@@ -4116,10 +4111,6 @@ class InverseSquareElastic(ConstitutiveLaw):
         return s
     
 class LogElastic(ConstitutiveLaw):
-    """
-    Logarithmic elastic constitutive law
-    """
-
     stiffness: Union[float, MBVar]
 
     def const_law_name(self) -> str:
@@ -4131,10 +4122,6 @@ class LogElastic(ConstitutiveLaw):
         return s
 
 class LinearElasticBistop(ConstitutiveLaw):
-    """
-    Linear elastic bistop constitutive law
-    """
-
     stiffness: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]]
     activating_condition: DriveCaller
@@ -4164,10 +4151,6 @@ class LinearElasticBistop(ConstitutiveLaw):
         return base_str
 
 class DoubleLinearElastic(ConstitutiveLaw):
-    """
-    Double linear elastic constitutive law
-    """
-
     stiffness_1: Union[MBVar, float]
     upper_strain: Union[MBVar, float]
     lower_strain: Union[MBVar, float]
