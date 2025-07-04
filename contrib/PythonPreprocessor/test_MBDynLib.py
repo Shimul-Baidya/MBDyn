@@ -6481,6 +6481,7 @@ class TestLinearViscoelasticGeneric(unittest.TestCase):
         self.assertEqual(law.stiffness, stiffness)
         self.assertEqual(law.viscosity, viscosity)
         self.assertIsNone(law.factor)
+        print(law)
 
     def test_valid_initialization_with_factor(self):
         stiffness = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]

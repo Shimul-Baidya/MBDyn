@@ -3952,6 +3952,26 @@ class ConstitutiveLaw(MBEntity):
             return 6
         else: 
             raise ValueError(f"Unknown constitutive law name: {self.law_type}") 
+    
+    @staticmethod
+    def validate_matrix(matrix: list, name: str, supported_dims: set = {3, 6}) -> None:
+        """
+        Validate a matrix to ensure it's a square matrix of a supported dimension.
+        Default supported dimensions are 3x3 and 6x6.
+        """
+        if not isinstance(matrix, list):
+            raise TypeError(f"{name.capitalize()} must be a list of lists.")    # runtime guard
+        
+        N = len(matrix)
+        if N not in supported_dims:
+            raise ValueError(f"Unsupported size for {name} matrix. Expected dimensions {supported_dims}, got {N}x?.")
+        
+        for i, row in enumerate(matrix):
+            if not isinstance(row, list):
+                raise TypeError(f"Row {i} of {name} matrix must be a list.")
+            if len(row) != N:
+                raise ValueError(f"{name.capitalize()} matrix must be square. Expected {N}x{N}, but row {i} has length {len(row)}.")
+
         
     def const_law_header(self) -> str:
         """Common syntax for start of any constitutive law"""
@@ -4028,7 +4048,7 @@ class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
     Linear elastic generic axial torsion coupling constitutive law
     """
 
-    stiffness: Union[List[List[Union[float, MBVar]]]]
+    stiffness: Union[List[List[Union[float, MBVar]]]] # TODO: Check it if I need to add float
     coupling_coef: Union[float, MBVar]
 
     def const_law_name(self) -> str:
