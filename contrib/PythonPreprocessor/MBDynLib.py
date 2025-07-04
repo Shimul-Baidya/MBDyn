@@ -3991,10 +3991,6 @@ class ConstitutiveLaw(MBEntity):
         return s
     
 class LinearElastic(ConstitutiveLaw):
-    """
-    Linear elastic constitutive law
-    """
-        
     def const_law_name(self) -> str:
         if self.dim == 1:
             return 'linear elastic'
@@ -4010,59 +4006,58 @@ class LinearElastic(ConstitutiveLaw):
         return s
 
 class LinearElasticGeneric(ConstitutiveLaw):
-    """
-    Linear elastic generic constitutive law
-    """
-
     stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
     
     def const_law_name(self) -> str:
         return 'linear elastic generic'
 
+    @model_validator(mode='before')
+    @classmethod
+    def validate_stiffness_matrix(cls, values):
+        stiffness = values.get('stiffness')
+        # Only validate if it's a list (matrix)
+        if isinstance(stiffness, list):
+            cls.validate_matrix(stiffness, 'stiffness', supported_dims={1, 3, 6})
+        return values
+
     def __str__(self):
+        s = self.const_law_header()
         if isinstance(self.stiffness, (float, MBVar)):
-            s = f'{self.const_law_header()}, {self.stiffness}'
-            s += self.const_law_footer()
-            return s
+            s += f', {self.stiffness}'
         elif isinstance(self.stiffness, list):
-            N = len(self.stiffness)
-            if N == 1:
-                s = f'{self.const_law_header()}, {self.stiffness[0][0]}'
-                s += self.const_law_footer()
-                return s
-            elif N == 3 or N == 6:
-                matrix_str = ''
-                for i in range(N):
-                    row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
-                    matrix_str += f',\n\t{row_str}'
-                s = f'{self.const_law_header()}{matrix_str}'
-                s += self.const_law_footer()
-                return s
-            else:
-                raise ValueError(f"{self.__class__.__name__}: Unsupported size of stiffness matrix")
+            matrix_str = ''
+            for row in self.stiffness:
+                row_str = ', '.join(map(str, row))
+                matrix_str += f',\n\t{row_str}'
+            s += matrix_str
         else:
-            raise TypeError(f"{self.__class__.__name__}: Invalid type for stiffness matrix")        
+            raise TypeError(f"{self.__class__.__name__}: Invalid type for stiffness matrix")
+        s += self.const_law_footer()
+        return s
 
 class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
-    """
-    Linear elastic generic axial torsion coupling constitutive law
-    """
-
-    stiffness: Union[List[List[Union[float, MBVar]]]] # TODO: Check it if I need to add float
+    stiffness: List[List[Union[float, MBVar]]]
     coupling_coef: Union[float, MBVar]
 
     def const_law_name(self) -> str:
         return 'linear elastic generic axial torsion coupling'
 
+    @model_validator(mode='before')
+    @classmethod
+    def validate_stiffness_matrix(cls, values):
+        stiffness = values.get('stiffness')
+        if isinstance(stiffness, list):
+            cls.validate_matrix(stiffness, 'stiffness', supported_dims={6})
+        return values
+
     def __str__(self):
         base_str = f'{self.const_law_header()}'
         matrix_str = ''
-        N = 6 
-        for i in range(N):
-            row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
+        for row in self.stiffness:
+            row_str = ', '.join(map(str, row))
             matrix_str += f',\n\t{row_str}'
-
-        base_str = f'{base_str}{matrix_str},\n\t{self.coupling_coef}'
+        base_str += matrix_str
+        base_str += f',\n\t{self.coupling_coef}'
         base_str += self.const_law_footer()
         return base_str
     
