@@ -5069,13 +5069,20 @@ class CrankNicolson(Method):
         return 'method: crank nicolson'
 
 class MethodWithRadius(Method):
-    differential_radius: DriveCaller
-    algebraic_radius: Optional[DriveCaller] = None
-    
+    differential_radius: Union[int, float, MBVar, DriveCaller]
+    algebraic_radius: Optional[Union[int, float, MBVar, DriveCaller]] = None
+
     def __str__(self):
-        s = f'method: {self.__class__.__name__.lower()}, {self.differential_radius}'
+        def to_drive_str(value):
+            if isinstance(value, (int, float, MBVar)):
+                return str(ConstDriveCaller(const_value=value))
+            return str(value)
+
+        diff_radius_str = to_drive_str(self.differential_radius)
+        s = f'method: {self.__class__.__name__.lower()}, {diff_radius_str}'
         if self.algebraic_radius is not None:
-            s += f', {self.algebraic_radius}'
+            alg_radius_str = to_drive_str(self.algebraic_radius)
+            s += f', {alg_radius_str}'
         return s
 
 class MS(MethodWithRadius):
