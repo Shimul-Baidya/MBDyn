@@ -4130,10 +4130,9 @@ class LinearElasticBistop(ConstitutiveLaw):
     def const_law_name(self) -> str:
         return 'linear elastic bistop'
 
-    # TODO: Ensure the string representation is correct
     def __str__(self):
         base_str = f'{self.const_law_header()}, {self.stiffness}'
-        
+
         if self.initial_status is not None:
             base_str += f',\n\tinitial status, {self.initial_status},'
 
@@ -4155,23 +4154,22 @@ class DoubleLinearElastic(ConstitutiveLaw):
     upper_strain: Union[MBVar, float]
     lower_strain: Union[MBVar, float]
     stiffness_2: Union[MBVar, float]
+    stiffness_3: Optional[Union[MBVar, float]] = None
     
     def const_law_name(self) -> str:
         return 'double linear elastic'
     
     def __str__(self):
         s = f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}'
+        if self.stiffness_3 is not None:
+            s += f', third stiffness, {self.stiffness_3}'
         s += self.const_law_footer()
         return s
 
 class IsotropicHardeningElastic(ConstitutiveLaw):
-    """
-    Isotropic hardening elastic constitutive law
-    """
-
     stiffness: Union[MBVar, float]
     reference_strain: Union[MBVar, float]
-    linear_stiffness: Optional[Union[MBVar, float]]
+    linear_stiffness: Optional[Union[MBVar, float]] = None
     
     def const_law_name(self) -> str:
         return 'isotropic hardening elastic'
