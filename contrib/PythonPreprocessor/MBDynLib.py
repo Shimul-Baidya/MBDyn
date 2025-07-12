@@ -4175,14 +4175,11 @@ class IsotropicHardeningElastic(ConstitutiveLaw):
         return 'isotropic hardening elastic'
     
     def __str__(self):
+        s = f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}'
         if self.linear_stiffness is not None:
-            s = f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}, linear stiffness, {self.linear_stiffness}'
-            s += self.const_law_footer()
-            return s
-        else:
-            s = f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}'
-            s += self.const_law_footer()
-            return s
+            s += f', linear stiffness, {self.linear_stiffness}'
+        s += self.const_law_footer()
+        return s
         
 class LinearViscous(ConstitutiveLaw):
     """
