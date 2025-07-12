@@ -4182,10 +4182,6 @@ class IsotropicHardeningElastic(ConstitutiveLaw):
         return s
         
 class LinearViscous(ConstitutiveLaw):
-    """
-    Linear viscous constitutive law
-    """
-
     viscosity: Union[MBVar, float]    
     
     def const_law_name(self) -> str:
@@ -4196,43 +4192,41 @@ class LinearViscous(ConstitutiveLaw):
 
     def __str__(self):
         s = f'{self.const_law_header()}, {self.viscosity}'
-        s += self.const_law_footer()
+        # this constitutive law does not require any prestrain template drive caller.
+        if self.prestress is not None:
+            s += f',\n\tprestress, {", ".join(str(i) for i in self.prestress)}'
         return s
 
 class LinearViscousGeneric(ConstitutiveLaw):
-    """
-    Linear viscous generic constitutive law
-    """
-
     viscosity: Union[float, MBVar, List[List[Union[float, MBVar]]]]
+
+    @validator('viscosity')
+    def validate_viscosity(cls, v):
+        if isinstance(v, list):
+            cls.validate_matrix(v, 'viscosity', supported_dims={1, 3, 6})
+        return v
 
     def const_law_name(self) -> str:
         return 'linear viscous generic'
 
     def __str__(self):
+        s = self.const_law_header()
+        
         if isinstance(self.viscosity, (float, MBVar)):
-            s = f'{self.const_law_header()}, {self.viscosity}'
-            s += self.const_law_footer()
-            return s
-        elif isinstance(self.viscosity, list):
-            N = len(self.viscosity)
-            if N == 1:
-                s = f'{self.const_law_header()}, {self.viscosity[0][0]}'
-                s += self.const_law_footer()
-                return s
-            elif N == 3 or N == 6:
-                matrix_str = ''
-                for i in range(N):
-                    row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
-                    matrix_str += f',\n\t{row_str}'
-                s = f'{self.const_law_header()}{matrix_str}'
-                s += self.const_law_footer()
-                return s
-            else:
-                raise ValueError(f"{self.__class__.__name__}: Unsupported size of viscosity matrix")
-        else:
-            raise TypeError(f"{self.__class__.__name__}: Invalid type for viscosity matrix")
- 
+            s += f', {self.viscosity}'
+        else: # It's a list (matrix)
+            matrix_str = ''
+            for row in self.viscosity:
+                row_str = ', '.join(map(str, row))
+                matrix_str += f',\n\t{row_str}'
+            s += matrix_str
+
+        # this constitutive law does not require any prestrain template drive caller.
+        if self.prestress is not None:
+            s += f',\n\tprestress, {", ".join(str(i) for i in self.prestress)}'
+        
+        return s
+
 class LinearViscoelastic(ConstitutiveLaw):
     """
     Linear viscoelastic constitutive law
