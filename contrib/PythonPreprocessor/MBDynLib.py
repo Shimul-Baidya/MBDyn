@@ -4228,17 +4228,16 @@ class LinearViscousGeneric(ConstitutiveLaw):
         return s
 
 class LinearViscoelastic(ConstitutiveLaw):
-    """
-    Linear viscoelastic constitutive law
-    """
-
     stiffness: Union[MBVar, float]
+    viscosity: Optional[Union[MBVar, float]] = None
+    factor: Optional[Union[MBVar, float]] = None
 
-    viscosity: Union[MBVar, float]
-    """The viscosity coefficient"""
-
-    factor: Optional[Union[MBVar, float]]
-    """Factor for proportional viscosity"""
+    @model_validator(mode='after')
+    def check_viscosity_or_factor(self):
+        if (self.viscosity is None and self.factor is None) or \
+           (self.viscosity is not None and self.factor is not None):
+            raise ValueError('For LinearViscoelastic, either "viscosity" or "factor" must be provided, but not both.')
+        return self
     
     def const_law_name(self) -> str:
         if self.dim == 1:
@@ -4247,17 +4246,14 @@ class LinearViscoelastic(ConstitutiveLaw):
             return 'linear viscoelastic isotropic'
 
     def __str__(self):
+        s = f'{self.const_law_header()}, {self.stiffness}'
         if self.viscosity is not None:
-            s = f'{self.const_law_header()}, {self.stiffness}, {self.viscosity}'
-            s += self.const_law_footer()
-            return s
-        elif self.factor is not None:
-            s = f'{self.const_law_header()}, {self.stiffness}, proportional, {self.factor}'
-            s += self.const_law_footer()
-            return s
-        else:
-            raise ValueError(f"{self.__class__.__name__}: Either viscosity or factor must be provided for Linear viscoelastic law")
-        
+            s += f', {self.viscosity}'
+        else:  # The validator ensures factor is not None here
+            s += f', proportional, {self.factor}'
+        s += self.const_law_footer()
+        return s
+
 class LinearViscoelasticGeneric(ConstitutiveLaw):
     """
     Linear viscoelastic generic constitutive law
