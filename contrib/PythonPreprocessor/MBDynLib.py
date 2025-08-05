@@ -4370,50 +4370,42 @@ class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
         return s
 
 class LinearViscoelasticGenericAxialTorsionCoupling(ConstitutiveLaw):
-    """
-    Linear viscoelastic generic axial torsion coupling constitutive law
-    """
-
-    stiffness: List[List[Union[float, MBVar]]]
-    viscosity: Optional[List[List[Union[float, MBVar]]]] = None
+    stiffness: List[Union[float, MBVar]]
+    coupling_coef: Union[float, MBVar]
+    viscosity: Optional[List[Union[float, MBVar]]] = None
     factor: Optional[Union[float, MBVar]] = None
-    coupling_coef: float
+
+    @model_validator(mode='after')
+    def validate_fields(self) -> 'LinearViscoelasticGenericAxialTorsionCoupling':
+        # Mutually exclusive check for viscosity/factor
+        if (self.viscosity is None and self.factor is None) or \
+           (self.viscosity is not None and self.factor is not None):
+            raise ValueError('Either "viscosity" or "factor" must be provided, but not both.')
+
+        # Validate vector dimensions
+        if len(self.stiffness) != 6:
+            raise ValueError(f"Stiffness vector must have 6 elements, but got {len(self.stiffness)}.")
+        if self.viscosity is not None and len(self.viscosity) != 6:
+            raise ValueError(f"Viscosity vector must have 6 elements, but got {len(self.viscosity)}.")
+        return self
 
     def const_law_name(self) -> str:
         return 'linear viscoelastic generic axial torsion coupling'
 
-    def __str__(self):
-        base_str = f'{self.const_law_header()}'
-        
-        # String representation for stiffness
-        if isinstance(self.stiffness, list):
-            N = len(self.stiffness)
-            if N != 6:
-                raise ValueError("Stiffness matrix must be 6x1")
-            matrix_str = ', '.join(str(self.stiffness[i][0]) for i in range(N))
-            base_str += f',\n\t{matrix_str}'
-        else:
-            raise TypeError("Invalid type for stiffness matrix")
-
-        # String representation for viscosity or factor
+    def __str__(self) -> str:
+        s = self.const_law_header()
+        # Format stiffness vector
+        stiffness_str = ', '.join(map(str, self.stiffness))
+        s += f',\n\t{stiffness_str}'
+        # Format viscosity vector or proportional factor
         if self.viscosity is not None:
-            if isinstance(self.viscosity, list):
-                N = len(self.viscosity)
-                if N != 6:
-                    raise ValueError("Viscosity matrix must be 6x1")
-                matrix_str = ', '.join(str(self.viscosity[i][0]) for i in range(N))
-                base_str += f',\n\t{matrix_str}'
-            else:
-                raise TypeError("Invalid type for viscosity matrix")
-        elif self.factor is not None:
-            base_str += f', proportional, {self.factor}'
-        else:
-            raise ValueError("Either viscosity or factor must be provided")
-
-        # Adding the coupling coefficient
-        base_str += f',\n\t{self.coupling_coef}'
-        base_str += self.const_law_footer()
-        return base_str
+            viscosity_str = ', '.join(map(str, self.viscosity))
+            s += f',\n\t{viscosity_str}'
+        else:  # Validator ensures factor is not None
+            s += f', proportional, {self.factor}'
+        s += f',\n\t{self.coupling_coef}'
+        s += self.const_law_footer()
+        return s
 
 class CubicViscoelasticGeneric(ConstitutiveLaw):
     """
