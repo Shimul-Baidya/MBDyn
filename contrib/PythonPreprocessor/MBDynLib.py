@@ -4283,7 +4283,7 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
         viscosity_dim = None
         if self.viscosity is not None:
             viscosity_dim = len(self.viscosity) if isinstance(self.viscosity, list) else 1
-        # Ensure dimensions match if viscosity is a matrix
+        # Ensure dimensions match
         if viscosity_dim is not None and stiffness_dim != viscosity_dim:
             raise ValueError(f'Stiffness and viscosity must have the same dimensions, but got {stiffness_dim} and {viscosity_dim}.')
 
@@ -4310,76 +4310,64 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
 
 
 class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
-    """
-    Linear time variant viscoelastic generic constitutive law
-    """
-
     stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
     stiffness_scale: DriveCaller
     viscosity: Optional[Union[float, MBVar, List[List[Union[float, MBVar]]]]] = None
     factor: Optional[Union[float, MBVar]] = None
-    viscosity_scale: DriveCaller
+    
+    # The viscosity scale can be a new DriveCaller, or the keyword 'same'
+    # to reuse the stiffness_scale DriveCaller.
+    viscosity_scale: Optional[Union[DriveCaller, Literal['same']]] = None
+
+    @model_validator(mode='after')
+    def validate_fields(self) -> 'LinearTimeVariantViscoelasticGeneric':
+        # Mutually exclusive check: either viscosity or factor must be provided.
+        if (self.viscosity is None and self.factor is None) or \
+           (self.viscosity is not None and self.factor is not None):
+            raise ValueError('Either "viscosity" or "factor" must be provided, but not both.')
+        
+        # If viscosity is provided, a viscosity_scale (or 'same') must also be provided.
+        if self.viscosity is not None and self.viscosity_scale is None:
+            raise ValueError('"viscosity_scale" or "same" must be provided when "viscosity" is specified.')
+        
+        # validate the structure matrices
+        if isinstance(self.stiffness, list):
+            self.validate_matrix(self.stiffness, 'stiffness', supported_dims={1, 3, 6})
+        if isinstance(self.viscosity, list):
+            self.validate_matrix(self.viscosity, 'viscosity', supported_dims={1, 3, 6})
+
+        # Ensure dimensions of stiffness and viscosity match
+        stiffness_dim = len(self.stiffness) if isinstance(self.stiffness, list) else 1
+        if self.viscosity is not None:
+            viscosity_dim = len(self.viscosity) if isinstance(self.viscosity, list) else 1
+            if stiffness_dim != viscosity_dim:
+                raise ValueError(f'Stiffness and viscosity must have the same implied dimensions, but got dim {stiffness_dim} and dim {viscosity_dim}.')
+        
+        return self
 
     def const_law_name(self) -> str:
         return 'linear time variant viscoelastic generic'
 
-    def __str__(self):
-        base_str = f'{self.const_law_header()}'
-        
-        # String representation for stiffness
-        if isinstance(self.stiffness, (float, MBVar)):
-            base_str += f', {self.stiffness}'
-        elif isinstance(self.stiffness, list):
-            N = len(self.stiffness)
-            if N == 1:
-                base_str += f', {self.stiffness[0][0]}'
-            elif N == 3 or N == 6:
-                matrix_str = ''
-                for i in range(N):
-                    row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
-                    matrix_str += f',\n\t{row_str}'
-                base_str += f'{matrix_str}'
-            else:
-                raise ValueError("Unsupported size of stiffness matrix")
-        else:
-            raise TypeError("Invalid type for stiffness matrix")
-
-        # String representation for stiffness scale
+    def __str__(self) -> str:
+        s = self.const_law_header()
+        s += self._format_property(self.stiffness)
         if self.stiffness_scale.idx is None:
-            base_str += f',\n\t{self.stiffness_scale},'
+            s += f',\n\t{self.stiffness_scale}'
         else:
-            base_str += f',\n\treference, {self.stiffness_scale.idx},'
-        
-        # String representation for viscosity
+            s += f',\n\treference, {self.stiffness_scale.idx}'
         if self.viscosity is not None:
-            if isinstance(self.viscosity, (float, MBVar)):
-                base_str += f', {self.viscosity}'
-            elif isinstance(self.viscosity, list):
-                N = len(self.viscosity)
-                if N == 1:
-                    base_str += f', {self.viscosity[0][0]}'
-                elif N == 3 or N == 6:
-                    matrix_str = ''
-                    for i in range(N):
-                        row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
-                        matrix_str += f',\n\t{row_str}'
-                    base_str += f',\n{matrix_str}'
-                else:
-                    raise ValueError("Unsupported size of viscosity matrix")
+            s += self._format_property(self.viscosity)
+        else:  # Validator ensures factor is not None
+            s += f', proportional, {self.factor}'
+        if self.viscosity_scale is not None:
+            if self.viscosity_scale == 'same':
+                s += f', same'
+            elif self.viscosity_scale.idx is not None:
+                s += f',\n\treference, {self.viscosity_scale.idx}'
             else:
-                raise TypeError("Invalid type for viscosity matrix")
-        elif self.factor is not None:
-            base_str += f', proportional, {self.factor}'
-        else:
-            raise ValueError("Either viscosity or factor must be provided")
-
-        # String representation for viscosity scale
-        if self.viscosity_scale.idx is None:
-            base_str += f',\n\t{self.viscosity_scale}'
-        else:
-            base_str += f',\n\treference, {self.viscosity_scale.idx}'
-        base_str += self.const_law_footer()
-        return base_str
+                s += f',\n\t{self.viscosity_scale}'
+        s += self.const_law_footer()
+        return s
 
 class LinearViscoelasticGenericAxialTorsionCoupling(ConstitutiveLaw):
     """
