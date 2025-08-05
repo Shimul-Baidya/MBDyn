@@ -3972,6 +3972,18 @@ class ConstitutiveLaw(MBEntity):
             if len(row) != N:
                 raise ValueError(f"{name.capitalize()} matrix must be square. Expected {N}x{N}, but row {i} has length {len(row)}.")
 
+    # TODO: Check if it can be used in other classes as well besides LinearViscoelasticGeneric (Probably it can be)
+    def _format_property(self, prop: Any) -> str:
+        """Helper to format a property that can be a scalar or a matrix."""
+        if isinstance(prop, (float, MBVar)):
+            return f', {prop}'
+        
+        # It's a matrix (validated to be a list of lists)
+        matrix_str = ''
+        for row in prop:
+            row_str = ', '.join(map(str, row))
+            matrix_str += f',\n\t{row_str}'
+        return matrix_str
         
     def const_law_header(self) -> str:
         """Common syntax for start of any constitutive law"""
@@ -4255,85 +4267,48 @@ class LinearViscoelastic(ConstitutiveLaw):
         return s
 
 class LinearViscoelasticGeneric(ConstitutiveLaw):
-    """
-    Linear viscoelastic generic constitutive law
-    """
-
-    stiffness: List[List[Union[float, MBVar]]]
-    viscosity: Optional[List[List[Union[float, MBVar]]]] = None
+    stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
+    viscosity: Optional[Union[float, MBVar, List[List[Union[float, MBVar]]]]] = None
     factor: Optional[Union[float, MBVar]] = None
 
-    @model_validator(mode='before')
-    def check_viscosity_factor(cls, values: 'FieldValidationInfo') -> Any:
-        stiffness = values.get('stiffness')
-        viscosity = values.get('viscosity')
-        factor = values.get('factor')
+    @model_validator(mode='after')
+    def validate_fields(self) -> 'LinearViscoelasticGeneric':
         # Ensure either viscosity or factor is provided, but not both
-        if viscosity is not None and factor is not None:
-            raise ValueError("Either viscosity or factor must be provided, not both.")
-        if viscosity is None and factor is None:
-            raise ValueError("One of viscosity or factor must be provided.")
+        if (self.viscosity is None and self.factor is None) or \
+           (self.viscosity is not None and self.factor is not None):
+            raise ValueError('For LinearViscoelasticGeneric, either "viscosity" or "factor" must be provided, but not both.')
 
-        def validate_matrix(matrix: List[List[Union[float, MBVar]]], name: str) -> None:
-            """Validate the matrix to ensure it's a square matrix of size 3x3 or 6x6."""
-            if matrix:
-                N = len(matrix)
-                if N not in {3, 6}:
-                    raise ValueError(f"Unsupported size of {name} matrix. Expected 3x3 or 6x6, got {N}x{N}.")
-                for row in matrix:
-                    if len(row) != N:
-                        raise ValueError(f"{name.capitalize()} matrix must be square. Expected {N}x{N}, but found a row with length {len(row)}.")
-        # Validate stiffness matrix
-        if stiffness:
-            validate_matrix(stiffness, 'stiffness')
-        # Validate viscosity matrix
-        if viscosity:
-            validate_matrix(viscosity, 'viscosity')
-        return values
+        # Get dimensions of stiffness and viscosity
+        stiffness_dim = len(self.stiffness) if isinstance(self.stiffness, list) else 1
+        viscosity_dim = None
+        if self.viscosity is not None:
+            viscosity_dim = len(self.viscosity) if isinstance(self.viscosity, list) else 1
+        # Ensure dimensions match if viscosity is a matrix
+        if viscosity_dim is not None and stiffness_dim != viscosity_dim:
+            raise ValueError(f'Stiffness and viscosity must have the same dimensions, but got {stiffness_dim} and {viscosity_dim}.')
+
+        # Validate matrix structures
+        if isinstance(self.stiffness, list):
+            self.validate_matrix(self.stiffness, 'stiffness', supported_dims={1, 3, 6})
+        if isinstance(self.viscosity, list):
+            self.validate_matrix(self.viscosity, 'viscosity', supported_dims={1, 3, 6})
+        
+        return self
     
     def const_law_name(self) -> str:
         return 'linear viscoelastic generic'
-    
+
     def __str__(self):
-        base_str = f'{self.const_law_header()}'
-        if isinstance(self.stiffness, (float, MBVar)):
-            base_str += f', {self.stiffness}'
-        elif isinstance(self.stiffness, list):
-            N = len(self.stiffness)
-            if N == 1:
-                base_str += f', {self.stiffness[0][0]}'
-            elif N == 3 or N == 6:
-                matrix_str = ''
-                for i in range(N):
-                    row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
-                    matrix_str += f',\n\t{row_str}'
-                base_str += f'{matrix_str}'
-            else:
-                raise ValueError("Unsupported size of stiffness matrix")
-        else:
-            raise TypeError("Invalid type for stiffness matrix")
+        s = self.const_law_header()
+        s += self._format_property(self.stiffness)
         if self.viscosity is not None:
-            if isinstance(self.viscosity, (float, MBVar)):
-                base_str += f', {self.viscosity}'
-            elif isinstance(self.viscosity, list):
-                N = len(self.viscosity)
-                if N == 1:
-                    base_str += f', {self.viscosity[0][0]}'
-                elif N == 3 or N == 6:
-                    matrix_str = ''
-                    for i in range(N):
-                        row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
-                        matrix_str += f',\n\t{row_str}'
-                    base_str += f'{matrix_str}'
-                else:
-                    raise ValueError("Unsupported size of viscosity matrix")
-            else:
-                raise TypeError("Invalid type for viscosity matrix")
-        elif self.factor is not None:
-            base_str += f', proportional, {self.factor}'
-        base_str += self.const_law_footer()
-        return base_str
-   
+            s += self._format_property(self.viscosity)
+        else:  # Validator ensures factor is not None
+            s += f', proportional, {self.factor}'
+        s += self.const_law_footer()
+        return s
+
+
 class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
     """
     Linear time variant viscoelastic generic constitutive law
