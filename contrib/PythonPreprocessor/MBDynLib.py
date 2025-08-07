@@ -4408,37 +4408,46 @@ class LinearViscoelasticGenericAxialTorsionCoupling(ConstitutiveLaw):
         return s
 
 class CubicViscoelasticGeneric(ConstitutiveLaw):
-    """
-    Cubic viscoelastic generic constitutive law
-    """
-
     stiffness_1: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_2: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_3: Union[float, MBVar, List[Union[float, MBVar]]]
     viscosity: Union[float, MBVar, List[Union[float, MBVar]]]
 
+    @model_validator(mode='after')
+    def validate_fields(self) -> 'CubicViscoelasticGeneric':
+        # Check if all fields are of the same type (all scalars or all lists)
+        is_s1_list = isinstance(self.stiffness_1, list)
+        is_s2_list = isinstance(self.stiffness_2, list)
+        is_s3_list = isinstance(self.stiffness_3, list)
+        is_visc_list = isinstance(self.viscosity, list)
+        if not (is_s1_list == is_s2_list == is_s3_list == is_visc_list):
+            raise TypeError("All stiffness and viscosity parameters must be of the same type (all scalars or all lists)")
+
+        # If they are lists, validate their dimensions
+        if is_s1_list:
+            if not (len(self.stiffness_1) == len(self.stiffness_2) == 
+                   len(self.stiffness_3) == len(self.viscosity) == 3):
+                raise ValueError("All vector parameters must have exactly 3 elements")
+        return self
+
     def const_law_name(self) -> str:
         return 'cubic viscoelastic generic'
 
-    def __str__(self):
-        base_str = f'{self.const_law_header()}'
+    def __str__(self) -> str:
+        s = self.const_law_header()
         if isinstance(self.stiffness_1, (float, MBVar)):
-            base_str += f', {self.stiffness_1}, {self.stiffness_2}, {self.stiffness_3}, {self.viscosity}'
-        elif isinstance(self.stiffness_1, list):
-            N = len(self.stiffness_1)
-            if N == 3:
-                stiffness_1_str = ', '.join(str(self.stiffness_1[i]) for i in range(N))
-                stiffness_2_str = ', '.join(str(self.stiffness_2[i]) for i in range(N))
-                stiffness_3_str = ', '.join(str(self.stiffness_3[i]) for i in range(N))
-                viscosity_str = ', '.join(str(self.viscosity[i]) for i in range(N))
-                base_str += f',\n\t{stiffness_1_str},\n\t{stiffness_2_str},\n\t{stiffness_3_str},\n\t{viscosity_str}'
-            else:
-                raise ValueError("Unsupported size of stiffness and viscosity vectors")
+            # Scalar case
+            s += f', {self.stiffness_1}, {self.stiffness_2}, {self.stiffness_3}, {self.viscosity}'
         else:
-            raise TypeError("Invalid type for stiffness and viscosity values")
-        base_str += self.const_law_footer()
-        return base_str
-    
+            # 3D vector case
+            s1_str = ', '.join(map(str, self.stiffness_1))
+            s2_str = ', '.join(map(str, self.stiffness_2))
+            s3_str = ', '.join(map(str, self.stiffness_3))
+            v_str = ', '.join(map(str, self.viscosity))
+            s += f',\n\t{s1_str},\n\t{s2_str},\n\t{s3_str},\n\t{v_str}'   
+        s += self.const_law_footer()
+        return s
+
 class DoubleLinearViscoelastic(ConstitutiveLaw):
     """
     Double linear viscoelastic constitutive law
