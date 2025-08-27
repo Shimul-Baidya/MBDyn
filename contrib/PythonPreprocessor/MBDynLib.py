@@ -4450,9 +4450,8 @@ class CubicViscoelasticGeneric(ConstitutiveLaw):
 
 class DoubleLinearViscoelastic(ConstitutiveLaw):
     """
-    Double linear viscoelastic constitutive law
+    Analogous to double linear elastic, but with an isotropic viscosity term.
     """
-
     stiffness_1: Union[MBVar, float]
     upper_strain: Union[MBVar, float]
     lower_strain: Union[MBVar, float]
@@ -4460,21 +4459,30 @@ class DoubleLinearViscoelastic(ConstitutiveLaw):
     viscosity: Union[MBVar, float]
     viscosity_2: Optional[Union[MBVar, float]] = None
 
+    @model_validator(mode='after')
+    def validate_strain_range(self) -> 'DoubleLinearViscoelastic':
+        # The upper strain must be greater than the lower strain.
+        # This check is possible if both values are numeric or resolvable MBVar instances.
+        try:
+            if self.upper_strain <= self.lower_strain:
+                raise ValueError(f"upper_strain ({self.upper_strain}) must be greater than lower_strain ({self.lower_strain})")
+        except TypeError: # TODO: Check if this can happen
+            # This can happen if an MBVar holds a non-numeric expression.
+            # In this case, we must assume it's valid.
+            pass
+        return self
+
     def const_law_name(self) -> str:
         return 'double linear viscoelastic'
 
-    def __str__(self):
-        base_str = f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}, {self.viscosity}'
+    def __str__(self) -> str:
+        s = f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}, {self.viscosity}'
         if self.viscosity_2 is not None:
-            base_str += f', second damping, {self.viscosity_2}'
-        base_str += self.const_law_footer()
-        return base_str
-        
-class TurbulentViscoelastic(ConstitutiveLaw):
-    """
-    Turbulent viscoelastic constitutive law
-    """
+            s += f', second damping, {self.viscosity_2}'
+        s += self.const_law_footer()
+        return s
 
+class TurbulentViscoelastic(ConstitutiveLaw):
     stiffness: Union[MBVar, float]
     parabolic_viscosity: Union[MBVar, float]
     threshold: Optional[Union[MBVar, float]] = None
