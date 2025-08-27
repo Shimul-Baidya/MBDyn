@@ -1,6 +1,4 @@
 from abc import ABC, abstractmethod
-from tkinter import NO
-from turtle import position
 from typing import List, Optional, Union
 from MBDynLib import *
 
@@ -73,7 +71,7 @@ class ReferenceSystem(MBEntity):
     orientation_wrt_base: Position
     velocity_wrt_base: Position
     angular_velocity_wrt_base: Position
-    mirror: Optional[bool] = NO
+    mirror: Optional[bool] = False
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(label='{self.label}', base_reference='{self.base_reference}')"
