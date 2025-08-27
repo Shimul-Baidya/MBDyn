@@ -49,6 +49,7 @@ class MBEntity(_EntityBase, ABC):
         """Has to be overridden to output the MBDyn syntax"""
         pass
 
+# --- Helper classes ---
 
 class PhysicalQuantity(MBEntity):
     """Represents a physical quantity with a value and a unit."""
@@ -88,6 +89,38 @@ class LumpedMass(MBEntity):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(label='{self.label}', mass={self.mass.value})"
 
+# --- Mixin for collecting MBDyn entities ---
+
+class ComponentCollectorMixin:
+    """
+    Mixin class that provides recursive methods to collect all MBDyn
+    entities from a tree of components.
+    """
+    @property
+    def _components_to_collect(self) -> List['RotorcraftComponent']:
+        """Abstract property that child classes must override to specify the list of components to iterate over."""
+        raise NotImplementedError
+
+    def get_all_references(self) -> List[Reference]:
+        """Gathers all MBDyn reference nodes from this component and its sub-components."""
+        all_refs = self._create_references()
+        for component in self._components_to_collect:
+            all_refs.extend(component.get_all_references())
+        return all_refs
+
+    def get_all_nodes(self) -> List[Node]:
+        """Gathers all MBDyn structural nodes from this component and its sub-components."""
+        all_nodes = self._create_nodes()
+        for component in self._components_to_collect:
+            all_nodes.extend(component.get_all_nodes())
+        return all_nodes
+
+    def get_all_elements(self) -> List[Element]:
+        """Gathers all MBDyn elements from this component and its sub-components."""
+        all_elements = self._create_elements()
+        for component in self._components_to_collect:
+            all_elements.extend(component.get_all_elements())
+        return all_elements
 
 class RotorcraftComponent(MBEntity):
     """The base class for all rotorcraft components.
