@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+from tkinter import NO
+from turtle import position
 from typing import List, Optional, Union
-from MBDynLib import Position, Reference
+from MBDynLib import *
 
 imported_pydantic = False
 try:
@@ -48,6 +50,45 @@ class MBEntity(_EntityBase, ABC):
     def __str__(self) -> str:
         """Has to be overridden to output the MBDyn syntax"""
         pass
+
+
+class PhysicalQuantity(MBEntity):
+    """Represents a physical quantity with a value and a unit."""
+    unit: str
+    value: Union[float, MBVar, List[Union[float, MBVar]]]
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(value={self.value}, unit='{self.unit}')"
+
+    def to_SI(self):
+        # TODO: implement conversion to SI units
+        pass
+
+class ReferenceSystem(MBEntity):
+    """Defines a coordinate system in the MBDyn model."""
+    label: str
+    component_axis: Optional[str] = 'x'
+    base_reference: str
+    position_wrt_base: Position
+    orientation_wrt_base: Position
+    velocity_wrt_base: Position
+    angular_velocity_wrt_base: Position
+    mirror: Optional[bool] = NO
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(label='{self.label}', base_reference='{self.base_reference}')"
+
+class LumpedMass(MBEntity):
+    """Represents a lumped mass with inertial properties."""
+    label: str
+    reference: Optional[str] = None  # if None, default to the component's main reference frame
+                                    # logic will be in the parent RotorcraftComponent that owns the mass
+    mass: PhysicalQuantity
+    relative_center_of_mass: PhysicalQuantity
+    diag_inertia_matrix: PhysicalQuantity
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(label='{self.label}', mass={self.mass.value})"
 
 
 class RotorcraftComponent(MBEntity):
