@@ -124,7 +124,7 @@ class ComponentCollectorMixin:
 
 # --- Main Base Classes ---
 
-class RotorcraftComponent(MBEntity, ComponentCollectorMixin, ABC):
+class RotorcraftComponent(MBEntity, ComponentCollectorMixin):
     """Abstract base class for any physical component of the rotorcraft"""
     reference_system: ReferenceSystem
     lumped_masses: Optional[List[LumpedMass]] = []
@@ -153,3 +153,28 @@ class RotorcraftComponent(MBEntity, ComponentCollectorMixin, ABC):
         pass
 
 RotorcraftComponent.model_rebuild() # Resolve self reference
+
+class Rotorcraft(MBEntity, ComponentCollectorMixin):
+    """
+    The main container for the rotorcraft model. It holds all top-level 
+    components and orchestrates the collection of all MBDyn entities.
+    """
+    model_name: str
+    root_components: List[RotorcraftComponent] = []
+
+    @property
+    def _components_to_collect(self) -> List['RotorcraftComponent']:
+        return self.root_components
+    
+    def add_root_component(self, component: RotorcraftComponent):
+        self.root_components.append(component)
+
+    # CONCRETE IMPLEMENTATIONS FOR THE TOP-LEVEL CONTAINER
+    def _create_references(self) -> List[Reference]: return []
+    def _create_nodes(self) -> List[Node]: return []
+    def _create_elements(self) -> List[Element]: return []
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(model_name='{self.model_name}', root_components={len(self.root_components)})"
+    
+# --- Component Classes ---
