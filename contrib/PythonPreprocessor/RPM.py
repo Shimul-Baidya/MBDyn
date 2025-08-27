@@ -122,63 +122,34 @@ class ComponentCollectorMixin:
             all_elements.extend(component.get_all_elements())
         return all_elements
 
-class RotorcraftComponent(MBEntity):
-    """The base class for all rotorcraft components.
+# --- Main Base Classes ---
 
-    This class provides the fundamental attributes and methods for creating a hierarchical
-    rotorcraft model. It is designed to be subclassed by specific components like
-    Rotor, Blade, Hub, etc.
-    """
+class RotorcraftComponent(MBEntity, ComponentCollectorMixin, ABC):
+    """Abstract base class for any physical component of the rotorcraft"""
+    reference_system: ReferenceSystem
+    lumped_masses: Optional[List[LumpedMass]] = []
+    sub_components: List['RotorcraftComponent'] = []
 
-    label: str
-    reference: Union[Reference, 'RotorcraftComponent', str]
-    position: Position
-    orientation: Position
-    children: List['RotorcraftComponent'] = []
+    @property
+    def _components_to_collect(self) -> List['RotorcraftComponent']:
+        return self.sub_components
+
+    def add_sub_component(self, component: 'RotorcraftComponent'):
+        self.sub_components.append(component)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(reference_system_label='{self.reference_system.label}', sub_components={len(self.sub_components)})"
 
     @abstractmethod
-    def _mbdyn_str(self) -> str:
-        """
-        Generates the MBDyn input string for this component ONLY.
-        This method is intended to be overridden by concrete subclasses.
-        """
-        raise NotImplementedError(
-            f"The component '{self.label}' of type '{self.__class__.__name__}' must implement the _mbdyn_str method."
-        )
+    def _create_references(self) -> List[Reference]:
+        pass
 
-    def __str__(self) -> str:
-        """Recursively generates the MBDyn input string for this component and all its children.
+    @abstractmethod
+    def _create_nodes(self) -> List[Node]:
+        pass
 
-        It orchestrates the generation of the MBDyn output by combining the 
-        component's own string with the strings of all its children.
-        """
-        parent_str = self._mbdyn_str()
-        children_str = "\n".join(str(child) for child in self.children)
-        return "\n".join(filter(None, [parent_str, children_str]))
+    @abstractmethod
+    def _create_elements(self) -> List[Element]:
+        pass
 
-    # --- Hierarchy Management Methods ---
-
-    def add_child(self, component: 'RotorcraftComponent') -> 'RotorcraftComponent':
-        """Adds a child component and returns the child for method chaining."""
-        self.children.append(component)
-        return component
-
-    def get_all_components(self) -> List['RotorcraftComponent']:
-        """Returns a flat list of this component and all its descendants."""
-        components = [self]
-        for child in self.children:
-            components.extend(child.get_all_components())
-        return components
-
-    def get_components_by_type(self, component_type: type) -> List['RotorcraftComponent']:
-        """
-        Finds all components of a specific type (e.g., Blade) in the hierarchy.
-        """
-        found_components = []
-        # First, check if the current component itself is the type we're looking for.
-        if isinstance(self, component_type):
-            found_components.append(self)
-        # Then, recursively ask all children to do the same search and add their findings.
-        for child in self.children:
-            found_components.extend(child.get_components_by_type(component_type))
-        return found_components
+RotorcraftComponent.model_rebuild() # Resolve self reference
