@@ -4212,7 +4212,7 @@ class LinearViscous(ConstitutiveLaw):
 class LinearViscousGeneric(ConstitutiveLaw):
     viscosity: Union[float, MBVar, List[List[Union[float, MBVar]]]]
 
-    @validator('viscosity')
+    @field_validator('viscosity')
     def validate_viscosity(cls, v):
         if isinstance(v, list):
             cls.validate_matrix(v, 'viscosity', supported_dims={1, 3, 6})
