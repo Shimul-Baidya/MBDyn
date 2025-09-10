@@ -587,8 +587,8 @@ class Node(MBEntity):
     
 class DynamicNode(Node):
     accelerations: Optional[Union[Literal['yes', 'no'], int, bool]] = None
-    def __init__(self, idx, pos, orient, vel, angular_vel, accelerations=None):
-        super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='dynamic')
+    def __init__(self, idx, position, orientation, velocity, angular_velocity, accelerations=None):
+        super().__init__(idx=idx, position=position, orientation=orientation, velocity=velocity, angular_velocity=angular_velocity, node_type='dynamic')
         self.accelerations = accelerations
     def __str__(self):
         s = super().__str__()
@@ -598,8 +598,8 @@ class DynamicNode(Node):
         return s
 
 class StaticNode(Node):
-    def __init__(self, idx, pos, orient, vel, angular_vel):
-        super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='static')
+    def __init__(self, idx, position, orientation, velocity, angular_velocity):
+        super().__init__(idx=idx, position=position, orientation=orientation, velocity=velocity, angular_velocity=angular_velocity, node_type='static')
     def __str__(self):
         return super().__str__() + ';\n'
 
@@ -610,8 +610,8 @@ class ModalNode(Node):
     """
 
     accelerations: Optional[Union[Literal['yes', 'no'], int, bool]] = None
-    def __init__(self, idx, pos, orient, vel, angular_vel, accelerations=None):
-        super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='modal')
+    def __init__(self, idx, position, orientation, velocity, angular_velocity, accelerations=None):
+        super().__init__(idx=idx, position=position, orientation=orientation, velocity=velocity, angular_velocity=angular_velocity, node_type='modal')
         self.accelerations = accelerations
     def __str__(self):
         s = super().__str__()
