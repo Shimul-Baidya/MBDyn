@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
-from MBDynLib import *
+import MBDynLib as l
+
 
 imported_pydantic = False
 try:
-    from pydantic import BaseModel, ConfigDict, field_validator, FieldValidationInfo, model_validator
+    from pydantic import BaseModel, ConfigDict, field_validator, model_validator
     imported_pydantic = True
     class _EntityBase(BaseModel):
         """Configuration for Entity with pydantic available"""
@@ -41,20 +42,16 @@ except ImportError:
     validate_call = identity_decorator
 
 
-class MBEntity(_EntityBase, ABC):
-    """Base class for every 'thing' to put in MBDyn file, other than numbers"""
-
-    @abstractmethod
-    def __str__(self) -> str:
-        """Has to be overridden to output the MBDyn syntax"""
-        pass
+class RPMEntity(_EntityBase):
+    """Base class for all RPM entities, providing Pydantic validation."""
+    pass
 
 # --- Helper classes ---
 
-class PhysicalQuantity(MBEntity):
+class PhysicalQuantity(RPMEntity):
     """Represents a physical quantity with a value and a unit."""
     unit: str
-    value: Union[float, MBVar, List[Union[float, MBVar]]]
+    value: Union[float, l.MBVar, List[Union[float, l.MBVar]]]
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(value={self.value}, unit='{self.unit}')"
@@ -63,21 +60,22 @@ class PhysicalQuantity(MBEntity):
         # TODO: implement conversion to SI units
         pass
 
-class ReferenceSystem(MBEntity):
+class ReferenceSystem(RPMEntity):
     """Defines a coordinate system in the MBDyn model."""
     label: str
     component_axis: Optional[str] = 'x'
     base_reference: str
-    position_wrt_base: Position
-    orientation_wrt_base: Position
-    velocity_wrt_base: Position
-    angular_velocity_wrt_base: Position
+    position_wrt_base: l.Position
+    orientation_wrt_base: l.Position
+    velocity_wrt_base: l.Position
+    angular_velocity_wrt_base: l.Position
     mirror: Optional[bool] = False
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(label='{self.label}', base_reference='{self.base_reference}')"
 
-class LumpedMass(MBEntity):
+
+class LumpedMass(RPMEntity):
     """Represents a lumped mass with inertial properties."""
     label: str
     reference: Optional[str] = None  # if None, default to the component's main reference frame
@@ -88,6 +86,7 @@ class LumpedMass(MBEntity):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(label='{self.label}', mass={self.mass.value})"
+
 
 # --- Mixin for collecting MBDyn entities ---
 
@@ -101,21 +100,21 @@ class ComponentCollectorMixin:
         """Abstract property that child classes must override to specify the list of components to iterate over."""
         raise NotImplementedError
 
-    def get_all_references(self) -> List[Reference]:
+    def get_all_references(self) -> List[l.Reference]:
         """Gathers all MBDyn reference nodes from this component and its sub-components."""
         all_refs = self._create_references()
         for component in self._components_to_collect:
             all_refs.extend(component.get_all_references())
         return all_refs
 
-    def get_all_nodes(self) -> List[Node]:
+    def get_all_nodes(self) -> List[l.Node]:
         """Gathers all MBDyn structural nodes from this component and its sub-components."""
         all_nodes = self._create_nodes()
         for component in self._components_to_collect:
             all_nodes.extend(component.get_all_nodes())
         return all_nodes
 
-    def get_all_elements(self) -> List[Element]:
+    def get_all_elements(self) -> List[l.Element]:
         """Gathers all MBDyn elements from this component and its sub-components."""
         all_elements = self._create_elements()
         for component in self._components_to_collect:
@@ -124,7 +123,7 @@ class ComponentCollectorMixin:
 
 # --- Main Base Classes ---
 
-class RotorcraftComponent(MBEntity, ComponentCollectorMixin):
+class RotorcraftComponent(RPMEntity, ComponentCollectorMixin, ABC):
     """Abstract base class for any physical component of the rotorcraft"""
     reference_system: ReferenceSystem
     lumped_masses: Optional[List[LumpedMass]] = []
@@ -141,25 +140,23 @@ class RotorcraftComponent(MBEntity, ComponentCollectorMixin):
         return f"{self.__class__.__name__}(reference_system_label='{self.reference_system.label}', sub_components={len(self.sub_components)})"
 
     @abstractmethod
-    def _create_references(self) -> List[Reference]:
+    def _create_references(self) -> List[l.Reference]:
         pass
 
     @abstractmethod
-    def _create_nodes(self) -> List[Node]:
+    def _create_nodes(self) -> List[l.Node]:
         pass
 
     @abstractmethod
-    def _create_elements(self) -> List[Element]:
+    def _create_elements(self) -> List[l.Element]:
         pass
 
 RotorcraftComponent.model_rebuild() # Resolve self reference
 
-class Rotorcraft(MBEntity, ComponentCollectorMixin):
-    """
-    The main container for the rotorcraft model. It holds all top-level 
-    components and orchestrates the collection of all MBDyn entities.
-    """
-    model_name: str
+
+class Rotorcraft(RPMEntity, ComponentCollectorMixin):
+    """The main container for the root components and entire model"""
+    name: str
     root_components: List[RotorcraftComponent] = []
 
     @property
@@ -170,11 +167,11 @@ class Rotorcraft(MBEntity, ComponentCollectorMixin):
         self.root_components.append(component)
 
     # CONCRETE IMPLEMENTATIONS FOR THE TOP-LEVEL CONTAINER
-    def _create_references(self) -> List[Reference]: return []
-    def _create_nodes(self) -> List[Node]: return []
-    def _create_elements(self) -> List[Element]: return []
+    def _create_references(self) -> List[l.Reference]: return []
+    def _create_nodes(self) -> List[l.Node]: return []
+    def _create_elements(self) -> List[l.Element]: return []
     
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(model_name='{self.model_name}', root_components={len(self.root_components)})"
+        return f"{self.__class__.__name__}(name='{self.name}', root_components={len(self.root_components)})"
     
 # --- Component Classes ---
