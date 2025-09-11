@@ -69,7 +69,23 @@ class ReferenceSystem(RPMEntity):
     orientation_wrt_base: l.Position
     velocity_wrt_base: l.Position
     angular_velocity_wrt_base: l.Position
-    mirror: Optional[bool] = False
+    mirror: bool = False
+
+    def __init__(self, **kwargs):
+        # A custom __init__ is used to set default values for mutable types like l.Position.
+        # If we set a mutable default directly on the class (e.g., `position_wrt_base: l.Position = l.Position(...)`),
+        # all instances of ReferenceSystem would share the same Position object, leading to unintended side effects.
+        # This method ensures that a new, unique Position object is created for each instance that doesn't provide one.
+        # It works regardless of whether Pydantic is installed.
+        if 'position_wrt_base' not in kwargs:
+            kwargs['position_wrt_base'] = l.Position(relative_position=[0., 0., 0.], reference='')
+        if 'orientation_wrt_base' not in kwargs:
+            kwargs['orientation_wrt_base'] = l.Position(relative_position=[1., 0., 0., 0., 1., 0., 0., 0., 1.], reference='')
+        if 'velocity_wrt_base' not in kwargs:
+            kwargs['velocity_wrt_base'] = l.Position(relative_position=[0., 0., 0.], reference='')
+        if 'angular_velocity_wrt_base' not in kwargs:
+            kwargs['angular_velocity_wrt_base'] = l.Position(relative_position=[0., 0., 0.], reference='')
+        super().__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(label='{self.label}', base_reference='{self.base_reference}')"
@@ -173,5 +189,34 @@ class Rotorcraft(RPMEntity, ComponentCollectorMixin):
     
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}', root_components={len(self.root_components)})"
-    
+
+
 # --- Component Classes ---
+
+class Airframe(RotorcraftComponent):
+    # The only attribute needed here to be input by the user is the 
+    # reference_system, which will be inherited from the 'RotorcraftComponent' class
+
+    def _create_references(self) -> List[l.Reference]:
+        # The airframe's primary reference system is the only one it creates.
+        ref = l.Reference(idx=20000, # self.reference_system.label # Using the hardcoded value for now
+                        position=self.reference_system.position_wrt_base, 
+                        orientation=self.reference_system.orientation_wrt_base, 
+                        velocity=self.reference_system.velocity_wrt_base, 
+                        angular_velocity=self.reference_system.angular_velocity_wrt_base)
+        return [ref]
+
+    def _create_nodes(self) -> List[l.Node]:
+        # The airframe has a single dynamic node at its reference point.
+        node = l.DynamicNode(
+            idx=10000, # self.reference_system.label # Using the hardcoded value for now
+            position=self.reference_system.position_wrt_base,
+            orientation=self.reference_system.orientation_wrt_base,
+            velocity=self.reference_system.velocity_wrt_base,
+            angular_velocity=self.reference_system.angular_velocity_wrt_base
+        )
+        return [node]
+
+    def _create_elements(self) -> List[l.Element]:
+        # A simple airframe does not create any elements itself.
+        return []
