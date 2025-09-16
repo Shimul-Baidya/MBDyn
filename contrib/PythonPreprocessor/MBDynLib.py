@@ -4488,17 +4488,23 @@ class TurbulentViscoelastic(ConstitutiveLaw):
     threshold: Optional[Union[MBVar, float]] = None
     linear_viscosity: Optional[Union[MBVar, float]] = None
 
+    @model_validator(mode='after')
+    def validate_fields(self) -> 'TurbulentViscoelastic':
+        if self.linear_viscosity is not None and self.threshold is None:
+            raise ValueError('"linear_viscosity" can only be provided if "threshold" is also specified.')
+        return self
+
     def const_law_name(self) -> str:
         return 'turbulent viscoelastic'
 
-    def __str__(self):
-        base_str = f'{self.const_law_header()}, {self.stiffness}, {self.parabolic_viscosity}'
+    def __str__(self) -> str:
+        s = f'{self.const_law_header()}, {self.stiffness}, {self.parabolic_viscosity}'
         if self.threshold is not None:
-            base_str += f', {self.threshold}'
+            s += f', {self.threshold}'
             if self.linear_viscosity is not None:
-                base_str += f', {self.linear_viscosity}'
-        base_str += self.const_law_footer()
-        return base_str
+                s += f', {self.linear_viscosity}'
+        s += self.const_law_footer()
+        return s
 
 class LinearViscoelasticBistop(ConstitutiveLaw):
     """
