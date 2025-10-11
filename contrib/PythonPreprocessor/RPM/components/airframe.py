@@ -24,9 +24,9 @@ class Airframe(RotorcraftComponent):
         node = l.DynamicNode(
             idx=20000, # Using the hardcoded value for now
             position=l.Position(relative_position=[0., 0., 0.], reference=self.reference_system.base_reference),
-            orientation=l.Position(relative_position=[l.eye()], reference=self.reference_system.base_reference),
-            velocity=l.Position(relative_position=[l.null()], reference=self.reference_system.base_reference),
-            angular_velocity=l.Position(relative_position=[l.null()], reference=self.reference_system.base_reference)
+            orientation=l.Position(relative_position=l.eye(), reference=self.reference_system.base_reference),
+            velocity=l.Position(relative_position=l.null(), reference=self.reference_system.base_reference),
+            angular_velocity=l.Position(relative_position=l.null(), reference=self.reference_system.base_reference)
         )
         return [node]
 

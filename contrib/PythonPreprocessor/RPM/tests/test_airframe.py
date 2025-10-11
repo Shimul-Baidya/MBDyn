@@ -10,12 +10,6 @@ from RPM.components.airframe import Airframe
 from RPM.core.datatypes import ReferenceSystem
 
 
-try:
-    import pydantic
-except ImportError:
-    pydantic = None
-
-
 class TestAirframe(unittest.TestCase):
     def setUp(self):
         base_ref = 'global'
@@ -23,9 +17,9 @@ class TestAirframe(unittest.TestCase):
             name='AIRFRAME_1',
             base_reference=base_ref,
             position_wrt_base=l.Position(relative_position=[0., 0., 0.], reference=base_ref),
-            orientation_wrt_base=l.Position(relative_position=[l.eye()], reference=base_ref),
-            velocity_wrt_base=l.Position(relative_position=[l.null()], reference=base_ref),
-            angular_velocity_wrt_base=l.Position(relative_position=[l.null()], reference=base_ref),
+            orientation_wrt_base=l.Position(relative_position=l.eye(), reference=base_ref),
+            velocity_wrt_base=l.Position(relative_position=l.null(), reference=base_ref),
+            angular_velocity_wrt_base=l.Position(relative_position=l.null(), reference=base_ref),
         )
         self.airframe = Airframe(reference_system=self.reference_system)
 
@@ -35,9 +29,9 @@ class TestAirframe(unittest.TestCase):
         self.assertEqual(self.airframe.reference_system.name, 'AIRFRAME_1')
         self.assertEqual(self.airframe.reference_system.base_reference, 'global')
         self.assertEqual(self.airframe.reference_system.position_wrt_base.relative_position, [0., 0., 0.])
-        self.assertEqual(self.airframe.reference_system.orientation_wrt_base.relative_position, [l.eye()])
-        self.assertEqual(self.airframe.reference_system.velocity_wrt_base.relative_position, [l.null()])
-        self.assertEqual(self.airframe.reference_system.angular_velocity_wrt_base.relative_position, [l.null()])
+        self.assertEqual(self.airframe.reference_system.orientation_wrt_base.relative_position, l.eye())
+        self.assertEqual(self.airframe.reference_system.velocity_wrt_base.relative_position, l.null())
+        self.assertEqual(self.airframe.reference_system.angular_velocity_wrt_base.relative_position, l.null())
 
     def test_create_references(self):
         """Test the _create_references method."""
@@ -59,9 +53,9 @@ class TestAirframe(unittest.TestCase):
         self.assertIsInstance(node, l.DynamicNode)
         self.assertEqual(node.idx, 20000)  # Using the hardcoded value for now
         self.assertEqual(node.position.relative_position, [0., 0., 0.])
-        self.assertEqual(node.orientation.relative_position, [l.eye()])
-        self.assertEqual(node.velocity.relative_position, [l.null()])
-        self.assertEqual(node.angular_velocity.relative_position, [l.null()])
+        self.assertEqual(node.orientation.relative_position, l.eye())
+        self.assertEqual(node.velocity.relative_position, l.null())
+        self.assertEqual(node.angular_velocity.relative_position, l.null())
 
     def test_create_elements(self):
         """Test the _create_elements method."""

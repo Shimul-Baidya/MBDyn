@@ -8,47 +8,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import MBDynLib as l
 
-# --- Optional Pydantic Boilerplate ---
-imported_pydantic = False
-try:
-    from pydantic import BaseModel, ConfigDict, field_validator, model_validator
-    imported_pydantic = True
-    class _EntityBase(BaseModel):
-        """Configuration for Entity with pydantic available"""
-        model_config = ConfigDict(extra='forbid', use_attribute_docstrings=True)
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-except ImportError:
-    class _EntityBasePlaceholder:
-        """Placeholder with minimal functionality for running a correct model when some libraries aren't available"""
-
-        def __init__(self, *args, **kwargs):
-            if len(args) > 0:
-                raise TypeError(
-                    'MBDyn entities cannot be initialized using positional arguments')
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-
-    def placeholder(*args, **kwargs):
-        """Ignores all arguments"""
-        return None
-
-    # HACK: This forces code analysis to always use the definition with pydantic
-    exec('_EntityBase = _EntityBasePlaceholder')
-    exec('ConfigDict = placeholder')
-
-    def identity_decorator(*args, **kwargs):
-        """Ignores all decorator arguments and returns the wrapped function unchanged"""
-        def identity(func):
-            return func
-        return identity
-
-    field_validator = identity_decorator
-    model_validator = identity_decorator
-# --- End Boilerplate ---
-
-class RPMEntity(_EntityBase):
-    """Base class for all RPM entities, providing optional Pydantic validation."""
-    pass
+class RPMEntity(BaseModel):
+    """Base class for all RPM entities, providing Pydantic validation."""
+    model_config = ConfigDict(extra='forbid', use_attribute_docstrings=True)
 
 def _collect_entities_from_components(components: List['RotorcraftComponent']) -> tuple[List[l.Reference], List[l.Node], List[l.Element]]:
     """Helper function to collect entities from a list of components."""
@@ -64,7 +28,7 @@ class RotorcraftComponent(RPMEntity, ABC):
     """Abstract base class for all rotorcraft components (e.g., Airframe, Rotor, Blade)."""
     # reference_system will be defined in subclasses that need it
     
-    # Remove the default values here - they'll be set in __init__
+    # Pydantic safely handles mutable defaults with = []
     sub_components: List['RotorcraftComponent'] = []
     _references: List[l.Reference] = []
     _nodes: List[l.Node] = []
@@ -118,8 +82,7 @@ class RotorcraftComponent(RPMEntity, ABC):
         
         return all_refs, all_nodes, all_elements
 
-if imported_pydantic:
-    RotorcraftComponent.model_rebuild()
+RotorcraftComponent.model_rebuild()
 
 class Rotorcraft(RPMEntity):
     """Represents the entire rotorcraft, managing all major components."""
@@ -156,7 +119,4 @@ __all__ = [
     'field_validator',
     'model_validator',
     'ConfigDict',
-    
-    # Flags that other modules might check
-    'imported_pydantic'
 ]
