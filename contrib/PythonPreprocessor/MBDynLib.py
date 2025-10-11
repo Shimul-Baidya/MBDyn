@@ -510,40 +510,26 @@ class eye(MBEntity):
     def __str__(self):
         return 'eye'
 
-class Position(MBEntity):
-    """Position definition for MBDyn elements"""
-        
-    relative_position: List[Union[float, MBVar, null, eye]]
-    reference: Union['Reference', Literal['global', 'node', 'other node', '']] # TODO: Make reference an optional field (remove '')
-
-    @field_validator('relative_position', mode='before')
-    def ensure_list(cls, v):
-        if not isinstance(v, list):
-            return [v]
-        return v
-
-    @field_validator('reference')
-    def validate_reference(cls, v):
-        if isinstance(v, str):
-            if v not in {'global', 'node', 'other node', ''}:
-                raise ValueError("Invalid literal for reference")
-        elif not isinstance(v, Reference):
-            raise ValueError("reference must be either a Reference instance or one of the specified strings")
-        return v
+class Position(MBEntity):        
+    relative_position: Union[null, eye, List[Union[float, MBVar]]]
+    reference: Optional[Union[str, MBVar]] = None
 
     def __str__(self):
         s = ''
-        if self.reference != '':
+        if self.reference is not None:
             s = 'reference, ' + str(self.reference) + ', '
-        s = s + ', '.join(str(i) for i in self.relative_position)
+        if isinstance(self.relative_position, (null, eye)):
+            s = s + str(self.relative_position)
+        else:
+            s = s + ', '.join(str(i) for i in self.relative_position)
         return s
 
     def isnull(self) -> bool:
-        return (self.reference == '') and isinstance(self.relative_position[0], null)
+        return (self.reference is None) and isinstance(self.relative_position, null)
 
     def iseye(self) -> bool:
-        return (self.reference == '') and isinstance(self.relative_position[0], eye)
-    
+        return (self.reference is None) and isinstance(self.relative_position, eye)
+
 class Reference(MBEntity):
     idx: Union[int, MBVar]
     position: Position
