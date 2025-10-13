@@ -1,0 +1,190 @@
+# File with convention for labels 
+
+###COMPONENTS 
+# Each sub-component in the assembly phase takes the parent component label as first part of the label.
+# For example, each node, element, reference system associated to a blade (subcomponent of parent component rotor) 
+# has a label that starts with ROTOR + CURR_BLADE +..., where 'ROTOR'=ROTOR_n, 'CURR_BLADE'='BLADE_n' and 
+# BLADE_n=n*CURR_BLADE
+
+# Apart from a set of base labels, labels for repeated components and subcomponents are generated depending on the actual number of 
+# repetitions for the specific model considered
+
+###JOINTS, DRIVERS, SOCKETS (#TODO other?)
+# All joint labels are associated to a progressive value starting from CURR_JOINT
+# All driver labels are associated to a progressive value starting from CURR_DRIVER
+# All socket labels are associated to a progressive value starting from CURR_SOCKET
+# All lumped masses labels are associated to a progressive value starting from CURR_LUMPEDMASS
+
+# MBDyn_label_gen.py generates labels.set for the model 
+
+
+#------------------------------------------------------------------------------------------------------------------------------------
+#                                                              GROUND
+#------------------------------------------------------------------------------------------------------------------------------------
+ground:
+  GROUND: 1
+#------------------------------------------------------------------------------------------------------------------------------------
+#                                                             COMPONENTS
+#------------------------------------------------------------------------------------------------------------------------------------
+#parent
+fuselage:
+  FUSELAGE: 10
+
+#parent
+gear:
+  GEAR: 20
+
+#sub_components
+forward_gear:
+  FWD_GEAR: 10
+aft_gear:
+  AFT_GEAR: 20
+
+#parent
+tail:
+  TAIL: 50
+tail_1:
+  TAIL_1: 50
+tail_2:
+  TAIL_2: 100
+
+horizontal_tail:
+  HT_TAIL: 10
+horizontal_tail_1:
+  HT_TAIL_1: 10
+horizontal_tail_2:
+  HT_TAIL_2: 10
+
+
+vertical_tail:
+  VT_TAIL: 20 
+vertical_tail_1:
+  VT_TAIL_1: 20 
+vertical_tail_2:
+  VT_TAIL_2: 20 
+
+
+
+#parent
+airframe_1: 
+  AIRFRAME_1: 80
+airframe_2: 
+  AIRFRAME_2: 90
+
+
+#parent
+rotor:
+  ROTOR: 10000
+rotor_1:
+  ROTOR_1: 10000
+rotor_2:
+  ROTOR_2: 20000
+
+
+
+blade:
+  CURR_BLADE: 1000
+blade_r1:
+  CURR_BLADE_R1: 1000
+blade_r2:
+  CURR_BLADE_R2: 1000
+  
+
+
+yoke:
+  CURR_YOKE: 900
+yoke_r1:
+  CURR_YOKE_R1: 900
+yoke_r2:
+  CURR_YOKE_R2: 900
+
+
+
+hub:
+  HUB: 200
+hub_r1:
+  HUB_R1: 200
+hub_r2:
+  HUB_R2: 200
+
+
+mast:
+  MAST: 190
+mast_r1:
+  MAST_R1: 190
+mast_r2:
+  MAST_R2: 190
+
+
+
+swashplate_rot:
+  SW_ROT: 100
+swashplate_rot_r1:
+  SW_ROT_R1: 100
+swashplate_rot_r2:
+  SW_ROT_R2: 100
+
+
+
+swashplate_fix:
+  SW_FIX: 90
+swashplate_fix_r1:
+  SW_FIX_R1: 90
+swashplate_fix_r2:
+  SW_FIX_R2: 90
+
+
+#parent
+wing:
+  WING: 100000
+wing_1:
+  WING_1: 100000
+wing_2:
+  WING_2: 200000
+
+
+
+fix_nacelle:
+  FIX_NACELLE: 100
+fix_nacelle_1:
+  FIX_NACELLE_1: 100
+fix_nacelle_2:
+  FIX_NACELLE_2: 100
+
+
+
+tilt_nacelle:
+  TILT_NACELLE: 200
+tilt_nacelle_1:
+  TILT_NACELLE_1: 200
+tilt_nacelle_2:
+  TILT_NACELLE_2: 200
+
+
+#------------------------------------------------------------------------------------------------------------------------------------
+#                                                        CONSTITUTIVE LAWS
+#------------------------------------------------------------------------------------------------------------------------------------
+constitutive laws:
+  CURR_CONSTLAW: 1000000
+#------------------------------------------------------------------------------------------------------------------------------------
+#                                                             JOINTS
+#------------------------------------------------------------------------------------------------------------------------------------
+joints:
+  CURR_JOINT: 2000000
+#------------------------------------------------------------------------------------------------------------------------------------
+#                                                             DRIVERS
+#------------------------------------------------------------------------------------------------------------------------------------
+drives:
+  CURR_DRIVE: 3000000
+#------------------------------------------------------------------------------------------------------------------------------------
+#                                                             SOCKETS
+#------------------------------------------------------------------------------------------------------------------------------------
+sockets:
+  CURR_SOCKET: 4000000
+
+#------------------------------------------------------------------------------------------------------------------------------------
+#                                                          LUMPED MASSES
+#------------------------------------------------------------------------------------------------------------------------------------
+lumped masses:
+  CURR_LUMPEDMASS: 5000000
+

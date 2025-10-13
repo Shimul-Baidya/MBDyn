@@ -37,35 +37,34 @@ class RotorcraftComponent(RPMEntity, ABC):
     def add_sub_component(self, component: 'RotorcraftComponent'):
         self.sub_components.append(component)
 
-    def generate_mbdyn_entities(self):
+    def generate_mbdyn_entities(self, processor: 'ModelProcessor'):
         """
         Orchestrates the creation of all MBDyn entities for this component.
         This method is called AFTER labels have been processed.
+        
+        Args:
+            processor: The ModelProcessor instance that assigned labels
         """
-        # This check will be specific to components that have a reference system
-        # if self.reference_system.mbdyn_label is None:
-        #     raise RuntimeError(f"Component '{self.reference_system.name}' has not been processed.")
-
-        self._references = self._create_references()
-        self._nodes = self._create_nodes()
-        self._elements = self._create_elements()
+        self._references = self._create_references(processor)
+        self._nodes = self._create_nodes(processor)
+        self._elements = self._create_elements(processor)
 
         # Recursively generate for sub-components
         for sub in self.sub_components:
-            sub.generate_mbdyn_entities()
+            sub.generate_mbdyn_entities(processor)
 
     @abstractmethod
-    def _create_references(self) -> List[l.Reference]:
+    def _create_references(self, processor: 'ModelProcessor') -> List[l.Reference]:
         """Creates MBDyn Reference objects for this component."""
         pass
 
     @abstractmethod
-    def _create_nodes(self) -> List[l.Node]:
+    def _create_nodes(self, processor: 'ModelProcessor') -> List[l.Node]:
         """Creates MBDyn Node objects for this component."""
         pass
 
     @abstractmethod
-    def _create_elements(self) -> List[l.Element]:
+    def _create_elements(self, processor: 'ModelProcessor') -> List[l.Element]:
         """Creates MBDyn Element objects for this component."""
         pass
 
@@ -92,10 +91,10 @@ class Rotorcraft(RPMEntity):
     def add_root_component(self, component: RotorcraftComponent):
         self.root_components.append(component)
 
-    def generate_all_mbdyn_entities(self):
+    def generate_all_mbdyn_entities(self, processor: 'ModelProcessor'):
         """Generates all MBDyn entities for the entire rotorcraft model."""
         for component in self.root_components:
-            component.generate_mbdyn_entities()
+            component.generate_mbdyn_entities(processor)
 
     def collect_all_entities(self) -> tuple[List[l.Reference], List[l.Node], List[l.Element]]:
         """Collects all MBDyn entities from all root components in the model."""
@@ -114,9 +113,4 @@ __all__ = [
     'RPMEntity',
     'RotorcraftComponent', 
     'Rotorcraft',
-    
-    # Decorators/functions that other modules might need
-    'field_validator',
-    'model_validator',
-    'ConfigDict',
 ]
