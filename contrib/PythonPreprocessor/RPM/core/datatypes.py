@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 import sys
 import os
-from pydantic import Field
+from pydantic import model_validator
 
 # Add the parent directory to the Python path to allow imports from there
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -29,19 +29,36 @@ class ReferenceSystem(RPMEntity):
     mbdyn_label: Optional[l.MBVar] = None
     component_axis: Optional[str] = 'x'
     base_reference: str
-    position_wrt_base: l.Position = Field(
-        default_factory=lambda: l.Position(relative_position=[l.null()], reference='')
-    )
-    orientation_wrt_base: l.Position = Field(
-        default_factory=lambda: l.Position(relative_position=[l.eye()], reference='')
-    )
-    velocity_wrt_base: l.Position = Field(
-        default_factory=lambda: l.Position(relative_position=[l.null()], reference='')
-    )
-    angular_velocity_wrt_base: l.Position = Field(
-        default_factory=lambda: l.Position(relative_position=[l.null()], reference='')
-    )
+    position_wrt_base: Optional[l.Position] = None
+    orientation_wrt_base: Optional[l.Position] = None
+    velocity_wrt_base: Optional[l.Position] = None
+    angular_velocity_wrt_base: Optional[l.Position] = None
     mirror: bool = False
+
+    @model_validator(mode='after')
+    def set_default_positions(self):
+        """Set default Positions using base_reference after construction."""
+        if self.position_wrt_base is None:
+            self.position_wrt_base = l.Position(
+                relative_position=l.null(), 
+                reference=self.base_reference
+            )
+        if self.orientation_wrt_base is None:
+            self.orientation_wrt_base = l.Position(
+                relative_position=l.eye(), 
+                reference=self.base_reference
+            )
+        if self.velocity_wrt_base is None:
+            self.velocity_wrt_base = l.Position(
+                relative_position=l.null(), 
+                reference=self.base_reference
+            )
+        if self.angular_velocity_wrt_base is None:
+            self.angular_velocity_wrt_base = l.Position(
+                relative_position=l.null(), 
+                reference=self.base_reference
+            )
+        return self
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}', base_reference='{self.base_reference}')"
