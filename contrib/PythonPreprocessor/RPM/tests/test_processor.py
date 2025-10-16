@@ -12,7 +12,7 @@ from RPM.components.airframe import Airframe
 from RPM.components.rotor import Rotor
 from RPM.components.blade import Blade
 from RPM.components.hub import Hub
-from RPM.core.datatypes import ReferenceSystem
+from RPM.core.datatypes import ReferenceSystem, PhysicalQuantity
 
 
 class TestModelProcessor(unittest.TestCase):
@@ -49,13 +49,15 @@ class TestModelProcessor(unittest.TestCase):
         # Check MBVar registry
         self.assertIn('AIRFRAME_1', processor._mbvar_registry)
         self.assertIsInstance(processor._mbvar_registry['AIRFRAME_1'], l.MBVar)
-
     def test_03_root_component_naming_with_digit_suffix(self):
         """Test that 'rotor_1' creates 'ROTOR_1' not 'ROTOR_1_1'."""
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         rotorcraft.add_root_component(rotor)
         
@@ -72,11 +74,17 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor1 = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         rotor2 = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         rotorcraft.add_root_component(rotor1)
         rotorcraft.add_root_component(rotor2)
@@ -98,7 +106,10 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         hub = Hub(
             reference_system=ReferenceSystem(name='hub', base_reference='ROTOR_1')
@@ -120,7 +131,10 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         
         # Add 3 blades
@@ -145,7 +159,10 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         blade = Blade(
             reference_system=ReferenceSystem(name='blade', base_reference='ROTOR_1')
@@ -173,7 +190,10 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         blade = Blade(
             reference_system=ReferenceSystem(name='blade', base_reference='ROTOR_1')
@@ -200,7 +220,10 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         blade = Blade(
             reference_system=ReferenceSystem(name='blade', base_reference='ROTOR_1')
@@ -222,7 +245,10 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         blade = Blade(
             reference_system=ReferenceSystem(name='blade', base_reference='ROTOR_1')
@@ -244,7 +270,10 @@ class TestModelProcessor(unittest.TestCase):
         rotorcraft = Rotorcraft(name='TestCraft')
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         rotorcraft.add_root_component(rotor)
         
@@ -292,7 +321,10 @@ class TestModelProcessor(unittest.TestCase):
         )
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='global'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         rotorcraft.add_root_component(airframe)
         rotorcraft.add_root_component(rotor)
@@ -353,7 +385,10 @@ class TestModelProcessor(unittest.TestCase):
         # Level 1: Rotor under Airframe
         rotor = Rotor(
             reference_system=ReferenceSystem(name='rotor_1', base_reference='AIRFRAME_1'),
-            n_blades=3
+            n_blades=3,
+            radius=PhysicalQuantity(unit='m', value=1.25),
+            precone=PhysicalQuantity(unit='deg', value=2.75),
+            precone_start=PhysicalQuantity(unit='adim', value=0.05)
         )
         airframe.add_sub_component(rotor)
         

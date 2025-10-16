@@ -1,4 +1,4 @@
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 import sys
 import os
 
@@ -29,19 +29,13 @@ class Rotor(RotorcraftComponent):
         n_blades: Number of blades in the rotor
         radius: Full radius of the rotor
         precone: Built-in angle of the blades (coning angle)
-        precone_start: Radial position where precone begins (dimensionless, 0-1)
-        delta3: Pitch-flap coupling angle
-        point_pitch_to_horn: Connection point from pitch link to pitch horn
-        point_swashplate: Connection point on swashplate
+        precone_start: Radial position where precone begins
     """
     reference_system: ReferenceSystem
     n_blades: int
-    radius: Optional[PhysicalQuantity]
-    precone: Optional[PhysicalQuantity]
-    precone_start: Optional[PhysicalQuantity]
-    delta3: Optional[PhysicalQuantity]
-    point_pitch_to_horn: Optional[PhysicalQuantity]
-    point_swashplate: Optional[PhysicalQuantity]
+    radius: PhysicalQuantity
+    precone: PhysicalQuantity
+    precone_start: PhysicalQuantity
 
     def _create_references(self, processor: 'ModelProcessor') -> List[l.Reference]:
         """

@@ -17,7 +17,7 @@ class TestAirframe(unittest.TestCase):
         """Set up test fixtures including processor and model."""
         base_ref = 'global'
         self.reference_system = ReferenceSystem(
-            name='AIRFRAME_1',
+            name='airframe_1',
             base_reference=base_ref,
             position_wrt_base=l.Position(relative_position=[0., 0., 0.], reference=base_ref),
             orientation_wrt_base=l.Position(relative_position=l.eye(), reference=base_ref),
@@ -35,7 +35,7 @@ class TestAirframe(unittest.TestCase):
     def test_initialization(self):
         """Test that the Airframe component is initialized correctly."""
         self.assertIsInstance(self.airframe, Airframe)
-        self.assertEqual(self.airframe.reference_system.name, 'AIRFRAME_1')
+        self.assertEqual(self.airframe.reference_system.name, 'airframe_1')
         self.assertEqual(self.airframe.reference_system.base_reference, 'global')
         self.assertEqual(self.airframe.reference_system.position_wrt_base.relative_position, [0., 0., 0.])
         self.assertEqual(self.airframe.reference_system.orientation_wrt_base.relative_position, l.eye())
