@@ -4493,35 +4493,31 @@ class TurbulentViscoelastic(ConstitutiveLaw):
         return s
 
 class LinearViscoelasticBistop(ConstitutiveLaw):
-    """
-    Linear viscoelastic bistop constitutive law
-    """
-
     stiffness: Union[float, MBVar]
     viscosity: Union[float, MBVar]
-    initial_status: Optional[Union[bool, str]] = None
+    initial_status: Optional[Union[bool, Literal['inactive', 'active']]] = None
     activating_condition: DriveCaller
     deactivating_condition: DriveCaller
 
     def const_law_name(self) -> str:
         return 'linear viscoelastic bistop'
 
-    def __str__(self):
-        base_str = f'{self.const_law_header()}, {self.stiffness}, {self.viscosity}'
+    def __str__(self) -> str:
+        s = f'{self.const_law_header()}, {self.stiffness}, {self.viscosity}'
         if self.initial_status is not None:
-            base_str += f',\n\tinitial status, {self.initial_status},'
-        base_str += '\n\t# activation condition drive'
+            s += f',\n\tinitial status, {self.initial_status}'
+        # Activating condition
         if self.activating_condition.idx is None:
-            base_str += f'\n\t{self.activating_condition},'
+            s += f',\n\t{self.activating_condition}'
         else:
-            base_str += f'\n\treference, {self.activating_condition.idx},'
-        base_str += '\n\t# deactivation condition drive'
+            s += f',\n\treference, {self.activating_condition.idx}'
+        # Deactivating condition
         if self.deactivating_condition.idx is None:
-            base_str += f'\n\t{self.deactivating_condition}'
+            s += f',\n\t{self.deactivating_condition}'
         else:
-            base_str += f'\n\treference, {self.deactivating_condition.idx}'
-        base_str += self.const_law_footer()
-        return base_str
+            s += f',\n\treference, {self.deactivating_condition.idx}'
+        s += self.const_law_footer()
+        return s
 
 class SymbolicElastic(ConstitutiveLaw):
     """
