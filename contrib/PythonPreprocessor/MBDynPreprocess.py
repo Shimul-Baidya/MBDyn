@@ -71,11 +71,6 @@ elif len(sys.argv) == 3:
         echo = False
 preprocessing_include = re.compile("[\s]*include:")
 
-nodes = []
-bodies = []
-joints = []
-shells = []
-beams = []
 
 class PreProc:
     def __init__(self, echo):
